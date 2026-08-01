@@ -83,7 +83,6 @@ export const feeService = {
 
   /**
    * List dental procedure codes with optional search/filters
-
    * @param {Object} params - { search, category, page, limit }
    */
   async getProcedureCodes(params = {}) {
@@ -95,6 +94,14 @@ export const feeService = {
 
     const response = await apiClient.get(`/fee-management/codes?${query.toString()}`);
     return response.data; // Returns { total, page, limit, data }
+  },
+
+  /**
+   * Get procedure buttons (Quick Procedure categories and items)
+   */
+  async getProcedureButtons() {
+    const response = await apiClient.get('/procedure-codes/buttons');
+    return response.data.data?.procedureButtons || [];
   },
 
   /**

@@ -15,6 +15,7 @@ const RightPanelCard = ({
   children,
 }) => (
   <Box
+    className="section-card"
     sx={{
       backgroundColor: COLORS.SURFACE_CARD,
       border: `1px solid ${COLORS.BORDER}`,
@@ -79,7 +80,7 @@ const RightPanelCard = ({
     </Box>
 
     {/* ── Card content ── */}
-    <Box sx={{ flex: 1, px: spacing.cardPx, py: spacing.cardContentPy, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <Box className="section-card-body" sx={{ flex: 1, px: spacing.cardPx, py: spacing.cardContentPy, display: 'flex', flexDirection: 'column', gap: '2px' }}>
       {children}
     </Box>
 

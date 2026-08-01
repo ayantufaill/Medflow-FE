@@ -40,7 +40,7 @@ const CONDITION_ANSWER_STYLES = {
 };
 
 const LegendDot = ({ color }) => (
-  <Box sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+  <Box className="legend-dot" sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
 );
 
 const SeverityBadge = ({ severity }) => {

@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Divider, Checkbox, FormControlLabel, Snackbar, Popover, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, CircularProgress } from '@mui/material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import SyncIcon from '@mui/icons-material/Sync';
-import CopyIcon from '@mui/icons-material/ContentCopy';
-import SettingsIcon from '@mui/icons-material/Settings';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { 
+  Box, 
+  Typography, 
+  Snackbar,
+  Popover,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button
+} from '@mui/material';
+import { Sync as SyncIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 import {
   fetchChecklists,
   addChecklistCategory,
@@ -17,146 +25,18 @@ import {
   addChoiceToChecklistItem,
   addProductToChecklistItem,
   updateChecklist,
+  deleteChecklistCategory,
   deleteChecklist,
   deleteChecklistItem,
+  removeChoiceFromChecklistItem,
+  removeProductFromChecklistItem,
   selectChecklists,
   selectLoadingChecklists
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
-
-
-const ChoiceIcon = () => (
-  <Box sx={{ width: 12, height: 12, backgroundColor: '#f56565', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1, mt: 0.5 }}>
-    <Box sx={{ width: 6, height: 1.5, backgroundColor: 'white' }} />
-  </Box>
-);
-
-const ChecklistIcon = ({ iconId, color = '#1a3a6b' }) => {
-  const icons = {
-    'syringe-h': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 7l4 4-4 4" />
-        <path d="M10 11h12" />
-        <rect x="2" y="8" width="8" height="6" rx="1" />
-        <path d="M2 11h-1" />
-      </svg>
-    ),
-    'syringe-v': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M11 10v12" />
-        <path d="M7 18l4 4 4-4" />
-        <rect x="8" y="2" width="6" height="8" rx="1" />
-      </svg>
-    ),
-    'mask': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 10c0-2 2-4 8-4s8 2 8 4-2 6-8 6-8-4-8-6z" />
-        <path d="M4 10s-2 0-2 2v2" />
-        <path d="M20 10s2 0 2 2v2" />
-      </svg>
-    ),
-    'tooth-pulp': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M12 8c-1 0-2 1-2 2v4c0 1 1 2 2 2s2-1 2-2v-4c0-1-1-2-2-2z" fill="#f56565" stroke="none" />
-      </svg>
-    ),
-    'tooth-fill': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M12 6h4v8h-4z" fill="#cbd5e0" stroke="none" />
-      </svg>
-    ),
-    'tooth-prep': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M12 4v4M10 6h4" />
-      </svg>
-    ),
-    'bonding': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M8 12h8M12 8v8" />
-      </svg>
-    ),
-    'bridge': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-        <rect x="2" y="12" width="4" height="6" />
-        <rect x="18" y="12" width="4" height="6" />
-        <rect x="10" y="12" width="4" height="6" />
-      </svg>
-    ),
-    'post': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v20M8 6h8M8 18h8" />
-      </svg>
-    ),
-    'instrument': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 4L4 20M16 4l4 4M4 16l4 4" />
-      </svg>
-    ),
-    'spray': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 8c0-3 2-5 5-5s5 2 5 5-2 5-5 5M10 8v12M7 16h6" />
-      </svg>
-    ),
-    'tray': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 4h16c1 0 2 1 2 2v12c0 1-1 2-2 2H4c-1 0-2-1-2-2V6c0-1 1-2 2-2z" />
-        <path d="M6 10h12" />
-      </svg>
-    ),
-    'tooth-yellow': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M7 4c-1 0-2 1-2 3v4h14V7c0-2-1-3-2-3H7z" fill="#FDE047" stroke="none" />
-      </svg>
-    ),
-    'tooth-pink': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M7 4c-1 0-2 1-2 3v4h14V7c0-2-1-3-2-3H7z" fill="#F472B6" stroke="none" />
-      </svg>
-    ),
-    'tooth-blue': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M7 4c-1 0-2 1-2 3v4h14V7c0-2-1-3-2-3H7z" fill="#60A5FA" stroke="none" />
-      </svg>
-    ),
-    'tooth-green': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M7 4c-1 0-2 1-2 3v4h14V7c0-2-1-3-2-3H7z" fill="#4ADE80" stroke="none" />
-      </svg>
-    ),
-    'tooth-purple': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5">
-        <path d="M7 4c-1 0-2 1-2 3v10c0 2 1 3 2 3h10c1 0 2-1 2-3V7c0-2-1-3-2-3H7z" />
-        <path d="M7 4c-1 0-2 1-2 3v4h14V7c0-2-1-3-2-3H7z" fill="#C084FC" stroke="none" />
-      </svg>
-    ),
-    'instrument-blue': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2">
-        <path d="M20 4L4 20M16 4l4 4M4 16l4 4" />
-      </svg>
-    ),
-    'instrument-pink': (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2">
-        <path d="M20 4L4 20M16 4l4 4M4 16l4 4" />
-      </svg>
-    )
-  };
-
-  return (
-    <Box sx={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {icons[iconId] || icons['tooth-prep']}
-    </Box>
-  );
-};
+import { ChecklistIcon } from '../../components/admin/clinical-management/checklists/ChecklistIcons';
+import ChecklistCategoryList from '../../components/admin/clinical-management/checklists/ChecklistCategoryList';
 
 const ChecklistsManagement = () => {
   const navigate = useNavigate();
@@ -363,6 +243,30 @@ const ChecklistsManagement = () => {
     }
   };
 
+  const handleRemoveChoice = async (category, checklistIdx, itemIdx, choiceIdx) => {
+    const item = checklists[category][checklistIdx].items[itemIdx];
+    try {
+      await dispatch(removeChoiceFromChecklistItem({ itemId: item.id, choiceIndex: choiceIdx })).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Choice removed successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to remove choice', 'error');
+    }
+  };
+
+  const handleRemoveProduct = async (category, checklistIdx, itemIdx, productIdx) => {
+    const item = checklists[category][checklistIdx].items[itemIdx];
+    try {
+      await dispatch(removeProductFromChecklistItem({ itemId: item.id, productIndex: productIdx })).unwrap();
+      dispatch(fetchChecklists());
+      showSnackbar('Product removed successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to remove product', 'error');
+    }
+  };
+
   const handleDeleteChecklist = async (category, checklistIdx) => {
     const checklist = checklists[category][checklistIdx];
     try {
@@ -375,367 +279,114 @@ const ChecklistsManagement = () => {
     }
   };
 
-  const renderItemTable = (items, category, checklistIdx) => (
-    <Box sx={{ ml: 8, mr: 2, mb: 2, border: '1px solid #eef1f5', borderRadius: '4px', overflow: 'hidden' }}>
-      <Box sx={{ display: 'flex', backgroundColor: '#f9fafb', py: 1, px: 2, borderBottom: '1px solid #eef1f5' }}>
-        <Typography sx={{ width: 30, fontSize: '0.75rem', fontWeight: 600, color: '#666' }}>#</Typography>
-        <Typography sx={{ flex: 2, fontSize: '0.75rem', fontWeight: 600, color: '#666' }}>Item</Typography>
-        <Typography sx={{ flex: 1.5, fontSize: '0.75rem', fontWeight: 600, color: '#666' }}>Item Choices</Typography>
-        <Typography sx={{ flex: 1, fontSize: '0.75rem', fontWeight: 600, color: '#666' }}>Product</Typography>
-        <Box sx={{ width: 100 }} />
-      </Box>
-      {items.map((item, idx) => (
-        <Box key={idx} sx={{ display: 'flex', py: 1.5, px: 2, borderBottom: idx === items.length - 1 ? 'none' : '1px solid #f0f0f0', '&:hover': { backgroundColor: '#fcfdfe' } }}>
-          <Typography sx={{ width: 30, fontSize: '0.8rem', color: '#666' }}>{item.id}-</Typography>
-          <Typography sx={{ flex: 2, fontSize: '0.8rem', color: '#1a3a6b', pr: 2 }}>{item.text}</Typography>
-          <Box sx={{ flex: 1.5 }}>
-            {item.choices.map((choice, cIdx) => (
-              <Box key={cIdx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}>
-                <ChoiceIcon />
-                <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{choice}</Typography>
-              </Box>
-            ))}
-            {activeInput?.type === 'choice' && activeInput.itemIdx === idx && activeInput.checklistIdx === checklistIdx && activeInput.category === category ? (
-              <Box sx={{ mt: 1 }}>
-                <input
-                  autoFocus
-                  placeholder="Type and press Enter"
-                  value={activeInput.value}
-                  onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
-                  onKeyDown={handleInputSubmit}
-                  onBlur={() => setActiveInput(null)}
-                  style={{
-                    width: '100%',
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    border: '1px solid #1a3a6b',
-                    borderRadius: '4px',
-                    outline: 'none'
-                  }}
-                />
-              </Box>
-            ) : (
-              <Typography 
-                onClick={() => setActiveInput({ type: 'choice', category, checklistIdx, itemIdx: idx, value: '' })}
-                sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 500, cursor: 'pointer', mt: 0.5, '&:hover': { textDecoration: 'underline' } }}
-              >
-                +Add choice
-              </Typography>
-            )}
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            {item.products && item.products.map((product, pIdx) => (
-               <Typography key={pIdx} sx={{ fontSize: '0.75rem', color: '#333', mb: 0.5 }}>- {product}</Typography>
-            ))}
-            {activeInput?.type === 'product' && activeInput.itemIdx === idx && activeInput.checklistIdx === checklistIdx && activeInput.category === category ? (
-              <Box sx={{ mt: 1 }}>
-                <input
-                  autoFocus
-                  placeholder="Type and press Enter"
-                  value={activeInput.value}
-                  onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
-                  onKeyDown={handleInputSubmit}
-                  onBlur={() => setActiveInput(null)}
-                  style={{
-                    width: '100%',
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    border: '1px solid #1a3a6b',
-                    borderRadius: '4px',
-                    outline: 'none'
-                  }}
-                />
-              </Box>
-            ) : (
-              <Typography 
-                onClick={() => setActiveInput({ type: 'product', category, checklistIdx, itemIdx: idx, value: '' })}
-                sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 500, cursor: 'pointer', mt: 0.5, '&:hover': { textDecoration: 'underline' } }}
-              >
-                +Add Product
-              </Typography>
-            )}
-          </Box>
-          <Box sx={{ width: 100, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
-            <DeleteIcon 
-              onClick={() => handleDeleteItem(category, checklistIdx, idx)}
-              sx={{ color: '#f56565', fontSize: '1rem', cursor: 'pointer', opacity: 0.6, '&:hover': { opacity: 1 } }} 
-            />
-            <CopyIcon 
-              onClick={() => handleCopyItemToClipboard(item)}
-              sx={{ color: '#666', fontSize: '1rem', cursor: 'pointer', opacity: 0.6, '&:hover': { opacity: 1 } }} 
-            />
-          </Box>
-        </Box>
-      ))}
-      <Box sx={{ py: 1.5, px: 2 }}>
-        {activeInput?.type === 'item' && activeInput.checklistIdx === checklistIdx && activeInput.category === category ? (
-          <Box sx={{ mb: 1 }}>
-            <input
-              autoFocus
-              placeholder="Enter item text and press Enter"
-              value={activeInput.value}
-              onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
-              onKeyDown={handleInputSubmit}
-              onBlur={() => setActiveInput(null)}
-              style={{
-                width: '100%',
-                padding: '6px 12px',
-                fontSize: '0.8rem',
-                border: '1px solid #1a3a6b',
-                borderRadius: '4px',
-                outline: 'none'
-              }}
-            />
-          </Box>
-        ) : (
-          <Typography 
-            onClick={() => setActiveInput({ type: 'item', category, checklistIdx, value: '' })}
-            sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 500, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-          >
-            +Add Checklist Item
-          </Typography>
-        )}
-      </Box>
-    </Box>
-  );
-
-  const renderChecklistItem = (item, idx, category) => {
-    const isExpanded = expandedChecklists.includes(item.name);
-    return (
-      <Box key={idx} sx={{ borderBottom: '1px solid #f0f0f0' }}>
-        <Box 
-          onClick={() => toggleChecklist(item.name)}
-          sx={{ 
-            pl: 4, 
-            pr: 1, 
-            py: 1, 
-            display: 'flex', 
-            alignItems: 'center', 
-            cursor: 'pointer',
-            backgroundColor: isExpanded ? '#f0f4f8' : 'transparent',
-            '&:hover': { backgroundColor: isExpanded ? '#e6edf5' : '#f9fafb' },
-            borderLeft: isExpanded ? '4px solid #1a3a6b' : '4px solid transparent',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-             {isExpanded ? (
-                <KeyboardArrowDownIcon sx={{ color: '#1a3a6b', fontSize: '1.2rem' }} />
-             ) : (
-                <ChevronRightIcon sx={{ color: '#1a3a6b', fontSize: '1.2rem' }} />
-             )}
-             <Box 
-               onClick={(e) => {
-                 e.stopPropagation();
-                 handleIconClick(e, category, idx);
-               }}
-               sx={{ 
-                 cursor: 'pointer', 
-                 p: 0.5, 
-                 borderRadius: '4px',
-                 '&:hover': { backgroundColor: '#eef1f5' } 
-               }}
-             >
-               <ChecklistIcon iconId={item.iconId} />
-             </Box>
-            <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500, flex: 1, ml: 1 }}>
-              {item.name}
-            </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 160 }}>
-              <Typography sx={{ color: '#666', fontSize: '0.8rem' }}>Short Name:</Typography>
-              <Typography sx={{ color: '#333', fontSize: '0.8rem', fontWeight: 500 }}>{item.shortName}</Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 380 }}>
-              <FormControlLabel
-                onClick={(e) => e.stopPropagation()}
-                control={
-                  <Checkbox 
-                    size="small" 
-                    checked={item.isTreatment} 
-                    onChange={(e) => handleToggleChecklistField(category, idx, 'isTreatment', e.target.checked)}
-                    sx={{ p: 0.5, color: '#999', '&.Mui-checked': { color: '#1a3a6b' } }} 
-                  />
-                }
-                label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Treatment Checklist</Typography>}
-              />
-              <FormControlLabel
-                onClick={(e) => e.stopPropagation()}
-                control={
-                  <Checkbox 
-                    size="small" 
-                    checked={item.isHygiene} 
-                    onChange={(e) => handleToggleChecklistField(category, idx, 'isHygiene', e.target.checked)}
-                    sx={{ p: 0.5, color: '#999', '&.Mui-checked': { color: '#1a3a6b' } }} 
-                  />
-                }
-                label={<Typography sx={{ fontSize: '0.8rem', color: '#333' }}>Hygiene Checklist</Typography>}
-              />
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }} onClick={(e) => e.stopPropagation()}>
-              <CopyIcon 
-                onClick={() => handleCopyChecklistToClipboard(item)}
-                sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} 
-              />
-              <SettingsIcon sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} />
-              <DeleteIcon 
-                onClick={() => handleDeleteChecklist(category, idx)}
-                sx={{ color: '#666', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { color: '#d32f2f' } }} 
-              />
-            </Box>
-          </Box>
-        </Box>
-        {isExpanded && item.items && item.items.length > 0 && renderItemTable(item.items, category, idx)}
-      </Box>
-    );
+  const handleDeleteCategory = async (categoryName) => {
+    try {
+      await dispatch(deleteChecklistCategory(categoryName)).unwrap();
+      showSnackbar('Category deleted successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Failed to delete category', 'error');
+    }
   };
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb Navigation */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography
-          onClick={() => navigate('/admin/clinical-management')}
-          sx={{
-            color: '#1a3a6b',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
-        >
-          Clinical Management
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      {/* Page Header and Toolbar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 4, pt: 4, mb: 4 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
+          Checklists Management
         </Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-          Checklists
-        </Typography>
-      </Box>
 
-      {/* Toolbar */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, mb: 3 }}>
-        <Box 
-          onClick={handleOpenSyncDialog}
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 0.5, 
-            color: '#1a3a6b', 
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' }
-          }}
-        >
-          <SyncIcon sx={{ fontSize: '1.1rem' }} />
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Sync</Typography>
-        </Box>
-        {activeInput?.type === 'category' ? (
-          <Box sx={{ mb: 1, width: 250 }}>
-            <input
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {activeInput?.type === 'category' ? (
+            <TextField
               autoFocus
+              size="small"
               placeholder="Enter category name and press Enter"
               value={activeInput.value}
               onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
               onKeyDown={handleInputSubmit}
               onBlur={() => setActiveInput(null)}
-              style={{
-                width: '100%',
-                padding: '6px 12px',
-                fontSize: '0.85rem',
-                border: '1px solid #1a3a6b',
-                borderRadius: '4px',
-                outline: 'none'
+              sx={{
+                width: 320,
+                '& .MuiOutlinedInput-root': { 
+                  borderRadius: 2, 
+                  backgroundColor: '#fff',
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#3b82f6',
+                    borderWidth: '2px',
+                  }
+                },
+                '& .MuiInputBase-input': { fontSize: '0.9rem', py: 1.1, px: 2 },
               }}
             />
-          </Box>
-        ) : (
-          <Typography 
-            onClick={() => setActiveInput({ type: 'category', value: '' })}
-            sx={{ 
-              color: '#1a3a6b', 
-              fontSize: '0.85rem', 
-              fontWeight: 500, 
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-          >
-            + Add Checklist Category
-          </Typography>
-        )}
-      </Box>
-
-      {/* Categories List */}
-      <Box sx={{ borderTop: '1px solid #eef1f5' }}>
-        {Object.keys(checklists).map((category, idx) => (
-          <Box key={idx}>
-            <Box 
-              onClick={() => toggleCategory(category)}
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                py: 1.5, 
-                px: 1,
-                cursor: 'pointer',
-                backgroundColor: expandedCategories.includes(category) ? '#fff' : 'transparent',
-                '&:hover': { backgroundColor: '#f9fafb' }
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={() => setActiveInput({ type: 'category', value: '' })}
+              sx={{
+                textTransform: 'none',
+                borderRadius: radius.md,
+                fontFamily: 'Inter',
+                fontSize: fontSize.base,
+                fontWeight: fontWeight.semibold,
+                color: COLORS.ACCENT,
+                borderColor: COLORS.ACCENT,
+                px: 2,
+                py: 0.8,
+                '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.ACCENT_HOVER }
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                {expandedCategories.includes(category) ? (
-                   <KeyboardArrowDownIcon sx={{ color: '#1a3a6b', fontSize: '1.4rem' }} />
-                ) : (
-                   <ChevronRightIcon sx={{ color: '#1a3a6b', fontSize: '1.4rem' }} />
-                )}
-                <Typography sx={{ color: '#1a3a6b', fontSize: '0.9rem', fontWeight: 600 }}>
-                  {category}
-                </Typography>
-              </Box>
-            </Box>
-            
-            {expandedCategories.includes(category) && (
-              <Box>
-                {checklists[category].map((item, itemIdx) => renderChecklistItem(item, itemIdx, category))}
-                <Box sx={{ pl: 5, py: 2 }}>
-                  {activeInput?.type === 'checklist' && activeInput.category === category ? (
-                    <Box sx={{ mb: 1, maxWidth: 300 }}>
-                      <input
-                        autoFocus
-                        placeholder="Enter checklist name and press Enter"
-                        value={activeInput.value}
-                        onChange={(e) => setActiveInput({ ...activeInput, value: e.target.value })}
-                        onKeyDown={handleInputSubmit}
-                        onBlur={() => setActiveInput(null)}
-                        style={{
-                          width: '100%',
-                          padding: '6px 12px',
-                          fontSize: '0.85rem',
-                          border: '1px solid #1a3a6b',
-                          borderRadius: '4px',
-                          outline: 'none'
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <Typography 
-                      onClick={() => setActiveInput({ type: 'checklist', category, value: '' })}
-                      sx={{ 
-                        color: '#1a3a6b', 
-                        fontSize: '0.85rem', 
-                        fontWeight: 500, 
-                        cursor: 'pointer',
-                        '&:hover': { textDecoration: 'underline' }
-                      }}
-                    >
-                      + Add Checklist
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            )}
-            <Divider sx={{ borderColor: '#eef1f5' }} />
-          </Box>
-        ))}
+              + Add Checklist Category
+            </Button>
+          )}
+
+          <Button
+            variant="contained"
+            disableElevation
+            onClick={handleOpenSyncDialog}
+            startIcon={<SyncIcon />}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              px: 3,
+              py: 0.8,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
+            }}
+          >
+            Sync
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box sx={{ px: 4 }}>
+
+        {/* Categories List */}
+        <ChecklistCategoryList 
+          checklists={checklists}
+          expandedCategories={expandedCategories}
+          toggleCategory={toggleCategory}
+          expandedChecklists={expandedChecklists}
+          toggleChecklist={toggleChecklist}
+          handleIconClick={handleIconClick}
+          handleToggleChecklistField={handleToggleChecklistField}
+          handleCopyChecklistToClipboard={handleCopyChecklistToClipboard}
+          handleDeleteChecklist={handleDeleteChecklist}
+          handleDeleteCategory={handleDeleteCategory}
+          activeInput={activeInput}
+          setActiveInput={setActiveInput}
+          handleInputSubmit={handleInputSubmit}
+          handleDeleteItem={handleDeleteItem}
+          handleCopyItemToClipboard={handleCopyItemToClipboard}
+          handleRemoveChoice={handleRemoveChoice}
+          handleRemoveProduct={handleRemoveProduct}
+        />
       </Box>
 
       <Snackbar
@@ -745,7 +396,7 @@ const ChecklistsManagement = () => {
         message="Copied to clipboard"
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         ContentProps={{
-          sx: { backgroundColor: '#1a3a6b' }
+          sx: { backgroundColor: '#1e293b', color: '#fff', fontWeight: 600, borderRadius: '8px' }
         }}
       />
 
@@ -757,15 +408,20 @@ const ChecklistsManagement = () => {
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         PaperProps={{
           sx: { 
-            p: 2, 
-            width: 400, 
-            boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+            width: 380, 
+            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
             borderRadius: '12px',
-            border: '1px solid #eef1f5'
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
           }
         }}
       >
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1.5 }}>
+        <Box sx={{ backgroundColor: '#f8fafc', py: 1.5, px: 2, borderBottom: '1px solid #e2e8f0' }}>
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b' }}>
+            Select Icon
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1.5, p: 2, backgroundColor: '#fff' }}>
           {[
             'syringe-h', 'syringe-v', 'mask', 'tooth-pulp', 'tooth-fill', 'tooth-prep', 
             'bonding', 'instrument', 'post', 'bridge', 'tray', 'spray',
@@ -776,7 +432,7 @@ const ChecklistsManagement = () => {
               key={iconId}
               onClick={() => handleIconSelect(iconId)}
               sx={{ 
-                p: 1, 
+                p: 1.5, 
                 cursor: 'pointer', 
                 borderRadius: '8px', 
                 display: 'flex', 
@@ -784,8 +440,9 @@ const ChecklistsManagement = () => {
                 justifyContent: 'center',
                 transition: 'all 0.2s',
                 '&:hover': { 
-                  backgroundColor: '#f0f4f8',
-                  transform: 'scale(1.1)'
+                  backgroundColor: '#f1f5f9',
+                  transform: 'scale(1.15)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                 }
               }}
             >
@@ -801,27 +458,31 @@ const ChecklistsManagement = () => {
         onClose={handleCloseSyncDialog}
         maxWidth="sm"
         fullWidth
+        sx={{ zIndex: 9999 }}
         PaperProps={{
-          sx: { borderRadius: 1, overflow: 'hidden' }
+          sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
         }}
       >
         <DialogTitle
           sx={{
-            backgroundColor: '#0c345d',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: 500,
-            py: 2,
-            px: 3,
-            lineHeight: 1.3,
+            backgroundColor: '#fff',
+            color: '#1e293b',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            py: 2.5,
+            px: 4,
+            borderBottom: '1px solid #e2e8f0'
           }}
         >
-          Select the offices you would like to sync with the source office
+          Sync Checklists
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 400, mt: 0.5 }}>
+            Select the target offices you would like to sync with the source office
+          </Typography>
         </DialogTitle>
-        <DialogContent sx={{ mt: 3, px: 3 }}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
-              Source Office:
+        <DialogContent sx={{ mt: 3, px: 4 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#334155' }}>
+              Source Office
             </Typography>
             <TextField
               fullWidth
@@ -829,33 +490,40 @@ const ChecklistsManagement = () => {
               value="thedentalstudio"
               disabled
               sx={{
-                '& .MuiInputBase-input': { backgroundColor: '#f0f0f0', fontSize: '0.85rem' },
-                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                '& .MuiInputBase-input': { backgroundColor: '#f8fafc', fontSize: '0.9rem', py: 1, borderRadius: 2, color: '#475569' },
+                '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #e2e8f0' }
               }}
             />
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#333' }}>
+            <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#334155' }}>
               Target Offices
             </Typography>
-            {/* Placeholder for Target Offices list - matching Products page */}
-            <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, backgroundColor: '#fafafa', textAlign: 'center' }}>
-              <Typography variant="caption" color="textSecondary">
+            {/* Placeholder for Target Offices list - matching Products/Checklists page */}
+            <Box sx={{ p: 4, border: '1px dashed #cbd5e1', borderRadius: 2, backgroundColor: '#f8fafc', textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ color: '#64748b' }}>
                 Select target offices from the list below...
               </Typography>
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+        <DialogActions sx={{ px: 4, pb: 4, pt: 1, gap: 1.5 }}>
           <Button
             onClick={handleCloseSyncDialog}
+            variant="outlined"
             sx={{
               textTransform: 'none',
-              backgroundColor: '#e0e0e0',
-              color: '#333',
-              fontSize: '0.85rem',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              color: COLORS.TEXT_MUTED,
+              borderColor: COLORS.BORDER,
+              '&:hover': {
+                borderColor: COLORS.TEXT_MUTED,
+                backgroundColor: COLORS.BACKGROUND,
+              },
               px: 3,
-              '&:hover': { backgroundColor: '#d0d0d0' }
             }}
           >
             Cancel
@@ -863,16 +531,20 @@ const ChecklistsManagement = () => {
           <Button
             onClick={handleCloseSyncDialog}
             variant="contained"
+            disableElevation
             sx={{
               textTransform: 'none',
-              backgroundColor: '#6b8fb9',
-              color: '#fff',
-              fontSize: '0.85rem',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
               px: 4,
-              '&:hover': { backgroundColor: '#5a7ca8' }
             }}
           >
-            Sync
+            Sync Offices
           </Button>
         </DialogActions>
       </Dialog>

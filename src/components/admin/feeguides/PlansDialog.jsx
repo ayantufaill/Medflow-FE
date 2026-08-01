@@ -12,8 +12,9 @@ import {
   TableHead,
   TableRow,
   Checkbox,
+  Box,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const mockPlans = [
   { id: '1', groupNumber: '00652756', groupName: 'PLAN 1 GROUP', employerName: 'EMPLOYER 1', payerName: 'MetLife', payerId: '65978' },
@@ -53,30 +54,42 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        borderBottom: '1px solid #e0e0e0',
-        py: 2
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#1a3a6b' }}>
-          {selectedFeeGuide}'S PLANS
-        </Typography>
-        <IconButton onClick={onClose} size="small">
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f", textTransform: 'uppercase' }}>
+            {selectedFeeGuide}'S PLANS
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            View and manage plans associated with this fee guide.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ p: 3 }}>
-        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, color: '#333' }}>
+      </Box>
+      <DialogContent sx={{ p: 4, mt: 1 }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
           Insurance Plans:
         </Typography>
-        <TableContainer>
+        <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { borderBottom: '2px solid #e0e0e0', color: '#4b71a1', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', borderBottom: '2px solid #e2e8f0', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' } }}>
                 <TableCell padding="checkbox">
                   <Checkbox 
                     size="small" 
@@ -94,7 +107,7 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
             </TableHead>
             <TableBody>
               {mockPlans.map((plan, index) => (
-                <TableRow key={index} sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #f0f0f0', py: 1.5, color: '#333', fontSize: '0.875rem' } }}>
+                <TableRow key={index} sx={{ '& .MuiTableCell-root': { borderBottom: '1px solid #f1f5f9', py: 1.5, color: '#1e293b', fontSize: '0.85rem' } }}>
                   <TableCell padding="checkbox">
                     <Checkbox 
                       size="small" 

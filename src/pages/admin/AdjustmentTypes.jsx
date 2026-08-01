@@ -1,12 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import {
   Box,
   Typography,
   Button,
-  Divider,
-  Grid,
   CircularProgress,
 } from '@mui/material';
 import {
@@ -14,7 +12,10 @@ import {
 } from '@mui/icons-material';
 
 // Sub-components
-import AdjustmentTable from '../../components/admin/AdjustmentTable';
+import CreditAdjustmentSettings from '../../components/admin/finance-management/adjustment-types/CreditAdjustmentSettings';
+import DebitAdjustmentSettings from '../../components/admin/finance-management/adjustment-types/DebitAdjustmentSettings';
+import FinanceChargeSettings from '../../components/admin/finance-management/adjustment-types/FinanceChargeSettings';
+import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
 
 // Redux
 import {
@@ -30,6 +31,8 @@ const AdjustmentTypes = () => {
   const dispatch = useDispatch();
   const adjustmentTypes = useSelector(selectAdjustmentTypes);
   const loading = useSelector(selectAdjustmentTypesLoading);
+
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAdjustmentTypes());
@@ -121,63 +124,63 @@ const AdjustmentTypes = () => {
   }
 
   return (
-    <Box sx={{ p: 0 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="body2" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Link to="/admin/finance-management" style={{ textDecoration: 'none', color: '#4b71a1' }}>Finance Management</Link> &gt; Adjustment Types
-        </Typography>
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      {/* Header Info */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', px: 4, pt: 4, mb: 4 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
+            Adjustment Types
+          </Typography>
+        </Box>
         <Button
-          startIcon={<SyncIcon />}
-          size="small"
-          onClick={() => dispatch(fetchAdjustmentTypes())}
-          sx={{ textTransform: 'none', color: '#4b71a1' }}
+          variant="contained"
+          onClick={() => setIsSyncDialogOpen(true)}
+          startIcon={<SyncIcon sx={{ fontSize: '18px' }} />}
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            height: 38, 
+            px: "20px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+          }}
         >
           Sync
         </Button>
       </Box>
 
-      <Grid container spacing={0} sx={{ flexWrap: 'nowrap', width: '100%' }}>
-        <Grid item sx={{ width: '48%', flexBasis: '48%', flexGrow: 0, flexShrink: 0 }}>
-          <AdjustmentTable
-            title="Credit Adjustment (subtraction)"
-            subtitle="If left blank, no default amount will apply once adj. selected on patient bill."
-            data={creditAdjustments}
-            section="credit"
-            hasNote={true}
-            onAdd={() => handleAdd('credit')}
-            onInputChange={handleInputChange}
-            onDelete={handleDelete}
-          />
-        </Grid>
-        
-        {/* Vertical Divider */}
-        <Grid item sx={{ width: '4%', display: 'flex', justifyContent: 'center' }}>
-          <Divider orientation="vertical" flexItem sx={{ height: 'auto', alignSelf: 'stretch', borderColor: '#e0e0e0' }} />
-        </Grid>
+      {/* Main Content Area */}
+      <Box sx={{ px: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <CreditAdjustmentSettings
+          data={creditAdjustments}
+          section="credit"
+          onAdd={() => handleAdd('credit')}
+          onInputChange={handleInputChange}
+          onDelete={handleDelete}
+        />
 
-        <Grid item sx={{ width: '48%', flexBasis: '48%', flexGrow: 0, flexShrink: 0 }}>
-          <AdjustmentTable
-            title="Debit Adjustment (addition)"
-            subtitle="If left blank, no default amount will apply once adj. selected on patient bill."
-            data={debitAdjustments}
-            section="debit"
-            hasNote={false}
-            onAdd={() => handleAdd('debit')}
-            onInputChange={handleInputChange}
-            onDelete={handleDelete}
-          />
-          <AdjustmentTable
-            title="Finance Charges"
-            subtitle="If left blank, no default amount will apply once adj. selected on patient bill."
-            data={financeCharges}
-            section="finance"
-            hasNote={false}
-            onAdd={() => handleAdd('finance')}
-            onInputChange={handleInputChange}
-            onDelete={handleDelete}
-          />
-        </Grid>
-      </Grid>
+        <DebitAdjustmentSettings
+          data={debitAdjustments}
+          section="debit"
+          onAdd={() => handleAdd('debit')}
+          onInputChange={handleInputChange}
+          onDelete={handleDelete}
+        />
+
+        <FinanceChargeSettings
+          data={financeCharges}
+          section="finance"
+          onAdd={() => handleAdd('finance')}
+          onInputChange={handleInputChange}
+          onDelete={handleDelete}
+        />
+      </Box>
+
+      <AdjustmentTypesSyncDialog
+        open={isSyncDialogOpen}
+        onClose={() => setIsSyncDialogOpen(false)}
+      />
     </Box>
   );
 };

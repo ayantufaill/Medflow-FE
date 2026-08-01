@@ -19,182 +19,17 @@ import {
   Popover,
 } from '@mui/material';
 import {
-  Dashboard,
-  People,
-  CalendarToday,
-  CalendarMonth,
-  Description,
-  Receipt,
-  Person,
-  Assessment,
   Lock,
   ExitToApp,
-  Business,
-  AccountBalance,
-  EventRepeat,
-  Queue,
-  MeetingRoom,
-  Note,
-  MonitorHeart,
-  Folder,
-  Payment,
-  RequestQuote,
-  MedicalServices,
-  Assignment,
-  CloudUpload,
-  VerifiedUser,
-  Forum,
   Settings,
-  AttachMoney,
-  AdminPanelSettings,
+  Person,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import { navMenuItems as menuItems, hasRequiredRole as hasRequiredRoleShared } from '../../config/navMenuItems';
 
 // Sidebar widths for desktop expanded and collapsed states
 const DRAWER_WIDTH_EXPANDED = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
-
-const menuItems = [
-  {
-    text: 'Dashboard',
-    icon: <Dashboard />,
-    path: '/admin/reports',
-    requiredRoles: ['Admin'],
-  },
-  // { text: 'Users', icon: <Person />, path: '/users', adminOnly: true },
-  // { text: 'Patients', icon: <People />, path: '/patients' },
-  // { text: 'Providers', icon: <Person />, path: '/providers', adminOnly: true },
-  /*{
-    text: 'Appointment Types',
-    icon: <CalendarToday />,
-    path: '/appointment-types',
-    adminOnly: true,
-  },*/
-  /*{
-    text: 'Rooms',
-    icon: <MeetingRoom />,
-    path: '/rooms',
-    requiredRoles: ['Admin'],
-  },*/
-  // { text: 'Users', icon: <Person />, path: '/users', requiredRoles: ['Admin'] },
-  {
-    text: 'Patients',
-    icon: <People />,
-    path: '/patients',
-    requiredRoles: ['Admin', 'Receptionist', 'Doctor'],
-  },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments/operatory-schedule', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
-  // {
-  //   text: 'Calendar',
-  //   icon: <CalendarMonth />,
-  //   path: '/appointments/calendar',
-  // },
-  /*{
-    text: 'Waitlist',
-    icon: <Queue />,
-    path: '/waitlist',
-    requiredRoles: ['Admin', 'Receptionist'],
-  },*/
-  /*{
-    text: 'Recurring Appointments',
-    icon: <EventRepeat />,
-    path: '/recurring-appointments',
-    requiredRoles: ['Admin', 'Receptionist'],
-  },*/
-  /*{
-    text: 'Portal Messages',
-    icon: <Forum />,
-    path: '/portal-messages',
-    requiredRoles: ['Admin', 'Provider', 'Doctor'],
-  },*/
-  /*{
-    text: 'Note Templates',
-    icon: <Note />,
-    path: '/note-templates',
-    requiredRoles: ['Admin', 'Doctor'],
-  },*/
-  /*{
-    text: 'Clinical Notes',
-    icon: <Description />,
-    path: '/clinical-notes',
-    requiredRoles: ['Admin', 'Doctor'],
-  },*/
-  {
-    text: 'Vital Signs',
-    icon: <MonitorHeart />,
-    path: '/vital-signs',
-    requiredRoles: ['Admin', 'Doctor', 'Receptionist'],
-  },
-  // {
-  //   text: 'Documents',
-  //   icon: <Folder />,
-  //   path: '/documents',
-  //   requiredRoles: ['Admin', 'Doctor', 'Nurse'],
-  // },
-  /*{
-    text: 'Service Catalog',
-    icon: <MedicalServices />,
-    path: '/services',
-    requiredRoles: ['Admin', 'Billing'],
-  },
-  {
-    text: 'Invoices',
-    icon: <Receipt />,
-    path: '/invoices',
-    requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-  },*/
-  /* {
-     text: 'Payments',
-     icon: <Payment />,
-     path: '/payments',
-     requiredRoles: ['Admin', 'Billing', 'Receptionist'],
-   },*/
-  /*{
-    text: 'Estimates',
-    icon: <RequestQuote />,
-    path: '/estimates',
-    requiredRoles: ['Admin', 'Billing', 'Doctor'],
-  },*/
-  //{ text: 'Reports', icon: <Assessment />, path: '/reports' },
-  { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
-  { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
-  { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
-  { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
-  // { text: 'Administration', icon: <AdminPanelSettings />, path: '/admin' },
-  /*{
-    text: 'Practice Info',
-    icon: <Business />,
-    path: '/practice-info',
-    requiredRoles: ['Admin'],
-  },*/
-  /*{
-    text: 'Insurance Companies',
-    icon: <AccountBalance />,
-    path: '/insurance-companies',
-    requiredRoles: ['Admin'],
-  },*/
-  // Sprint 6 - Claims Management
-  /*{
-    text: 'Claims',
-    icon: <Assignment />,
-    path: '/claims',
-    requiredRoles: ['Admin', 'Billing'],
-  },*/
-  // Sprint 6 - ERA/EOB Processing
-  /*{
-    text: 'ERA/EOB',
-    icon: <CloudUpload />,
-    path: '/era',
-    requiredRoles: ['Admin', 'Billing'],
-  },*/
-  // Sprint 6 - Authorization Management
-  /*{
-    text: 'Authorizations',
-    icon: <VerifiedUser />,
-    path: '/authorizations',
-    requiredRoles: ['Admin', 'Billing', 'Front Desk'],
-  },*/
-];
 
 // open: controls desktop sidebar — true = expanded (full), false = collapsed (icons only)
 // mobileOpen: controls the temporary mobile drawer
@@ -219,22 +54,9 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
     setSettingsAnchor(null);
   };
 
-  // Helper function to check if user has required roles
-  const hasRequiredRole = (requiredRoles) => {
-    // If no role restrictions, show to everyone
-    if (!requiredRoles || requiredRoles.length === 0) return true;
-
-    // If user doesn't have roles data, don't show restricted items
-    if (!user || !user.roles || user.roles.length === 0) return false;
-
-    const userRoles = user.roles;
-    const userRoleNames = userRoles
-      .map((role) => (typeof role === 'string' ? role : role?.name || ''))
-      .filter(Boolean);
-
-    // Check if user has at least one of the required roles
-    return requiredRoles.some((role) => userRoleNames.includes(role));
-  };
+  // Helper function to check if user has required roles (shared with UserProfile.jsx
+  // via src/config/navMenuItems.js, so the two surfaces can't drift apart)
+  const hasRequiredRole = (requiredRoles) => hasRequiredRoleShared(user, requiredRoles);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -642,8 +464,8 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Reports') navigate('/admin/reports/financial');
                 if (item === 'KPI Dashboard') {
-                  console.log("Navigating to KPI Dashboard route: /admin/reports/kpi");
-                  navigate('/admin/reports/kpi');
+                  console.log("Navigating to KPI Dashboard route: /admin/kpi");
+                  navigate('/kpi');
                 }
                 handleSettingsClose();
               }}

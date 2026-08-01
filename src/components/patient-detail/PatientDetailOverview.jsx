@@ -142,6 +142,7 @@ export default function PatientDetailOverview({
   onDocuments,
   onAddFamilyMember,
   onSendUpdateRequest,
+  onRequestUpdatesClick,
   onPatientDataChange,
 }) {
   const [myChartModalOpen, setMyChartModalOpen] = useState(false);
@@ -189,6 +190,7 @@ export default function PatientDetailOverview({
           isActive={patient?.isActive}
           onConvertToNonPatient={onConvertToNonPatient}
           onSendUpdateRequest={onSendUpdateRequest}
+          onRequestUpdatesClick={onRequestUpdatesClick}
           patient={patient}
           isEditMode={isEditMode}
         />

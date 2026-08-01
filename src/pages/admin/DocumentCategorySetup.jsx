@@ -17,8 +17,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, Save as SaveIcon } from '@mui/icons-material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 import DocumentCategoryCard from '../../components/admin/practice-setup/document-category/DocumentCategoryCard';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
@@ -42,7 +47,7 @@ const DocumentCategorySetup = () => {
   const [documents, setDocuments] = useState(defaultDocumentList);
   const [categories, setCategories] = useState(defaultCategoryList);
   const { showSnackbar } = useSnackbar();
-  
+
   const practiceInfo = useSelector(selectPracticeInfo);
   const dispatch = useDispatch();
 
@@ -86,7 +91,7 @@ const DocumentCategorySetup = () => {
         })).unwrap();
         id = newPractice._id || newPractice.id;
       }
-      
+
       await dispatch(updateDocumentCategories({
         practiceInfoId: id,
         documentCategoriesData: { documents, categories }
@@ -151,7 +156,7 @@ const DocumentCategorySetup = () => {
         setCategories(newCats);
       }
     }
-    
+
     setInputDialog({ open: false, mode: 'add', type: 'document', index: null, value: '', error: '' });
   };
 
@@ -167,38 +172,57 @@ const DocumentCategorySetup = () => {
 
   return (
     <Box>
-      
-      {/* --- HEADER SECTION --- */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 4,
-          flexWrap: 'wrap',
-          gap: 2
+      <Box
+        sx={{
+          backgroundColor: '#FBFCFE',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          p: { xs: 3, sm: 4 },
         }}
       >
-        <Typography variant="h6" fontWeight="bold" color="#11223F">
-          Document Category
-        </Typography>
-        
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={handleSave}
-          sx={{ borderRadius: 1.5, textTransform: 'none', px: 2, py: 1 }}
-          startIcon={<img src={SaveConfigIcon} alt="Save" style={{ width: 16, height: 16 }} />}
+        {/* --- HEADER SECTION --- */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 4,
+            flexWrap: 'wrap',
+            gap: 2
+          }}
         >
-          Save Configuration
-        </Button>
-      </Box>
+          <Typography variant="h6" fontWeight="bold" color="#11223F">
+            Document Category
+          </Typography>
 
-      {/* --- CONTENT SECTION --- */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        {/* DOCUMENTS */}
-        <Box sx={{ width: { xs: '100%', md: '564px' } }}>
-           <DocumentCategoryCard
+          <Button
+            variant="contained"
+            disableElevation
+            onClick={handleSave}
+            startIcon={<SaveIcon sx={{ fontSize: '16px' }} />}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+            }}
+          >
+            Save Configuration
+          </Button>
+        </Box>
+
+        {/* --- CONTENT SECTION --- */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          {/* DOCUMENTS */}
+          <Box sx={{ width: { xs: '100%', md: '564px' } }}>
+            <DocumentCategoryCard
               title="DOCUMENTS"
               icon={DocumentsIcon}
               items={documents}
@@ -206,11 +230,11 @@ const DocumentCategorySetup = () => {
               onAdd={handleAddItem}
               onEdit={handleEditItem}
               onDelete={handleDeleteItem}
-           />
-        </Box>
-        {/* CATEGORY */}
-        <Box sx={{ width: { xs: '100%', md: '564px' } }}>
-           <DocumentCategoryCard
+            />
+          </Box>
+          {/* CATEGORY */}
+          <Box sx={{ width: { xs: '100%', md: '564px' } }}>
+            <DocumentCategoryCard
               title="CATEGORY"
               icon={CategoryIcon}
               items={categories}
@@ -218,49 +242,103 @@ const DocumentCategorySetup = () => {
               onAdd={handleAddItem}
               onEdit={handleEditItem}
               onDelete={handleDeleteItem}
-           />
+            />
+          </Box>
         </Box>
+
       </Box>
 
       {/* --- INPUT DIALOG (ADD/EDIT) --- */}
-      <BaseDialog
+      <Dialog
         open={inputDialog.open}
         onClose={() => setInputDialog(prev => ({ ...prev, open: false }))}
-        title={`${inputDialog.mode === 'add' ? 'Add New' : 'Edit'} ${inputDialog.type === 'document' ? 'Document' : 'Category'}`}
-        showCloseButton
         maxWidth="sm"
-        actions={
-          <>
-            <Button onClick={() => setInputDialog(prev => ({ ...prev, open: false }))} color="inherit">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmInput} variant="contained" color="primary">
-              Save
-            </Button>
-          </>
-        }
+        fullWidth
+        sx={{ zIndex: 10000 }}
+        PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden' } }}
       >
-        <Box sx={{ mt: 2 }}>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Name"
-            type="text"
-            fullWidth
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3,
+            py: 2,
+            bgcolor: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+          }}
+        >
+          <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.1rem' }}>
+            {`${inputDialog.mode === 'add' ? 'Add New' : 'Edit'} ${inputDialog.type === 'document' ? 'Document' : 'Category'}`}
+          </Typography>
+          <IconButton onClick={() => setInputDialog(prev => ({ ...prev, open: false }))} size="small" sx={{ color: '#64748b' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#64748b', mb: '4px' }}>Name</Typography>
+            <TextField
+              autoFocus
+              size="small"
+              fullWidth
+              value={inputDialog.value}
+              onChange={(e) => setInputDialog(prev => ({ ...prev, value: e.target.value, error: '' }))}
+              error={!!inputDialog.error}
+              helperText={inputDialog.error}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleConfirmInput();
+                }
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { height: '36px', bgcolor: '#ffffff', borderRadius: '6px', fontSize: '13px' } }}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{
+          px: 3,
+          py: 2,
+          backgroundColor: '#F9FAFB',
+          borderTop: '1px solid #E5E7EB',
+          gap: 1.5,
+          justifyContent: 'flex-end'
+        }}>
+          <Button
+            onClick={() => setInputDialog(prev => ({ ...prev, open: false }))}
             variant="outlined"
-            value={inputDialog.value}
-            onChange={(e) => setInputDialog(prev => ({ ...prev, value: e.target.value, error: '' }))}
-            error={!!inputDialog.error}
-            helperText={inputDialog.error}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleConfirmInput();
-              }
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              textTransform: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              px: 3,
+              '&:hover': { borderColor: '#94a3b8', bgcolor: '#f1f5f9' },
             }}
-          />
-        </Box>
-      </BaseDialog>
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmInput}
+            variant="contained"
+            sx={{
+              bgcolor: '#2262EF',
+              color: '#FFFFFF',
+              textTransform: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              px: 3,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#1a4fc4', boxShadow: 'none' },
+            }}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* --- DELETE CONFIRMATION DIALOG --- */}
       <ConfirmationDialog

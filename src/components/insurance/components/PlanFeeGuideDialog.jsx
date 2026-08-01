@@ -4,7 +4,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, IconButton, Box, Typography, Collapse
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
+import { KeyboardArrowDown, KeyboardArrowUp, Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const PlanFeeGuideDialog = ({ open, onClose, planName }) => {
   const [expandedRows, setExpandedRows] = useState({});
@@ -29,10 +29,47 @@ const PlanFeeGuideDialog = ({ open, onClose, planName }) => {
   ];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle sx={{ bgcolor: '#5c7cba', color: '#fff', py: 1, fontSize: '0.9rem', textAlign: 'center' }}>
-        {planName || 'Careington PPO Platinum (directly in network)'}
-      </DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+    >
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "10px", py: "10px",
+        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ 
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            {planName || 'Careington PPO Platinum (directly in network)'}
+          </Typography>
+          <Typography sx={{ 
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            Manage the fee guide for this insurance plan.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
       <DialogContent sx={{ p: 0 }}>
         <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 0 }}>
           <Table size="small">
@@ -67,10 +104,46 @@ const PlanFeeGuideDialog = ({ open, onClose, planName }) => {
           </Table>
         </TableContainer>
       </DialogContent>
-      <DialogActions sx={{ p: 1.5, gap: 1 }}>
-        <Button size="small" variant="contained" onClick={onClose} sx={{ bgcolor: '#a0aec0', textTransform: 'none' }}>Close</Button>
-        <Button size="small" variant="contained" sx={{ bgcolor: '#d1a97d', textTransform: 'none' }}>Export as CSV</Button>
-        <Button size="small" variant="contained" sx={{ bgcolor: '#4b71a1', textTransform: 'none' }}>Upload fee Guide</Button>
+      <DialogActions sx={{ px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', gap: 1.5, justifyContent: 'flex-end' }}>
+        <Button 
+          variant="outlined" 
+          onClick={onClose}
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+          }}
+        >
+          Close
+        </Button>
+        <Button 
+          variant="contained" 
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+          }}
+        >
+          Export as CSV
+        </Button>
+        <Button 
+          variant="contained" 
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+          }}
+        >
+          Upload fee Guide
+        </Button>
       </DialogActions>
     </Dialog>
   );

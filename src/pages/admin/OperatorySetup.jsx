@@ -61,7 +61,7 @@ const OperatorySetup = () => {
   return (
     <Box
       sx={{
-        bgcolor: '#f6f8fb',
+        bgcolor: '#FBFCFE',
         border: '1px solid #e8eaf0',
         borderRadius: 2,
         p: 3,

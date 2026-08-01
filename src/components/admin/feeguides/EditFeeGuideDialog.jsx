@@ -8,7 +8,9 @@ import {
   TextField,
   Box,
   Button,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 import { updateFeeGuide, setDefaultFeeGuide } from '../../../store/slices/feeGuideSlice';
 
 const EditFeeGuideDialog = ({ open, onClose, feeGuideObj }) => {
@@ -33,20 +35,36 @@ const EditFeeGuideDialog = ({ open, onClose, feeGuideObj }) => {
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        Edit Fee Guide
-      </DialogTitle>
-      <DialogContent sx={{ py: 3, px: 2 }}>
-        <Typography variant="body2" sx={{ mb: 1, fontWeight: 700, color: '#333' }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Edit Fee Guide
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Modify fee guide name or set as default.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ py: 3, px: 4 }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
           Name
         </Typography>
         <TextField
@@ -55,14 +73,14 @@ const EditFeeGuideDialog = ({ open, onClose, feeGuideObj }) => {
           value={localName}
           onChange={(e) => setLocalName(e.target.value)}
           sx={{ 
-            mb: 2,
-            '& .MuiOutlinedInput-root': { 
-              '& fieldset': { borderColor: '#4fc3f7' },
-            }
+            mb: 4,
+            '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+            '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
           }}
         />
         <Button 
-          variant="contained" 
+          variant="outlined" 
           onClick={() => {
             if (feeGuideObj) {
               dispatch(setDefaultFeeGuide(feeGuideObj.id));
@@ -70,29 +88,45 @@ const EditFeeGuideDialog = ({ open, onClose, feeGuideObj }) => {
             }
           }}
           sx={{ 
-            bgcolor: '#d9a366', 
-            textTransform: 'none', 
-            mb: 4,
-            fontSize: '0.875rem',
-            '&:hover': { bgcolor: '#c08d50' } 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #2262ef", color: "#2262ef",
+            px: "16px", py: "7px",
+            width: '100%', mb: 4,
+            "&:hover": { borderColor: "#1a50cc", backgroundColor: "#eff6ff" },
           }}
         >
           Set As Default Fee Guide
         </Button>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', mx: -4, mb: -4 }}>
           <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#c08d50' } }}
-            onClick={handleSave}
-          >
-            Save
-          </Button>
-          <Button 
-            variant="contained" 
-            sx={{ bgcolor: '#999', textTransform: 'none', minWidth: 80, '&:hover': { bgcolor: '#888' } }}
+            variant="outlined" 
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
             onClick={onClose}
           >
             Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
+            }}
+            onClick={handleSave}
+            disabled={!localName.trim()}
+          >
+            Save
           </Button>
         </Box>
       </DialogContent>

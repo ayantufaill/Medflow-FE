@@ -24,7 +24,10 @@ import depositReducer from './slices/depositSlice';
 import referralReportReducer from './slices/referralReportSlice';
 import patientReportReducer from './slices/patientReportSlice';
 import clinicalReportReducer from './slices/clinicalReportSlice';
+import othersReportReducer from './slices/othersReportSlice';
 import waitlistReducer from './slices/waitlistSlice';
+import clinicAnalyticsReducer from './slices/clinicAnalyticsSlice';
+import branchReducer from './slices/branchSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -52,7 +55,10 @@ const appReducer = combineReducers({
   referralReport: referralReportReducer,
   patientReport: patientReportReducer,
   clinicalReport: clinicalReportReducer,
+  othersReport: othersReportReducer,
   waitlist: waitlistReducer,
+  clinicAnalytics: clinicAnalyticsReducer,
+  branch: branchReducer,
 });
 
 const rootReducer = (state, action) => {

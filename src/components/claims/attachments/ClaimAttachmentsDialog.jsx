@@ -20,10 +20,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
 import DescriptionIcon from '@mui/icons-material/Description';
 
-const MOCK_REFERENCE_NUMBERS = [
-  '223042593614017',
-  'E9JC5NM3800',
-];
+
 
 const AttachmentAlertModal = ({ open, title = "Attachment", message, onClose, onAttach }) => {
   return (
@@ -103,7 +100,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '8px', minHeight: '400px' } }}>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '8px', minHeight: '400px' } }}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2.5, pb: 1 }}>
           <Typography sx={{ fontWeight: 600, color: '#333', fontSize: '1.05rem' }}>
             Claim Attachments
@@ -167,24 +164,15 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
             </Typography>
             
             {isEditingPayorRef ? (
-              <Autocomplete
-                freeSolo
-                options={MOCK_REFERENCE_NUMBERS}
+              <TextField
                 value={payorRefValue}
-                onChange={(event, newValue) => setPayorRefValue(newValue)}
-                onInputChange={(event, newInputValue) => setPayorRefValue(newInputValue)}
+                onChange={(event) => setPayorRefValue(event.target.value)}
                 onBlur={() => setIsEditingPayorRef(false)}
+                autoFocus
+                variant="outlined"
                 size="small"
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    autoFocus 
-                    variant="outlined" 
-                    size="small" 
-                    sx={{ width: 250, '& .MuiInputBase-root': { height: '30px', fontSize: '0.85rem' } }}
-                    error={!payorRefValue}
-                  />
-                )}
+                sx={{ width: 250, '& .MuiInputBase-root': { height: '30px', fontSize: '0.85rem' } }}
+                error={!payorRefValue}
               />
             ) : (
               <>

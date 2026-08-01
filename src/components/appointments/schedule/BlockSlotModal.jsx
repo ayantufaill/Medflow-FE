@@ -37,13 +37,14 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
       const { startTime: initStart, endTime: initEnd } = initialData;
       if (initStart) setStartTime(initStart);
       if (initEnd) setEndTime(initEnd);
-      setNotes('');
-      setSelectedColor(BLOCK_COLORS[0]);
+      setNotes(initialData.notes || initialData.note || '');
+      setSelectedColor(initialData.color || BLOCK_COLORS[0]);
     }
   }, [open, initialData]);
 
   const handleSave = () => {
     onSave({
+      id: initialData?.id || initialData?._id,
       startTime,
       endTime,
       notes,
@@ -237,6 +238,23 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
         gap: 1,
         backgroundColor: COLORS.SURFACE_FOOTER,
       }}>
+         <Button
+          variant="outlined"
+          onClick={onClose}
+          size="small"
+          sx={{
+            borderRadius: radius.sm,
+            textTransform: 'none',
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.medium,
+            px: 2,
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
+            '&:hover': { borderColor: COLORS.TEXT_MUTED, backgroundColor: 'rgba(0,0,0,0.02)' },
+          }}
+        >
+          Cancel
+        </Button>
         {(initialData?.id || initialData?._id) && onDelete && (
           <Button
             variant="outlined"
@@ -255,25 +273,7 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
           </Button>
         )}
         <Button
-          variant="outlined"
-          onClick={onClose}
-          size="small"
-          sx={{
-            borderRadius: radius.sm,
-            textTransform: 'none',
-            fontSize: fontSize.md,
-            fontWeight: fontWeight.medium,
-            px: 2,
-            borderColor: COLORS.BORDER,
-            color: COLORS.TEXT_PRIMARY,
-            '&:hover': { borderColor: COLORS.TEXT_MUTED, backgroundColor: 'rgba(0,0,0,0.02)' },
-          }}
-        >
-          Cancel
-        </Button>
-        {!(initialData?.id || initialData?._id) && (
-          <Button
-            variant="contained"
+          variant="contained"
             onClick={handleSave}
             disableElevation
             size="small"
@@ -290,7 +290,6 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
           >
             Save
           </Button>
-        )}
       </Box>
     </Dialog>
   );

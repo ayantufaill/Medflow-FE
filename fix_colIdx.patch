@@ -1,0 +1,12 @@
+--- ../Medflow-FE/src/components/appointments/schedule/ScheduleTimeGrid.jsx
++++ ../Medflow-FE/src/components/appointments/schedule/ScheduleTimeGrid.jsx
+@@ -406,6 +406,6 @@
+     const map = {};
+     activeColumns.forEach((col, idx) => {
+-      const id = col._id || col.id;
+-      if (id) map[id] = idx;
++      const id = String(col._id || col.id);
++      if (id) map[`op${id}`] = idx;
++      map[id] = idx; // fallback just in case
+     });
+     return map;

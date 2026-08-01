@@ -1,19 +1,15 @@
 import { Box, Chip, IconButton, Typography } from "@mui/material";
 import {
   Close,
-  AttachMoney,
-  PeopleOutline,
   Refresh,
-  DescriptionOutlined,
-  LinkOutlined,
 } from "@mui/icons-material";
 import InitialsAvatar from "../shared/InitialsAvatar";
 import { ActionBtn, VDiv } from "./helpers";
-import ToothSvg from "../../assets/operatory icons/Vector (2).svg";
-import ReportIcon from "../../assets/operatory icons/report.png";
-import DollarIcon from "../../assets/operatory icons/dollar.png";
-import PremmedIcon from "../../assets/operatory icons/premmed.png";
-import PeopleIcon from "../../assets/operatory icons/people.png";
+import ToothSvg from "../../assets/patientslidericons/tabler_dental.svg";
+import DocumentIcon from "../../assets/patientslidericons/document.svg";
+import BillingIcon from "../../assets/patientslidericons/billing.svg";
+import LinkIcon from "../../assets/patientslidericons/link.svg";
+import FamilyIcon from "../../assets/patientslidericons/family-icon.svg";
 
 // 1. Add onRefresh to the component props
 const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
@@ -67,7 +63,7 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
         icon={
           <Box
             component="img"
-            src={ReportIcon}
+            src={DocumentIcon}
             sx={{ width: "16px", height: "16px", objectFit: "contain" }}
           />
         }
@@ -77,18 +73,17 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
         icon={
           <Box
             component="img"
-            src={DollarIcon}
+            src={BillingIcon}
             sx={{ width: "16px", height: "16px", objectFit: "contain" }}
           />
         }
         title="Billing"
-        active
       />
       <ActionBtn
         icon={
           <Box
             component="img"
-            src={PremmedIcon}
+            src={LinkIcon}
             sx={{ width: "16px", height: "16px", objectFit: "contain" }}
           />
         }
@@ -98,7 +93,7 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
         icon={
           <Box
             component="img"
-            src={PeopleIcon}
+            src={FamilyIcon}
             sx={{ width: "16px", height: "16px", objectFit: "contain" }}
           />
         }

@@ -16,12 +16,16 @@ import {
   TableRow,
   Paper,
   CircularProgress,
-  TextField
+  TextField,
+  Select,
+  MenuItem,
+  Divider
 } from '@mui/material';
 import { depositService } from '../../../../services/deposit.service';
 import { useLocation } from 'react-router-dom';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
 import { reportingService } from '../../../../services/reporting.service';
+import { ReportLayout } from '../../../../components/reports/ui';
 
 const PAYMENT_TYPES = [
   'EFT', 'Debit Card', 'Visa Card', 'Credit Card', 'Master Card', 'Amex', 
@@ -396,8 +400,8 @@ const DepositSummary = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Transactions Date Range:</Typography>
               <Select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
+                value={dateRangeType}
+                onChange={(e) => setDateRangeType(e.target.value)}
                 size="small"
                 variant="standard"
                 sx={{ fontSize: '0.85rem', minWidth: 100, backgroundColor: '#fff' }}
@@ -416,18 +420,18 @@ const DepositSummary = () => {
           
           <Grid container spacing={2}>
             <Grid item xs={4}>
-              <CheckboxGroup title="Patient payment types" items={PAYMENT_TYPES} />
+              <CheckboxGroup title="Patient payment types" items={PAYMENT_TYPES} selected={patientTypes} setSelected={setPatientTypes} />
             </Grid>
             <Grid item xs={4}>
-              <CheckboxGroup title="Insurance payment types" items={PAYMENT_TYPES.slice(0, 15)} />
+              <CheckboxGroup title="Insurance payment types" items={PAYMENT_TYPES.slice(0, 15)} selected={insuranceTypes} setSelected={setInsuranceTypes} />
             </Grid>
             <Grid item xs={4}>
-              <CheckboxGroup title="Include refund payment types" items={PAYMENT_TYPES.slice(0, 15)} />
+              <CheckboxGroup title="Include refund payment types" items={PAYMENT_TYPES.slice(0, 15)} selected={refundTypes} setSelected={setRefundTypes} />
             </Grid>
           </Grid>
 
           <Box sx={{ mt: 2 }}>
-            <CheckboxGroup title="Include Deposits" items={PAYMENT_TYPES.slice(0, 5)} />
+            <CheckboxGroup title="Include Deposits" items={PAYMENT_TYPES.slice(0, 5)} selected={depositTypes} setSelected={setDepositTypes} />
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1 }}>

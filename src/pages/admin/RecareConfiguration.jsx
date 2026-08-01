@@ -12,35 +12,10 @@ import {
   selectLoadingRecare
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import {
-  Box,
-  Typography,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Radio,
-  RadioGroup,
-  IconButton,
-  Tabs,
-  Tab,
-  Switch,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import {
-  DragIndicator as DragIcon,
-  KeyboardArrowDown as ExpandIcon,
-  Delete as DeleteIcon,
-} from '@mui/icons-material';
+import { Box, Typography, Grid } from '@mui/material';
 
+import GeneralRecareConfig from '../../components/admin/clinical-management/recare/GeneralRecareConfig';
+import ConfiguringStaging from '../../components/admin/clinical-management/recare/ConfiguringStaging';
 
 const STAGING_PROCEDURES = [
   'Polishing', 'Prophy', 'Exam', 'BW', 'Fluoride', 'Pano/Fmx', 'Scaling', 'Maintenance', 'PA', 'TDS Membership', 'Additional2', 'Additional3'
@@ -203,227 +178,43 @@ const RecareConfiguration = () => {
   };
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumb Navigation */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography
-          onClick={() => navigate('/admin/clinical-management')}
-          sx={{
-            color: '#1a3a6b',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
-        >
-          Clinical Management
-        </Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem' }}>{'>'}</Typography>
-        <Typography sx={{ color: '#1a3a6b', fontSize: '0.85rem', fontWeight: 500 }}>
-          Recare Configuration
-        </Typography>
+    <Box sx={{ backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh', pb: 5 }}>
+      {/* Header Info */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', px: 4, pt: 4, mb: 4 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>Recare Configuration</Typography>
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', mt: 0.5 }}>
+            Manage recare settings, general procedures, and periodontal staging configurations.
+          </Typography>
+        </Box>
       </Box>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <Typography>Loading configurations...</Typography>
+          <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Loading configurations...</Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
-          {/* Left Column: General Recare Configuration */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, fontSize: '1rem', mb: 1 }}>
-              General Recare Configuration
-            </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#666', mb: 1 }}>
-              Automatically create recare plans using the default setting when needed, or uncheck it so recare plans are only created by you using the selected configuration.
-            </Typography>
-            <FormControlLabel
-              control={<Checkbox size="small" checked={autoCreate} onChange={(e) => handleToggleAutoCreate(e.target.checked)} />}
-              label={<Typography sx={{ fontSize: '0.75rem', color: '#666' }}>Automatically create recare plans</Typography>}
-            />
-            <Typography sx={{ fontSize: '0.75rem', color: '#666', mt: 2, mb: 1 }}>
-              Configure and order the codes that you would like to include in your recare plan, the intervals used, and the procedures to trigger the reminders
-            </Typography>
+        <Box sx={{ px: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {/* Top Section: General Recare Configuration */}
+          <GeneralRecareConfig 
+            autoCreate={autoCreate} 
+            handleToggleAutoCreate={handleToggleAutoCreate} 
+            procedures={procedures} 
+            updateProcedure={updateProcedure} 
+          />
 
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <Button variant="contained" sx={{ backgroundColor: '#e0e0e0', color: '#333', textTransform: 'none', fontSize: '0.7rem', py: 0.5 }}>
-                Update Recall Dates For All Patients
-              </Button>
-              <Button variant="contained" sx={{ backgroundColor: '#a0aec0', color: '#fff', textTransform: 'none', fontSize: '0.7rem', py: 0.5 }}>
-                Update Recare Plans For All Patients
-              </Button>
-            </Box>
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-              <Typography sx={{ fontSize: '0.65rem', color: '#999', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                Drag and drop to rearrange <DragIcon sx={{ fontSize: '0.9rem' }} />
-              </Typography>
-            </Box>
-
-            <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                    <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#1a3a6b' }}>Name</TableCell>
-                    <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#1a3a6b' }}>Intervals</TableCell>
-                    <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#1a3a6b' }}>Recall Trigger</TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {procedures.map((row, index) => (
-                    <TableRow key={index} sx={{ '& td': { py: 1.5 } }}>
-                      <TableCell sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>{row.name}</TableCell>
-                      <TableCell sx={{ width: 200 }}>
-                        <TextField 
-                          size="small" 
-                          fullWidth 
-                          value={row.intervals} 
-                          onChange={(e) => updateProcedure(index, { intervals: e.target.value })}
-                          sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, backgroundColor: '#f8f9fa' } }} 
-                        />
-                        <RadioGroup 
-                          row 
-                          value={row.unit} 
-                          onChange={(e) => updateProcedure(index, { unit: e.target.value })}
-                          sx={{ mt: 0.5 }}
-                        >
-                          <FormControlLabel value="Days" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.65rem' }}>Days</Typography>} />
-                          <FormControlLabel value="Months" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.65rem' }}>Months</Typography>} />
-                        </RadioGroup>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Checkbox 
-                          size="small" 
-                          checked={row.trigger} 
-                          onChange={(e) => updateProcedure(index, { trigger: e.target.checked })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <DragIcon sx={{ fontSize: '0.9rem', color: '#ccc', cursor: 'grab' }} />
-                          <IconButton size="small"><ExpandIcon sx={{ fontSize: '1.2rem', color: '#999', border: '1px solid #eee', borderRadius: '50%' }} /></IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Grid>
-
-          {/* Right Column: Configuring Staging */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="h6" sx={{ color: '#1a3a6b', fontWeight: 600, fontSize: '1rem' }}>
-                Configuring Staging
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="small" 
-                onClick={handleAddStage}
-                sx={{ backgroundColor: '#0c345d', color: '#fff', textTransform: 'none', fontSize: '0.75rem' }}
-              >
-                + Add Stage
-              </Button>
-            </Box>
-            <Typography sx={{ fontSize: '0.75rem', color: '#666', mb: 0.5 }}>
-              Customize the procedures and the intervals for each stage of periodontal disease (automatically calculated by Medflow)
-            </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#666', mb: 2 }}>
-              Create your own recare intervals and procedures for membership plans
-            </Typography>
-
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange} 
-              variant="scrollable" 
-              scrollButtons="auto"
-              sx={{ 
-                minHeight: 32, 
-                mb: 2,
-                '& .MuiTab-root': { textTransform: 'none', fontSize: '0.7rem', minWidth: 60, minHeight: 32, p: 0.5, color: '#4a90e2' },
-                '& .Mui-selected': { color: '#333 !important', backgroundColor: '#f0f0f0', borderRadius: '4px 4px 0 0' },
-                '& .MuiTabs-indicator': { display: 'none' }
-              }}
-            >
-              {stages.map((stage, idx) => (
-                <Tab key={idx} label={stage.name} sx={stage.name === 'Healthy' ? { color: '#48bb78 !important' } : {}} />
-              ))}
-            </Tabs>
-
-            {stages[activeTab] && (
-              <Box sx={{ backgroundColor: '#f8f9fa', p: 1.5, borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <TextField 
-                    placeholder="New Stage" 
-                    size="small" 
-                    value={stages[activeTab].name}
-                    onChange={(e) => handleUpdateStageDetails({ name: e.target.value })}
-                    sx={{ flex: 1, backgroundColor: '#fff', '& .MuiInputBase-input': { fontSize: '0.8rem', py: 0.5 } }} 
-                  />
-                  <IconButton size="small" onClick={() => handleDeleteStage(activeTab)}>
-                    <DeleteIcon sx={{ fontSize: '1.1rem', color: '#ccc' }} />
-                  </IconButton>
-                  <FormControlLabel
-                    control={
-                      <Checkbox 
-                        size="small" 
-                        checked={stages[activeTab].default || false}
-                        onChange={(e) => handleUpdateStageDetails({ default: e.target.checked })}
-                      />
-                    }
-                    label={<Typography sx={{ fontSize: '0.7rem', color: '#666' }}>Default</Typography>}
-                  />
-                </Box>
-
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f0f0f0' }}>
-                        <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#333' }}>Procedure</TableCell>
-                        <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#333' }}>Frequency Interval</TableCell>
-                        <TableCell />
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {STAGING_PROCEDURES.map((proc, index) => {
-                        const currentProc = stages[activeTab].procedures?.find(p => p.name === proc) || { name: proc, frequency: 'Months', active: false };
-                        return (
-                          <TableRow key={index}>
-                            <TableCell sx={{ fontSize: '0.75rem', color: '#333', fontWeight: 500 }}>{proc}</TableCell>
-                            <TableCell sx={{ width: 100 }}>
-                              <Select 
-                                fullWidth 
-                                size="small" 
-                                variant="standard" 
-                                value={currentProc.frequency || 'Months'}
-                                onChange={(e) => handleUpdateStageProcedure(proc, { frequency: e.target.value })}
-                                sx={{ fontSize: '0.7rem', backgroundColor: '#fff', border: '1px solid #eee', px: 1 }}
-                              >
-                                <MenuItem value="Months">Months</MenuItem>
-                                <MenuItem value="Weeks">Weeks</MenuItem>
-                                <MenuItem value="Days">Days</MenuItem>
-                              </Select>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Switch 
-                                size="small" 
-                                checked={currentProc.active || false}
-                                onChange={(e) => handleUpdateStageProcedure(proc, { active: e.target.checked })}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            )}
-          </Grid>
-        </Grid>
+          {/* Bottom Section: Configuring Staging */}
+          <ConfiguringStaging 
+            stages={stages} 
+            activeTab={activeTab} 
+            handleTabChange={handleTabChange} 
+            handleAddStage={handleAddStage} 
+            handleDeleteStage={handleDeleteStage} 
+            handleUpdateStageDetails={handleUpdateStageDetails} 
+            handleUpdateStageProcedure={handleUpdateStageProcedure} 
+            stagingProcedures={STAGING_PROCEDURES} 
+          />
+        </Box>
       )}
     </Box>
   );

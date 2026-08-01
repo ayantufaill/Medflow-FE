@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 
 import AccountAdjustmentDialog from './AccountAdjustmentDialog';
 import CourtesyRefundDialog from './CourtesyRefundDialog';
-import EditPatientFlagsDialog from './EditPatientFlagsDialog';
+import PatientFlagsDialog from '../patient-flags/PatientFlagsDialog';
 import DepositDialog from './DepositDialog';
 import DepositOptionsMenu from './DepositOptionsMenu';
 import CourtesyCreditComponent from './CourtesyCreditComponent';
@@ -20,7 +20,7 @@ const DialogWrapper = ({ children, onClose, maxWidth = '100%', extraSx = {} }) =
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      zIndex: 1300
+      zIndex: 1400
     }}
     onClick={onClose}
   >
@@ -63,7 +63,7 @@ const FinancePageDialogs = ({
       )}
 
       {showCourtesyRefund && (
-        <DialogWrapper onClose={() => setShowCourtesyRefund(false)} maxWidth="900px" extraSx={{ width: '90%' }}>
+        <DialogWrapper onClose={() => setShowCourtesyRefund(false)} maxWidth="1000px" extraSx={{ width: '90%' }}>
           <CourtesyRefundDialog 
             patient={patient}
             onClose={() => setShowCourtesyRefund(false)} 
@@ -71,15 +71,15 @@ const FinancePageDialogs = ({
         </DialogWrapper>
       )}
 
-      {showEditFlags && (
-        <DialogWrapper onClose={() => setShowEditFlags(false)} maxWidth="750px" extraSx={{ width: '90%', overflow: 'hidden' }}>
-          <EditPatientFlagsDialog 
-            onClose={() => setShowEditFlags(false)}
-            onSave={handleEditFlagsSave}
-            initialFlags={patient?.patientFlags || []}
-          />
-        </DialogWrapper>
-      )}
+      <PatientFlagsDialog
+        open={showEditFlags}
+        onClose={() => setShowEditFlags(false)}
+        onSave={(newFlags) => {
+          handleEditFlagsSave(newFlags);
+          setShowEditFlags(false);
+        }}
+        initialFlags={patient?.patientFlags || []}
+      />
 
       {showDeposit && (
         <DialogWrapper onClose={() => setShowDeposit(false)} maxWidth="900px" extraSx={{ width: '90%' }}>

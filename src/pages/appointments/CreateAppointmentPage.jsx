@@ -28,14 +28,15 @@ const CreateAppointmentPage = () => {
   const initialDateTime = useMemo(() => {
     const date = searchParams.get('date');
     const startTime = searchParams.get('startTime');
+    const now = dayjs();
     if (!date && !startTime) return null;
-    if (!date) return dayjs().hour(9).minute(5);
+    if (!date) return now;
     const d = dayjs(date);
     if (startTime) {
       const [h, m] = startTime.split(':').map(Number);
       return d.hour(h).minute(m || 0);
     }
-    return d.hour(9).minute(5);
+    return d.hour(now.hour()).minute(now.minute());
   }, [searchParams]);
 
   const initialData = useMemo(() => {

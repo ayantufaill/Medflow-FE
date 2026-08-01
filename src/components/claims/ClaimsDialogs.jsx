@@ -394,7 +394,7 @@ export const ClaimsDialogs = ({
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, backgroundColor: '#e2e8f0', p: 1, borderRadius: '4px' }}>TREATING DENTIST</Typography>
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.treatingProvider ? `${displayClaim.treatingProvider.firstName} ${displayClaim.treatingProvider.lastName}` : displayClaim.treatingProvider || '—'}</Typography>
+                    <Typography variant="body2"><strong>Name:</strong> {displayClaim.treatingProvider ? (typeof displayClaim.treatingProvider === 'object' ? `${displayClaim.treatingProvider.firstName || ''} ${displayClaim.treatingProvider.lastName || ''}`.trim() : displayClaim.treatingProvider) : '—'}</Typography>
                     <Typography variant="body2"><strong>NPI:</strong> {displayClaim.treatingProvider?.npi || '—'}</Typography>
                   </Box>
                 </Grid>
@@ -420,7 +420,7 @@ export const ClaimsDialogs = ({
                           <TableCell>{proc.code || '—'}</TableCell>
                           <TableCell>{proc.tooth || '—'} {proc.surface ? `(${proc.surface})` : ''}</TableCell>
                           <TableCell>{proc.description || '—'}</TableCell>
-                          <TableCell>{proc.providerName || (displayClaim.treatingProvider ? `${displayClaim.treatingProvider.firstName} ${displayClaim.treatingProvider.lastName}` : '—')}</TableCell>
+                          <TableCell>{proc.providerName || (displayClaim.treatingProvider ? (typeof displayClaim.treatingProvider === 'object' ? `${displayClaim.treatingProvider.firstName || ''} ${displayClaim.treatingProvider.lastName || ''}`.trim() : displayClaim.treatingProvider) : '—')}</TableCell>
                           <TableCell align="right">${(proc.fee || 0).toFixed(2)}</TableCell>
                         </TableRow>
                       )) : (

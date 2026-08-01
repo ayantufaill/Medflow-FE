@@ -7,6 +7,10 @@ import {
   Collapse,
   Breadcrumbs,
   Link,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -15,7 +19,9 @@ import {
   Add as AddIcon,
   DeleteOutline as DeleteIcon,
   Edit as EditIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
+import { DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   fetchCoverageShortcuts, 
@@ -25,6 +31,7 @@ import {
   selectCoverageShortcuts 
 } from '../../store/slices/coverageShortcutsSlice';
 import AddCoverageGroupModal from '../../components/admin/coverage/AddCoverageGroupModal';
+import CoverageCategoryItem from '../../components/admin/finance-management/coverage-book-shortcuts/CoverageCategoryItem';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const CoverageBookShortcuts = () => {
@@ -37,6 +44,9 @@ const CoverageBookShortcuts = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  
+  const [addTemplateModalOpen, setAddTemplateModalOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
 
   React.useEffect(() => {
     dispatch(fetchCoverageShortcuts());
@@ -69,10 +79,15 @@ const CoverageBookShortcuts = () => {
   };
 
   const handleAddTemplate = () => {
-    const newTemplateName = prompt("Enter new template name:");
-    if (newTemplateName) {
-      dispatch(createCoverageShortcut({ name: newTemplateName, groups: [] }));
+    setNewTemplateName('');
+    setAddTemplateModalOpen(true);
+  };
+
+  const handleSaveTemplate = () => {
+    if (newTemplateName.trim()) {
+      dispatch(createCoverageShortcut({ name: newTemplateName.trim(), groups: [] }));
     }
+    setAddTemplateModalOpen(false);
   };
 
   const handleDeleteTemplate = (e, id) => {
@@ -119,31 +134,24 @@ const CoverageBookShortcuts = () => {
   }
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 4, '& .MuiBreadcrumbs-separator': { color: '#003366' } }}>
-        <Link underline="hover" color="#7a96b5" component={RouterLink} to="/admin/finance-management" sx={{ fontSize: '0.85rem' }}>
-          Finance Management
-        </Link>
-        <Typography color="#003366" sx={{ fontSize: '0.85rem' }}>
-          Coverage Book Shortcuts
-        </Typography>
-      </Breadcrumbs>
-
+    <Box sx={{ p: 4, backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h6" sx={{ color: '#003366', fontWeight: 600 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
           Coverage Book Shortcuts
         </Typography>
         <Button
+          variant="contained"
           onClick={handleAddTemplate}
-          startIcon={<AddIcon />}
-          sx={{
-            color: '#003366',
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
+          startIcon={<AddIcon sx={{ fontSize: '18px' }} />}
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            height: 38, 
+            px: "20px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
           }}
         >
           Add Template
@@ -153,188 +161,22 @@ const CoverageBookShortcuts = () => {
       {/* List */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {shortcuts.length === 0 && (
-          <Typography sx={{ p: 2, color: '#666', fontStyle: 'italic' }}>No templates found. Click "Add Template" to create one.</Typography>
+          <Typography sx={{ p: 2, color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>No templates found. Click "Add Template" to create one.</Typography>
         )}
-        {shortcuts.map((category) => {
-          const isExpanded = expandedCategories.includes(category.id);
-
-          return (
-            <Box key={category.id} sx={{ borderBottom: '1px solid #7a96b5', pb: 1 }}>
-              <Box
-                onClick={() => toggleCategory(category.id)}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  py: 1.2,
-                  px: 2,
-                  backgroundColor: isExpanded ? '#003366' : '#f0f7ff',
-                  color: isExpanded ? 'white' : '#003366',
-                  cursor: 'pointer',
-                  borderRadius: 1,
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    backgroundColor: isExpanded ? '#002244' : '#e1efff',
-                  },
-                }}
-              >
-                {isExpanded ? (
-                  <ChevronDownIcon sx={{ mr: 2, fontSize: '1.2rem' }} />
-                ) : (
-                  <ChevronRightIcon sx={{ mr: 2, fontSize: '1.2rem' }} />
-                )}
-                <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', flex: 1 }}>
-                  {category.name}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Button
-                    onClick={(e) => handleAddGroup(e, category.id)}
-                    startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
-                    sx={{
-                      color: isExpanded ? 'white' : '#003366',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
-                    }}
-                  >
-                    Add Group
-                  </Button>
-                  <IconButton 
-                    onClick={(e) => handleDeleteTemplate(e, category.id)}
-                    size="small" 
-                    sx={{ color: isExpanded ? 'white' : '#7a96b5' }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-
-              <Collapse in={isExpanded}>
-                <Box sx={{ pl: 4, mt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  {(!category.groups || category.groups.length === 0) && (
-                    <Typography sx={{ color: '#888', fontStyle: 'italic', fontSize: '0.8rem', py: 1 }}>
-                      No groups added yet.
-                    </Typography>
-                  )}
-                  {category.groups && category.groups.map((group) => {
-                    const isGroupExpanded = expandedGroups.includes(group.id);
-
-                    return (
-                      <Box key={group.id} sx={{ mb: 0.5 }}>
-                        <Box
-                          onClick={() => toggleGroup(group.id)}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            py: 1,
-                            px: 2,
-                            backgroundColor: '#f9fbfd',
-                            borderRadius: 1,
-                            border: '1px solid transparent',
-                            cursor: 'pointer',
-                            '&:hover': { borderColor: '#7a96b5' },
-                          }}
-                        >
-                          {isGroupExpanded ? (
-                            <ChevronDownIcon sx={{ mr: 2, fontSize: '1.1rem', color: '#7a96b5' }} />
-                          ) : (
-                            <ChevronRightIcon sx={{ mr: 2, fontSize: '1.1rem', color: '#7a96b5' }} />
-                          )}
-                          <Typography sx={{ color: '#003366', fontWeight: 600, fontSize: '0.85rem', width: '200px' }}>
-                            {group.name}
-                          </Typography>
-
-                          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            {group.deliveryPattern && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ color: '#333', fontWeight: 600, fontSize: '0.85rem' }}>
-                                  Delivery Pattern:
-                                </Typography>
-                                <Typography sx={{ color: '#333', fontSize: '0.85rem' }}>
-                                  {group.deliveryPattern}
-                                </Typography>
-                              </Box>
-                            )}
-                            
-                            {group.ageLimit && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ color: '#333', fontWeight: 600, fontSize: '0.85rem' }}>
-                                  Age Limit:
-                                </Typography>
-                                <Typography sx={{ color: '#333', fontSize: '0.85rem' }}>
-                                  {group.ageLimit}
-                                </Typography>
-                              </Box>
-                            )}
-
-                            {group.downgrade && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ color: '#333', fontWeight: 600, fontSize: '0.85rem' }}>
-                                  Downgrade:
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Typography sx={{ fontSize: '0.9rem' }}>🦷</Typography>
-                                  {typeof group.downgrade === 'string' && (
-                                    <Typography sx={{ color: '#333', fontSize: '0.85rem' }}>
-                                      {group.downgrade}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </Box>
-                            )}
-                          </Box>
-
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Button
-                              onClick={(e) => handleEditGroup(e, category.id, group)}
-                              sx={{
-                                color: '#003366',
-                                textTransform: 'none',
-                                fontWeight: 600,
-                                fontSize: '0.8rem',
-                                '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            <IconButton onClick={(e) => handleDeleteGroup(e, category.id, group.id)} size="small" sx={{ color: '#7a96b5' }}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-
-                        {/* Collapsible Nested Codes List */}
-                        <Collapse in={isGroupExpanded}>
-                          <Box sx={{ pl: 6, mt: 0.5, borderLeft: '1px dashed #cbd5e1', ml: 3, display: 'flex', flexDirection: 'column' }}>
-                            {group.codes && group.codes.map((codeItem, cIdx) => (
-                              <Box
-                                key={cIdx}
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  py: 1,
-                                  borderBottom: '1px solid #f1f5f9',
-                                  gap: 2
-                                }}
-                              >
-                                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a3a6b', minWidth: 60 }}>
-                                  {codeItem.code}
-                                </Typography>
-                                <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
-                                  {codeItem.desc}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </Collapse>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Collapse>
-            </Box>
-          );
-        })}
+        {shortcuts.map((category) => (
+          <CoverageCategoryItem
+            key={category.id}
+            category={category}
+            isExpanded={expandedCategories.includes(category.id)}
+            toggleCategory={toggleCategory}
+            expandedGroups={expandedGroups}
+            toggleGroup={toggleGroup}
+            handleAddGroup={handleAddGroup}
+            handleEditGroup={handleEditGroup}
+            handleDeleteTemplate={handleDeleteTemplate}
+            handleDeleteGroup={handleDeleteGroup}
+          />
+        ))}
       </Box>
 
       <AddCoverageGroupModal
@@ -343,6 +185,93 @@ const CoverageBookShortcuts = () => {
         onSave={handleSaveGroup}
         groupData={selectedGroup}
       />
+
+      {/* Add Template Modal */}
+      <Dialog 
+        open={addTemplateModalOpen} 
+        onClose={() => setAddTemplateModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: 9999 }}
+        PaperProps={{
+          sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "20px", py: "16px",
+          borderBottom: "1px solid #e0e5eb",
+          backgroundColor: "#f3f8fd",
+        }}>
+          <Box sx={{
+            width: "36px", height: "36px", borderRadius: "8px",
+            backgroundColor: "#eff6ff",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+              Add Template
+            </Typography>
+            <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+              Create a new coverage book template.
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setAddTemplateModalOpen(false)} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ px: 4, py: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", color: '#374151', fontWeight: 600, fontSize: '13px' }}>
+              Template Name:
+            </Typography>
+            <TextField
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              placeholder="Enter template name"
+              variant="outlined"
+              size="small"
+              fullWidth
+              autoFocus
+              InputProps={{
+                sx: { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" }
+              }}
+              sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' } }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, py: 3, borderTop: '1px solid #f1f5f9', gap: 1.5, justifyContent: 'flex-end' }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => setAddTemplateModalOpen(false)}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveTemplate}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            }}
+          >
+            Create Template
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

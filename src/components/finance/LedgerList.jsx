@@ -27,6 +27,7 @@ import {
 
 import LedgerItemCard from './LedgerItemCard';
 import LedgerDialogManager from './LedgerDialogManager';
+import { claimService } from '../../services/claim.service';
 
 const LedgerList = ({ patient, expanded }) => {
   const dispatch = useDispatch();
@@ -66,6 +67,9 @@ const LedgerList = ({ patient, expanded }) => {
   const [showInvoiceModal,       setShowInvoiceModal]       = useState(false);
   const [invoiceModalData,       setInvoiceModalData]       = useState(null);
   const [magicStickAnchorEl,     setMagicStickAnchorEl]     = useState(null);
+  const [showAttachDialog,       setShowAttachDialog]       = useState(false);
+  const [attachTarget,           setAttachTarget]           = useState(null);
+  
   // Local deposit edits (not server-persisted in the original code either)
   const [depositOverrides,       setDepositOverrides]       = useState({});
 
@@ -231,10 +235,20 @@ const LedgerList = ({ patient, expanded }) => {
     else if (option === 'Insurance Write-Off') setShowWriteOffDialog(true);
   };
 
+  const handleAttachClick = (data) => {
+    setAttachTarget(data);
+    setShowAttachDialog(true);
+  };
+
   const handleAddProcedureClick = (item) => { setInvoiceModalData(item); setShowInvoiceModal(true); };
   const handleInvoiceModalCancel = () => { setShowInvoiceModal(false); setInvoiceModalData(null); };
 
-  const handleInvoiceModalSave = async (data) => {
+  const handleInvoiceModalSave = async (savePayload) => {
+    // Support both old array format and new object format from InvoiceModal
+    const data = Array.isArray(savePayload) ? savePayload : savePayload.procedures;
+    const shouldAddClaim = !Array.isArray(savePayload) && savePayload.addClaim;
+    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []) : [];
+
     const payload = {
       patientId: parseInt(patientId, 10) || 1,
       items: data.map((row) => {
@@ -254,9 +268,29 @@ const LedgerList = ({ patient, expanded }) => {
     };
     if (payload.items.length === 0) { alert('Please add at least one procedure before saving.'); return; }
     try {
-      await dispatch(createInvoice(payload)).unwrap();
+      const result = await dispatch(createInvoice(payload)).unwrap();
       setShowInvoiceModal(false);
       setInvoiceModalData(null);
+
+      // If "Add Claim" was checked, create a claim for all dbi=false procedures
+      if (shouldAddClaim && claimRows.length > 0) {
+        const createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
+        if (createdInvoiceId) {
+          try {
+            await claimService.createClaimFromInvoice(createdInvoiceId, {
+              procedures: claimRows.map((row) => ({
+                code: row.code,
+                description: row.treatment,
+                charge: parseFloat((String(row.charge || '')).replace(/[^0-9.-]+/g, '')) || 0,
+                insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+              })),
+            });
+          } catch (claimErr) {
+            console.warn('Invoice created but claim creation failed:', claimErr);
+          }
+        }
+      }
+
       refreshLedger();
     } catch (err) {
       alert('Failed to create invoice: ' + (err.message || err));
@@ -293,6 +327,7 @@ const LedgerList = ({ patient, expanded }) => {
             setPrintAnchorEl={setPrintAnchorEl}
             setPrintItem={setPrintItem}
             handleAddProcedureClick={handleAddProcedureClick}
+            handleAttachClick={handleAttachClick}
           />
         );
       })}
@@ -315,6 +350,7 @@ const LedgerList = ({ patient, expanded }) => {
         magicStickAnchorEl={magicStickAnchorEl} setMagicStickAnchorEl={setMagicStickAnchorEl}
         showTransferConfirmation={showTransferConfirmation} setShowTransferConfirmation={setShowTransferConfirmation}
         showEditInvoice={showEditInvoice} setShowEditInvoice={setShowEditInvoice} editInvoiceTarget={editInvoiceTarget}
+        showAttachDialog={showAttachDialog} setShowAttachDialog={setShowAttachDialog} attachTarget={attachTarget}
       />
     </Box>
   );

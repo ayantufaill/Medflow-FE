@@ -28,10 +28,16 @@ const AppointmentLeftPanel = ({
   // Procedure table
   procedures, setProcedures, providers,
   showExtendedOptions,
+  onDuplicateProcedure,
 }) => {
   const [showPastVisits, setShowPastVisits] = useState(false);
 
   const handleAddPastProcedure = (proc) => {
+    const exists = procedures.some((p) => p.code === proc.code);
+    if (exists) {
+      if (onDuplicateProcedure) onDuplicateProcedure("Already added");
+      return;
+    }
     setProcedures([...procedures, proc]);
   };
 
@@ -176,7 +182,7 @@ const AppointmentLeftPanel = ({
     {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: '10px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px' }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -185,7 +191,7 @@ const AppointmentLeftPanel = ({
               />
             }
             label={
-              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151' }}>
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#374151', mr:1 }}>
                 check out appointment
               </Typography>
             }

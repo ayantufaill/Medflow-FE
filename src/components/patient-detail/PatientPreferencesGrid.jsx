@@ -148,17 +148,10 @@ export function CommunicationPreferencesCard({ patient, isEditMode, onPatientDat
       newPrefs = newPrefs.filter((p) => p !== field);
     }
 
-    const newCustomFields = { ...patient?.customFields };
-    delete newCustomFields.communicationContactByPhone;
-    delete newCustomFields.communicationLeaveVoicemailAtHome;
-    delete newCustomFields.communicationAgreeElectronicCommunications;
-    delete newCustomFields.communicationAgreeSmsMessages;
-
-    onPatientDataChange({ 
-      ...patient, 
-      communicationPreference: newPrefs,
-      customFields: newCustomFields
-    });
+    // Only pass the changed fields — do NOT spread the entire patient object
+    // because the parent merges with editedPatientData and a full spread would
+    // wipe out any concurrent edits made in other sections.
+    onPatientDataChange({ communicationPreference: newPrefs });
   };
 
   return (
@@ -205,12 +198,12 @@ export function ReferringCard({ patient, isEditMode, onPatientDataChange }) {
   }, [patientSearchText, isEditMode, isReferringPatientEnabled]);
 
   const handleSourceChange = (e) => {
-    onPatientDataChange({ ...patient, referralSource: e.target.value });
+    onPatientDataChange({ referralSource: e.target.value });
   };
 
   const handlePatientChange = (e, newValue) => {
     const val = typeof newValue === 'string' ? newValue : patientLabel(newValue);
-    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, referringPatient: val } });
+    onPatientDataChange({ customFields: { referringPatient: val } });
   };
 
   return (
@@ -277,7 +270,8 @@ export function ConfirmationSettingsCard({ patient, isEditMode, onPatientDataCha
   ].map((item) => ({ ...item, checked: !!patient?.customFields?.[item.field] }));
 
   const handleToggle = (field, checked) => {
-    onPatientDataChange({ ...patient, customFields: { ...patient?.customFields, [field]: checked } });
+    // Only pass changed customFields key — do NOT spread the full patient object
+    onPatientDataChange({ customFields: { [field]: checked } });
   };
 
   return (
@@ -298,18 +292,8 @@ export function AssignmentReleaseCard({ patient, isEditMode, onPatientDataChange
   ];
 
   const handleChange = (field, value) => {
-    // Also remove from customFields to prevent duplicate data payload
-    const newCustomFields = { ...patient?.customFields };
-    delete newCustomFields[field];
-    
-    onPatientDataChange({ 
-      ...patient, 
-      customFields: newCustomFields,
-      assignmentAndRelease: { 
-        ...patient?.assignmentAndRelease, 
-        [field]: value 
-      } 
-    });
+    // Only pass the specific assignmentAndRelease field that changed
+    onPatientDataChange({ assignmentAndRelease: { [field]: value } });
   };
 
   return (
@@ -530,11 +514,14 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
   const { updatePatient } = usePatient();
   const { showSnackbar } = useSnackbar();
   const [savingField, setSavingField] = useState(null);
-  const [otherText, setOtherText] = useState(patient?.customFields?.releaseOther || '');
+  const [otherText, setOtherText] = useState('');
 
-  useEffect(() => {
-    setOtherText(patient?.customFields?.releaseOther || '');
-  }, [patient?.customFields?.releaseOther]);
+  // Support both legacy string and new array format for releaseOther
+  const otherEntries = Array.isArray(patient?.customFields?.releaseOther)
+    ? patient.customFields.releaseOther
+    : patient?.customFields?.releaseOther
+      ? [patient.customFields.releaseOther]
+      : [];
 
   const persist = async (updatedCustomFields, fieldKey) => {
     if (!patientId) return;
@@ -553,10 +540,24 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
     persist({ ...patient?.customFields, [field]: !patient?.customFields?.[field] }, field);
   };
 
-  const handleOtherBlur = () => {
-    const current = patient?.customFields?.releaseOther || '';
-    if (otherText === current) return;
-    persist({ ...patient?.customFields, releaseOther: otherText }, 'releaseOther');
+  const handleAddOther = () => {
+    const trimmed = otherText.trim();
+    if (!trimmed) return;
+    const updatedEntries = [...otherEntries, trimmed];
+    persist({ ...patient?.customFields, releaseOther: updatedEntries }, 'releaseOther');
+    setOtherText('');
+  };
+
+  const handleRemoveOther = (indexToRemove) => {
+    const updatedEntries = otherEntries.filter((_, idx) => idx !== indexToRemove);
+    persist({ ...patient?.customFields, releaseOther: updatedEntries }, 'releaseOther');
+  };
+
+  const handleOtherKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddOther();
+    }
   };
 
   return (
@@ -591,10 +592,14 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
             />
           );
         })}
-        {otherText && !isEditMode && (
+        {/* "Other" entries shown as removable chips */}
+        {otherEntries.map((entry, idx) => (
           <Chip
-            label={otherText}
+            key={`other-${idx}`}
+            label={entry}
             icon={<CheckCircleIcon sx={{ fontSize: '14px', color: COLORS.ACCENT }} />}
+            onDelete={isEditMode ? () => handleRemoveOther(idx) : undefined}
+            disabled={savingField === 'releaseOther'}
             sx={{
               fontFamily: 'Inter',
               fontSize: fontSize.base,
@@ -603,9 +608,11 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
               backgroundColor: COLORS.ACCENT_BG,
               color: COLORS.ACCENT,
               border: `1px solid ${COLORS.ACCENT}`,
+              opacity: savingField === 'releaseOther' ? 0.6 : 1,
+              '& .MuiChip-deleteIcon': { color: COLORS.ACCENT },
             }}
           />
-        )}
+        ))}
       </Box>
 
       {isEditMode && (
@@ -613,16 +620,38 @@ function ReleaseInformationCard({ patient, isEditMode = false, onPatientDataChan
           <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase', letterSpacing: '0.3px', mb: 0.75 }}>
             Other
           </Typography>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Add another authorized contact"
-            value={otherText}
-            onChange={(e) => setOtherText(e.target.value)}
-            onBlur={handleOtherBlur}
-            disabled={savingField === 'releaseOther'}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
-          />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Add another authorized contact"
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              onKeyDown={handleOtherKeyDown}
+              disabled={savingField === 'releaseOther'}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleAddOther}
+              disabled={!otherText.trim() || savingField === 'releaseOther'}
+              sx={{
+                textTransform: 'none',
+                fontFamily: 'Inter',
+                fontWeight: fontWeight.semibold,
+                fontSize: fontSize.base,
+                bgcolor: COLORS.ACCENT,
+                color: '#fff',
+                borderRadius: radius.md,
+                px: 2,
+                flexShrink: 0,
+                '&:hover': { bgcolor: COLORS.ACCENT_HOVER },
+              }}
+            >
+              Add
+            </Button>
+          </Box>
         </>
       )}
     </SectionCard>

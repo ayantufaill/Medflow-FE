@@ -127,6 +127,18 @@ export const addChecklistCategory = createAsyncThunk(
   }
 );
 
+export const deleteChecklistCategory = createAsyncThunk(
+  'clinicalManagement/deleteChecklistCategory',
+  async (name, { rejectWithValue }) => {
+    try {
+      await clinicalManagementService.deleteChecklistCategory(name);
+      return name;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to delete checklist category');
+    }
+  }
+);
+
 export const addChecklist = createAsyncThunk(
   'clinicalManagement/addChecklist',
   async ({ categoryName, checklistData }, { rejectWithValue }) => {
@@ -171,6 +183,30 @@ export const addProductToChecklistItem = createAsyncThunk(
       return { itemId, products: data.products };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to add product to item');
+    }
+  }
+);
+
+export const removeChoiceFromChecklistItem = createAsyncThunk(
+  'clinicalManagement/removeChoiceFromChecklistItem',
+  async ({ itemId, choiceIndex }, { rejectWithValue }) => {
+    try {
+      const data = await clinicalManagementService.removeChoiceFromChecklistItem(itemId, choiceIndex);
+      return { itemId, choices: data.choices };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to remove choice from item');
+    }
+  }
+);
+
+export const removeProductFromChecklistItem = createAsyncThunk(
+  'clinicalManagement/removeProductFromChecklistItem',
+  async ({ itemId, productIndex }, { rejectWithValue }) => {
+    try {
+      const data = await clinicalManagementService.removeProductFromChecklistItem(itemId, productIndex);
+      return { itemId, products: data.products };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to remove product from item');
     }
   }
 );
@@ -516,6 +552,10 @@ const clinicalManagementSlice = createSlice({
         if (!state.checklists[name]) {
           state.checklists[name] = [];
         }
+      })
+      .addCase(deleteChecklistCategory.fulfilled, (state, action) => {
+        const name = action.payload;
+        delete state.checklists[name];
       })
       .addCase(addChecklist.fulfilled, (state, action) => {
         const { categoryName, checklist } = action.payload;

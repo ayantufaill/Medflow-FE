@@ -47,6 +47,11 @@ export const clinicalManagementService = {
     return response.data.data;
   },
 
+  async deleteChecklistCategory(name) {
+    const response = await apiClient.delete(`/clinical-management/checklists/categories/${encodeURIComponent(name)}`);
+    return response.data.data;
+  },
+
   async createChecklist(categoryName, checklistData) {
     const response = await apiClient.post('/clinical-management/checklists', { categoryName, ...checklistData });
     return response.data.data;
@@ -79,6 +84,16 @@ export const clinicalManagementService = {
 
   async deleteChecklistItem(itemId) {
     const response = await apiClient.delete(`/clinical-management/checklists/items/${itemId}`);
+    return response.data.data;
+  },
+
+  async removeChoiceFromChecklistItem(itemId, choiceIndex) {
+    const response = await apiClient.delete(`/clinical-management/checklists/items/${itemId}/choice/${choiceIndex}`);
+    return response.data.data;
+  },
+
+  async removeProductFromChecklistItem(itemId, productIndex) {
+    const response = await apiClient.delete(`/clinical-management/checklists/items/${itemId}/product/${productIndex}`);
     return response.data.data;
   },
 

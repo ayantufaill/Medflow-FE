@@ -43,6 +43,8 @@ import {
   selectProviderDropdownList,
 } from "../../../../store/slices/providerSlice";
 import PatientChat from "../../../../components/shared/PatientChat";
+import RecareListFilters from "../../../../components/reports/clinical/RecareListFilters";
+import ProductionReportActions from "../../../../components/reports/financial/ProductionReportActions";
 
 const ActionIcons = ({ onChatClick }) => (
   <Box
@@ -477,230 +479,39 @@ const RecareList = ({
       }}
     >
       {!hideFilters && (
-        <Paper sx={{ p: 3, mb: 3, backgroundColor: "#fdfcfb" }}>
-          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-            Filters:
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 3,
-              alignItems: "center",
-            }}
-          >
-            <RadioGroup
-              row
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-            >
-              <FormControlLabel
-                value="range"
-                control={<Radio size="small" />}
-                label={<Typography variant="body2">Range</Typography>}
-              />
-              <FormControlLabel
-                value="monthly"
-                control={<Radio size="small" />}
-                label={<Typography variant="body2">Monthly</Typography>}
-              />
-            </RadioGroup>
+        <>
+          <RecareListFilters
+            filterType={filterType}
+            startDate={startDate}
+            endDate={endDate}
+            dentist={dentist}
+            hygienist={hygienist}
+            dentistOptions={dentistOptions}
+            hygienistOptions={hygienistOptions}
+            includeAppointed={includeAppointed}
+            flagFilter={flagFilter}
+            showFlagsCol={showFlagsCol}
+            searchQuery={searchQuery}
+            setFilterType={setFilterType}
+            setStartDate={setStartDate}
+            setEndDate={setEndDate}
+            setDentist={setDentist}
+            setHygienist={setHygienist}
+            setIncludeAppointed={setIncludeAppointed}
+            setFlagFilter={setFlagFilter}
+            setShowFlagsCol={setShowFlagsCol}
+            setSearchQuery={setSearchQuery}
+            handleApplyFilters={handleApplyFilters}
+            handleClearFilters={handleClearFilters}
+            getProviderName={getProviderName}
+          />
 
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="body2" color="primary">
-                  From Date:
-                </Typography>
-                <TextField
-                  variant="standard"
-                  type="date"
-                  size="small"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  sx={{ width: 130 }}
-                />
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="body2" color="primary">
-                  To Date:
-                </Typography>
-                <TextField
-                  variant="standard"
-                  type="date"
-                  size="small"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  sx={{ width: 130 }}
-                />
-              </Box>
-            </Box>
-
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Dentist</InputLabel>
-              <Select
-                value={dentist}
-                label="Dentist"
-                onChange={(e) => setDentist(e.target.value)}
-              >
-                <MenuItem value="None">
-                  <em>None</em>
-                </MenuItem>
-                {dentistOptions.map((p) => (
-                  <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                    {getProviderName(p)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Hygienist</InputLabel>
-              <Select
-                value={hygienist}
-                label="Hygienist"
-                onChange={(e) => setHygienist(e.target.value)}
-              >
-                <MenuItem value="None">
-                  <em>None</em>
-                </MenuItem>
-                {hygienistOptions.map((p) => (
-                  <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                    {getProviderName(p)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={includeAppointed}
-                  onChange={(e) => setIncludeAppointed(e.target.checked)}
-                />
-              }
-              label={<Typography variant="body2">Include Appointed</Typography>}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 3,
-              mt: 2,
-              alignItems: "center",
-            }}
-          >
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <Select
-                value={flagFilter}
-                onChange={(e) => setFlagFilter(e.target.value)}
-              >
-                <MenuItem value="both">Pts With Or Without Flags</MenuItem>
-                <MenuItem value="with">Pts With Flags</MenuItem>
-                <MenuItem value="without">Pts Without Flags</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  checked={showFlagsCol}
-                  onChange={(e) => setShowFlagsCol(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  {showFlagsCol
-                    ? "Hide Flags in Report"
-                    : "Show Flags in Report"}
-                </Typography>
-              }
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              mt: 3,
-            }}
-          >
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mb: 0.5, display: "block" }}
-              >
-                Filter by Patient:
-              </Typography>
-              <TextField
-                size="small"
-                placeholder="Search Patient"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                sx={{ width: 250 }}
-                InputProps={{
-                  startAdornment: (
-                    <Search
-                      sx={{ color: "text.secondary", mr: 1, fontSize: 20 }}
-                    />
-                  ),
-                }}
-              />
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="text"
-                size="small"
-                onClick={handleClearFilters}
-                sx={{ textTransform: "none", color: "error.main" }}
-              >
-                Clear all filters
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleApplyFilters}
-                sx={{ textTransform: "none", backgroundColor: "#4a90e2" }}
-              >
-                Apply Filters
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                disabled
-                sx={{ textTransform: "none", backgroundColor: "#d1a066" }}
-              >
-                Create Template
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handlePrint}
-                sx={{ textTransform: "none", backgroundColor: "#4a90e2" }}
-                startIcon={<Print />}
-              >
-                Print
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleExportCSV}
-                sx={{ textTransform: "none", backgroundColor: "#d1a066" }}
-                startIcon={<FileDownload />}
-              >
-                Export as CSV
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
+          <ProductionReportActions
+            onExportCsv={handleExportCSV}
+            onPrint={handlePrint}
+            hasData={filteredRows.length > 0}
+          />
+        </>
       )}
 
       <Typography variant="subtitle2" sx={{ textAlign: "center", mb: 2 }}>

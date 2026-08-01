@@ -4,9 +4,25 @@ import {
   IconButton, Link, Button, TextField, Checkbox, Dialog, DialogTitle, DialogContent,
   DialogActions, InputAdornment, FormControlLabel,
 } from '@mui/material';
-import { Delete as DeleteIcon, Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
+import { Search as SearchIcon, DragIndicator as DragIndicatorIcon } from '@mui/icons-material';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-const defaultForms = [
+const defaultFormsInitial = [
   { name: 'Confidential', type: 'Onyx Form' },
   { name: 'Dental History', type: 'Onyx Form' },
   { name: 'HIPAA', type: 'Onyx Form' },
@@ -18,7 +34,7 @@ const defaultForms = [
   { name: 'HIPAA 2026', type: 'Custom Form' },
 ];
 
-const updateForms = [
+const updateFormsInitial = [
   { name: 'Confidential', checked: true, type: 'Onyx Form' },
   { name: 'Dental History', checked: false, type: 'Onyx Form' },
   { name: 'HIPAA', checked: false, type: 'Onyx Form' },
@@ -39,107 +55,227 @@ const availableForms = [
   'Recement Permanent Crown Informed Consent', 'Tooth Extraction Informed Consent',
 ];
 
-const WelcomeEmailDefaults = () => {
+const SortableDefaultRow = ({ form, tCellSx }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: form.name });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.8 : 1,
+    backgroundColor: isDragging ? '#f8fafc' : undefined,
+    zIndex: isDragging ? 10 : 0,
+    position: isDragging ? 'relative' : undefined,
+  };
+  return (
+    <TableRow ref={setNodeRef} style={style} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+      <TableCell sx={{ ...tCellSx, width: 40, pr: 0 }}>
+        <div {...attributes} {...listeners} style={{ cursor: 'grab', display: 'inline-flex' }}>
+          <DragIndicatorIcon sx={{ fontSize: '1.1rem', color: '#CBD5E1' }} />
+        </div>
+      </TableCell>
+      <TableCell sx={{ ...tCellSx, color: '#3B82F6', fontWeight: 500, fontSize: '0.85rem' }}>{form.name}</TableCell>
+      <TableCell sx={{ ...tCellSx, color: '#64748B', fontSize: '0.85rem' }}>{form.type}</TableCell>
+    </TableRow>
+  );
+};
+
+const SortableUpdateRow = ({ form, tCellSx, onToggle }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: form.name });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.8 : 1,
+    backgroundColor: isDragging ? '#f8fafc' : undefined,
+    zIndex: isDragging ? 10 : 0,
+    position: isDragging ? 'relative' : undefined,
+  };
+  return (
+    <TableRow ref={setNodeRef} style={style} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+      <TableCell sx={{ ...tCellSx, width: 40, pr: 0 }}>
+        <div {...attributes} {...listeners} style={{ cursor: 'grab', display: 'inline-flex' }}>
+          <DragIndicatorIcon sx={{ fontSize: '1.1rem', color: '#CBD5E1' }} />
+        </div>
+      </TableCell>
+      <TableCell sx={{ ...tCellSx, color: '#3B82F6', fontWeight: 500, fontSize: '0.85rem' }}>{form.name}</TableCell>
+      <TableCell sx={tCellSx}>
+        <Checkbox
+          size="small"
+          checked={form.checked}
+          onChange={(e) => onToggle(e.target.checked)}
+          sx={{ p: 0.3, '&.Mui-checked': { color: '#2563EB' } }}
+          icon={<Box sx={{ width: 16, height: 16, border: '2px solid #CBD5E1', borderRadius: '4px' }} />}
+          checkedIcon={<Box sx={{ width: 16, height: 16, bgcolor: '#2563EB', borderRadius: '4px' }} />}
+        />
+      </TableCell>
+      <TableCell sx={{ ...tCellSx, color: '#64748B', fontSize: '0.85rem' }}>{form.type}</TableCell>
+    </TableRow>
+  );
+};
+
+const WelcomeEmailDefaults = ({ settings, setSettings }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSearch, setModalSearch] = useState('');
   const [selectedForms, setSelectedForms] = useState([]);
-  const [age, setAge] = useState('12');
+  const [targetList, setTargetList] = useState('default');
 
-  const filteredForms = availableForms.filter(f =>
-    f.toLowerCase().includes(modalSearch.toLowerCase())
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const toggleForm = (form) => {
-    setSelectedForms(prev =>
-      prev.includes(form) ? prev.filter(f => f !== form) : [...prev, form]
-    );
+  if (!settings) return null;
+
+  const currentSettings = settings.welcomeEmailDefaults || {
+    pediatricAge: '12',
+    defaultForms: defaultFormsInitial,
+    updateForms: updateFormsInitial
   };
 
-  const tHeadSx = { bgcolor: '#1a3a6b', color: '#fff', fontWeight: 700, fontSize: '0.75rem', py: 0.8, borderRight: '1px solid rgba(255,255,255,0.15)' };
-  const tCellSx = { fontSize: '0.8rem', py: 1, borderBottom: '1px solid #eee' };
+  const updateWelcomeSettings = (newPartial) => {
+    setSettings(prev => {
+      const current = prev.welcomeEmailDefaults || {
+        pediatricAge: '12',
+        defaultForms: defaultFormsInitial,
+        updateForms: updateFormsInitial
+      };
+      return {
+        ...prev,
+        welcomeEmailDefaults: { ...current, ...newPartial }
+      };
+    });
+  };
+
+  const filteredForms = availableForms.filter(f => f.toLowerCase().includes(modalSearch.toLowerCase()));
+
+  const toggleForm = (form) => {
+    setSelectedForms(prev => prev.includes(form) ? prev.filter(f => f !== form) : [...prev, form]);
+  };
+
+  const handleAddForms = () => {
+    if (targetList === 'default') {
+      const newForms = selectedForms.map(name => ({ name, type: 'Custom Form' }));
+      updateWelcomeSettings({ defaultForms: [...currentSettings.defaultForms, ...newForms] });
+    } else {
+      const newForms = selectedForms.map(name => ({ name, checked: false, type: 'Custom Form' }));
+      updateWelcomeSettings({ updateForms: [...currentSettings.updateForms, ...newForms] });
+    }
+    setModalOpen(false);
+    setSelectedForms([]);
+    setModalSearch('');
+  };
+
+  const handleDragEndDefault = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = currentSettings.defaultForms.findIndex(f => f.name === active.id);
+      const newIndex = currentSettings.defaultForms.findIndex(f => f.name === over.id);
+      updateWelcomeSettings({ defaultForms: arrayMove(currentSettings.defaultForms, oldIndex, newIndex) });
+    }
+  };
+
+  const handleDragEndUpdate = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = currentSettings.updateForms.findIndex(f => f.name === active.id);
+      const newIndex = currentSettings.updateForms.findIndex(f => f.name === over.id);
+      updateWelcomeSettings({ updateForms: arrayMove(currentSettings.updateForms, oldIndex, newIndex) });
+    }
+  };
+
+  const toggleUpdateFormCheck = (index, checked) => {
+    const arr = [...currentSettings.updateForms];
+    arr[index].checked = checked;
+    updateWelcomeSettings({ updateForms: arr });
+  };
+
+  const tHeadSx = { bgcolor: '#F2F6FC', color: '#334155', fontWeight: 700, fontSize: '0.7rem', py: 1.5, borderBottom: 'none' };
+  const tCellSx = { fontSize: '0.8rem', py: 1.5, borderBottom: '1px solid #f1f5f9' };
 
   return (
-    <Box>
+    <Box sx={{ border: '1px solid #E5E9F2', borderRadius: '8px', overflow: 'hidden', bgcolor: '#fff' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#222' }}>Welcome/Update Email Defaults</Typography>
-        <Button variant="contained" sx={{ bgcolor: '#2e7d32', textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 3, '&:hover': { bgcolor: '#1b5e20' } }}>Save</Button>
+      <Box sx={{ bgcolor: '#F2F6FC', px: 3, py: 1.5, borderBottom: '1px solid #E5E9F2' }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#1E293B' }}>Welcome/Update Email Defaults</Typography>
       </Box>
 
-      {/* Age filter */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Send pediatric forms to patients below the age of</Typography>
-        <TextField size="small" value={age} onChange={(e) => setAge(e.target.value)} sx={{ width: 50, '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.8rem' } }} />
-      </Box>
-
-      {/* Two-column tables */}
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        {/* Left — Default Welcome Email Forms */}
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.5 }}>Default Welcome Email Forms</Typography>
-          <Typography sx={{ fontSize: '0.78rem', color: '#4b71a1', mb: 2 }}>Forms in this list will be sent out with the welcome email</Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ ...tHeadSx, width: 40 }}></TableCell>
-                  <TableCell sx={tHeadSx}>Welcome Email Forms</TableCell>
-                  <TableCell sx={{ ...tHeadSx, borderRight: 'none' }}>Type</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {defaultForms.map((form, i) => (
-                  <TableRow key={i} hover>
-                    <TableCell sx={{ ...tCellSx, width: 40 }}>
-                      <IconButton size="small"><DeleteIcon sx={{ fontSize: '0.9rem', color: '#999' }} /></IconButton>
-                    </TableCell>
-                    <TableCell sx={{ ...tCellSx, color: '#1a3a6b', fontWeight: 500 }}>{form.name}</TableCell>
-                    <TableCell sx={{ ...tCellSx, color: '#c06000' }}>{form.type}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Link href="#" underline="hover" onClick={(e) => { e.preventDefault(); setModalOpen(true); }}
-            sx={{ fontSize: '0.82rem', color: '#1a3a6b', fontWeight: 600, mt: 2, display: 'inline-flex', alignItems: 'center' }}>
-            + Add More Forms
-          </Link>
+      <Box sx={{ p: 3 }}>
+        {/* Age filter */}
+        <Box sx={{ mb: 4 }}>
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', mb: 1.5 }}>Send pediatric forms to patients below the age of:</Typography>
+          <TextField
+            size="small"
+            value={currentSettings.pediatricAge}
+            onChange={(e) => updateWelcomeSettings({ pediatricAge: e.target.value })}
+            sx={{ width: 60, '& .MuiOutlinedInput-root': { height: 32, fontSize: '0.85rem', borderRadius: '6px' } }}
+          />
         </Box>
 
-        {/* Right — Update Request Appearance */}
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.5 }}>Update Request Appearance</Typography>
-          <Typography sx={{ fontSize: '0.78rem', color: '#4b71a1', mb: 2 }}>Choose what forms appear under the update request option</Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ ...tHeadSx, width: 40 }}></TableCell>
-                  <TableCell sx={tHeadSx}>Include in update request list</TableCell>
-                  <TableCell sx={tHeadSx}>Checked by Default ⓘ</TableCell>
-                  <TableCell sx={{ ...tHeadSx, borderRight: 'none' }}>Type</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {updateForms.map((form, i) => (
-                  <TableRow key={i} hover>
-                    <TableCell sx={{ ...tCellSx, width: 40 }}>
-                      <IconButton size="small"><DeleteIcon sx={{ fontSize: '0.9rem', color: '#999' }} /></IconButton>
-                    </TableCell>
-                    <TableCell sx={{ ...tCellSx, color: '#1a3a6b', fontWeight: 500 }}>{form.name}</TableCell>
-                    <TableCell sx={tCellSx} align="center">
-                      <Checkbox size="small" defaultChecked={form.checked} sx={{ p: 0.3 }} />
-                    </TableCell>
-                    <TableCell sx={{ ...tCellSx, color: '#c06000' }}>{form.type}</TableCell>
+        {/* Two-column tables */}
+        <Box sx={{ display: 'flex', gap: 4 }}>
+          {/* Left — Default Welcome Email Forms */}
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B', mb: 0.5 }}>Default Welcome Email Forms</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mb: 2 }}>Forms in the list will be sent out with the welcome email</Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ ...tHeadSx, width: 40, borderTopLeftRadius: '6px' }}></TableCell>
+                    <TableCell sx={tHeadSx}>WELCOME EMAIL FORMS</TableCell>
+                    <TableCell sx={{ ...tHeadSx, borderTopRightRadius: '6px' }}>TYPE</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Link href="#" underline="hover" onClick={(e) => { e.preventDefault(); setModalOpen(true); }}
-            sx={{ fontSize: '0.82rem', color: '#1a3a6b', fontWeight: 600, mt: 2, display: 'inline-flex', alignItems: 'center' }}>
-            + Add More Forms
-          </Link>
+                </TableHead>
+                <TableBody>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndDefault}>
+                    <SortableContext items={currentSettings.defaultForms.map(f => f.name)} strategy={verticalListSortingStrategy}>
+                      {currentSettings.defaultForms.map((form) => (
+                        <SortableDefaultRow key={form.name} form={form} tCellSx={tCellSx} />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Link href="#" underline="hover" onClick={(e) => { e.preventDefault(); setTargetList('default'); setModalOpen(true); }}
+              sx={{ fontSize: '0.85rem', color: '#3B82F6', fontWeight: 600, mt: 2, display: 'inline-flex', alignItems: 'center' }}>
+              + Add More Forms
+            </Link>
+          </Box>
+
+          {/* Right — Update Request Appearance */}
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B', mb: 0.5 }}>Update Request Appearance</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', mb: 2 }}>Choose what forms appear under the update request option</Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ ...tHeadSx, width: 40, borderTopLeftRadius: '6px' }}></TableCell>
+                    <TableCell sx={tHeadSx}>INCLUDE IN UPDATE REQUEST LIST</TableCell>
+                    <TableCell sx={tHeadSx}>CHECKED BY DEFAULT</TableCell>
+                    <TableCell sx={{ ...tHeadSx, borderTopRightRadius: '6px' }}>TYPE</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndUpdate}>
+                    <SortableContext items={currentSettings.updateForms.map(f => f.name)} strategy={verticalListSortingStrategy}>
+                      {currentSettings.updateForms.map((form, i) => (
+                        <SortableUpdateRow
+                          key={form.name}
+                          form={form}
+                          tCellSx={tCellSx}
+                          onToggle={(checked) => toggleUpdateFormCheck(i, checked)}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Link href="#" underline="hover" onClick={(e) => { e.preventDefault(); setTargetList('update'); setModalOpen(true); }}
+              sx={{ fontSize: '0.85rem', color: '#3B82F6', fontWeight: 600, mt: 2, display: 'inline-flex', alignItems: 'center' }}>
+              + Add More Forms
+            </Link>
+          </Box>
         </Box>
       </Box>
 
@@ -166,7 +302,7 @@ const WelcomeEmailDefaults = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setModalOpen(false)} sx={{ textTransform: 'none', color: '#666' }}>Cancel</Button>
-          <Button variant="contained" onClick={() => setModalOpen(false)}
+          <Button variant="contained" onClick={handleAddForms}
             sx={{ bgcolor: '#2e7d32', textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 3, '&:hover': { bgcolor: '#1b5e20' } }}>
             Add
           </Button>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Box, Dialog } from "@mui/material";
+import { Box, Dialog, Alert, Snackbar } from "@mui/material";
 import dayjs from "dayjs";
 import { shortlistService } from "../../services/shortlist.service";
 
@@ -26,9 +26,12 @@ const AddNewPatientAppointmentForm = ({
   initialDateTime = null,
   initialRoomId = "",
   initialShortlistData = null,
+  initialAppointment = null,
   open = true,
   showExtendedOptions = false,
 }) => {
+  console.log("DEBUG AddNewPatientAppointmentForm render. open:", open, "showExtendedOptions:", showExtendedOptions, "isEditMode:", !!initialAppointment || !!initialShortlistData);
+
   /* ── Left panel state ── */
   const [patient,           setPatient]           = useState(initialShortlistData ? initialShortlistData.patient : initialPatient || null);
   
@@ -78,6 +81,8 @@ const AddNewPatientAppointmentForm = ({
   // Tracks whether the user has tried to submit at least once — required-field
   // borders only turn red after a failed attempt, not while the form is still empty on open.
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
 
   const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
@@ -88,6 +93,13 @@ const AddNewPatientAppointmentForm = ({
     const occupied = new Set();
     appointments.forEach(appt => {
       if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
+      
+      if (initialAppointment) {
+        const apptId = String(appt.id || appt._id).replace('appt-', '');
+        const editId = String(initialAppointment.id || initialAppointment._id).replace('appt-', '');
+        if (apptId === editId) return;
+      }
+
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
       if (apptDateStr !== selectedStart.format("YYYY-MM-DD")) return;
 
@@ -115,11 +127,198 @@ const AddNewPatientAppointmentForm = ({
     });
 
     return occupied;
-  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins]);
+  }, [appointments, scheduleBlocks, apptDate, timeHours, timeMins, amPm, durationMins, initialAppointment]);
 
   useEffect(() => {
     if (open) {
-      if (initialShortlistData) {
+      if (initialAppointment) {
+
+        const applyApptToForm = (sourceAppt, sourceProcedures = []) => {
+            const customFields = sourceAppt.customFields || sourceAppt.CustomFields || {};
+            
+            const rawPat = sourceAppt.patientId || sourceAppt.patient || sourceAppt.patientNumber || initialAppointment.patientId || "";
+            const patId = typeof rawPat === 'object' ? String(rawPat._id || rawPat.id || rawPat.PatNum || "") : String(rawPat);
+            
+            const fullPatient = patients.find(p => String(p.id || p._id || p.PatNum) === patId);
+            
+            const hasName = sourceAppt.patientName || initialAppointment.patientName;
+            const mockPatient = (patId || hasName) ? { 
+              id: patId || "unknown", 
+              rawId: patId || "unknown",
+              firstName: hasName ? hasName.split(' ')[0] : 'Unknown',
+              lastName: hasName ? hasName.split(' ').slice(1).join(' ') : 'Patient',
+              fullName: hasName || 'Unknown Patient'
+            } : null;
+            
+            setPatient(fullPatient || mockPatient);
+            
+            let parsedDate = dayjs();
+            const rawDate = sourceAppt.appointmentDate || initialAppointment.date || initialAppointment.appointmentDate;
+            if (rawDate) {
+              const dateStr = typeof rawDate === 'string' && rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
+              parsedDate = dayjs(dateStr);
+            }
+            
+            const timeStr = sourceAppt.startTime || initialAppointment.time || initialAppointment.startTime;
+            let hStr = parsedDate.format("hh"), mStr = parsedDate.format("mm"), aStr = parsedDate.format("A");
+            
+            if (timeStr) {
+              const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+              if (match) {
+                hStr = match[1].padStart(2, '0');
+                mStr = match[2].padStart(2, '0');
+                if (match[3]) {
+                  aStr = match[3].toUpperCase();
+                } else {
+                  let h24 = parseInt(hStr, 10);
+                  if (h24 >= 12) {
+                    aStr = "PM";
+                    if (h24 > 12) hStr = String(h24 - 12).padStart(2, '0');
+                  } else {
+                    aStr = "AM";
+                    if (h24 === 0) hStr = "12";
+                  }
+                }
+              }
+            }
+            
+            setApptDate(parsedDate); setTimeHours(hStr); setTimeMins(mStr); setAmPm(aStr);
+            setRoomId(sourceAppt.roomId || initialAppointment.roomId ? String(sourceAppt.roomId || initialAppointment.roomId) : "");
+            setStatus(sourceAppt.status || initialAppointment.status ? String(sourceAppt.status || initialAppointment.status).toLowerCase() : "scheduled");
+            setDurationMins(sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60);
+            
+            let vType = sourceAppt.appointmentType || sourceAppt.visitType || initialAppointment.appointmentType || initialAppointment.visitType || "recare";
+            vType = String(vType).toLowerCase();
+            if (vType !== "recare") {
+              vType = "treatment"; // Default anything that isn't explicitly recare to treatment
+            }
+            setVisitType(vType);
+            
+            let provId = "";
+            if (sourceAppt.providerId && typeof sourceAppt.providerId === 'object') provId = sourceAppt.providerId._id || sourceAppt.providerId.id || sourceAppt.providerId.providerId;
+            else if (sourceAppt.providerId) provId = sourceAppt.providerId;
+            else if (initialAppointment.providerId) provId = initialAppointment.providerId;
+            else if (initialAppointment.ProvNum) provId = initialAppointment.ProvNum;
+            else if (initialAppointment.provider && typeof initialAppointment.provider === 'object') provId = initialAppointment.provider._id || initialAppointment.provider.id;
+            else if (typeof initialAppointment.provider === 'string' && providers.some(p => String(p._id || p.id) === initialAppointment.provider)) provId = initialAppointment.provider;
+            
+            setProviderRows(provId ? 
+              [{ id: Date.now(), providerId: String(provId), time: sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60 }] : 
+              [{ id: Date.now(), providerId: "", time: 60 }]);
+              
+            setNotes(sourceAppt.notes || initialAppointment.notes || initialAppointment.description || "");
+            
+            let sourceProcs = sourceProcedures.length > 0 ? sourceProcedures : (customFields.procedures && Array.isArray(customFields.procedures) && customFields.procedures.length > 0
+              ? customFields.procedures
+              : (sourceAppt.workspace?.procedures || sourceAppt.procedures || sourceAppt.procedureCodes || sourceAppt.Procedures || initialAppointment.procedures || []));
+            
+            let initialProcs = [];
+            if (Array.isArray(sourceProcs)) {
+              initialProcs = sourceProcs;
+            } else if (typeof sourceProcs === 'string') {
+              initialProcs = sourceProcs.split(',').map(p => ({ code: "TBD", treatment: p.trim(), charge: "$0.00" }));
+            }
+            
+            initialProcs = initialProcs.map((p, i) => {
+              if (typeof p === 'string') {
+                return { code: "TBD", treatment: p, charge: "$0.00", checked: true, id: Date.now() + i };
+              }
+              return { 
+                code: p.procedureCode || p.code || p.ProcCode || "TBD", 
+                treatment: p.description || p.treatment || p.name || p.title || p.Descript || "Unknown", 
+                charge: p.fee || p.charge || p.amount || "$0.00", 
+                checked: true, 
+                id: p._id || p.id || (Date.now() + i) 
+              };
+            });
+            
+            setProcedures(initialProcs.length > 0 ? initialProcs : INITIAL_PROCEDURES);
+
+            const tagsSource = customFields.procedureTags || sourceAppt.tags || initialAppointment.tags;
+            if (Array.isArray(tagsSource)) {
+              const tagsSet = new Set();
+              tagsSource.forEach(tagObj => {
+                if (tagObj && tagObj.label) {
+                  import('./new-appointment/constants').then(({ DEFAULT_PROCEDURE_TAGS }) => {
+                    const idx = DEFAULT_PROCEDURE_TAGS.findIndex(t => t.label === tagObj.label);
+                    if (idx >= 0) {
+                      tagsSet.add(`${tagObj.label}-${idx}`);
+                      setSelectedTagLabels(new Set(tagsSet));
+                    }
+                  }).catch(() => {});
+                } else if (typeof tagObj === 'string') {
+                  import('./new-appointment/constants').then(({ DEFAULT_PROCEDURE_TAGS }) => {
+                    const idx = DEFAULT_PROCEDURE_TAGS.findIndex(t => t.label === tagObj);
+                    if (idx >= 0) {
+                      tagsSet.add(`${tagObj}-${idx}`);
+                      setSelectedTagLabels(new Set(tagsSet));
+                    }
+                  }).catch(() => {});
+                }
+              });
+            }
+            
+            const colorTagsSource = customFields.colorTags || sourceAppt.colorTags || initialAppointment.colorTags;
+            if (Array.isArray(colorTagsSource)) {
+              setSelectedColorTags(new Set(colorTagsSource.map(c => typeof c === 'string' ? c.toLowerCase() : c)));
+            }
+
+            const extractProvId = (val) => {
+              if (!val) return "";
+              if (typeof val === 'object') return String(val._id || val.id || val.providerId || "");
+              return String(val);
+            };
+
+            if (fullPatient) {
+              const fallbackDentist = fullPatient.preferredDentistId || fullPatient.preferredDentist || fullPatient.preferredProviderId;
+              setPreferredDentist(extractProvId(customFields.preferredDentist) || extractProvId(fallbackDentist));
+              const fallbackHygienist = fullPatient.preferredHygienistId || fullPatient.preferredHygienist;
+              setPreferredHygienist(extractProvId(customFields.preferredHygienist) || extractProvId(fallbackHygienist));
+            } else if (patId) {
+              setPreferredDentist(extractProvId(customFields.preferredDentist));
+              setPreferredHygienist(extractProvId(customFields.preferredHygienist));
+              import('../../services/patient.service').then(({ patientService }) => {
+                patientService.getPatientById(patId).then(res => {
+                  const p = res.data;
+                  if (p) {
+                    if (!customFields.preferredDentist) {
+                      const d = p.preferredDentistId || p.preferredDentist || p.preferredProviderId;
+                      if (d) setPreferredDentist(extractProvId(d));
+                    }
+                    if (!customFields.preferredHygienist) {
+                      const h = p.preferredHygienistId || p.preferredHygienist;
+                      if (h) setPreferredHygienist(extractProvId(h));
+                    }
+                  }
+                }).catch(() => {});
+              }).catch(() => {});
+            }
+        };
+
+        const shallowAppt = initialAppointment.rawAppointment || initialAppointment;
+        applyApptToForm(shallowAppt, []); // Synchronous load instantly
+
+        const loadFullDetails = async () => {
+          try {
+            if (initialAppointment.id && !String(initialAppointment.id).startsWith("temp-")) {
+              const { appointmentService } = await import('../../services/appointment.service');
+              const realId = String(initialAppointment.id).replace('appt-', '');
+              try {
+                const fullAppt = await appointmentService.getAppointmentById(realId);
+                const fullProcedures = await appointmentService.getAppointmentProcedures(realId);
+                applyApptToForm(fullAppt, fullProcedures); // Update with deep data
+              } catch (e) {
+                console.warn("Failed to fetch full appointment details, falling back to shallow data", e);
+              }
+            }
+          } catch (err) {
+            console.error("Error populating AddNewPatientAppointmentForm", err);
+          }
+        };
+        
+        loadFullDetails();
+
+      } else if (initialShortlistData) {
         // Try to find the full patient object from the loaded patients list
         const patId = String(initialShortlistData.PatNum || initialShortlistData.patientId);
         const fullPatient = patients.find(p => String(p.id || p._id || p.PatNum) === patId);
@@ -277,7 +476,7 @@ const AddNewPatientAppointmentForm = ({
 
       setSubmitAttempted(false);
     }
-  }, [open, initialPatient, initialDateTime, initialRoomId, initialShortlistData]);
+  }, [open, initialPatient, initialDateTime, initialRoomId, initialShortlistData, initialAppointment]);
 
   const dateTime = useMemo(() => {
     const h = parseInt(timeHours || "9", 10);
@@ -322,10 +521,18 @@ const AddNewPatientAppointmentForm = ({
         setTagProcedureIds((prev) => { const { [key]: _, ...rest } = prev; return rest; });
       }
     } else {
-      setSelectedTagLabels((prev) => new Set([...prev, key]));
       const template = TAG_DEFAULT_PROCEDURES[label];
       const tagInfo  = DEFAULT_PROCEDURE_TAGS[idx];
       if (template && tagInfo) {
+        const existing = procedures.find((p) => p.code === template.code);
+        if (existing) {
+          setToastMessage("Already added");
+          setSelectedTagLabels((prev) => new Set([...prev, key]));
+          setTagProcedureIds((prev) => ({ ...prev, [key]: existing.id }));
+          return;
+        }
+
+        setSelectedTagLabels((prev) => new Set([...prev, key]));
         const newId = nextId.current++;
         setProcedures((prev) => [...prev, {
           id: newId, code: template.code, treatment: template.treatment,
@@ -340,6 +547,13 @@ const AddNewPatientAppointmentForm = ({
 
   const handleSelectProcedure = (option) => {
     if (!option) return;
+    const exists = procedures.some((p) => p.code === option.code);
+    if (exists) {
+      setToastMessage("Already added");
+      setProcedureInput("");
+      setAddingProcedure(false);
+      return;
+    }
     setProcedures((prev) => [...prev, {
       id: nextId.current++, code: option.code, treatment: option.treatment,
       site: "", provider: "", charge: option.charge, checked: true, tag: option.tag,
@@ -389,7 +603,7 @@ const AddNewPatientAppointmentForm = ({
 
     const start = dateTime || dayjs();
     if (start.isBefore(dayjs().startOf('day'))) {
-      alert("Appointment date cannot be in the past.");
+      setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }
 
@@ -420,6 +634,24 @@ const AddNewPatientAppointmentForm = ({
   const handleSubmit = () => {
     if (!onSubmit) return;
     setSubmitAttempted(true);
+
+    const checkedProcedures = procedures.filter(p => p.checked);
+    if (checkedProcedures.length === 0) {
+      setErrorMessage("Please select at least one procedure to create an appointment.");
+      return;
+    }
+
+    if (durationMins <= 0) {
+      setErrorMessage("Please enter a valid appointment duration (greater than 0 minutes).");
+      return;
+    }
+
+    const startH = dateTime.hour();
+    if (startH < 7 || startH >= 21) {
+      setErrorMessage("Appointments can only be scheduled between 7:00 AM and 9:00 PM.");
+      return;
+    }
+
     // Only providerRows[0] feeds the payload's providerId (see getAppointmentPayload),
     // so that's the row that actually needs to be filled in to submit.
     if (!patient || !providerRows[0]?.providerId) return;
@@ -427,16 +659,17 @@ const AddNewPatientAppointmentForm = ({
     if (payload) onSubmit(payload);
   };
 
-  const isEditMode = Boolean(initialShortlistData);
+  const isShortlistEditMode = Boolean(initialShortlistData);
+  const isEditMode = Boolean(initialAppointment || initialShortlistData);
 
   const handleConvertToShortlist = async () => {
     if (!patient) {
-      alert("Please select a patient first.");
+      setErrorMessage("Please select a patient first.");
       return;
     }
     const payload = getAppointmentPayload();
     try {
-      if (isEditMode) {
+      if (isShortlistEditMode) {
         await shortlistService.updateShortlistItem(initialShortlistData.ShortlistNum, payload);
         alert("Successfully updated shortlist item!");
       } else {
@@ -446,14 +679,16 @@ const AddNewPatientAppointmentForm = ({
       // Dispatch event to instantly update the Shortlist panel
       window.dispatchEvent(new Event('shortlist-updated'));
       if (onCancel) onCancel(); // Close modal
-    } catch (error) {
-      console.error("Failed to convert/update shortlist:", error);
-      alert(`Failed to ${isEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
+    } catch (err) {
+      console.error("Shortlist operation failed:", err);
+      setErrorMessage(`Failed to ${isShortlistEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
     }
   };
 
+  const fName = patient?.firstName || patient?.FName || "";
+  const lName = patient?.lastName || patient?.LName || "";
   const patientDisplayName = patient
-    ? (patient.name || patient.fullName || `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Patient")
+    ? (`${fName} ${lName}`.trim() || patient.name || patient.fullName || "Patient")
     : "";
   const patientId = patient?.patientId || patient?.chartNumber || patient?.id || patient?._id || "";
 
@@ -474,9 +709,21 @@ const AddNewPatientAppointmentForm = ({
           onCancel={onCancel} 
           onConvertToShortlist={handleConvertToShortlist} 
           isEditMode={isEditMode} 
+          patientDisplayName={patientDisplayName}
+          apptDate={apptDate}
+          timeHours={timeHours}
+          timeMins={timeMins}
+          amPm={amPm}
+          visitType={visitType}
         />
 
-        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        {errorMessage && (
+          <Alert severity="error" sx={{ mx: 2, mt: 2, mb: 1 }} onClose={() => setErrorMessage("")}>
+            {errorMessage}
+          </Alert>
+        )}
+
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0, mt: errorMessage ? 0 : 2 }}>
           <AppointmentLeftPanel
             patients={patients}
             loadingPatients={loadingPatients}
@@ -504,6 +751,7 @@ const AddNewPatientAppointmentForm = ({
             setProcedures={setProcedures}
             providers={providers}
             showExtendedOptions={showExtendedOptions}
+            onDuplicateProcedure={setToastMessage}
           />
 
           <AppointmentRightPanel
@@ -545,8 +793,14 @@ const AddNewPatientAppointmentForm = ({
           onSubmit={handleSubmit}
           loading={loading}
           showExtendedOptions={showExtendedOptions}
+          isEditMode={isEditMode}
         />
       </Box>
+      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setToastMessage("")} severity="info" sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

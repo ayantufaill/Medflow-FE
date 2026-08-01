@@ -12,7 +12,10 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Button,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const AuditHistoryDialog = ({ open, onClose }) => {
   return (
@@ -21,43 +24,62 @@ const AuditHistoryDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1,
-        fontSize: '1rem',
-        fontWeight: 600
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        Audit FeeGuides History
-      </DialogTitle>
-      <DialogContent sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Typography variant="body2" sx={{ color: '#4b71a1', fontWeight: 600 }}>Filter list by:</Typography>
-          <Typography variant="body2" sx={{ color: '#4b71a1', fontWeight: 600, ml: 4 }}>Action:</Typography>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Audit Fee Guides History
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            View history of actions taken on fee guides.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ p: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#475569', fontWeight: 500 }}>Filter list by:</Typography>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#475569', fontWeight: 500, ml: 3 }}>Action:</Typography>
           <TextField 
             select 
             size="small" 
             defaultValue="All"
             SelectProps={{ native: true }}
-            sx={{ '& .MuiInputBase-root': { fontSize: '0.8rem' } }}
+            sx={{ 
+              '& .MuiInputBase-root': { fontFamily: "Inter", fontSize: "13px", backgroundColor: '#fff', borderRadius: "8px", color: "#374151" },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
+            }}
           >
             <option value="All">All</option>
           </TextField>
         </Box>
-        <TableContainer sx={{ border: '1px solid #e0e0e0', maxHeight: 500 }}>
+        <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, maxHeight: 500 }}>
           <Table stickyHeader size="small">
             <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: '#f9fafb', fontWeight: 700, fontSize: '0.75rem', py: 1.5 } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
                 <TableCell>Date</TableCell>
                 <TableCell>User</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Action</TableCell>
                 <TableCell sx={{ textAlign: 'center' }} colSpan={3}>Difference</TableCell>
               </TableRow>
-              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: '#f9fafb', fontWeight: 700, fontSize: '0.75rem', py: 1 } }}>
+              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1, borderBottom: '2px solid #e2e8f0' } }}>
                 <TableCell colSpan={4} />
                 <TableCell sx={{ textAlign: 'center', width: '20%' }}>Key</TableCell>
                 <TableCell sx={{ textAlign: 'center', width: '20%' }}>Old</TableCell>
@@ -78,7 +100,7 @@ const AuditHistoryDialog = ({ open, onClose }) => {
                 { date: '09/22/2021 09:10:12 AM', user: 'John Davis', name: 'FeeGuide', action: 'Update', diff: [{ key: '/default', old: 'No', new: 'Yes' }] },
               ].map((row, i) => (
                 <React.Fragment key={i}>
-                  <TableRow sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem', verticalAlign: 'top', borderBottom: row.diff.length > 0 ? 'none' : '1px solid #e0e0e0' } }}>
+                  <TableRow sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', color: '#1e293b', verticalAlign: 'top', borderBottom: row.diff.length > 0 ? 'none' : '1px solid #f1f5f9' } }}>
                     <TableCell rowSpan={row.diff.length || 1}>{row.date}</TableCell>
                     <TableCell rowSpan={row.diff.length || 1}>{row.user}</TableCell>
                     <TableCell rowSpan={row.diff.length || 1}>{row.name}</TableCell>
@@ -86,17 +108,17 @@ const AuditHistoryDialog = ({ open, onClose }) => {
                     {row.diff.length === 0 && <TableCell colSpan={3} />}
                     {row.diff.length > 0 && (
                       <>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].key}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].old}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{row.diff[0].new}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{row.diff[0].key}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{row.diff[0].old}</TableCell>
+                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{row.diff[0].new}</TableCell>
                       </>
                     )}
                   </TableRow>
                   {row.diff.slice(1).map((d, j) => (
-                    <TableRow key={j} sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem', borderBottom: j === row.diff.length - 2 ? '1px solid #e0e0e0' : 'none' } }}>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.key}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.old}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #e0e0e0', textAlign: 'center' }}>{d.new}</TableCell>
+                    <TableRow key={j} sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', borderBottom: j === row.diff.length - 2 ? '1px solid #f1f5f9' : 'none' } }}>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{d.key}</TableCell>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{d.old}</TableCell>
+                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{d.new}</TableCell>
                     </TableRow>
                   ))}
                 </React.Fragment>
@@ -104,6 +126,23 @@ const AuditHistoryDialog = ({ open, onClose }) => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', mx: -4, mb: -4, mt: 3 }}>
+          <Button 
+            variant="contained" 
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
+            }}
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </Box>
       </DialogContent>
     </Dialog>
   );

@@ -1,5 +1,7 @@
 import { Box, Typography, Table, TableHead, TableRow, TableCell, TableBody, TextField, Button, Paper } from '@mui/material';
 import { Add as AddIcon, InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
+import { standardFieldSx, radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const SECTION_HEADER_BG = '#F3F8FD';
 
@@ -37,11 +39,19 @@ const KioskAccountsSection = ({
         {/* Add Account button — sits above the table card, with space around it */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
-            size="small"
             variant="contained"
-            startIcon={<AddIcon sx={{ fontSize: '0.95rem' }} />}
+            disableElevation
+            startIcon={<AddIcon sx={{ fontSize: '16px' }} />}
             onClick={onOpenAddRow}
-            sx={{ textTransform: 'none', fontSize: '0.85rem', backgroundColor: '#2563eb', '&:hover': { backgroundColor: '#1d4ed8' } }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+            }}
           >
             Add Account
           </Button>
@@ -86,57 +96,68 @@ const KioskAccountsSection = ({
                 <TableRow>
                   <TableCell>
                     <TextField
-                      size="small"
                       placeholder="Email"
                       value={newAccount.email}
                       onChange={handleFieldChange('email')}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.82rem', py: 0.5 } }}
+                      sx={standardFieldSx}
                       fullWidth
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
-                      size="small"
                       placeholder="First Name"
                       value={newAccount.firstName}
                       onChange={handleFieldChange('firstName')}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.82rem', py: 0.5 } }}
+                      sx={standardFieldSx}
                       fullWidth
                     />
                   </TableCell>
                   <TableCell>
                     <TextField
-                      size="small"
                       placeholder="Last Name"
                       value={newAccount.lastName}
                       onChange={handleFieldChange('lastName')}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.82rem', py: 0.5 } }}
+                      sx={standardFieldSx}
                       fullWidth
                     />
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                       <TextField
-                        size="small"
                         placeholder="Telephone Number"
                         value={newAccount.telephoneNumber}
                         onChange={handleFieldChange('telephoneNumber')}
-                        sx={{ '& .MuiInputBase-input': { fontSize: '0.82rem', py: 0.5 } }}
-                        fullWidth
+                        sx={{ ...standardFieldSx, flex: 1 }}
                       />
                       <Button
-                        size="small"
                         variant="contained"
+                        disableElevation
                         onClick={onAddAccount}
-                        sx={{ textTransform: 'none', fontSize: '0.78rem', py: 0.4, backgroundColor: '#1a3a6b', '&:hover': { backgroundColor: '#142d52' } }}
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: radius.md,
+                          fontFamily: 'Inter',
+                          fontSize: fontSize.base,
+                          fontWeight: fontWeight.semibold,
+                          backgroundColor: COLORS.ACCENT,
+                          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+                        }}
                       >
                         Add
                       </Button>
                       <Button
-                        size="small"
                         variant="outlined"
+                        disableElevation
                         onClick={onCancelAddRow}
-                        sx={{ textTransform: 'none', fontSize: '0.78rem', py: 0.4 }}
+                        sx={{
+                          textTransform: 'none',
+                          borderRadius: radius.md,
+                          fontFamily: 'Inter',
+                          fontSize: fontSize.base,
+                          fontWeight: fontWeight.semibold,
+                          borderColor: COLORS.BORDER,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
                       >
                         Cancel
                       </Button>

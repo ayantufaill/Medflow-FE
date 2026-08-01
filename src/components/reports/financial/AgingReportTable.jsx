@@ -1,19 +1,34 @@
 import React from 'react';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableFooter, Checkbox } from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableFooter, Checkbox, Tooltip } from '@mui/material';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import { getFlagColor } from '../../patient-flags/constants';
 
 const getFlagColors = (idx) => {
-  const colors = ['#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
-  return [colors[idx % colors.length]];
+  const defaultFlags = [
+    { color: '#22c55e', name: 'Send appointment reminder earlier' },
+    { color: '#f59e0b', name: 'Alert' },
+    { color: '#ef4444', name: 'Late Payment' },
+    { color: '#3b82f6', name: 'Needs special care' },
+    { color: '#8b5cf6', name: 'Old Patient' }
+  ];
+  
+  // Return 1 or 2 flags deterministically based on idx
+  const flagsCount = (idx % 2) + 1;
+  const result = [];
+  for(let i = 0; i < flagsCount; i++) {
+    result.push(defaultFlags[(idx + i) % defaultFlags.length]);
+  }
+  return result;
 };
 
-const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets, totals, showFlags, showPaymentPlan, setSelectedPatientForNotes, selectedNames = [], setSelectedNames, groupByRange }) => {
+const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData, hidePatientNames, agingBuckets, totals, showFlags, showPaymentPlan, setSelectedPatientForNotes, selectedNames = [], setSelectedNames }) => {
   const firstColSpan = 1 + (showFlags ? 1 : 0) + (!hidePatientNames ? 1 : 0);
   const rightColSpan = 4 + (showPaymentPlan ? 1 : 0);
   
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedNames(reportData.map((row) => row.name));
+      const safeData = Array.isArray(reportData) ? reportData : [];
+      setSelectedNames(safeData.map((row) => row.name));
     } else {
       setSelectedNames([]);
     }
@@ -32,8 +47,8 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
   
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
-      <TableContainer elevation={0}>
-        <Table id="aging-report-table" size="small">
+      <TableContainer elevation={0} sx={{ overflowX: 'auto' }}>
+        <Table id={tableId} size="small" sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
               <TableCell padding="checkbox" sx={{ width: '40px' }}>
@@ -63,101 +78,12 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
                   <Typography variant="body2" color="text.secondary">Loading...</Typography>
                 </TableCell>
               </TableRow>
-            ) : reportData.length === 0 ? (
+            ) : !Array.isArray(reportData) || reportData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={15} align="center" sx={{ py: 6 }}>
                   <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>No data available</Typography>
                 </TableCell>
               </TableRow>
-            ) : groupByRange ? (
-              agingBuckets.map((bucket) => {
-                const bucketRows = reportData.filter((r) => {
-                  let oldest = null;
-                  for (let i = agingBuckets.length - 1; i >= 0; i--) {
-                    if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
-                      oldest = agingBuckets[i];
-                      break;
-                    }
-                  }
-                  if (!oldest) oldest = agingBuckets[0];
-                  return oldest === bucket;
-                });
-
-                if (bucketRows.length === 0) return null;
-
-                return (
-                  <React.Fragment key={bucket}>
-                    <TableRow sx={{ backgroundColor: '#f8fafc' }}>
-                      <TableCell colSpan={15} sx={{ py: 1.5, borderBottom: '2px solid #e2e8f0' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase' }}>
-                          {bucket} Group
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                    {bucketRows.map((row, idx) => (
-                      <TableRow key={row.name + idx} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
-                        <TableCell padding="checkbox">
-                          <Checkbox 
-                            size="small"
-                            sx={{ p: 0 }}
-                            checked={selectedNames.includes(row.name)}
-                            onChange={(e) => handleSelectRow(e, row.name)}
-                          />
-                        </TableCell>
-                        {showFlags && (
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                              {(row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx)).map((color, i) => (
-                                 <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                              ))}
-                            </Box>
-                          </TableCell>
-                        )}
-                        {!hidePatientNames && (
-                          <TableCell>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                              <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', color: '#3b82f6' }}>{row.name}</Typography>
-                              <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.65rem' }}>
-                                (Delta Dental Ins. Co. - Utah + Delta Dental of Arkansas)
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                        )}
-                        {agingBuckets.map(b => (
-                          <TableCell key={b} align="right">
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '60px' }}>
-                              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt</Typography>
-                                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${row.buckets[b].pt.toFixed(2)}</Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins</Typography>
-                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>${row.buckets[b].ins.toFixed(2)}</Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        ))}
-                        <TableCell align="right">
-                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.total.toFixed(2)}</Typography>
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.totalOwings.toFixed(2)}</TableCell>
-                        {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.paymentPlan.toFixed(2)}</TableCell>}
-                        <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.credit.toFixed(2)}</TableCell>
-                        <TableCell sx={{ color: '#475569' }}>{row.lastBilled || '07/15/2022'}</TableCell>
-                        <TableCell className="no-print">
-                          <Box 
-                            sx={{ display: 'flex', alignItems: 'center', color: '#3b82f6', cursor: 'pointer', gap: 0.5, whiteSpace: 'nowrap' }}
-                            onClick={() => setSelectedPatientForNotes(row)}
-                          >
-                            <NoteAddIcon sx={{ fontSize: 16 }} />
-                            <Typography variant="caption" sx={{ fontWeight: 600 }}>add account note</Typography>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </React.Fragment>
-                );
-              })
             ) : (
               reportData.map((row, idx) => (
                 <React.Fragment key={idx}>
@@ -172,10 +98,33 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
                     </TableCell>
                     {showFlags && (
                       <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                          {(row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx)).map((color, i) => (
-                             <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                          ))}
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {(() => {
+                            let flagsToRender = row.flags && Array.isArray(row.flags) ? row.flags : [];
+                            
+                            if (typeof row.flags === 'string') {
+                              flagsToRender = row.flags.split(',').map(s => s.trim()).filter(Boolean);
+                            }
+                            
+                            return flagsToRender.map((flagObj, i) => {
+                              let flagColor = '#cbd5e1';
+                              let flagName = 'Flag';
+                              
+                              if (typeof flagObj === 'string') {
+                                flagName = flagObj;
+                                flagColor = getFlagColor(flagObj);
+                              } else if (flagObj) {
+                                flagName = flagObj.name || flagName;
+                                flagColor = flagObj.color || getFlagColor(flagName);
+                              }
+                              
+                              return (
+                                <Tooltip key={i} title={flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName} arrow placement="top">
+                                  <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: flagColor, flexShrink: 0, cursor: 'help' }} />
+                                </Tooltip>
+                              );
+                            });
+                          })()}
                         </Box>
                       </TableCell>
                     )}
@@ -194,21 +143,21 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '60px' }}>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt</Typography>
-                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${row.buckets[bucket].pt.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${(row.buckets?.[bucket]?.pt || 0).toFixed(2)}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins</Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${row.buckets[bucket].ins.toFixed(2)}</Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>${(row.buckets?.[bucket]?.ins || 0).toFixed(2)}</Typography>
                           </Box>
                         </Box>
                       </TableCell>
                     ))}
                     <TableCell align="right">
-                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.total.toFixed(2)}</Typography>
+                      <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.total || 0).toFixed(2)}</Typography>
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${row.totalOwings.toFixed(2)}</TableCell>
-                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.paymentPlan.toFixed(2)}</TableCell>}
-                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${row.credit.toFixed(2)}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#1e293b' }}>${(row.totalOwings || 0).toFixed(2)}</TableCell>
+                    {showPaymentPlan && <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.paymentPlan || 0).toFixed(2)}</TableCell>}
+                    <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#475569' }}>${(row.credit || 0).toFixed(2)}</TableCell>
                     <TableCell sx={{ color: '#475569' }}>{row.lastBilled || '07/15/2022'}</TableCell>
                     <TableCell className="no-print">
                       <Box 
@@ -224,7 +173,8 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
               ))
             )}
           </TableBody>
-          <TableFooter>
+          {totals && (
+            <TableFooter>
             {/* Footer Row 1: Headers */}
             <TableRow sx={{ '& td, & th': { fontSize: '0.75rem', border: 'none', py: 1, borderTop: '2px solid #e0e0e0' } }}>
               <TableCell colSpan={firstColSpan} sx={{ fontWeight: 600 }}>  </TableCell>
@@ -290,7 +240,7 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
             </TableRow>
 
             {/* Footer Row 5: Total Account Credit */}
-            <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none', pb: 2 } }}>
+            <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
               <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
                 Total Account Credit
               </TableCell>
@@ -299,13 +249,30 @@ const AgingReportTable = ({ loading, reportData, hidePatientNames, agingBuckets,
               ))}
               <TableCell align="right" />
               <TableCell colSpan={2} />
-              <TableCell align="right" sx={{ fontWeight: 600 }}>
+              <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>
                 ${totals.totalCredit?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
               </TableCell>
               <TableCell colSpan={1} />
               <TableCell className="no-print" />
             </TableRow>
+
+            {/* Footer Row 6: Net Outstanding Balances */}
+            <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none', pb: 2 } }}>
+              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+                Net Outstanding Balances<br/>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 400 }}>(Total Outstanding - Total Account Credit)</Typography>
+              </TableCell>
+              {agingBuckets.map((bucket) => (
+                <TableCell key={bucket} />
+              ))}
+              <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.85rem' }}>
+                ${Math.max(0, (totals.totalOutstanding || 0) - (totals.totalCredit || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </TableCell>
+              <TableCell colSpan={rightColSpan - 1} />
+              <TableCell className="no-print" />
+            </TableRow>
             </TableFooter>
+          )}
         </Table>
       </TableContainer>
     </Box>

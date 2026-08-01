@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import dayjs from 'dayjs';
 import ViewToggle from './ViewToggle';
@@ -29,6 +30,17 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
   const handlePrev = () => setSelectedDate(dayjsDate.subtract(1, calendarView).toISOString());
   const handleNext = () => setSelectedDate(dayjsDate.add(1, calendarView).toISOString());
 
+  const [lastViewedDates, setLastViewedDates] = useState([]);
+
+  useEffect(() => {
+    setLastViewedDates(prev => {
+      const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
+      if (prev.length > 0 && prev[0] === dateStr) return prev;
+      const updated = [dateStr, ...prev.filter(d => d !== dateStr)].slice(0, 10);
+      return updated;
+    });
+  }, [selectedDate]);
+
   return (
     <Box
       sx={{
@@ -59,7 +71,18 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}
         <Box sx={{ flex: 1 }} />
         
-        <ActionIconsBar onPrintClick={onPrintClick} onMoreClick={onMoreClick} privacyMode={privacyMode} onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)} hideBlocks={hideBlocks} onToggleHideBlocks={() => setHideBlocks(!hideBlocks)} showGhosted={showGhosted} onToggleShowGhosted={() => setShowGhosted(!showGhosted)} />
+        <ActionIconsBar 
+          onPrintClick={onPrintClick} 
+          onMoreClick={onMoreClick} 
+          privacyMode={privacyMode} 
+          onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)} 
+          hideBlocks={hideBlocks} 
+          onToggleHideBlocks={() => setHideBlocks(!hideBlocks)} 
+          showGhosted={showGhosted} 
+          onToggleShowGhosted={() => setShowGhosted(!showGhosted)}
+          lastViewedDates={lastViewedDates}
+          onDateSelect={(dateStr) => setSelectedDate(dayjs(dateStr).toISOString())}
+        />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />
       </Box>

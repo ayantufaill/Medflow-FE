@@ -16,9 +16,12 @@ const SetProviderFeeGuideDialog = ({ open, onClose, onSave }) => {
   const [provider, setProvider] = React.useState('');
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2 } }}>
-      <DialogTitle sx={{ bgcolor: '#4b71a1', color: 'white', py: 1.5, fontSize: '1rem', textAlign: 'center' }}>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth sx={{ zIndex: 1400, '& .MuiDialog-paper': { borderRadius: '12px', overflow: 'hidden' } }}>
+      <DialogTitle sx={{ backgroundColor: '#F1F5FD', color: '#111', py: 2, px: 3, fontSize: '1.25rem', fontWeight: 600, borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         Set Provider Fee Guide
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748b' }}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <DialogContent sx={{ mt: 3 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#333' }}>
@@ -38,20 +41,20 @@ const SetProviderFeeGuideDialog = ({ open, onClose, onSave }) => {
           }}
         />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'flex-end', gap: 2 }}>
-        <Button 
-          variant="contained" 
-          onClick={() => onSave(provider)}
-          sx={{ bgcolor: '#d9a366', '&:hover': { bgcolor: '#c99356' }, textTransform: 'none', px: 4 }}
-        >
-          Save
-        </Button>
-        <Button 
-          variant="contained" 
+      <DialogActions sx={{ px: 3, py: 2, backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', justifyContent: 'flex-end', gap: 1 }}>
+        <Button
+          variant="outlined"
           onClick={onClose}
-          sx={{ bgcolor: '#9e9e9e', '&:hover': { bgcolor: '#8e8e8e' }, textTransform: 'none', px: 4 }}
+          sx={{ color: '#64748b', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' }, textTransform: 'none', px: 3, fontWeight: 600 }}
         >
           Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => onSave(provider)}
+          sx={{ bgcolor: '#2262ef', color: '#fff', '&:hover': { bgcolor: '#1d4ed8' }, textTransform: 'none', px: 3, fontWeight: 600, boxShadow: 'none' }}
+        >
+          Save
         </Button>
       </DialogActions>
     </Dialog>

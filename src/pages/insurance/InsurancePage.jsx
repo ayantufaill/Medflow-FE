@@ -1,33 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { 
-  Box, Typography, Button, Tabs, Tab, Table, TableBody, 
-  TableCell, TableContainer, TableHead, TableRow, Paper,
-  Menu, MenuItem, Chip, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, Alert, Collapse, Grid, Stack
-} from '@mui/material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ArchiveIcon from '@mui/icons-material/Archive';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DescriptionIcon from '@mui/icons-material/Description';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Box, Alert, CircularProgress } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
-  fetchPatientInsurances, 
-  updatePatientInsuranceThunk, 
-  deletePatientInsuranceThunk 
+  fetchPatientInsurances,
+  fetchAllPatientInsurances,
+  updatePatientInsuranceThunk 
 } from '../../store/slices/patientSlice';
+
+import { COLORS } from '../../constants/colors';
+import { radius } from '../../constants/styles';
+
+// Import newly refactored components
+import InsuranceHeader from '../../components/insurance/InsuranceHeader';
+import ImportedCoverageBanner from '../../components/insurance/ImportedCoverageBanner';
+import InsuranceTabs from '../../components/insurance/InsuranceTabs';
+import InsuranceTable from '../../components/insurance/InsuranceTable';
+import InsuranceDialogs from '../../components/insurance/InsuranceDialogs';
 
 const InsurancePage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
   const [tabValue, setTabValue] = useState(0);
-  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [rowMenuAnchorEl, setRowMenuAnchorEl] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
-
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -38,31 +36,44 @@ const InsurancePage = () => {
   const [addCoverageDialogOpen, setAddCoverageDialogOpen] = useState(false);
   const [viewCoverageDialogOpen, setViewCoverageDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Form states
   const [newCoverageType, setNewCoverageType] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const dispatch = useDispatch();
-  const insurancesData = useSelector(state => state.patient.insurancesCache[patientId]?.data || []);
-  const isFetching = useSelector(state => state.patient.patientInsurancesLoading);
+  const insurancesData = useSelector(state => 
+    patientId 
+      ? (state.patient.insurancesCache[patientId]?.data || [])
+      : (state.patient.globalInsurances || [])
+  );
+  
+  const isFetching = useSelector(state => 
+    patientId 
+      ? state.patient.patientInsurancesLoading
+      : state.patient.globalInsurancesLoading
+  );
 
   const mappedData = React.useMemo(() => {
     return insurancesData.map(item => ({
       ...item,
-      id: item._id || item.id,
-      payer: item.insuranceCompany?.name || item.payer || 'Unknown Payer',
-      plan: item.planType || item.plan || 'No Plan',
-      subscriber: item.subscriberName || item.subscriber || 'Unknown Subscriber',
-      status: (item.isActive === true || item.status === 'active') ? 'active' : 'inactive',
+      id: item._id || item.id || item.PatPlanNum,
+      patientName: item.patientName || (item.patient ? `${item.patient.FName} ${item.patient.LName}` : 'Unknown Patient'),
+      payer: item.insuranceCompanyId?.name || item.insuranceCompany?.name || item.payer || (item.inssub?.insplan?.carrier?.CarrierName) || 'Unknown Payer',
+      plan: item.groupName || item.planType || item.plan || 'No Plan',
+      subscriber: item.subscriberName || item.subscriber || item.patientName || 'Unknown Subscriber',
+      status: (item.isActive === true || item.status === 'active' || item.Relationship === 0) ? 'active' : 'inactive',
       eligibilityChecked: item.lastEligibilityCheckDate || 'Not checked',
-      dentist: item.provider?.name || 'Default Dentist'
+      dentist: item.provider?.name || 'Default Dentist',
+      isFamilyPlan: item.isFamilyPlan || (item.relationshipToPatient && item.relationshipToPatient !== 'self') || false
     }));
   }, [insurancesData]);
 
-  const activeCoverages = mappedData.filter(i => i.status === 'active');
-  const archivedCoverages = mappedData.filter(i => i.status === 'inactive');
+  const activeCoverages = mappedData.filter(i => i.status === 'active' && !i.isFamilyPlan);
+  const familyCoverages = mappedData.filter(i => i.status === 'active' && i.isFamilyPlan);
+  const archivedCoverages = mappedData.filter(i => i.status === 'inactive' && !i.isFamilyPlan);
+  const archivedFamilyCoverages = mappedData.filter(i => i.status === 'inactive' && i.isFamilyPlan);
 
   useEffect(() => {
     if (patientId) {
@@ -76,28 +87,24 @@ const InsurancePage = () => {
         .finally(() => {
           setLoading(false);
         });
+    } else {
+      setLoading(true);
+      dispatch(fetchAllPatientInsurances())
+        .unwrap()
+        .catch((error) => {
+          console.error('Error fetching global insurances:', error);
+          showSnackbar('Failed to load global coverages', 'error');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [patientId, dispatch]);
-
-  const [familyCoverages] = useState([
-    {
-      id: 4,
-      payer: 'United Healthcare',
-      plan: 'FAMILY PLAN',
-      subscriber: 'John Doe',
-      members: ['John Doe', 'Jane Doe', 'Jimmy Doe'],
-      eligibilityChecked: '03/05/2026',
-      status: 'active'
-    }
-  ]);
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
     setTimeout(() => setSnackbar({ open: false, message: '', severity: 'success' }), 3000);
   };
-
-  const handleOpenMenu = (event) => setMenuAnchorEl(event.currentTarget);
-  const handleCloseMenu = () => setMenuAnchorEl(null);
 
   const handleRowMenuOpen = (event, row) => {
     setRowMenuAnchorEl(event.currentTarget);
@@ -114,11 +121,9 @@ const InsurancePage = () => {
     if (type === 'Membership Plan') {
       navigate(patientId ? `/patients/member/${patientId}` : '/membership-plans');
     } else {
-      // Navigate to the real insurance form page (with or without patientId)
       const path = patientId ? `/patients/${patientId}/insurance/new` : '/insurance/new';
       navigate(path);
     }
-    handleCloseMenu();
   };
 
   const handleViewCoverage = (row) => {
@@ -129,22 +134,61 @@ const InsurancePage = () => {
   const handleDeactivate = (row) => {
     setSelectedRow(row);
     setDeactivateDialogOpen(true);
-    handleRowMenuClose();
+    setRowMenuAnchorEl(null);
   };
 
   const handleConfirmDeactivate = async () => {
     if (selectedRow) {
+      console.log('Deactivating row:', selectedRow);
       try {
+        const targetPatientId = patientId || selectedRow.patientId;
         await dispatch(updatePatientInsuranceThunk({ 
-          patientId, 
+          patientId: targetPatientId, 
           insuranceId: selectedRow.id, 
           payload: { isActive: false, status: 'inactive' } 
         })).unwrap();
+        
         showSnackbar(`${selectedRow.payer} coverage deactivated`, 'success');
+        
+        // Refresh the global list if we are on the global insurance page
+        if (!patientId) {
+          dispatch(fetchAllPatientInsurances({ force: true }));
+        }
       } catch (error) {
+        console.error('Failed to deactivate coverage:', error);
         showSnackbar('Failed to deactivate coverage', 'error');
       }
       setDeactivateDialogOpen(false);
+      setSelectedRow(null);
+    }
+  };
+
+  const handleActivate = (row) => {
+    setSelectedRow(row);
+    setActivateDialogOpen(true);
+    setRowMenuAnchorEl(null);
+  };
+
+  const handleConfirmActivate = async () => {
+    if (selectedRow) {
+      try {
+        const targetPatientId = patientId || selectedRow.patientId;
+        await dispatch(updatePatientInsuranceThunk({ 
+          patientId: targetPatientId, 
+          insuranceId: selectedRow.id, 
+          payload: { isActive: true, status: 'active' } 
+        })).unwrap();
+        
+        showSnackbar(`${selectedRow.payer} coverage activated`, 'success');
+        
+        if (!patientId) {
+          dispatch(fetchAllPatientInsurances({ force: true }));
+        }
+      } catch (error) {
+        console.error('Failed to activate coverage:', error);
+        showSnackbar('Failed to activate coverage', 'error');
+      }
+      setActivateDialogOpen(false);
       setSelectedRow(null);
     }
   };
@@ -153,22 +197,6 @@ const InsurancePage = () => {
     setSelectedRow(row);
     setEditDialogOpen(true);
     handleRowMenuClose();
-  };
-
-  const handleArchive = async (row) => {
-    if (window.confirm(`Are you sure you want to archive ${row.payer}?`)) {
-      try {
-        await dispatch(updatePatientInsuranceThunk({ 
-          patientId, 
-          insuranceId: row.id, 
-          payload: { isActive: false, status: 'inactive' } 
-        })).unwrap();
-        showSnackbar(`${row.payer} archived successfully`, 'success');
-      } catch (error) {
-        showSnackbar('Failed to archive coverage', 'error');
-      }
-      handleRowMenuClose();
-    }
   };
 
   const handleCheckEligibility = (row) => {
@@ -195,7 +223,7 @@ const InsurancePage = () => {
       case 0: return activeCoverages;
       case 1: return familyCoverages;
       case 2: return archivedCoverages;
-      case 3: return [];
+      case 3: return archivedFamilyCoverages;
       default: return activeCoverages;
     }
   };
@@ -203,7 +231,7 @@ const InsurancePage = () => {
   const currentTabData = getTabData();
 
   return (
-    <Box sx={{ p: 2, bgcolor: 'white', minHeight: '100vh' }}>
+    <Box sx={{ p: '8px', bgcolor: COLORS.SURFACE_PAGE, minHeight: 'calc(100vh - 65px)', width: '100%', boxSizing: 'border-box' }}>
       {/* Snackbar Notification */}
       {snackbar.open && (
         <Alert severity={snackbar.severity} sx={{ mb: 2 }}>
@@ -211,458 +239,70 @@ const InsurancePage = () => {
         </Alert>
       )}
 
-      {/* Top Header Section */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#333' }}>
-          Insurance
-        </Typography>
+      {/* Header Card */}
+      <InsuranceHeader onAddCoverage={handleAddCoverage} />
 
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            variant="contained"
-            onClick={handleOpenMenu}
-            endIcon={<KeyboardArrowDownIcon />}
-            sx={{
-              bgcolor: '#2e7d32', // Reverted to original green
-              color: '#fff',
-              textTransform: 'none',
-              borderRadius: '20px',
-              px: 3,
-              fontWeight: 700,
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#2fb365', boxShadow: 'none' }
-            }}
-          >
-            Add Coverage
-          </Button>
-          <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleCloseMenu}>
-            <MenuItem onClick={() => handleAddCoverage('Insurance Coverage')}>Insurance Coverage</MenuItem>
-            <MenuItem onClick={() => handleAddCoverage('Membership Plan')}>Membership Plan</MenuItem>
-          </Menu>
+      {/* Main Container Card */}
+      <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, p: '8px' }}>
+        {hasImportedCoverage && (
+          <Box sx={{ px: '8px' }}>
+            <ImportedCoverageBanner onReview={() => setReviewImportedDialogOpen(true)} />
+          </Box>
+        )}
+
+        <Box sx={{ px: '8px' }}>
+          <InsuranceTabs tabValue={tabValue} onTabChange={(e, v) => setTabValue(v)} />
         </Box>
+
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={4}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <InsuranceTable
+            patientId={patientId}
+            currentTabData={currentTabData}
+            expandedRowId={expandedRowId}
+            onViewCoverage={handleViewCoverage}
+            onCheckEligibility={handleCheckEligibility}
+            onDeactivate={handleDeactivate}
+            onActivate={handleActivate}
+            onRowMenuOpen={handleRowMenuOpen}
+          />
+        )}
       </Box>
 
-      {/* Imported Insurance Blue Banner */}
-      {hasImportedCoverage && (
-      <Box sx={{ 
-        bgcolor: '#ebf5ff', 
-        p: 2, 
-        borderRadius: '8px', 
-        mb: 2, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        border: '1px solid #d1e9ff'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ bgcolor: 'white', p: 1.5, borderRadius: '50%', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-            <DescriptionIcon sx={{ color: '#1976d2', fontSize: 28 }} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#1a3353' }}>
-              Insurance details were imported
-            </Typography>
-            <Typography sx={{ fontSize: '0.8rem', color: '#6a7d95' }}>
-              This patient uploaded their insurance details
-            </Typography>
-          </Box>
-        </Box>
-        <Button 
-          variant="contained" 
-          size="small"
-          onClick={() => setReviewImportedDialogOpen(true)}
-          sx={{ 
-            bgcolor: '#1976d2', 
-            borderRadius: '20px', 
-            textTransform: 'none', 
-            px: 3, 
-            fontWeight: 700,
-            fontSize: '0.8rem',
-            '&:hover': { bgcolor: '#1565c0' }
-          }}
-        >
-          Review
-        </Button>
-      </Box>
-      )}
+      {/* Dialogs Wrapper */}
+      <InsuranceDialogs
+        addCoverageDialogOpen={addCoverageDialogOpen}
+        setAddCoverageDialogOpen={setAddCoverageDialogOpen}
+        newCoverageType={newCoverageType}
+        handleSaveNewCoverage={handleSaveNewCoverage}
 
-      {/* Custom Tabs */}
-      <Tabs
-        value={tabValue}
-        onChange={(e, v) => setTabValue(v)}
-        sx={{
-          borderBottom: 1,
-          borderColor: 'divider',
-          '& .MuiTab-root': {
-            textTransform: 'none',
-            minWidth: 120,
-            fontWeight: 600,
-            fontSize: '0.8rem',
-            color: '#999'
-          },
-          '& .Mui-selected': { color: '#1976d2 !important' }
-        }}
-      >
-        <Tab label="Active Coverages" />
-        <Tab label="Family Coverages" />
-        <Tab label="Archived Coverages" />
-        <Tab label="Archived Family Coverages" />
-      </Tabs>
+        viewCoverageDialogOpen={viewCoverageDialogOpen}
+        setViewCoverageDialogOpen={setViewCoverageDialogOpen}
+        selectedRow={selectedRow}
+        handleEdit={handleEdit}
 
-      {/* The Table */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: 'none' }}>
-        <Table size="small" sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#fbfbfb', '& .MuiTableCell-head': { py: 0.75, fontSize: '0.75rem', fontWeight: 600, color: '#888', whiteSpace: 'nowrap' } }}>
-              <TableCell>PAYER/CARRIER</TableCell>
-              <TableCell align="center">PLAN</TableCell>
-              <TableCell>SUBSCRIBER</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentTabData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3, fontSize: '0.78rem', color: '#999' }}>
-                  No coverages found in this tab
-                </TableCell>
-              </TableRow>
-            ) : (
-              currentTabData.map((row) => (
-                <React.Fragment key={row.id}>
-                  <TableRow sx={{ '& .MuiTableCell-body': { py: 1.25, borderBottom: expandedRowId === row.id ? 'none' : '1px solid #eee' } }}>
-                    <TableCell sx={{ fontSize: '0.78rem', color: '#444', fontWeight: 500 }}>
-                      {row.payer}
-                    </TableCell>
+        deactivateDialogOpen={deactivateDialogOpen}
+        setDeactivateDialogOpen={setDeactivateDialogOpen}
+        handleConfirmDeactivate={handleConfirmDeactivate}
 
-                    <TableCell sx={{ fontSize: '0.78rem', color: '#444' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Chip
-                          label={row.plan}
-                          sx={{
-                            bgcolor: row.status === 'active' ? '#e8f5e9' : '#fff3e0',
-                            color: row.status === 'active' ? '#2e7d32' : '#f57c00',
-                            fontWeight: 700,
-                            fontSize: '0.65rem',
-                            height: 20,
-                          }}
-                        />
-                        {row.dentist && (
-                          <Box sx={{ textAlign: 'left' }}>
-                            <Typography component="span" sx={{ fontSize: '0.78rem', color: '#2e7d32', fontWeight: 500 }}>
-                              Check Eligibility with{' '}
-                            </Typography>
-                            <Typography
-                              component="span"
-                              sx={{ fontSize: '0.78rem', color: '#666', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
-                              onClick={() => handleCheckEligibility(row)}
-                            >
-                              {row.dentist} <KeyboardArrowDownIcon sx={{ fontSize: 14, verticalAlign: 'middle' }} />
-                            </Typography>
-                            <Typography sx={{ fontSize: '0.72rem', color: '#aaa' }}>
-                              Eligibility Checked on {row.eligibilityChecked}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </TableCell>
+        activateDialogOpen={activateDialogOpen}
+        setActivateDialogOpen={setActivateDialogOpen}
+        handleConfirmActivate={handleConfirmActivate}
 
-                    <TableCell sx={{ fontSize: '0.78rem', color: '#444' }}>
-                      {row.subscriber}
-                    </TableCell>
+        editDialogOpen={editDialogOpen}
+        setEditDialogOpen={setEditDialogOpen}
+        handleSaveEdit={handleSaveEdit}
 
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleViewCoverage(row)}
-                          sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, fontSize: '0.72rem', py: 0.25, px: 1.25, borderColor: '#1a237e', color: '#1a237e' }}
-                        >
-                          View Coverage
-                        </Button>
-                        {row.status !== 'archived' && (
-                          <>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => handleDeactivate(row)}
-                              sx={{ borderRadius: '20px', textTransform: 'none', fontWeight: 700, fontSize: '0.72rem', py: 0.25, px: 1.25, borderColor: '#eee', color: '#888', bgcolor: '#f5f5f5' }}
-                            >
-                              Deactivate
-                            </Button>
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleRowMenuOpen(e, row)}
-                              sx={{ border: '1px solid #eee', p: 0.25, ml: 0.5 }}
-                            >
-                              <KeyboardArrowDownIcon fontSize="small" />
-                            </IconButton>
-                          </>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                  
-                  {/* Expanded Detail View */}
-                  <TableRow>
-                    <TableCell colSpan={4} sx={{ p: 0 }}>
-                      <Collapse in={expandedRowId === row.id} timeout="auto" unmountOnExit>
-                        <Box sx={{ px: 3, pb: 3, pt: 1, borderBottom: '1px solid #eee' }}>
-                          <Grid container spacing={4}>
-                            {/* Column 1: Carrier Info */}
-                            <Grid item xs={12} md={4}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                <InfoRow label="Carrier name:" value={row.insuranceCompany?.name || row.payer} />
-                                <InfoRow label="Payer ID:" value={row.payerId || '39026'} />
-                                <InfoRow label="Payer Phone Number:" value={row.payerPhone || '(877) 434-2336'} />
-                                <InfoRow label="Payer Address:" value={row.payerAddress || 'P.O. Box 21191, Eagan, Minnesota, 55121'} />
-                              </Box>
-                            </Grid>
-
-                            {/* Column 2: Plan Info */}
-                            <Grid item xs={12} md={4} sx={{ borderLeft: { md: '1px solid #eee' }, pl: { md: 4 } }}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                <InfoRow label="Employer/Insurance Plan Name:" value={row.employerName || row.plan} />
-                                <InfoRow label="Group Name:" value={row.groupName || 'Delta Care'} />
-                                <InfoRow label="Group Number:" value={row.groupNumber || '7443-0001'} />
-                                <InfoRow label="Plan Fee Guide:" value={row.planFeeGuide || 'Careington PPO Platinum (directly in network)'} />
-                                <InfoRow label="Employer Address:" value={row.employerAddress || '---'} />
-                                <InfoRow label="Employer Phone Number:" value={row.employerPhone || '---'} />
-                              </Box>
-                            </Grid>
-
-                            {/* Column 3: Subscriber Info */}
-                            <Grid item xs={12} md={4} sx={{ borderLeft: { md: '1px solid #eee' }, pl: { md: 4 } }}>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                <InfoRow label="Subscriber Name:" value={row.subscriberName || row.subscriber} />
-                                <InfoRow label="Subscriber ID:" value={row.subscriberId || '865421010'} />
-                                <InfoRow label="Subscriber Birthday:" value={row.subscriberDob || '10/29/1975'} />
-                                <InfoRow label="Renewal Date:" value={row.renewalDate || 'January'} />
-                                <InfoRow label="Relationship to subscriber:" value={row.relationship || 'Self'} />
-                                <InfoRow label="Policy Started:" value={row.policyStartDate || '01/01/2023'} />
-                              </Box>
-                            </Grid>
-                          </Grid>
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Row Actions Menu */}
-      <Menu
-        anchorEl={rowMenuAnchorEl}
-        open={Boolean(rowMenuAnchorEl)}
-        onClose={handleRowMenuClose}
-      >
-        <MenuItem onClick={() => handleEdit(selectedRow)}>
-          <EditIcon sx={{ mr: 1, fontSize: 18 }} /> Edit
-        </MenuItem>
-        <MenuItem onClick={() => handleArchive(selectedRow)}>
-          <ArchiveIcon sx={{ mr: 1, fontSize: 18 }} /> Archive
-        </MenuItem>
-        <MenuItem onClick={() => { handleRowMenuClose(); navigate('/patients'); }}>
-          <CheckCircleIcon sx={{ mr: 1, fontSize: 18 }} /> View Patient
-        </MenuItem>
-      </Menu>
-
-      {/* Add Coverage Dialog */}
-      <Dialog open={addCoverageDialogOpen} onClose={() => setAddCoverageDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add {newCoverageType}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Insurance Company/Payer"
-              type="text"
-              fullWidth
-              variant="outlined"
-            />
-            <TextField
-              margin="dense"
-              label="Plan Type"
-              type="text"
-              fullWidth
-              variant="outlined"
-            />
-            <TextField
-              margin="dense"
-              label="Subscriber Name"
-              type="text"
-              fullWidth
-              variant="outlined"
-            />
-            <TextField
-              margin="dense"
-              label="Policy Number"
-              type="text"
-              fullWidth
-              variant="outlined"
-            />
-            <TextField
-              margin="dense"
-              label="Group Number"
-              type="text"
-              fullWidth
-              variant="outlined"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddCoverageDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveNewCoverage} variant="contained" sx={{ bgcolor: '#2e7d32' }}>
-            Save Coverage
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Coverage Dialog */}
-      <Dialog open={viewCoverageDialogOpen} onClose={() => setViewCoverageDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Coverage Details - {selectedRow?.payer}</DialogTitle>
-        <DialogContent>
-          {selectedRow && (
-            <Box sx={{ pt: 2 }}>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                <strong>Plan:</strong> {selectedRow.plan}
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                <strong>Subscriber:</strong> {selectedRow.subscriber}
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                <strong>Status:</strong> <Chip label={selectedRow.status.toUpperCase()} size="small" color={selectedRow.status === 'active' ? 'success' : 'default'} />
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                <strong>Eligibility Checked:</strong> {selectedRow.eligibilityChecked}
-              </Typography>
-              {selectedRow.dentist && (
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  <strong>Dentist:</strong> {selectedRow.dentist}
-                </Typography>
-              )}
-              {selectedRow.members && (
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  <strong>Members:</strong> {selectedRow.members.join(', ')}
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewCoverageDialogOpen(false)}>Close</Button>
-          <Button onClick={() => handleEdit(selectedRow)} variant="outlined">Edit</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Deactivate Confirmation Dialog */}
-      <Dialog open={deactivateDialogOpen} onClose={() => setDeactivateDialogOpen(false)}>
-        <DialogTitle>Confirm Deactivation</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to deactivate coverage for <strong>{selectedRow?.payer}</strong>?
-          </Typography>
-          <Typography sx={{ mt: 2, color: 'text.secondary' }}>
-            This will move the coverage to archived status.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeactivateDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirmDeactivate} variant="contained" color="error">
-            Deactivate
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit Coverage Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Coverage - {selectedRow?.payer}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Insurance Company/Payer"
-              type="text"
-              fullWidth
-              variant="outlined"
-              defaultValue={selectedRow?.payer}
-            />
-            <TextField
-              margin="dense"
-              label="Plan Type"
-              type="text"
-              fullWidth
-              variant="outlined"
-              defaultValue={selectedRow?.plan}
-            />
-            <TextField
-              margin="dense"
-              label="Subscriber Name"
-              type="text"
-              fullWidth
-              variant="outlined"
-              defaultValue={selectedRow?.subscriber}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveEdit} variant="contained">
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Review Imported Coverage Dialog */}
-      <Dialog open={reviewImportedDialogOpen} onClose={() => setReviewImportedDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Review Imported Coverage</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              Please review the insurance details uploaded by the patient.
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              <strong>Payer:</strong> United Healthcare <br />
-              <strong>Plan:</strong> PPO Basic <br />
-              <strong>Subscriber:</strong> John Doe <br />
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setReviewImportedDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={() => {
-              setReviewImportedDialogOpen(false);
-              setHasImportedCoverage(false);
-              showSnackbar('Imported coverage approved and added', 'success');
-            }} 
-            variant="contained" 
-            sx={{ bgcolor: '#2e7d32' }}
-          >
-            Approve & Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+        reviewImportedDialogOpen={reviewImportedDialogOpen}
+        setReviewImportedDialogOpen={setReviewImportedDialogOpen}
+        setHasImportedCoverage={setHasImportedCoverage}
+        showSnackbar={showSnackbar}
+      />
     </Box>
   );
 };
-
-// Helper component for info rows in expanded view
-const InfoRow = ({ label, value }) => (
-  <Box sx={{ display: 'flex', gap: 1, py: 0.2 }}>
-    <Typography sx={{ fontSize: '0.72rem', color: '#888', width: 'auto', minWidth: 'fit-content' }}>
-      {label}
-    </Typography>
-    <Typography sx={{ fontSize: '0.72rem', color: '#333', fontWeight: 600 }}>
-      {value}
-    </Typography>
-  </Box>
-);
 
 export default InsurancePage;

@@ -7,7 +7,9 @@ import {
   Typography,
   Box,
   Button,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const ReestimateDialog = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);
@@ -30,26 +32,51 @@ const ReestimateDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 1 } }}
+      sx={{ zIndex: 9999 }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        bgcolor: '#4b71a1', 
-        color: 'white', 
-        textAlign: 'center',
-        py: 1.5,
-        fontSize: '1rem',
-        fontWeight: 600
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        The system will start re-estimating all active treatment plans.
-      </DialogTitle>
-      <DialogContent sx={{ pb: 2, px: 2 }}>
-        <Typography variant="body2" sx={{ textAlign: 'center', mt: 6, mb: 4, color: '#333' }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Re-estimate Treatment Plans
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Start re-estimating active treatment plans.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ py: 3, px: 4 }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "14px", fontWeight: 600, color: '#1e293b', mb: 1 }}>
+          The system will start re-estimating all active treatment plans.
+        </Typography>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#475569', mb: 3 }}>
           This process can take up to 2 hours depending on the number of treatment plans in your system.
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', mx: -4, mb: -4 }}>
           <Button 
             variant="outlined" 
-            sx={{ textTransform: 'none', color: '#666', borderColor: '#ccc' }}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
             onClick={onClose}
             disabled={loading}
           >
@@ -57,7 +84,15 @@ const ReestimateDialog = ({ open, onClose }) => {
           </Button>
           <Button 
             variant="contained" 
-            sx={{ bgcolor: '#d9a366', textTransform: 'none', minWidth: 60, '&:hover': { bgcolor: '#c08d50' } }}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
+            }}
             onClick={handleConfirm}
             disabled={loading}
           >

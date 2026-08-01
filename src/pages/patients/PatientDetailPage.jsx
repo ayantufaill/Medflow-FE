@@ -13,6 +13,7 @@ import { validateUSPhoneNumber, patientValidations } from '../../validations/pat
 
 const PatientDetailOverview = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.PatientDetailOverview })));
 const AddFamilyMemberDialog = lazy(() => import('../../components/patient-detail').then(module => ({ default: module.AddFamilyMemberDialog })));
+const RequestUpdatesDialog = lazy(() => import('../../components/patient-detail/RequestUpdatesDialog'));
 const PatientInsuranceTabContent = lazy(() => import('../../components/patient-tabs').then(module => ({ default: module.PatientInsuranceTabContent })));
 
 /**
@@ -38,6 +39,7 @@ const PatientDetailPage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedPatientData, setEditedPatientData] = useState(null);
   const [addFamilyDialogOpen, setAddFamilyDialogOpen] = useState(false);
+  const [requestMenuAnchor, setRequestMenuAnchor] = useState(null);
 
   useEffect(() => {
     if (!patientId) return;
@@ -94,7 +96,16 @@ const PatientDetailPage = () => {
       if (editedPatientData) {
         Object.keys(editedPatientData).forEach(key => {
           if (editedPatientData[key] !== undefined) {
-            dataToSave[key] = editedPatientData[key];
+            // For nested JSON objects, we MUST deep merge with the original patient object
+            // because the backend completely replaces these fields rather than patching them.
+            if (key === 'customFields' || key === 'assignmentAndRelease') {
+              dataToSave[key] = {
+                ...(patient[key] || {}),
+                ...editedPatientData[key]
+              };
+            } else {
+              dataToSave[key] = editedPatientData[key];
+            }
           }
         });
       }
@@ -143,6 +154,20 @@ const PatientDetailPage = () => {
         delete dataToSave.workAddress.postalCode;
       }
       
+      // Clean phone numbers: backend requires digits only
+      if (dataToSave.phonePrimary) {
+        dataToSave.phonePrimary = dataToSave.phonePrimary.replace(/\D/g, '');
+      }
+      if (dataToSave.phoneSecondary) {
+        dataToSave.phoneSecondary = dataToSave.phoneSecondary.replace(/\D/g, '');
+      }
+      if (dataToSave.emergencyContact?.phone) {
+        dataToSave.emergencyContact = {
+          ...dataToSave.emergencyContact,
+          phone: dataToSave.emergencyContact.phone.replace(/\D/g, '')
+        };
+      }
+
       // Validate US phone numbers and Dates before saving
       const validationErrors = [];
       
@@ -158,6 +183,13 @@ const PatientDetailPage = () => {
         const lastVisitValidation = patientValidations.lastVisitDate.validate(dataToSave.lastVisitDate);
         if (lastVisitValidation !== true) {
           validationErrors.push(lastVisitValidation);
+        } else if (dataToSave.dateOfBirth) {
+          // Last visit date must be on or after the date of birth
+          const dob = new Date(dataToSave.dateOfBirth);
+          const lastVisit = new Date(dataToSave.lastVisitDate);
+          if (!isNaN(dob.getTime()) && lastVisit < dob) {
+            validationErrors.push('Last visit date cannot be earlier than the date of birth');
+          }
         }
       }
 
@@ -191,6 +223,13 @@ const PatientDetailPage = () => {
         return;
       }
       
+      // Map gender field for OpenDental DB (only supports male/female/unknown).
+      // sexAtBirth and genderIdentity are stored in meta (full value preserved).
+      // The `gender` column in OpenDental must be one of: male, female, non_binary, prefer_not_to_say, unknown.
+      const odSafeGenders = ['male', 'female', 'non_binary', 'prefer_not_to_say', 'unknown'];
+      const derivedGender = dataToSave.genderIdentity || dataToSave.sexAtBirth || dataToSave.gender || '';
+      dataToSave.gender = odSafeGenders.includes(derivedGender) ? derivedGender : (derivedGender ? 'unknown' : dataToSave.gender);
+
       // Dispatch the Redux update thunk
       await updatePatient(patientId, dataToSave).unwrap();
       
@@ -213,10 +252,18 @@ const PatientDetailPage = () => {
     console.log('  - spouseInfo:', updatedData.spouseInfo);
     console.log('  - headOfHousehold:', updatedData.headOfHousehold);
     
-    // Merge new updates with existing edited data
+    // Merge new updates with existing edited data.
+    // customFields must be deep-merged so changes from different sections
+    // (e.g. Release Information vs Assignment & Release) don't overwrite each other.
     setEditedPatientData((prev) => ({
       ...prev,
       ...updatedData,
+      ...(updatedData.customFields != null || prev?.customFields != null
+        ? { customFields: { ...prev?.customFields, ...updatedData.customFields } }
+        : {}),
+      ...(updatedData.assignmentAndRelease != null || prev?.assignmentAndRelease != null
+        ? { assignmentAndRelease: { ...prev?.assignmentAndRelease, ...updatedData.assignmentAndRelease } }
+        : {}),
     }));
     
     console.log('📝 Updated editedPatientData state');
@@ -321,6 +368,7 @@ const PatientDetailPage = () => {
                 onDocuments={() => navigate(`/patients/${patientId}/signed-documents`)}
                 onAddFamilyMember={() => setAddFamilyDialogOpen(true)}
                 onSendUpdateRequest={handleSendUpdateRequest}
+                onRequestUpdatesClick={(e) => setRequestMenuAnchor(e.currentTarget)}
               />
             )}
           </Suspense>
@@ -365,11 +413,17 @@ const PatientDetailPage = () => {
               }
 
               await updatePatient(selectedPatient._id || selectedPatient.id, { guarantorId: patientId }).unwrap();
+              fetchById(patientId); // Refresh the current patient to see the new household member
               showSnackbar('Family member linked successfully', 'success');
             } catch (err) {
               showSnackbar(typeof err === 'string' ? err : err?.message || 'Failed to link family member', 'error');
             }
           }}
+        />
+        <RequestUpdatesDialog
+          anchorEl={requestMenuAnchor}
+          onClose={() => setRequestMenuAnchor(null)}
+          onSend={handleSendUpdateRequest}
         />
       </Suspense>
     </Box>
