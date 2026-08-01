@@ -229,7 +229,43 @@ export const fetchLedgerItems = createAsyncThunk(
         };
       });
 
-      const combined = [...mappedInvoices, ...mappedAdjustments];
+      const mappedPayments = payments
+        .filter((pay) => !pay.invoiceId)
+        .map((pay) => {
+          const amt = Number(pay.amount || 0);
+          return {
+            id: pay._id || pay.id,
+            invoiceNumber: `Pay #${pay.receiptNumber || pay.id}`,
+            date: pay.paidAt ? dayjs(pay.paidAt).format('MM/DD/YYYY') : 'N/A',
+            rawDate: pay.paidAt || '',
+            method: 'Payment',
+            amount: `$${amt.toFixed(2)}`,
+            color: '#4caf50',
+            isAdjustment: false,
+            isTopLevelPayment: true,
+            useCheckmark: true,
+            initials: 'STAFF',
+            success: true,
+            summary: {
+              insWo:     '$0.00',
+              ptBal:     '$0.00',
+              insBal:    '$0.00',
+              invBal:    '$0.00',
+              appliedWo: '$0.00',
+              ptPaid:    `$${amt.toFixed(2)}`,
+              insPaid:   '$0.00',
+            },
+            details: [
+              {
+                id: pay._id || pay.id,
+                title: pay.notes || `Patient Payment via ${pay.paymentMethod || 'Card'}`,
+                amount: `$${amt.toFixed(2)}`,
+              },
+            ],
+          };
+        });
+
+      const combined = [...mappedInvoices, ...mappedAdjustments, ...mappedPayments];
       combined.sort((a, b) => {
         const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
         const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;

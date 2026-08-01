@@ -237,6 +237,7 @@ const FinancePage = () => {
 
       await apiClient.post("/payment-plans", {
         patientId: patientId.toString(),
+        invoiceIds: planData.invoiceIds,
         totalAmount: planData.totalAmount,
         downPayment: planData.downPayment,
         monthlyPayment: planData.monthlyPayment,

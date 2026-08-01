@@ -81,7 +81,7 @@ const LedgerItemCard = ({
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptBal || '$0.00'}</Typography>
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptPaid || '$0.00'}</Typography>
           </Box>
 
           {/* Column 3 */}
@@ -90,7 +90,7 @@ const LedgerItemCard = ({
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insBal || '$0.00'}</Typography>
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insPaid || '$0.00'}</Typography>
           </Box>
 
           {/* Column 4: Invoice Balance & Claim */}

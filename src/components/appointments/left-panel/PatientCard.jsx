@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
-  CalendarMonthOutlined, PendingOutlined, Autorenew,
+  CalendarMonthOutlined, PendingOutlined, Autorenew, LocalHospitalOutlined
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
@@ -26,7 +26,14 @@ const TAGS = [
 const ACTION_BUTTONS = [
   { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
   { label: 'Email',   icon: <EmailOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: true,  disabled: true },
-  { label: 'Book',    icon: <CalendarMonthOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,  dot: false, disabled: false },
+  { label: 'MH',      
+    icon: (
+      <Box sx={{ backgroundColor: COLORS.ACCENT_BG, borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography sx={{ fontSize: '12px', fontWeight: 700, color: COLORS.ACCENT, lineHeight: 1 }}>MH</Typography>
+      </Box>
+    ), 
+    dot: false, disabled: false, action: 'mh' 
+  },
   { label: 'Jump to', icon: <PendingOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,          dot: false, disabled: true },
 ];
 
@@ -215,25 +222,6 @@ const PatientCard = () => {
         </Box>
       </Box>
 
-      {/* ── Medical alert badge ──────────────────────────────────────────────── */}
-      {/* Shown when the patient has medical alerts — currently a static indicator;
-          wire to currentPatient.medicalAlerts when that field is available. */}
-      <Box sx={{ display: 'flex' }}>
-        <Box
-          onClick={() => navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`)}
-          sx={{
-            width: '22px', height: '22px',
-            backgroundColor: '#fef08a',
-            borderRadius: '4px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px solid #fde047',
-            cursor: 'pointer',
-          }}
-        >
-          <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#854d0e' }}>+</Typography>
-        </Box>
-      </Box>
-
       {/* ── Patient flag tags ────────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', gap: '5px' }}>
@@ -253,31 +241,22 @@ const PatientCard = () => {
             </Box>
           ))}
         </Box>
-
-        {/* Provider initials avatar (assigned hygienist/dentist — static for now) */}
-        <Box
-          sx={{
-            width: avatarSize.sm, height: avatarSize.sm,
-            borderRadius: '50%',
-            backgroundColor: COLORS.TEXT_MUTED,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Typography sx={{ fontSize: '9px', fontWeight: fontWeight.bold, color: COLORS.WHITE }}>MH</Typography>
-        </Box>
       </Box>
 
       <Divider sx={{ borderColor: COLORS.BORDER, my: '6px' }} />
 
       {/* ── Quick-action buttons ─────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', gap: '6px' }}>
-        {ACTION_BUTTONS.map(({ label, icon, dot, disabled }) => (
+        {ACTION_BUTTONS.map(({ label, icon, dot, disabled, action }) => (
           <Box
             key={label}
             onClick={() => {
               if (disabled) return;
               if (label === 'Book') {
                 window.dispatchEvent(new CustomEvent('open-new-appointment-modal', { detail: { isFromPatientCard: true } }));
+              }
+              if (action === 'mh') {
+                navigate(`/patients/${currentPatient._id || currentPatient.id}/medical-history`);
               }
             }}
             sx={{
