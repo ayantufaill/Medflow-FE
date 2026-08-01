@@ -98,10 +98,10 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
       sx={{ '& .MuiDialog-paper': { borderRadius: '4px', overflow: 'hidden' } }}
     >
@@ -222,16 +222,16 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
       </DialogContent>
 
       <DialogActions sx={{ p: 2, bgcolor: '#f8f9fa' }}>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handlePrint}
           startIcon={<PrintIcon />}
           sx={{ bgcolor: '#5c7cbc', textTransform: 'none', px: 3 }}
         >
           Print
         </Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={onClose}
           sx={{ bgcolor: '#94a3b8', textTransform: 'none', px: 3, '&:hover': { bgcolor: '#7f8c8d' } }}
         >
