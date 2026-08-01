@@ -10,6 +10,11 @@ export const fetchClinicAnalytics = createAsyncThunk(
   async ({ branchId = 'all', startDate, endDate } = {}, { rejectWithValue }) => {
     try {
       const data = await clinicAnalyticsService.getClinicAnalytics(branchId, { startDate, endDate });
+      // Guard against a response-shape mismatch from the backend rendering as a silent
+      // blank page (undefined.toLocaleString() crashes) instead of a clear error.
+      if (!data || typeof data.totalAppointments !== 'number') {
+        return rejectWithValue('Unexpected response shape from /branches/analytics — check the API response in devtools.');
+      }
       return { branchId, data };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch clinic analytics');

@@ -15,6 +15,7 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
@@ -22,6 +23,7 @@ import {
   selectClinicAnalyticsSelectedBranchId,
   selectClinicAnalyticsData,
   selectClinicAnalyticsLoading,
+  selectClinicAnalyticsError,
 } from '../../store/slices/clinicAnalyticsSlice';
 import { useBranch } from '../../hooks/redux';
 
@@ -51,6 +53,7 @@ const ClinicAnalyticsPage = () => {
   const selectedBranchId = useSelector(selectClinicAnalyticsSelectedBranchId);
   const data = useSelector(selectClinicAnalyticsData);
   const loading = useSelector(selectClinicAnalyticsLoading);
+  const error = useSelector(selectClinicAnalyticsError);
   // Branch list is owned by the global branchSlice (shared with the header's switcher in
   // UserProfile.jsx), not fetched separately here. Also land on whichever branch the user
   // already switched to from the header, so "View full analytics" continues the context
@@ -99,10 +102,22 @@ const ClinicAnalyticsPage = () => {
         </FormControl>
       </Box>
 
-      {loading || !data ? (
+      {error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Couldn't load clinic analytics: {error}
+        </Alert>
+      ) : null}
+
+      {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <CircularProgress />
         </Box>
+      ) : !data ? (
+        error ? null : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', color: '#6B7280' }}>
+            No analytics data available for this branch/date range.
+          </Box>
+        )
       ) : (
         <>
           <Box sx={{ display: 'flex', gap: 3, width: '100%', mb: 4, flexWrap: 'wrap' }}>
