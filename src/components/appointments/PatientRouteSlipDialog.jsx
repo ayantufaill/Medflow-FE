@@ -25,6 +25,7 @@ import dayjs from 'dayjs';
 import { useDispatch } from 'react-redux';
 import { fetchPatientInsurances } from '../../store/slices/patientSlice';
 import { fetchPatientHistory } from '../../store/slices/appointmentSlice';
+import medflowLogo from '../../assets/medflow-logo.png';
 
 const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patientBalance }) => {
   const dispatch = useDispatch();
@@ -121,6 +122,11 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
         ) : (
           <Box className="printable-content">
+            {/* Print-only Medflow Logo at Top Center */}
+            <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>
+              <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
+            </Box>
+
             {/* Top Info */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
               <Typography sx={{ fontSize: '0.8rem' }}>{dayjs().format('dddd MMM DD, YYYY')}</Typography>
