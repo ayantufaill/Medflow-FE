@@ -47,7 +47,7 @@ const patientRoutes = [
   <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={adminReception(<MembershipPlanPage />)} />,
   <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={adminReception(<AddCoveragePage />, true)} />,
   <Route key="/patients/:patientId/insurance/:insuranceId/edit" path="/patients/:patientId/insurance/:insuranceId/edit" element={adminReception(<AddCoveragePage />, true)} />,
-  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={adminReception(<InsurancePage />)} />,
+  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={adminReception(<InsurancePage />, true)} />,
   <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={adminReception(<ViewPatientInsurancePage />)} />,
   <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={adminReception(<PatientSignedDocumentsPage />)} />,
   <Route

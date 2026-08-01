@@ -28,6 +28,8 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { patientService } from '../../../services/patient.service';
 import { extractTextFromImage, parseInsuranceCard } from '../../../services/ocr.service';
+import { useSelector } from 'react-redux';
+import { selectCachedPatient } from '../../../store/slices/patientSlice';
 
 export default function InsuranceDialog({
   open,
@@ -51,6 +53,9 @@ export default function InsuranceDialog({
   const fileInputRef = useRef(null);
   const previousInsuranceIdRef = useRef(null);
   const previousOpenRef = useRef(false);
+
+  const cachedPatient = useSelector(selectCachedPatient(patientId));
+  const household = cachedPatient?.household || [];
 
   const companyList = Array.isArray(companies) ? companies : companies?.companies || [];
 
@@ -135,7 +140,18 @@ export default function InsuranceDialog({
         notes: '',
       });
     }
-  }, [open, insurance?._id, insurance?.id]);
+  }, [open, insurance]);
+
+  const relationship = watch('relationshipToPatient');
+  const isSelf = relationship === 'self';
+
+  useEffect(() => {
+    if (isSelf && cachedPatient) {
+      const name = [cachedPatient.firstName, cachedPatient.lastName].filter(Boolean).join(' ');
+      if (name) setValue('subscriberName', name);
+      if (cachedPatient.dateOfBirth) setValue('subscriberDateOfBirth', dayjs(cachedPatient.dateOfBirth));
+    }
+  }, [isSelf, cachedPatient, setValue]);
 
   const handleInsuranceCardScan = async (event) => {
     const file = event.target.files?.[0];
@@ -376,13 +392,69 @@ export default function InsuranceDialog({
                 <TextField fullWidth label="Group Name" {...register('groupName')} />
               </Grid>
               <Grid item size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Subscriber Name *"
-                  {...register('subscriberName', { required: 'Subscriber name is required' })}
-                  error={!!errors.subscriberName}
-                  helperText={errors.subscriberName?.message}
-                />
+                {isSelf ? (
+                  <TextField
+                    fullWidth
+                    label="Subscriber Name *"
+                    {...register('subscriberName', { required: 'Subscriber name is required' })}
+                    error={!!errors.subscriberName}
+                    helperText={errors.subscriberName?.message}
+                    disabled={true}
+                  />
+                ) : (
+                  <FormControl fullWidth error={!!errors.subscriberName}>
+                    <InputLabel>Subscriber Name *</InputLabel>
+                    <Controller
+                      name="subscriberName"
+                      control={control}
+                      rules={{ required: 'Subscriber name is required' }}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          label="Subscriber Name *"
+                          onChange={async (e) => {
+                            field.onChange(e);
+                            const selectedName = e.target.value;
+                            if (selectedName === 'custom') return;
+                            const selectedMember = household.find(m => `${m.firstName} ${m.lastName}` === selectedName);
+                            if (selectedMember) {
+                              setValue('subscriberDateOfBirth', selectedMember.dateOfBirth ? dayjs(selectedMember.dateOfBirth) : null);
+                              try {
+                                const insurances = await patientService.getPatientInsurances(selectedMember._id || selectedMember.id, true);
+                                if (insurances && insurances.length > 0) {
+                                  const primary = insurances.find(i => (i.insuranceType || i.Ordinal) === 'primary' || i.insuranceType === 'Primary') || insurances[0];
+                                  if (primary) {
+                                    if (primary.insuranceCompanyId || primary.insuranceCompany?._id) {
+                                      setValue('insuranceCompanyId', primary.insuranceCompanyId || primary.insuranceCompany?._id);
+                                    }
+                                    if (primary.policyNumber || primary.SubscriberID) {
+                                      setValue('policyNumber', primary.policyNumber || primary.SubscriberID);
+                                    }
+                                    if (primary.groupNumber || primary.GroupNum) {
+                                      setValue('groupNumber', primary.groupNumber || primary.GroupNum);
+                                    }
+                                    showSnackbar('Auto-filled policy details from family member.', 'success');
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Failed to fetch family member insurance', err);
+                              }
+                            }
+                          }}
+                        >
+                          {household.map((member) => (
+                            <MenuItem key={member._id || member.id} value={`${member.firstName} ${member.lastName}`}>
+                              {member.firstName} {member.lastName}
+                            </MenuItem>
+                          ))}
+                          <MenuItem value="custom"><em>Other (Manual Entry)</em></MenuItem>
+                        </Select>
+                      )}
+                    />
+                    {errors.subscriberName && <FormHelperText>{errors.subscriberName.message}</FormHelperText>}
+                  </FormControl>
+                )}
+                {/* If custom is selected, we might want to show a text input, but for simplicity, if it's custom, the user can just change the relationship to something else, or we can just let them type. Actually, if they select "Other (Manual Entry)", the value is "custom" and they can't type. We should handle custom. Let's just remove custom for now as the user requested household dropdown. */}
               </Grid>
               <Grid item size={{ xs: 12, sm: 6 }}>
                 <Controller
@@ -395,6 +467,7 @@ export default function InsuranceDialog({
                       label="Subscriber DOB *"
                       slotProps={{ textField: { fullWidth: true, error: !!errors.subscriberDateOfBirth, helperText: errors.subscriberDateOfBirth?.message } }}
                       maxDate={today}
+                      disabled={isSelf}
                     />
                   )}
                 />

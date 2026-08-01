@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Dialog, Box, Typography, TextField, MenuItem, Button, IconButton, Switch, FormControlLabel, CircularProgress } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { COLORS } from '../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../constants/styles';
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from '../../constants/styles';
 import { isValidRoutingNumber, tokenizeBankAccount } from '../../utils/bankAccountTokenization';
 
 const ERROR_RED = '#ef4444'; // matches the app's existing error-red convention (see AppointmentRightPanel's "occupied" message)
+const DIALOG_Z_INDEX = 1400;
+const ACCOUNT_TYPE_MENU_Z_INDEX = 1401;
 
 const errorFieldSx = {
   '& .MuiOutlinedInput-notchedOutline': { borderColor: ERROR_RED },
@@ -68,7 +70,7 @@ export default function AddBankAccountModal({ open, onClose, onSave, hasExisting
     <Dialog
       open={open}
       onClose={onClose}
-      sx={{ zIndex: 1400 }}
+      sx={{ zIndex: DIALOG_Z_INDEX }}
       PaperProps={{ sx: { width: '420px', maxWidth: '92vw', borderRadius: radius.lg, p: 0 } }}
     >
       {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}
@@ -145,6 +147,22 @@ export default function AddBankAccountModal({ open, onClose, onSave, hasExisting
               size="small"
               value={accountType}
               onChange={(e) => setAccountType(e.target.value)}
+              SelectProps={{
+                MenuProps: {
+                  ...roundedSelectMenuProps,
+                  sx: {
+                    ...(roundedSelectMenuProps.sx || {}),
+                    zIndex: ACCOUNT_TYPE_MENU_Z_INDEX,
+                  },
+                  PaperProps: {
+                    ...(roundedSelectMenuProps.PaperProps || {}),
+                    sx: {
+                      ...((roundedSelectMenuProps.PaperProps && roundedSelectMenuProps.PaperProps.sx) || {}),
+                      zIndex: ACCOUNT_TYPE_MENU_Z_INDEX,
+                    },
+                  },
+                },
+              }}
               sx={{ '& .MuiOutlinedInput-root': { borderRadius: radius.md, fontSize: fontSize.md } }}
             >
               <MenuItem value="checking">Checking</MenuItem>

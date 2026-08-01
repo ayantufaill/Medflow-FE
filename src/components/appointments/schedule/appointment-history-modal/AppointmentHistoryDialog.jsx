@@ -88,8 +88,31 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
       if (sortBy === "date") {
         return dayjs(b.appointmentDate || b.date).diff(dayjs(a.appointmentDate || a.date));
       } else {
-        const timeA = a.updatedAt || a.createdAt || a.date;
-        const timeB = b.updatedAt || b.createdAt || b.date;
+        // Last Status Change sort
+        const getStatusChangeTime = (apt) => {
+          if (apt.systemEvents && apt.systemEvents.length > 0) {
+            const statusEvents = apt.systemEvents.filter(e => 
+              e.type === 'status_changed' || 
+              e.action === 'status_changed' || 
+              (e.message && e.message.toLowerCase().includes('status'))
+            );
+            if (statusEvents.length > 0) {
+              const latestEvent = statusEvents.reduce((latest, current) => {
+                const tCurrent = current.timestamp || current.createdAt || current.date;
+                const tLatest = latest.timestamp || latest.createdAt || latest.date;
+                return dayjs(tCurrent).isAfter(dayjs(tLatest)) ? current : latest;
+              });
+              return latestEvent.timestamp || latestEvent.createdAt || latestEvent.date;
+            }
+          }
+          // Fallback: If no explicit status change, use a very old date so they sink to the bottom
+          // or just use createdAt, but to satisfy the user's mental model, explicit status changes win.
+          // We will use a date 10 years ago for those with no explicit status change.
+          return dayjs(apt.createdAt || apt.date).subtract(10, 'year').toISOString();
+        };
+
+        const timeA = getStatusChangeTime(a);
+        const timeB = getStatusChangeTime(b);
         return dayjs(timeB).diff(dayjs(timeA));
       }
     });

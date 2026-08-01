@@ -26,6 +26,8 @@ import patientReportReducer from './slices/patientReportSlice';
 import clinicalReportReducer from './slices/clinicalReportSlice';
 import othersReportReducer from './slices/othersReportSlice';
 import waitlistReducer from './slices/waitlistSlice';
+import clinicAnalyticsReducer from './slices/clinicAnalyticsSlice';
+import branchReducer from './slices/branchSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -55,6 +57,8 @@ const appReducer = combineReducers({
   clinicalReport: clinicalReportReducer,
   othersReport: othersReportReducer,
   waitlist: waitlistReducer,
+  clinicAnalytics: clinicAnalyticsReducer,
+  branch: branchReducer,
 });
 
 const rootReducer = (state, action) => {

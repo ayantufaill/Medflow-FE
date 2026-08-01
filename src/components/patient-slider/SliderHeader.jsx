@@ -78,7 +78,6 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
           />
         }
         title="Billing"
-        active
       />
       <ActionBtn
         icon={

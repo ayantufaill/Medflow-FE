@@ -55,7 +55,7 @@ export const fetchPatientInsurances = createAsyncThunk(
   'patient/fetchPatientInsurances',
   async ({ patientId, activeOnly = false, force = false }, { rejectWithValue }) => {
     try {
-      const insurances = await patientService.getPatientInsurances(patientId, activeOnly);
+      const insurances = await patientService.getPatientInsurances(patientId, activeOnly ? true : undefined);
       return { patientId, insurances };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch insurances');
@@ -75,6 +75,32 @@ export const fetchPatientInsurances = createAsyncThunk(
     }
   }
 );
+
+export const fetchAllPatientInsurances = createAsyncThunk(
+  'patient/fetchAllPatientInsurances',
+  async ({ activeOnly = false, force = false } = {}, { rejectWithValue }) => {
+    try {
+      const insurances = await patientService.getAllPatientInsurances(activeOnly ? true : undefined);
+      return insurances;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch global insurances');
+    }
+  },
+  {
+    condition: ({ force } = {}, { getState }) => {
+      if (force) return true;
+      const { patient } = getState();
+      if (patient.globalInsurancesLoading) {
+        return false;
+      }
+      if (patient.globalInsurances && patient.globalInsurances.length > 0) {
+        return false;
+      }
+      return true;
+    }
+  }
+);
+
 
 export const fetchPatientBalance = createAsyncThunk(
   'patient/fetchBalance',
@@ -161,12 +187,14 @@ export const createPatientThunk = createAsyncThunk(
 
 export const updatePatientThunk = createAsyncThunk(
   'patient/updatePatient',
-  async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
+  async ({ patientId, payload }, { dispatch, getState, rejectWithValue }) => {
     try {
       const response = await patientService.updatePatient(patientId, payload);
-      
-      // After a successful update, we should refresh the workspace payload to ensure Redux has all relational data
-      dispatch(fetchPatientById(patientId));
+      const state = getState();
+      // Only refresh if the updated patient is the currently selected one
+      if (state.patient.selectedPatientId === patientId) {
+        dispatch(fetchPatientById(patientId));
+      }
       return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update patient');
@@ -312,6 +340,10 @@ const initialState = {
   // Balance cache
   balanceCache: {}, // { [patientId]: { data, timestamp } }
   balanceLoading: false,
+
+  // Global Insurances
+  globalInsurances: [],
+  globalInsurancesLoading: false,
 };
 
 // Cache disabled - always fetch fresh data from backend
@@ -438,6 +470,17 @@ const patientSlice = createSlice({
       })
       .addCase(fetchPatientInsurances.rejected, (state) => {
         state.patientInsurancesLoading = false;
+      })
+      // fetchAllPatientInsurances
+      .addCase(fetchAllPatientInsurances.pending, (state) => {
+        state.globalInsurancesLoading = true;
+      })
+      .addCase(fetchAllPatientInsurances.fulfilled, (state, action) => {
+        state.globalInsurances = action.payload;
+        state.globalInsurancesLoading = false;
+      })
+      .addCase(fetchAllPatientInsurances.rejected, (state) => {
+        state.globalInsurancesLoading = false;
       })
       // Fetch Patient Balance
       .addCase(fetchPatientBalance.pending, (state) => {
