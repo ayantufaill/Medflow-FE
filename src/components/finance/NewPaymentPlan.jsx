@@ -127,10 +127,10 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
 
 
   const mapInvoiceToPlanRow = (inv) => {
-    const ptBalance = inv.patientPortion !== undefined ? inv.patientPortion - (inv.ptPaid || 0) : inv.balanceDue;
-    const ptPaid = inv.ptPaid || 0;
-    const insBalance = inv.insurancePortion !== undefined ? inv.insurancePortion - (inv.insPaid || 0) : 0;
+    const ptPaid = inv.paidAmount || inv.ptPaid || 0;
+    const ptBalance = inv.patientPortion !== undefined ? inv.patientPortion - ptPaid : inv.balanceDue;
     const insPaid = inv.insPaid || 0;
+    const insBalance = inv.insurancePortion !== undefined ? inv.insurancePortion - insPaid : 0;
     const insWo = inv.insWriteOff || 0;
     
     return {
@@ -373,6 +373,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
 
               if (onCreatePlan) {
                 onCreatePlan({
+                  invoiceIds: selectedInvoiceIds,
                   totalAmount: planTotalAmount,
                   downPayment: numDownPayment,
                   monthlyPayment: parseFloat(calculatedPayment),
@@ -382,7 +383,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
               }
             }}
             sx={{
-              bgcolor: COLORS.PRIMARY,
+              bgcolor: COLORS.ACCENT,
               textTransform: 'none',
               borderRadius: radius.md,
               px: 6,
@@ -391,7 +392,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
               fontWeight: fontWeight.semibold,
               boxShadow: 'none',
               '&:hover': {
-                bgcolor: COLORS.PRIMARY_HOVER,
+                bgcolor: COLORS.ACCENT_HOVER,
                 boxShadow: 'none',
               },
             }}
