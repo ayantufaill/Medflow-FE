@@ -22,6 +22,7 @@ import { COLORS } from "../../../../constants/colors";
 
 import AppointmentHistoryFilters from './AppointmentHistoryFilters';
 import AppointmentHistoryTable, { getAppointmentRowKey } from './AppointmentHistoryTable';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
@@ -172,17 +173,21 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
           `}
         </style>
         <Box className="printable-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          
-          <AppointmentHistoryFilters 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            uniqueStatuses={uniqueStatuses}
-            filteredCount={filteredAndSortedAppointments.length}
-          />
+          <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', mb: 3, pt: 2 } }}>
+            <img src={medflowLogo} alt="Medflow" style={{ height: 40 }} />
+          </Box>
+          <Box className="no-print">
+            <AppointmentHistoryFilters 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              uniqueStatuses={uniqueStatuses}
+              filteredCount={filteredAndSortedAppointments.length}
+            />
+          </Box>
 
           <AppointmentHistoryTable 
             loading={loading}

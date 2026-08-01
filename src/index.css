@@ -48,7 +48,6 @@ body {
   /* Ensure main content area expands */
   body,
   html,
-  .MuiBox-root,
   .main-content,
   .page-content,
   .print-content {
