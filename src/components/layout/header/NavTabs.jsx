@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const TABS = [
+  { label: 'Dashboard', path: '/dashboard' },
   { label: 'Schedule', path: '/appointments/operatory-schedule' },
   { label: 'Patients', path: '/patients' },
   { label: 'Clinical', path: '/clinical/treatment-plan' },

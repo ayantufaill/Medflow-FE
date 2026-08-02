@@ -53,7 +53,6 @@ import PaymentRequest from './reports/financial/PaymentRequest';
 import OpenEdgeTransactions from './reports/financial/OpenEdgeTransactions';
 import ProceduresInsurance from './reports/financial/ProceduresInsurance';
 import FamilyMigratedBalances from './reports/financial/FamilyMigratedBalances';
-import DashboardTab from './reports/DashboardTab';
 import KpiDashboard from './reports/KpiDashboard';
 import { TABS, FINANCIAL_REPORT_SUB_TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
