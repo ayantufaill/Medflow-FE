@@ -4,13 +4,16 @@ import { CalendarMonthOutlined, AutoAwesome, Close, EventRepeatOutlined, Content
 const AppointmentModalHeader = ({ 
   onCancel, 
   onConvertToShortlist, 
+  onCopyToShortlist,
   isEditMode,
   patientDisplayName,
   apptDate,
   timeHours,
   timeMins,
   amPm,
-  visitType
+  visitType,
+  isRescheduling,
+  onReschedule
 }) => {
   const formattedDate = apptDate ? (typeof apptDate.format === 'function' ? apptDate.format("MM/DD/YYYY") : apptDate) : "";
   const formattedTime = `${timeHours || ""}:${timeMins || ""} ${amPm || ""}`;
@@ -77,13 +80,16 @@ const AppointmentModalHeader = ({
 
       {isEditMode ? (
         <Box sx={{ display: 'flex', gap: '8px' }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<EventRepeatOutlined sx={{ fontSize: "14px" }} />}
-            sx={actionBtnStyle}
-          >
-            Re-schedule
-          </Button>
+          {!isRescheduling && (
+            <Button 
+              variant="outlined" 
+              onClick={onReschedule}
+              startIcon={<EventRepeatOutlined sx={{ fontSize: "14px" }} />}
+              sx={actionBtnStyle}
+            >
+              Re-schedule
+            </Button>
+          )}
           <Button
             variant="outlined"
             onClick={onConvertToShortlist}
@@ -94,7 +100,7 @@ const AppointmentModalHeader = ({
           </Button>
           <Button
             variant="outlined"
-            onClick={onConvertToShortlist}
+            onClick={onCopyToShortlist}
             startIcon={<ContentCopyOutlined sx={{ fontSize: "14px" }} />}
             sx={actionBtnStyle}
           >

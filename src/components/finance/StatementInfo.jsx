@@ -1,9 +1,10 @@
 import { Box, Typography, Grid, InputBase } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const StatementInfo = ({ statementInfo }) => {
-  const primaryBlue = '#40548e';
-  const lightBlue = '#abb8d3';
+  const primaryBlue = COLORS.TEXT_PRIMARY;
+  const lightBlue = COLORS.BORDER;
 
   return (
     <Grid container spacing={6} sx={{ mb: 4 }} alignItems="flex-start">
@@ -21,14 +22,14 @@ const StatementInfo = ({ statementInfo }) => {
       <Grid item xs={6}>
         <Box 
           sx={{ 
-            border: `1px solid ${lightBlue}`, 
+            border: `1px solid ${COLORS.BORDER}`, 
             borderRadius: '4px', 
             overflow: 'hidden' 
           }}
         >
           {/* Patient Name Row */}
-          <Box sx={{ display: 'flex', borderBottom: `1px solid ${lightBlue}` }}>
-            <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: fontSize.sm, color: primaryBlue }}>
+          <Box sx={{ display: 'flex', borderBottom: `1px solid ${COLORS.BORDER}` }}>
+            <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '14px', color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>
               Patient Name
             </Typography>
             <InputBase
@@ -36,17 +37,18 @@ const StatementInfo = ({ statementInfo }) => {
               sx={{ 
                 flex: 1, 
                 p: 1, 
-                fontSize: fontSize.sm, 
-                color: primaryBlue,
-                borderLeft: `1px solid ${lightBlue}`,
-                paddingLeft: '1.5rem'
+                fontSize: '14px', 
+                color: COLORS.TEXT_PRIMARY,
+                borderLeft: `1px solid ${COLORS.BORDER}`,
+                paddingLeft: '1.5rem',
+                fontWeight: fontWeight.semiBold
               }}
             />
           </Box>
 
           {/* Statement Date Row */}
           <Box sx={{ display: 'flex' }}>
-            <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: fontSize.sm, color: primaryBlue }}>
+            <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '14px', color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>
               Statement Date
             </Typography>
             <InputBase
@@ -54,10 +56,11 @@ const StatementInfo = ({ statementInfo }) => {
               sx={{ 
                 flex: 1, 
                 p: 1, 
-                fontSize: fontSize.sm, 
-                color: primaryBlue,
-                borderLeft: `1px solid ${lightBlue}`,
-                paddingLeft: '1.5rem'
+                fontSize: '14px', 
+                color: COLORS.TEXT_PRIMARY,
+                borderLeft: `1px solid ${COLORS.BORDER}`,
+                paddingLeft: '1.5rem',
+                fontWeight: fontWeight.semiBold
               }}
             />
           </Box>

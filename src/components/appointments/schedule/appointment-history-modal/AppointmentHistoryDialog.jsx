@@ -92,9 +92,10 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
         const getStatusChangeTime = (apt) => {
           if (apt.systemEvents && apt.systemEvents.length > 0) {
             const statusEvents = apt.systemEvents.filter(e => 
-              e.type === 'status_changed' || 
+              (e.type === 'status_changed' || 
               e.action === 'status_changed' || 
-              (e.message && e.message.toLowerCase().includes('status'))
+              (e.message && e.message.toLowerCase().includes('status'))) && 
+              e.action !== 'created' && e.type !== 'created'
             );
             if (statusEvents.length > 0) {
               const latestEvent = statusEvents.reduce((latest, current) => {

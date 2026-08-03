@@ -21,8 +21,10 @@ const AppointmentRightPanel = ({
   noReminders, onNoRemindersChange,
   tags, onTagsChange,
   showExtendedOptions,
+  readOnly,
 }) => (
-  <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px" }}>
+  <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "18px", pointerEvents: readOnly ? 'none' : 'auto', opacity: readOnly ? 0.85 : 1 }}>
 
     <FieldBox label="Appointment status">
       <Select MenuProps={{ sx: { zIndex: 1400 } }}
@@ -146,6 +148,7 @@ const AppointmentRightPanel = ({
     )}
 
     <ColorTagPicker selected={selectedColorTags} onChange={onColorTagsChange} />
+    </Box>
   </Box>
 );
 

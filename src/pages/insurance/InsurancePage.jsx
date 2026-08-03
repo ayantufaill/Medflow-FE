@@ -78,28 +78,24 @@ const InsurancePage = () => {
   useEffect(() => {
     if (patientId) {
       setLoading(true);
-      dispatch(fetchPatientInsurances({ patientId }))
-        .unwrap()
-        .catch((error) => {
-          console.error('Error fetching insurances:', error);
+      dispatch(fetchPatientInsurances({ patientId })).then((action) => {
+        if (action.error && action.meta?.condition !== true) {
+          console.error('Error fetching insurances:', action.error);
           showSnackbar('Failed to load insurance coverage', 'error');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+        }
+        setLoading(false);
+      });
     } else {
       setLoading(true);
-      dispatch(fetchAllPatientInsurances())
-        .unwrap()
-        .catch((error) => {
-          console.error('Error fetching global insurances:', error);
+      dispatch(fetchAllPatientInsurances()).then((action) => {
+        if (action.error && action.meta?.condition !== true) {
+          console.error('Error fetching global insurances:', action.error);
           showSnackbar('Failed to load global coverages', 'error');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+        }
+        setLoading(false);
+      });
     }
-  }, [patientId, dispatch]);
+  }, [dispatch, patientId]);
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });

@@ -211,10 +211,9 @@ const ShareDropdown = ({ anchorEl, onClose, onSelect }) => {
         onClose={handleShareStatementClose}
         maxWidth="sm"
         fullWidth={false}
+        sx={{ zIndex: 9999 }}
       >
-        <DialogContent sx={{ p: 0 }}>
-          <ShareByEmail onClose={handleShareStatementClose} />
-        </DialogContent>
+        <ShareByEmail onClose={handleShareStatementClose} />
       </Dialog>
     </>
   );

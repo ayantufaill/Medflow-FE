@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Checkbox, FormControlLabel, Button } from '@mui/material';
+import { Box, Typography, Checkbox, FormControlLabel, Button, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import CloseIcon from '@mui/icons-material/Close';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const ShareByEmail = ({ onClose }) => {
   const [startDate, setStartDate] = useState(dayjs('2023-09-20'));
@@ -11,169 +13,134 @@ const ShareByEmail = ({ onClose }) => {
   const [onlyOpen, setOnlyOpen] = useState(true);
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-    <Box
-      sx={{
-        width: '400px',
-        backgroundColor: 'white',
-        borderRadius: '4px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <Box
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden' }}>
+      <DialogTitle
         sx={{
-          backgroundColor: '#7788bb',
-          color: 'white',
-          padding: '8px',
-          textAlign: 'center',
+          boxSizing: 'border-box',
+          px: '25px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 'normal', margin: 0 }}>
+        <EmailOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Share Statement
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
-      {/* Body */}
-      <Box sx={{ padding: '15px', color: '#333' }}>
-        {/* Start Date */}
-        <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-          <Typography component="span" sx={{ fontSize: '13px', minWidth: '100px' }}>Start Date:</Typography>
-          <DatePicker
-            enableAccessibleFieldDOMStructure={false}
-            value={startDate}
-            onChange={(newValue) => setStartDate(newValue)}
-            slots={{
-              textField: (params) => (
-                <TextField
-                  {...params}
-                  variant="standard"
-                  sx={{
-                    width: '140px',
-                    '& .MuiInput-root': {
-                      fontSize: '13px',
-                      '&:before': {
-                        borderBottom: '1px solid #ddd',
-                      },
-                      '&:hover:not(.Mui-disabled):before': {
-                        borderBottom: '1px solid #bbb',
-                      },
-                      '&:after': {
-                        borderBottom: '1px solid #7788bb',
-                      },
-                    },
-                    '& input': {
-                      padding: '4px 0',
-                      fontSize: '13px',
-                    },
-                  }}
-                />
-              ),
-            }}
-          />
-        </Box>
-
-        {/* End Date */}
-        <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-          <Typography component="span" sx={{ fontSize: '13px', minWidth: '100px' }}>End Date:</Typography>
-          <DatePicker
-            enableAccessibleFieldDOMStructure={false}
-            value={endDate}
-            onChange={(newValue) => setEndDate(newValue)}
-            slots={{
-              textField: (params) => (
-                <TextField
-                  {...params}
-                  variant="standard"
-                  sx={{
-                    width: '140px',
-                    '& .MuiInput-root': {
-                      fontSize: '13px',
-                      '&:before': {
-                        borderBottom: '1px solid #ddd',
-                      },
-                      '&:hover:not(.Mui-disabled):before': {
-                        borderBottom: '1px solid #bbb',
-                      },
-                      '&:after': {
-                        borderBottom: '1px solid #7788bb',
-                      },
-                    },
-                    '& input': {
-                      padding: '4px 0',
-                      fontSize: '13px',
-                    },
-                  }}
-                />
-              ),
-            }}
-          />
-        </Box>
-
-        {/* Checkbox */}
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={onlyOpen}
-              onChange={() => setOnlyOpen(!onlyOpen)}
-              sx={{
-                padding: '4px',
-                '& .MuiSvgIcon-root': {
-                  fontSize: '16px',
-                },
-              }}
+      <DialogContent sx={{ px: '25px', py: '20px', pt: '25px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+          {/* Top Row: Checkbox */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FormControlLabel
+              control={<Checkbox size="small" checked={onlyOpen} onChange={() => setOnlyOpen(!onlyOpen)} />}
+              label={<Typography sx={{ fontSize: '13px' }}>Only Open Invoices</Typography>}
+              sx={{ m: 0 }}
             />
-          }
-          label="Only Open Invoices"
-          sx={{ 
-            marginTop: '10px', 
-            fontSize: '12px',
-            gap: '8px',
-            marginLeft: 'auto',
-            '& .MuiTypography-root': {
-              fontSize: '12px',
-            }
-          }}
-        />
-
-        {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '15px' }}>
-          <Button
-            variant="contained"
-            size="small"
-            sx={{
-              padding: '6px 16px',
-              borderRadius: '4px',
-              backgroundColor: '#7788bb',
-              fontSize: '13px',
-              '&:hover': {
-                backgroundColor: '#6677aa',
-              },
-            }}
-          >
-            Share
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={onClose}
-            sx={{
-              padding: '6px 16px',
-              borderRadius: '4px',
-              backgroundColor: '#a9a9a9',
-              fontSize: '13px',
-              '&:hover': {
-                backgroundColor: '#999999',
-              },
-            }}
-          >
-            Cancel
-          </Button>
+          </Box>
+          
+          {/* Bottom Row: Start Date and End Date */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Start Date</Typography>
+              <DatePicker
+                value={startDate}
+                onChange={(newValue) => setStartDate(newValue)}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1500 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { 
+                      width: '180px', 
+                      '& .MuiInputBase-root': { 
+                        fontSize: '13px', 
+                        borderRadius: '4px', 
+                        height: '36px', 
+                        bgcolor: COLORS.SURFACE_TINT, 
+                        color: COLORS.TEXT_PRIMARY 
+                      }, 
+                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                      '& fieldset': { borderColor: COLORS.BORDER } 
+                    } 
+                  }
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>End Date</Typography>
+              <DatePicker
+                value={endDate}
+                onChange={(newValue) => setEndDate(newValue)}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1500 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { 
+                      width: '180px', 
+                      '& .MuiInputBase-root': { 
+                        fontSize: '13px', 
+                        borderRadius: '4px', 
+                        height: '36px', 
+                        bgcolor: COLORS.SURFACE_TINT, 
+                        color: COLORS.TEXT_PRIMARY 
+                      }, 
+                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                      '& fieldset': { borderColor: COLORS.BORDER } 
+                    } 
+                  }
+                }}
+              />
+            </Box>
+          </Box>
         </Box>
-      </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          sx={{
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
+          }}
+        >
+          Share
+        </Button>
+      </DialogActions>
     </Box>
-    </LocalizationProvider>
   );
 };
 

@@ -396,7 +396,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             }}
             componentsProps={{ 
               popper: { 
-                sx: { zIndex: 1500 }, 
+                sx: { zIndex: 150000 }, 
                 modifiers: [
                   { name: 'flip', enabled: false },
                   { name: 'preventOverflow', enabled: false }

@@ -58,7 +58,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       writeoff: 0,
       code,
       dbi: false,
-      coverageTable: patientCoverageTable,
+      coverageTable: patient?.coverageTable || null,
     });
 
     const newProcedure = {
@@ -85,7 +85,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     if (patient && patient._id) {
       try {
         const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
-          { code: newProcedure.code, charge: baseFee }
+          { code: newProcedure.code, charge: fee }
         ]);
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
@@ -139,7 +139,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             writeoff: numWriteoff,
             code: updated.code,
             dbi: dbiState,
-            coverageTable: patientCoverageTable,
+            coverageTable: patient?.coverageTable || null,
             explicitPct: updated.coveragePct,
           });
           updated.insPortion = `$${portions.insPortion.toFixed(2)}`;
@@ -192,7 +192,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           writeoff: numWriteoff,
           code: p.code,
           dbi: p.dbi,
-          coverageTable: patientCoverageTable,
+          coverageTable: patient?.coverageTable || null,
         });
         return {
           ...p,
@@ -214,8 +214,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         variant="outlined"
         size="small"
         MenuProps={{ 
-          style: { zIndex: 9999 }, 
-          sx: { zIndex: 9999 },
+          style: { zIndex: 150000 }, 
+          sx: { zIndex: 150000 },
           anchorOrigin: { vertical: "bottom", horizontal: "left" },
           transformOrigin: { vertical: "top", horizontal: "left" }
         }}

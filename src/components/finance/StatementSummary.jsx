@@ -1,10 +1,11 @@
 import { Box, Typography, Grid } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingData, showOutstandingBalance = true }) => {
-  const textDarkBlue = '#40548e';
-  const headerBlue = '#abb8d3';
-  const rowLightBlue = '#f0f4fa';
+  const textDarkBlue = COLORS.TEXT_PRIMARY;
+  const headerBlue = COLORS.SURFACE_TINT;
+  const rowLightBlue = COLORS.SURFACE_TINT;
 
   // Filter out Outstanding Balance if showOutstandingBalance is false
   const filteredSummaryData = showOutstandingBalance 
@@ -18,8 +19,9 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
         sx={{ 
           mt: 2,
           p: '12px 24px', 
-          bgcolor: '#f0f4f8',
-          borderBottom: '1px solid #ddd',
+          bgcolor: COLORS.SURFACE_TINT,
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          borderTop: `1px solid ${COLORS.BORDER}`,
           width: '100%'
         }}
       >
@@ -36,9 +38,9 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
             >
               <Typography 
                 sx={{ 
-                  fontSize: fontSize.xs, 
-                  fontWeight: fontWeight.bold, 
-                  color: textDarkBlue,
+                  fontSize: '12px', 
+                  fontWeight: fontWeight.semiBold, 
+                  color: COLORS.TEXT_SECONDARY,
                   whiteSpace: 'nowrap' 
                 }}
               >
@@ -46,10 +48,10 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
               </Typography>
               <Typography 
                 sx={{ 
-                  fontWeight: fontWeight.bold, 
-                  fontSize: fontSize.lg, 
+                  fontWeight: fontWeight.semiBold, 
+                  fontSize: '16px', 
                   mt: 0.5, 
-                  color: '#333' 
+                  color: COLORS.TEXT_PRIMARY 
                 }}
               >
                 {item.value}
@@ -63,8 +65,8 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
       <Box sx={{ mt:2, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', pr: 2, mb: 2 }}>
         {insuranceSubtotals.map((item) => (
           <Box key={item.label} sx={{ display: 'flex', width: '300px', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: fontSize.sm, color: textDarkBlue }}>{item.label}</Typography>
-            <Typography sx={{ fontSize: fontSize.sm }}>{item.value}</Typography>
+            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>{item.label}</Typography>
+            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>{item.value}</Typography>
           </Box>
         ))}
       </Box>
@@ -72,12 +74,14 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
       {/* Your Portion Banner */}
       <Box 
         sx={{ 
-          bgcolor: headerBlue, 
+          bgcolor: COLORS.SURFACE_TINT, 
           p: 1.5, 
           mb: 2,
           display: 'grid',
           gridTemplateColumns: '1fr auto 1fr', 
-          alignItems: 'center'
+          alignItems: 'center',
+          borderTop: `1px solid ${COLORS.BORDER}`,
+          borderBottom: `1px solid ${COLORS.BORDER}`
         }}
       >
         {/* Left Spacer */}
@@ -86,9 +90,9 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
         {/* Center Text */}
         <Typography 
           sx={{ 
-            fontWeight: fontWeight.bold, 
-            color: textDarkBlue, 
-            fontSize: fontSize.lg,
+            fontWeight: fontWeight.semiBold, 
+            color: COLORS.TEXT_PRIMARY, 
+            fontSize: '15px',
             textAlign: 'center'
           }}
         >
@@ -98,9 +102,9 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
         {/* Right Amount */}
         <Typography 
           sx={{ 
-            fontWeight: fontWeight.bold, 
-            color: textDarkBlue, 
-            fontSize: fontSize.lg, 
+            fontWeight: fontWeight.semiBold, 
+            color: COLORS.TEXT_PRIMARY, 
+            fontSize: '15px', 
             textAlign: 'right',
             pr: 2 
           }}
@@ -114,8 +118,9 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
         container 
         sx={{ 
           p: '12px 24px',
-          bgcolor: '#f0f4f8',
-          borderBottom: '1px solid #ddd',
+          bgcolor: COLORS.SURFACE_TINT,
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          borderTop: `1px solid ${COLORS.BORDER}`,
           width: '100%' 
         }} 
         justifyContent="space-between"
@@ -132,8 +137,8 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
           >
             <Typography 
               sx={{ 
-                fontSize: fontSize.xs, 
-                color: textDarkBlue, 
+                fontSize: '12px', 
+                color: COLORS.TEXT_SECONDARY, 
                 whiteSpace: 'nowrap',
                 fontWeight: fontWeight.medium 
               }}
@@ -142,10 +147,10 @@ const StatementSummary = ({ summaryData, insuranceSubtotals, yourPortion, agingD
             </Typography>
             <Typography 
               sx={{ 
-                fontWeight: fontWeight.bold, 
-                fontSize: fontSize.lg, 
+                fontWeight: fontWeight.semiBold, 
+                fontSize: '15px', 
                 mt: 0.5, 
-                color: '#333' 
+                color: COLORS.TEXT_PRIMARY 
               }}
             >
               {item.value}

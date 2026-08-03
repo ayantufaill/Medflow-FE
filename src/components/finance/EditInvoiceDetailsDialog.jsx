@@ -17,45 +17,49 @@ import {
 } from '@mui/material';
 import { KeyboardArrowDown } from '@mui/icons-material';
 import EditEstimatesDialog from './EditEstimatesDialog';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const [showEstimates, setShowEstimates] = useState(false);
   return (
-    <Box sx={{ width: '1000px', bgcolor: '#fff', borderRadius: '4px', overflow: 'hidden' }}>
+    <Box sx={{ width: '1000px', bgcolor: '#fff', borderRadius: radius.md, overflow: 'hidden' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: '#7788bb', p: 1, display: 'flex', justifyContent: 'center' }}>
-        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.85rem' }}>
+      <Box sx={{ bgcolor: COLORS.SURFACE_TINT, borderBottom: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'center' }}>
+        <Typography variant="subtitle1" sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold, fontSize: '15px' }}>
           Edit invoice #{invoiceId}
         </Typography>
       </Box>
 
       {/* Content */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: '24px' }}>
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <Button 
             variant="contained" 
             onClick={() => setShowEstimates(true)}
             sx={{ 
-              bgcolor: '#d2b48c', 
-              color: '#fff', 
+              bgcolor: COLORS.ACCENT, 
+              color: COLORS.WHITE, 
               textTransform: 'none', 
               px: 2, 
-              py: 0.5,
-              fontSize: '0.8rem',
+              height: '32px',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
               boxShadow: 'none',
-              '&:hover': { bgcolor: '#c4a47c' }
+              borderRadius: radius.sm,
+              '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
             }}
           >
             Edit Estimates
           </Button>
         </Stack>
 
-        <TableContainer sx={{ border: 'none' }}>
+        <TableContainer sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: '6px', overflow: 'hidden' }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', py: 1, color: '#333', fontWeight: 'bold', fontSize: '0.85rem' } }}>
+              <TableRow sx={{ bgcolor: COLORS.SURFACE_TINT, '& th': { borderBottom: `1px solid ${COLORS.BORDER}`, py: 1.5, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px' } }}>
                 <TableCell padding="checkbox">
-                  <Checkbox size="small" />
+                  <Checkbox size="small" sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />
                 </TableCell>
                 <TableCell>DOS</TableCell>
                 <TableCell>Procedure</TableCell>
@@ -66,18 +70,19 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow sx={{ '& td': { borderBottom: '1px solid #eee', py: 1.5, fontSize: '0.85rem' } }}>
+              <TableRow sx={{ '& td': { borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.5, fontSize: '13px', color: COLORS.TEXT_PRIMARY } }}>
                 <TableCell padding="checkbox">
-                  <Checkbox size="small" />
+                  <Checkbox size="small" sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />
                 </TableCell>
                 <TableCell>
                   <TextField 
                     size="small" 
                     value="05/06/2026" 
+                    variant="outlined"
                     sx={{ 
                       width: '110px',
-                      '& .MuiInputBase-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }
+                      '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
                     }} 
                   />
                 </TableCell>
@@ -91,22 +96,26 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                     onDelete={() => {}}
                     deleteIcon={<KeyboardArrowDown />}
                     sx={{ 
-                      bgcolor: '#c8e6c9', 
-                      color: '#2e7d32', 
-                      borderRadius: '4px',
+                      bgcolor: '#e0f2fe', 
+                      color: COLORS.ACCENT, 
+                      borderRadius: radius.sm,
                       height: '24px',
-                      '& .MuiChip-label': { px: 1, fontSize: '0.75rem', fontWeight: 'bold' }
+                      border: `1px solid #bae6fd`,
+                      '& .MuiChip-label': { px: 1, fontSize: '11px', fontWeight: fontWeight.semiBold },
+                      '& .MuiChip-deleteIcon': { color: COLORS.ACCENT, '&:hover': { color: COLORS.ACCENT_HOVER } }
                     }}
                   />
                 </TableCell>
                 <TableCell align="right">
                   <TextField 
                     size="small" 
-                    value="$100.00" 
+                    value="$100.00"
+                    variant="outlined"
                     sx={{ 
                       width: '80px',
-                      '& .MuiInputBase-input': { py: 0.5, px: 1, fontSize: '0.85rem', textAlign: 'right' },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }
+                      '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
+                      '& .MuiInputBase-input': { textAlign: 'right' },
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
                     }} 
                   />
                 </TableCell>
@@ -116,16 +125,19 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
         </TableContainer>
 
         {/* Footer Actions */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3, pt: 2, borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>
           <Button 
-            variant="contained" 
+            variant="outlined" 
             sx={{ 
-              bgcolor: '#90a4ae', 
-              color: '#fff', 
+              borderColor: COLORS.BORDER, 
+              color: COLORS.TEXT_PRIMARY, 
               textTransform: 'none', 
               minWidth: '60px',
-              boxShadow: 'none',
-              fontSize: '0.85rem'
+              height: '36px',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
             }}
           >
             DBI
@@ -133,15 +145,17 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
 
           <Stack direction="row" spacing={1.5}>
             <Button 
-              variant="contained" 
+              variant="outlined" 
               sx={{ 
-                bgcolor: '#d2b48c', 
-                color: '#fff', 
+                borderColor: COLORS.ACCENT, 
+                color: COLORS.ACCENT, 
                 textTransform: 'none', 
                 px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#c4a47c' }
+                height: '36px',
+                fontSize: '13px',
+                fontWeight: fontWeight.medium,
+                borderRadius: radius.sm,
+                '&:hover': { borderColor: COLORS.ACCENT_HOVER, bgcolor: 'rgba(59, 130, 246, 0.04)' }
               }}
             >
               Re-estimate
@@ -149,28 +163,33 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
             <Button 
               variant="contained" 
               sx={{ 
-                bgcolor: '#d2b48c', 
-                color: '#fff', 
+                bgcolor: COLORS.ACCENT, 
+                color: COLORS.WHITE, 
                 textTransform: 'none', 
                 px: 3,
+                height: '36px',
+                fontSize: '13px',
+                fontWeight: fontWeight.medium,
                 boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#c4a47c' }
+                borderRadius: radius.sm,
+                '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
               }}
             >
               Save
             </Button>
             <Button 
-              variant="contained" 
+              variant="outlined" 
               onClick={onClose}
               sx={{ 
-                bgcolor: '#9e9e9e', 
-                color: '#fff', 
+                borderColor: COLORS.BORDER, 
+                color: COLORS.TEXT_PRIMARY, 
                 textTransform: 'none', 
                 px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#8e8e8e' }
+                height: '36px',
+                fontSize: '13px',
+                fontWeight: fontWeight.medium,
+                borderRadius: radius.sm,
+                '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
               }}
             >
               Cancel
@@ -192,7 +211,7 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            zIndex: 1400
+            zIndex: 140000
           }}
           onClick={() => setShowEstimates(false)}
         >
