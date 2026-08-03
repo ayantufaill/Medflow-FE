@@ -15,13 +15,150 @@ import {
   Button,
   Chip,
   Tooltip,
-  InputAdornment,
   Autocomplete,
 } from '@mui/material';
-import { Info as InfoIcon, Add as AddIcon } from '@mui/icons-material';
+import {
+  Info as InfoIcon,
+  Add as AddIcon,
+  PersonOutline as PersonOutlineIcon,
+  AssignmentOutlined as AssignmentOutlinedIcon,
+  LocationOnOutlined as LocationOnOutlinedIcon,
+  SettingsOutlined as SettingsOutlinedIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+} from '@mui/icons-material';
 import ReactPhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
+import SectionContainer from '../practice-onboarding/practice-info/SectionContainer';
+import FormInputLabel from '../practice-onboarding/practice-info/FormInputLabel';
+
+// ─── Styles matching Practice Onboarding UI & Dropdown fixes ─────────────────
+
+const dropdownMenuProps = {
+  style: { zIndex: 10000 },
+  sx: { zIndex: 10000 },
+};
+
+const commonInputStyles = {
+  '& .MuiOutlinedInput-root': {
+    height: '36px',
+    borderRadius: '8px',
+    backgroundColor: '#fff',
+    '& fieldset': { borderColor: '#d1d5db' },
+    '&:hover fieldset': { borderColor: '#9ca3af' },
+    '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
+    '&.Mui-disabled': { backgroundColor: '#f9fafb', opacity: 0.8 },
+  },
+  '& .MuiOutlinedInput-input': {
+    padding: '0 12px',
+    height: '36px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '0.85rem',
+  },
+  '& .MuiFormHelperText-root': {
+    fontSize: '0.75rem',
+    mx: 0.5,
+    mt: 0.5,
+  }
+};
+
+const selectStyles = {
+  ...commonInputStyles,
+  '& .MuiSelect-select': {
+    display: 'flex',
+    alignItems: 'center',
+    paddingTop: '0 !important',
+    paddingBottom: '0 !important',
+    height: '100% !important',
+    fontSize: '0.85rem',
+  },
+  '& .MuiSelect-icon': {
+    color: '#9ca3af',
+  }
+};
+
+const multilineInputStyles = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '8px',
+    backgroundColor: '#fff',
+    padding: '10px 12px',
+    '& fieldset': { borderColor: '#d1d5db' },
+    '&:hover fieldset': { borderColor: '#9ca3af' },
+    '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1px' },
+  },
+  '& .MuiOutlinedInput-input': {
+    padding: 0,
+    fontSize: '0.85rem',
+    lineHeight: '1.4',
+  }
+};
+
+const phoneInputStyles = {
+  '& .react-tel-input': {
+    width: '100%',
+    height: '36px',
+    borderRadius: '8px',
+    border: '1px solid #d1d5db',
+    backgroundColor: '#fff',
+    boxSizing: 'border-box',
+    display: 'flex',
+    alignItems: 'center',
+    '&:hover': {
+      borderColor: '#9ca3af',
+    },
+    '&:focus-within': {
+      borderColor: '#3b82f6',
+    },
+  },
+  '& .react-tel-input .special-label': {
+    display: 'none !important',
+  },
+  '& .react-tel-input .country-list': {
+    zIndex: '10000 !important',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    fontSize: '0.85rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+  },
+  '& .react-tel-input .form-control': {
+    width: '100%',
+    height: '100%',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '0.85rem',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    paddingLeft: '48px',
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+    outline: 'none',
+  },
+  '& .react-tel-input .form-control:focus': {
+    border: 'none',
+    boxShadow: 'none',
+  },
+  '& .react-tel-input .flag-dropdown': {
+    border: 'none',
+    borderRight: '1px solid #d1d5db',
+    borderRadius: '8px 0 0 8px',
+    backgroundColor: 'transparent',
+    width: '42px',
+    height: '100%',
+  },
+  '& .react-tel-input .flag-dropdown:hover': {
+    backgroundColor: '#f3f4f6',
+  },
+  '& .react-tel-input .selected-flag': {
+    width: '100%',
+    height: '100%',
+    padding: '0 0 0 8px',
+    backgroundColor: 'transparent',
+  },
+  '& .react-tel-input .selected-flag:hover': {
+    backgroundColor: 'transparent',
+  },
+};
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -91,15 +228,9 @@ const buildDefaultValues = (provider) => {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const Label = ({ children, required }) => (
-  <Typography variant="caption" fontWeight={600} display="block" mb={0.5}>
-    {children}{required && <span style={{ color: '#e53935' }}> *</span>}
-  </Typography>
-);
-
-const PhoneInput = ({ label, required, name, control }) => (
-  <Box>
-    <Label required={required}>{label}</Label>
+const PhoneInputRow = ({ label, required, name, control }) => (
+  <Box sx={{ width: '100%' }}>
+    <FormInputLabel label={label} required={required} />
     <Controller
       name={name}
       control={control}
@@ -116,20 +247,17 @@ const PhoneInput = ({ label, required, name, control }) => (
       }}
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <Box>
-          <ReactPhoneInput
-            country={'us'}
-            value={value}
-            onChange={(phone) => onChange(phone)}
-            inputStyle={{
-              width: '100%',
-              height: '40px',
-              borderColor: error ? '#d32f2f' : '#ccc',
-              borderRadius: '4px'
-            }}
-            containerStyle={{ width: '100%' }}
-          />
+          <Box sx={phoneInputStyles}>
+            <ReactPhoneInput
+              country={'us'}
+              specialLabel={""}
+              dropdownStyle={{ zIndex: 10000 }}
+              value={value || ''}
+              onChange={(phone) => onChange(phone)}
+            />
+          </Box>
           {error && (
-            <Typography color="error" variant="caption" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
+            <Typography color="error" sx={{ fontSize: '0.75rem', mt: 0.5, ml: 0.5 }}>
               {error.message}
             </Typography>
           )}
@@ -167,282 +295,340 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
   };
 
   return (
-    <Box component="form" id={formId} onSubmit={handleSubmit(submit)} noValidate>
-      <Grid container spacing={2}>
+    <Box component="form" id={formId} onSubmit={handleSubmit(submit)} noValidate sx={{ pb: 1 }}>
+      
+      {/* Section 1: Personal Information (Strictly 3 fields per row: md: 4) */}
+      <SectionContainer title="Personal Information" icon={PersonOutlineIcon}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="First Name" required />
+            <TextField fullWidth placeholder="Enter First Name"
+              sx={commonInputStyles}
+              {...register('firstName', { required: 'Required' })}
+              error={!!errors.firstName} helperText={errors.firstName?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Last Name" required />
+            <TextField fullWidth placeholder="Enter Last Name"
+              sx={commonInputStyles}
+              {...register('lastName', { required: 'Required' })}
+              error={!!errors.lastName} helperText={errors.lastName?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Middle Name" />
+            <TextField fullWidth placeholder="Enter Middle Name" sx={commonInputStyles} {...register('middleName')} />
+          </Grid>
 
-        {/* Row 1: First Name | Last Name | Middle Name */}
-        <Grid size={4}>
-          <Label required>First Name</Label>
-          <TextField fullWidth size="small" placeholder="Enter First Name"
-            {...register('firstName', { required: 'Required' })}
-            error={!!errors.firstName} helperText={errors.firstName?.message} />
-        </Grid>
-        <Grid size={4}>
-          <Label required>Last Name</Label>
-          <TextField fullWidth size="small" placeholder="Enter Last Name"
-            {...register('lastName', { required: 'Required' })}
-            error={!!errors.lastName} helperText={errors.lastName?.message} />
-        </Grid>
-        <Grid size={4}>
-          <Label>Middle Name</Label>
-          <TextField fullWidth size="small" placeholder="Enter Middle Name" {...register('middleName')} />
-        </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Prefix (Dr, Mr...)" required />
+            <TextField fullWidth placeholder="Enter Title" sx={commonInputStyles} {...register('prefix', { required: 'Required' })} error={!!errors.prefix} helperText={errors.prefix?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Suffix (DDS...)" />
+            <TextField fullWidth placeholder="Enter Suffix" sx={commonInputStyles} {...register('suffix')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Preferred Name" />
+            <TextField fullWidth placeholder="Enter Preferred Name" sx={commonInputStyles} {...register('preferredName')} />
+          </Grid>
 
-        {/* Row 2: Prefix | Suffix | Preferred Name | Internal Code Name */}
-        <Grid size={2}>
-          <Label required>Prefix (Dr, Mr...)</Label>
-          <TextField fullWidth size="small" placeholder="Enter Title" {...register('prefix')} />
-        </Grid>
-        <Grid size={2}>
-          <Label>Suffix (DDs...)</Label>
-          <TextField fullWidth size="small" placeholder="Enter Suffix" {...register('suffix')} />
-        </Grid>
-        <Grid size={4}>
-          <Label>Preferred Name</Label>
-          <TextField fullWidth size="small" placeholder="Enter Preferred Name" {...register('preferredName')} />
-        </Grid>
-        <Grid size={4}>
-          <Label>
-            Internal Code Name&nbsp;
-            <Tooltip title="Internal identifier for this provider">
-              <InfoIcon sx={{ fontSize: 14, verticalAlign: 'middle', cursor: 'help' }} />
-            </Tooltip>
-          </Label>
-          <TextField fullWidth size="small" placeholder="Enter Internal Code" {...register('internalCodeName')} />
-        </Grid>
-
-        {/* Row 3: Email */}
-        <Grid size={4}>
-          <Label required>Email</Label>
-          <TextField fullWidth size="small" type="email" placeholder="Enter Email"
-            {...register('email', { required: 'Required' })}
-            error={!!errors.email} helperText={errors.email?.message} />
-        </Grid>
-
-        {/* Row 4: Organization Name | Federal Tax Number */}
-        <Grid size={6}>
-          <Label>Organization Name</Label>
-          <TextField fullWidth size="small" placeholder="Enter Organization Name" {...register('organizationName')} />
-        </Grid>
-        <Grid size={6}>
-          <Label required>Federal Tax Number</Label>
-          <TextField fullWidth size="small" placeholder="Enter Federal Tax Number"
-            {...register('federalTaxNumber', { required: 'Required' })}
-            error={!!errors.federalTaxNumber} helperText={errors.federalTaxNumber?.message} />
-        </Grid>
-
-        {/* Row 5: NPI | Additional Provider ID | DEA */}
-        <Grid size={4}>
-          <Label required>NPI</Label>
-          <TextField fullWidth size="small" placeholder="Enter NPI"
-            {...register('npiNumber', { required: 'Required' })}
-            error={!!errors.npiNumber} helperText={errors.npiNumber?.message} />
-        </Grid>
-        <Grid size={4}>
-          <Label>Additional Provider ID</Label>
-          <TextField fullWidth size="small" placeholder="Fills 52A on manual claim"
-            {...register('additionalProviderId')} />
-        </Grid>
-        <Grid size={4}>
-          <Label>DEA</Label>
-          <TextField fullWidth size="small" placeholder="Enter DEA" {...register('dea')} />
-        </Grid>
-
-        {/* Row 6: Specialty | Mobile Phone | Home Phone */}
-        <Grid size={4}>
-          <Label>Specialty</Label>
-          <Controller name="specialty" control={control} render={({ field }) => (
-            <FormControl fullWidth size="small">
-              <Select {...field} displayEmpty>
-                <MenuItem value=""><em>Select Specialty</em></MenuItem>
-                {SPECIALTIES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-              </Select>
-            </FormControl>
-          )} />
-        </Grid>
-        <Grid size={4}><PhoneInput label="Mobile Phone Number" required name="mobilePhone" control={control} /></Grid>
-        <Grid size={4}><PhoneInput label="Home Phone Number" name="homePhone" control={control} /></Grid>
-
-        {/* Row 7: License Number | Tax Id Type */}
-        <Grid size={6}>
-          <Label required>License Number</Label>
-          <TextField fullWidth size="small" placeholder="Enter License Number"
-            {...register('licenseNumber', { required: 'Required' })}
-            error={!!errors.licenseNumber} helperText={errors.licenseNumber?.message} />
-        </Grid>
-        <Grid size={6}>
-          <Label required>Tax Id Type</Label>
-          <TextField fullWidth size="small"
-            {...register('taxIdType', { required: 'Required' })}
-            error={!!errors.taxIdType} helperText={errors.taxIdType?.message} />
-        </Grid>
-
-        {/* Row 8: Type radio | Signature on File | Default Dentist + Default Hygienist */}
-        <Grid size={4}>
-          <Label>Type</Label>
-          <Controller name="providerType" control={control} render={({ field }) => (
-            <RadioGroup row {...field}>
-              <FormControlLabel value="Dentist" control={<Radio size="small" />} label={<Typography variant="body2">Dentist</Typography>} />
-              <FormControlLabel value="Hygienist" control={<Radio size="small" />} label={<Typography variant="body2">Hygienist</Typography>} />
-              <FormControlLabel value="Assistant/Other" control={<Radio size="small" />} label={<Typography variant="body2">Assistant/ Other</Typography>} />
-            </RadioGroup>
-          )} />
-        </Grid>
-        <Grid size={4} sx={{ display: 'flex', alignItems: 'center', pt: 3 }}>
-          <Controller name="signatureOnFile" control={control} render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} />}
-              label={<Typography variant="body2">Signature on File</Typography>}
-            />
-          )} />
-        </Grid>
-        <Grid size={4} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, pt: 2 }}>
-          <Controller name="defaultDentist" control={control} render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} />}
-              label={<Typography variant="body2">Default Dentist</Typography>}
-            />
-          )} />
-          <Controller name="defaultHygienist" control={control} render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} />}
-              label={<Typography variant="body2">Default Hygienist</Typography>}
-            />
-          )} />
-        </Grid>
-
-        {/* Row 9: Country | Address Line 1 | Address Line 2 */}
-        <Grid size={4}>
-          <Label required>Country</Label>
-          <Controller name="country" control={control} render={({ field }) => (
-            <FormControl fullWidth size="small">
-              <Select {...field}>
-                <MenuItem value="United States">United States</MenuItem>
-              </Select>
-            </FormControl>
-          )} />
-        </Grid>
-        <Grid size={4}>
-          <Label required>Address Line 1</Label>
-          <TextField fullWidth size="small"
-            {...register('addressLine1', { required: 'Required' })}
-            error={!!errors.addressLine1} helperText={errors.addressLine1?.message} />
-        </Grid>
-        <Grid size={4}>
-          <Label>Address Line 2</Label>
-          <TextField fullWidth size="small" placeholder="Address line 2" {...register('addressLine2')} />
-        </Grid>
-
-        {/* Row 10: State | City | Zip */}
-        <Grid size={4}>
-          <Label required>State/Province</Label>
-          <Controller name="state" control={control} rules={{ required: 'Required' }} render={({ field }) => (
-            <FormControl fullWidth size="small" error={!!errors.state}>
-              <Select {...field} displayEmpty onChange={(e) => { field.onChange(e); setValue('city', ''); }}>
-                <MenuItem value=""><em>Select State</em></MenuItem>
-                {US_STATES.map((s) => <MenuItem key={s.value} value={s.label}>{s.label}</MenuItem>)}
-              </Select>
-            </FormControl>
-          )} />
-        </Grid>
-        <Grid size={4}>
-          <Label required>City</Label>
-          <Controller name="city" control={control} rules={{ required: 'Required' }} render={({ field: { onChange, value }, fieldState: { error } }) => {
-            const currentStateLabel = watch('state');
-            const stateObj = US_STATES.find(s => s.label === currentStateLabel);
-            const stateAbbr = stateObj ? stateObj.value : '';
-            return (
-              <Autocomplete
-                options={STATE_CITIES[stateAbbr] || []}
-                value={value || ""}
-                onChange={(_, newVal) => onChange(newVal || "")}
-                onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                disabled={!currentStateLabel}
-                freeSolo
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    size="small"
-                    placeholder={currentStateLabel ? "City" : "Select state first"}
-                    error={!!error}
-                    helperText={error?.message}
-                  />
-                )}
-              />
-            );
-          }} />
-        </Grid>
-        <Grid size={4}>
-          <Label required>Zip/Postal Code</Label>
-          <TextField fullWidth size="small"
-            {...register('zipCode', { required: 'Required' })}
-            error={!!errors.zipCode} helperText={errors.zipCode?.message} />
-        </Grid>
-
-        {/* Row 11: Description | Color */}
-        <Grid size={6}>
-          <Label>Description</Label>
-          <TextField fullWidth size="small" multiline rows={3} placeholder="Enter Description"
-            {...register('description')} />
-        </Grid>
-        <Grid size={6}>
-          <Label>Color</Label>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
-            {COLOR_SWATCHES.map((c) => (
-              <Box key={c} onClick={() => setValue('color', c)}
-                sx={{
-                  width: 22, height: 22, borderRadius: '3px', backgroundColor: c, cursor: 'pointer',
-                  border: selectedColor === c ? '2px solid #1a3a6b' : '1px solid rgba(0,0,0,0.2)',
-                  transition: 'transform 0.1s',
-                  '&:hover': { transform: 'scale(1.15)' },
-                }} />
-            ))}
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>More Colors:</Typography>
-            <input type="color" value={selectedColor || '#000000'}
-              onChange={(e) => setValue('color', e.target.value)}
-              style={{ width: 22, height: 22, padding: 0, border: '1px solid rgba(0,0,0,0.2)', borderRadius: 3, cursor: 'pointer' }} />
-          </Box>
-        </Grid>
-
-        {/* Row 12: Open Edge Token */}
-        <Grid size={12}>
-          <Label>Open Edge Token:</Label>
-          <TextField fullWidth size="small" {...register('openEdgeToken')} />
-        </Grid>
-
-        {/* Row 13: Carriers out of network | OpenDental Provider Id */}
-        <Grid size={6}>
-          <Label>Carriers to be out of network</Label>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <Select displayEmpty value={carrierInput}
-                onChange={(e) => setCarrierInput(e.target.value)}>
-                <MenuItem value=""><em>Select carrier</em></MenuItem>
-                {['Delta Dental','Blue Cross Blue Shield','Aetna','Cigna','United Healthcare','Humana'].map((c) => (
-                  <MenuItem key={c} value={c}>{c}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button size="small" startIcon={<AddIcon />} onClick={handleAddCarrier}
-              sx={{ color: 'primary.main', textTransform: 'none' }}>
-              +Add
-            </Button>
-          </Box>
-          {carriers.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {carriers.map((c) => (
-                <Chip key={c} label={c} size="small" onDelete={() => handleRemoveCarrier(c)}
-                  sx={{ fontSize: '0.75rem' }} />
-              ))}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <FormInputLabel label="Internal Code Name" />
+              <Tooltip title="Internal identifier for this provider">
+                <InfoIcon sx={{ fontSize: 15, ml: 0.5, mb: 0.8, color: '#9ca3af', cursor: 'help' }} />
+              </Tooltip>
             </Box>
-          )}
-        </Grid>
-        <Grid size={6}>
-          <Label>OpenDental Provider Id</Label>
-          <TextField fullWidth size="small" {...register('openDentalProviderId')} />
-        </Grid>
+            <TextField fullWidth placeholder="Enter Internal Code" sx={commonInputStyles} {...register('internalCodeName')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Email Address" required />
+            <TextField fullWidth type="email" placeholder="Enter Email"
+              sx={commonInputStyles}
+              {...register('email', { required: 'Required' })}
+              error={!!errors.email} helperText={errors.email?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <PhoneInputRow label="Mobile Phone Number" required name="mobilePhone" control={control} />
+          </Grid>
 
-      </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <PhoneInputRow label="Home Phone Number" name="homePhone" control={control} />
+          </Grid>
+        </Grid>
+      </SectionContainer>
+
+      {/* Section 2: Professional Credentials & Identifiers (Strictly 3 fields per row: md: 4) */}
+      <SectionContainer title="Professional Credentials & Identifiers" icon={AssignmentOutlinedIcon}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Organization Name" />
+            <TextField fullWidth placeholder="Enter Organization Name" sx={commonInputStyles} {...register('organizationName')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Federal Tax Number" required />
+            <TextField fullWidth placeholder="Enter Federal Tax Number"
+              sx={commonInputStyles}
+              {...register('federalTaxNumber', { required: 'Required' })}
+              error={!!errors.federalTaxNumber} helperText={errors.federalTaxNumber?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="NPI Number" required />
+            <TextField fullWidth placeholder="Enter NPI"
+              sx={commonInputStyles}
+              {...register('npiNumber', { required: 'Required' })}
+              error={!!errors.npiNumber} helperText={errors.npiNumber?.message} />
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Additional Provider ID" />
+            <TextField fullWidth placeholder="Fills 52A on manual claim"
+              sx={commonInputStyles}
+              {...register('additionalProviderId')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="DEA Number" />
+            <TextField fullWidth placeholder="Enter DEA" sx={commonInputStyles} {...register('dea')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Specialty" />
+            <Controller name="specialty" control={control} render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || ""}
+                sx={selectStyles}
+                SelectProps={{ displayEmpty: true, IconComponent: KeyboardArrowDownIcon, MenuProps: dropdownMenuProps }}
+              >
+                <MenuItem value="" sx={{ fontSize: '0.85rem', color: '#9ca3af' }}><em>Select Specialty</em></MenuItem>
+                {SPECIALTIES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: '0.85rem' }}>{s}</MenuItem>)}
+              </TextField>
+            )} />
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="License Number" required />
+            <TextField fullWidth placeholder="Enter License Number"
+              sx={commonInputStyles}
+              {...register('licenseNumber', { required: 'Required' })}
+              error={!!errors.licenseNumber} helperText={errors.licenseNumber?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Tax ID Type" required />
+            <TextField fullWidth placeholder="Enter Tax ID Type" sx={commonInputStyles}
+              {...register('taxIdType', { required: 'Required' })}
+              error={!!errors.taxIdType} helperText={errors.taxIdType?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Provider Type" />
+            <Controller name="providerType" control={control} render={({ field }) => (
+              <RadioGroup row {...field} sx={{ mt: 0.2 }}>
+                <FormControlLabel value="Dentist" control={<Radio size="small" sx={{ p: 0.5, color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />} label={<Typography sx={{ fontSize: '0.82rem', color: '#374151', fontWeight: 500, mr: 0.5 }}>Dentist</Typography>} />
+                <FormControlLabel value="Hygienist" control={<Radio size="small" sx={{ p: 0.5, color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />} label={<Typography sx={{ fontSize: '0.82rem', color: '#374151', fontWeight: 500, mr: 0.5 }}>Hygienist</Typography>} />
+                <FormControlLabel value="Assistant/Other" control={<Radio size="small" sx={{ p: 0.5, color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />} label={<Typography sx={{ fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>Other</Typography>} />
+              </RadioGroup>
+            )} />
+          </Grid>
+        </Grid>
+      </SectionContainer>
+
+      {/* Section 3: Address & Location Details (Strictly 3 fields per row: md: 4) */}
+      <SectionContainer title="Address & Location Details" icon={LocationOnOutlinedIcon}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Country" required />
+            <Controller name="country" control={control} render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                sx={selectStyles}
+                SelectProps={{ IconComponent: KeyboardArrowDownIcon, MenuProps: dropdownMenuProps }}
+              >
+                <MenuItem value="United States" sx={{ fontSize: '0.85rem' }}>United States</MenuItem>
+              </TextField>
+            )} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Address Line 1" required />
+            <TextField fullWidth placeholder="Enter Street Address" sx={commonInputStyles}
+              {...register('addressLine1', { required: 'Required' })}
+              error={!!errors.addressLine1} helperText={errors.addressLine1?.message} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Address Line 2" />
+            <TextField fullWidth placeholder="Apt, Suite, Bldg (optional)" sx={commonInputStyles} {...register('addressLine2')} />
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="State/Province" required />
+            <Controller name="state" control={control} rules={{ required: 'Required' }} render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || ""}
+                error={!!errors.state}
+                helperText={errors.state?.message}
+                sx={selectStyles}
+                onChange={(e) => { field.onChange(e); setValue('city', ''); }}
+                SelectProps={{ displayEmpty: true, IconComponent: KeyboardArrowDownIcon, MenuProps: dropdownMenuProps }}
+              >
+                <MenuItem value="" sx={{ fontSize: '0.85rem', color: '#9ca3af' }}><em>Select State</em></MenuItem>
+                {US_STATES.map((s) => <MenuItem key={s.value} value={s.label} sx={{ fontSize: '0.85rem' }}>{s.label}</MenuItem>)}
+              </TextField>
+            )} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="City" required />
+            <Controller name="city" control={control} rules={{ required: 'Required' }} render={({ field: { onChange, value }, fieldState: { error } }) => {
+              const currentStateLabel = watch('state');
+              const stateObj = US_STATES.find(s => s.label === currentStateLabel);
+              const stateAbbr = stateObj ? stateObj.value : '';
+              return (
+                <Autocomplete
+                  options={STATE_CITIES[stateAbbr] || []}
+                  value={value || ""}
+                  onChange={(_, newVal) => onChange(newVal || "")}
+                  onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                  disabled={!currentStateLabel}
+                  freeSolo
+                  PopperProps={dropdownMenuProps}
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      sx={commonInputStyles}
+                      placeholder={currentStateLabel ? "Enter City" : "Select state first"}
+                      error={!!error}
+                      helperText={error?.message}
+                    />
+                  )}
+                />
+              );
+            }} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Zip/Postal Code" required />
+            <TextField fullWidth placeholder="Enter Zip/Postal Code" sx={commonInputStyles}
+              {...register('zipCode', { required: 'Required' })}
+              error={!!errors.zipCode} helperText={errors.zipCode?.message} />
+          </Grid>
+        </Grid>
+      </SectionContainer>
+
+      {/* Section 4: Preferences & Integration Settings (Strictly 3 fields per row: md: 4) */}
+      <SectionContainer title="Preferences & Integration Settings" icon={SettingsOutlinedIcon}>
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12 }}>
+            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <Controller name="signatureOnFile" control={control} render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />}
+                  label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Signature on File</Typography>}
+                  sx={{ m: 0 }}
+                />
+              )} />
+              <Controller name="defaultDentist" control={control} render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />}
+                  label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Default Dentist</Typography>}
+                  sx={{ m: 0 }}
+                />
+              )} />
+              <Controller name="defaultHygienist" control={control} render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={!!field.value} onChange={field.onChange} sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#3b82f6' } }} />}
+                  label={<Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151' }}>Default Hygienist</Typography>}
+                  sx={{ m: 0 }}
+                />
+              )} />
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Open Edge Token" />
+            <TextField fullWidth placeholder="Enter Open Edge Token" sx={commonInputStyles} {...register('openEdgeToken')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="OpenDental Provider ID" />
+            <TextField fullWidth placeholder="Enter OpenDental ID" sx={commonInputStyles} {...register('openDentalProviderId')} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Description & Notes" />
+            <TextField fullWidth placeholder="Clinical or Provider Notes" sx={commonInputStyles}
+              {...register('description')} />
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Calendar Color Accent" />
+            <Box sx={{ p: 1.5, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb', height: 'auto' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                {COLOR_SWATCHES.slice(0, 8).map((c) => (
+                  <Box key={c} onClick={() => setValue('color', c)}
+                    sx={{
+                      width: 24, height: 24, borderRadius: '5px', backgroundColor: c, cursor: 'pointer',
+                      border: selectedColor === c ? '2.5px solid #3b82f6' : '1px solid #d1d5db',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { transform: 'scale(1.1)' },
+                    }} />
+                ))}
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>Custom:</Typography>
+                <input type="color" value={selectedColor || '#3b82f6'}
+                  onChange={(e) => setValue('color', e.target.value)}
+                  style={{ width: 32, height: 24, padding: 0, border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', backgroundColor: '#fff' }} />
+              </Box>
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 8 }}>
+            <FormInputLabel label="Carriers Out Of Network" />
+            <Box sx={{ p: 1.5, bgcolor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <FormControl fullWidth sx={selectStyles}>
+                    <Select displayEmpty value={carrierInput}
+                      IconComponent={KeyboardArrowDownIcon}
+                      MenuProps={dropdownMenuProps}
+                      onChange={(e) => setCarrierInput(e.target.value)}>
+                      <MenuItem value="" sx={{ fontSize: '0.85rem', color: '#9ca3af' }}><em>Select carrier to add</em></MenuItem>
+                      {['Delta Dental','Blue Cross Blue Shield','Aetna','Cigna','United Healthcare','Humana'].map((c) => (
+                        <MenuItem key={c} value={c} sx={{ fontSize: '0.85rem' }}>{c}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Button size="small" startIcon={<AddIcon />} onClick={handleAddCarrier}
+                  variant="outlined"
+                  sx={{
+                    height: '36px',
+                    borderRadius: '8px',
+                    borderColor: '#3b82f6',
+                    color: '#3b82f6',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.85rem',
+                    px: 2.5,
+                    '&:hover': { bgcolor: '#eff6ff', borderColor: '#2563eb' }
+                  }}>
+                  Add Carrier
+                </Button>
+              </Box>
+              {carriers.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5, pt: 1.5, borderTop: '1px solid #e5e7eb' }}>
+                  {carriers.map((c) => (
+                    <Chip key={c} label={c} size="small" onDelete={() => handleRemoveCarrier(c)}
+                      sx={{ fontWeight: 500, fontSize: '0.8rem', bgcolor: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', border: '1px solid #bfdbfe', py: 1.5 }} />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </SectionContainer>
+
     </Box>
   );
 };
