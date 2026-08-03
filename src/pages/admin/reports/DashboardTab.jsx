@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Grid,
@@ -13,12 +13,118 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import RightPanel from '../../../components/appointments/right-panel/RightPanel';
 import RightPanelCollapsed from '../../../components/appointments/right-panel/RightPanelCollapsed';
+import { reportingService } from '../../../services/reporting.service';
+import dayjs from 'dayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+
+const defaultMetrics = {
+  total: { pVal: 0, pGoal: 0, pPercent: 0, cVal: 0, cGoal: 0, cPercent: 0, gpVal: 0, gpGoal: 0, gpPercent: 0, gcVal: 0, gcGoal: 0, gcPercent: 0, perHourStr: '$0 (goal $0)', perVisitStr: '$0 (goal $0)' },
+  dentist: { pVal: 0, pGoal: 0, pPercent: 0, cVal: 0, cGoal: 0, cPercent: 0, gpVal: 0, gpGoal: 0, gpPercent: 0, gcVal: 0, gcGoal: 0, gcPercent: 0, perHourStr: '$0 (goal $0)', perVisitStr: '$0 (goal $0)' },
+  hygienist: { pVal: 0, pGoal: 0, pPercent: 0, cVal: 0, cGoal: 0, cPercent: 0, gpVal: 0, gpGoal: 0, gpPercent: 0, gcVal: 0, gcGoal: 0, gcPercent: 0, perHourStr: '$0 (goal $0)', perVisitStr: '$0 (goal $0)' },
+  trends: {
+    labels: [],
+    totalProduction: Array(20).fill(0),
+    treatmentProduction: Array(20).fill(0),
+    hygieneProduction: Array(20).fill(0),
+    totalProductionSummary: { percent: '0%', footer: 'Production Goal $0 · Actual $0 (0%)' },
+    treatmentProductionSummary: { percent: '0%', footer: 'Tx Production Goal $0 · Actual $0 (0%)' },
+    hygieneProductionSummary: { percent: '0%', footer: 'Hyg Production Goal $0 · Actual $0 (0%)' }
+  },
+  patients: {
+    txPt: { count: '0', label: 'treatment visits', rows: [{ name: 'Completed', val: 0 }, { name: 'In chair', val: 0 }, { name: 'Rescheduled', val: 0 }] },
+    hygPt: { count: '0', label: 'hygiene visits', rows: [{ name: 'Recare', val: 0 }, { name: 'Perio', val: 0 }, { name: 'New', val: 0 }] },
+    newPt: { count: '0', label: 'patients today', rows: [{ name: 'Scheduled', val: 0 }, { name: 'Walk-in', val: 0 }, { name: 'No-show', val: 0 }] }
+  },
+  hygienePotential: {
+    onTimeNoPreAppt: 0, onTimePreAppt: 0, noRecare: 0, flaggedNoRecare: 0, late12mAppt: 0, late12mBroken: 0, late12mNoAppt: 0
+  },
+  caseAcceptance: {
+    newPt: { acceptanceRate: '0.00%', summaryText: '(0 Patient/s · $0 accepted)', statuses: { scheduled: 0, acceptedInProgress: 0, completed: 0, acceptedNotScheduled: 0, presented: 0, diagnosed: 0, rejected: 0, followUp: 0, reviewed: 0 } },
+    existingPt: { acceptanceRate: '0.00%', summaryText: '(0 Patient/s · $0 accepted)', statuses: { scheduled: 0, acceptedInProgress: 0, completed: 0, acceptedNotScheduled: 0, presented: 0, diagnosed: 0, rejected: 0, followUp: 0, reviewed: 0 } }
+  }
+};
+
+const DonutChart = ({ slices }) => {
+  const total = slices.reduce((acc, s) => acc + (Number(s.value) || 0), 0);
+  if (total === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
+        <svg width="155px" height="155px" viewBox="-3 -3 42 42">
+          <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#f1f5f9" strokeWidth="5.2" />
+        </svg>
+      </Box>
+    );
+  }
+
+  let offset = 0;
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
+      <svg width="155px" height="155px" viewBox="-3 -3 42 42">
+        <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#f1f5f9" strokeWidth="5.2" />
+        {slices.map((slice, idx) => {
+          const val = Number(slice.value) || 0;
+          if (val === 0) return null;
+          const pct = (val / total) * 100;
+          const dashArray = `${pct} ${100 - pct}`;
+          const dashOffset = -offset;
+          offset += pct;
+          return (
+            <circle
+              key={idx}
+              cx="18"
+              cy="18"
+              r="15.9155"
+              fill="transparent"
+              stroke={slice.color}
+              strokeWidth="5.2"
+              strokeDasharray={dashArray}
+              strokeDashoffset={dashOffset}
+            />
+          );
+        })}
+      </svg>
+    </Box>
+  );
+};
 
 const DashboardTab = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [dateRange, setDateRange] = useState('Daily');
   const [provider, setProvider] = useState('All');
-  const [currentDate, setCurrentDate] = useState('May 22, 2026');
+  const [currentDate, setCurrentDate] = useState(dayjs());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const centerDateRef = useRef(null);
+  const [metrics, setMetrics] = useState(defaultMetrics);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoading(true);
+        const validDate = currentDate && currentDate.isValid() ? currentDate.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+        const data = await reportingService.getDashboardMetrics({
+          date: validDate,
+          range: dateRange,
+          providerId: provider
+        });
+        if (data) {
+          setMetrics(prev => ({
+            ...prev,
+            ...data,
+            trends: { ...prev.trends, ...data.trends },
+            patients: { ...prev.patients, ...data.patients },
+            hygienePotential: { ...prev.hygienePotential, ...data.hygienePotential },
+            caseAcceptance: { ...prev.caseAcceptance, ...data.caseAcceptance }
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard metrics:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, [dateRange, provider, currentDate]);
 
   const colors = {
     navy: '#1a3a6b',
@@ -45,14 +151,17 @@ const DashboardTab = () => {
   };
 
   const handlePrevDate = () => {
-    setCurrentDate('May 21, 2026');
+    const unit = dateRange === 'Daily' ? 'day' : dateRange === 'Weekly' ? 'week' : dateRange === 'Monthly' ? 'month' : 'year';
+    setCurrentDate(prev => (prev && prev.isValid() ? prev : dayjs()).subtract(1, unit));
   };
 
   const handleNextDate = () => {
-    setCurrentDate('May 23, 2026');
+    const unit = dateRange === 'Daily' ? 'day' : dateRange === 'Weekly' ? 'week' : dateRange === 'Monthly' ? 'month' : 'year';
+    setCurrentDate(prev => (prev && prev.isValid() ? prev : dayjs()).add(1, unit));
   };
 
-  const renderProgressBarRow = (label, currentVal, goalVal, percentFill, isRed = false) => {
+  const renderProgressBarRow = (label, currentVal, goalVal, percentFill, forceRed = false) => {
+    const isRed = forceRed && (Number(currentVal) > 0 || Number(goalVal) > 0);
     return (
       <Box
         sx={{
@@ -80,7 +189,7 @@ const DashboardTab = () => {
           {label} ${currentVal}
         </Typography>
 
-        {goalVal && (
+        {goalVal ? (
           <Typography
             sx={{
               fontFamily: "'Inter', sans-serif",
@@ -94,7 +203,7 @@ const DashboardTab = () => {
           >
             | ${goalVal}
           </Typography>
-        )}
+        ) : null}
       </Box>
     );
   };
@@ -132,13 +241,38 @@ const DashboardTab = () => {
           </Select>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box ref={centerDateRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, position: 'relative' }}>
           <IconButton size="small" onClick={handlePrevDate} sx={{ color: '#475569', p: 0.5, '&:hover': { bgcolor: '#f1f5f9' } }}>
             <KeyboardArrowLeftIcon fontSize="small" />
           </IconButton>
-          <Typography sx={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 600 }}>
-            {currentDate}
+          <Typography 
+            onClick={() => setDatePickerOpen(true)} 
+            sx={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 600, cursor: 'pointer', userSelect: 'none', '&:hover': { textDecoration: 'underline', color: '#1a3a6b' } }}
+          >
+            {currentDate && currentDate.isValid() ? currentDate.format('MMM DD, YYYY') : dayjs().format('MMM DD, YYYY')}
           </Typography>
+          <DatePicker
+            value={currentDate && currentDate.isValid() ? currentDate : dayjs()}
+            open={datePickerOpen}
+            onClose={() => setDatePickerOpen(false)}
+            onOpen={() => setDatePickerOpen(true)}
+            onChange={(newValue) => {
+              if (newValue && newValue.isValid()) {
+                setCurrentDate(newValue);
+              }
+            }}
+            slotProps={{
+              popper: {
+                anchorEl: centerDateRef.current,
+                placement: 'bottom-start'
+              },
+              textField: {
+                sx: {
+                  display: 'none'
+                }
+              }
+            }}
+          />
           <IconButton size="small" onClick={handleNextDate} sx={{ color: '#475569', p: 0.5, '&:hover': { bgcolor: '#f1f5f9' } }}>
             <KeyboardArrowRightIcon fontSize="small" />
           </IconButton>
@@ -149,7 +283,7 @@ const DashboardTab = () => {
             Date:
           </Typography>
           <Typography sx={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 600 }}>
-            05/22/2026
+            {dayjs().format('MM/DD/YYYY')}
           </Typography>
         </Box>
 
@@ -176,28 +310,28 @@ const DashboardTab = () => {
             {/* ================= ROW 1: Target Metrics (3 cards) ================= */}
             {[
               {
-                title: 'Total', titleColor: '#0F172B', value: '$0',
-                pVal: '0', pGoal: '1,400', pPercent: 0,
-                cVal: '328.67', cGoal: '1,372', cPercent: 24,
-                gpVal: '0', gpGoal: '', gpPercent: 0,
-                gcVal: '328.67', gcGoal: '', gcPercent: 24,
-                perHour: '$0 (goal $200)', perVisit: '$0 (goal $0)'
+                title: 'Total', titleColor: '#0F172B', value: `$${metrics.total?.pVal ?? 0}`,
+                pVal: metrics.total?.pVal ?? 0, pGoal: metrics.total?.pGoal || '', pPercent: metrics.total?.pPercent ?? 0,
+                cVal: metrics.total?.cVal ?? 0, cGoal: metrics.total?.cGoal || '', cPercent: metrics.total?.cPercent ?? 0,
+                gpVal: metrics.total?.gpVal ?? 0, gpGoal: metrics.total?.gpGoal || '', gpPercent: metrics.total?.gpPercent ?? 0,
+                gcVal: metrics.total?.gcVal ?? 0, gcGoal: metrics.total?.gcGoal || '', gcPercent: metrics.total?.gcPercent ?? 0,
+                perHour: metrics.total?.perHourStr || '$0 / $0', perVisit: metrics.total?.perVisitStr || '$0 / $0'
               },
               {
-                title: 'Dentist', titleColor: '#00786F', value: '$0',
-                pVal: '0', pGoal: '1,400', pPercent: 0,
-                cVal: '266.67', cGoal: '1,372', cPercent: 19,
-                gpVal: '0', gpGoal: '', gpPercent: 0,
-                gcVal: '266.67', gcGoal: '', gcPercent: 19,
-                perHour: '$0 (goal $200)', perVisit: '$0 (goal $0)'
+                title: 'Dentist', titleColor: '#00786F', value: `$${metrics.dentist?.pVal ?? 0}`,
+                pVal: metrics.dentist?.pVal ?? 0, pGoal: metrics.dentist?.pGoal || '', pPercent: metrics.dentist?.pPercent ?? 0,
+                cVal: metrics.dentist?.cVal ?? 0, cGoal: metrics.dentist?.cGoal || '', cPercent: metrics.dentist?.cPercent ?? 0,
+                gpVal: metrics.dentist?.gpVal ?? 0, gpGoal: metrics.dentist?.gpGoal || '', gpPercent: metrics.dentist?.gpPercent ?? 0,
+                gcVal: metrics.dentist?.gcVal ?? 0, gcGoal: metrics.dentist?.gcGoal || '', gcPercent: metrics.dentist?.gcPercent ?? 0,
+                perHour: metrics.dentist?.perHourStr || '$0 / $0', perVisit: metrics.dentist?.perVisitStr || '$0 / $0'
               },
               {
-                title: 'Hygienist', titleColor: '#7008E7', value: '$0',
-                pVal: '0', pGoal: '', pPercent: 0,
-                cVal: '62', cGoal: '', cPercent: 10,
-                gpVal: '0', gpGoal: '', gpPercent: 0,
-                gcVal: '62', gcGoal: '', gcPercent: 10,
-                perHour: '$0 (goal $0)', perVisit: '$0 (goal $0)'
+                title: 'Hygienist', titleColor: '#7008E7', value: `$${metrics.hygienist?.pVal ?? 0}`,
+                pVal: metrics.hygienist?.pVal ?? 0, pGoal: metrics.hygienist?.pGoal || '', pPercent: metrics.hygienist?.pPercent ?? 0,
+                cVal: metrics.hygienist?.cVal ?? 0, cGoal: metrics.hygienist?.cGoal || '', cPercent: metrics.hygienist?.cPercent ?? 0,
+                gpVal: metrics.hygienist?.gpVal ?? 0, gpGoal: metrics.hygienist?.gpGoal || '', gpPercent: metrics.hygienist?.gpPercent ?? 0,
+                gcVal: metrics.hygienist?.gcVal ?? 0, gcGoal: metrics.hygienist?.gcGoal || '', gcPercent: metrics.hygienist?.gcPercent ?? 0,
+                perHour: metrics.hygienist?.perHourStr || '$0 / $0', perVisit: metrics.hygienist?.perVisitStr || '$0 / $0'
               }
             ].map((card, idx) => (
               <Grid item xs={4} key={`metrics-${idx}`} sx={{ minWidth: 0, flexBasis: '33.3333%', maxWidth: '33.3333%' }}>
@@ -220,16 +354,26 @@ const DashboardTab = () => {
                       {card.title}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 2.5 }}>
-                      <Typography sx={{ color: '#ef4444', fontSize: '0.9rem', lineHeight: 1, fontWeight: 700 }}>
-                        ▼
-                      </Typography>
+                      {Number(card.pVal) > 0 && Number(card.pVal) >= Number(card.pGoal || 0) && Number(card.pGoal || 0) > 0 ? (
+                        <Typography sx={{ color: '#10b981', fontSize: '0.9rem', lineHeight: 1, fontWeight: 700 }}>
+                          ▲
+                        </Typography>
+                      ) : Number(card.pGoal) > 0 && Number(card.pVal) < Number(card.pGoal) ? (
+                        <Typography sx={{ color: '#ef4444', fontSize: '0.9rem', lineHeight: 1, fontWeight: 700 }}>
+                          ▼
+                        </Typography>
+                      ) : (
+                        <Typography sx={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1, fontWeight: 700 }}>
+                          •
+                        </Typography>
+                      )}
                       <Typography sx={{ fontSize: '0.88rem', color: '#64748b', fontWeight: 500 }}>
                         {card.value}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                       {renderProgressBarRow('P', card.pVal, card.pGoal, card.pPercent)}
-                      {renderProgressBarRow('C', card.cVal, card.cGoal, card.cPercent, true)}
+                      {renderProgressBarRow('C', card.cVal, card.cGoal, card.cPercent, Number(card.cGoal) > 0 && Number(card.cVal) < Number(card.cGoal))}
                       {renderProgressBarRow('GP', card.gpVal, card.gpGoal, card.gpPercent)}
                       {renderProgressBarRow('GC', card.gcVal, card.gcGoal, card.gcPercent)}
                     </Box>
@@ -253,25 +397,25 @@ const DashboardTab = () => {
               {
                 title: 'Total Production',
                 titleColor: '#0F172B',
-                percent: '68%',
-                activeIdx: 13,
-                footer: 'Production Goal 1,400 · Actual $952 (68%)'
+                percent: metrics.trends?.totalProductionSummary?.percent || '0%',
+                footer: metrics.trends?.totalProductionSummary?.footer || 'Production Goal $0 · Actual $0 (0%)'
               },
               {
                 title: 'Treatment Production',
                 titleColor: '#00786F',
-                percent: '68%',
-                activeIdx: 13,
-                footer: 'Tx Production Goal 1,400 · Actual $952 (68%)'
+                percent: metrics.trends?.treatmentProductionSummary?.percent || '0%',
+                footer: metrics.trends?.treatmentProductionSummary?.footer || 'Tx Production Goal $0 · Actual $0 (0%)'
               },
               {
                 title: 'Hygiene Production',
                 titleColor: '#7008E7',
-                percent: '0%',
-                activeIdx: 0,
-                footer: 'Hyg Production Goal 0 · Actual $0 (0%)'
+                percent: metrics.trends?.hygieneProductionSummary?.percent || '0%',
+                footer: metrics.trends?.hygieneProductionSummary?.footer || 'Hyg Production Goal $0 · Actual $0 (0%)'
               }
-            ].map((chart, idx) => (
+            ].map((chart, idx) => {
+              const numPct = parseInt((chart.percent || '0%').replace('%', ''), 10) || 0;
+              const activeIdx = Math.min(19, Math.max(0, Math.round((numPct / 100) * 19)));
+              return (
               <Grid item xs={4} key={`prod-${idx}`} sx={{ minWidth: 0, flexBasis: '33.3333%', maxWidth: '33.3333%' }}>
                 <Paper
                   sx={{
@@ -294,7 +438,7 @@ const DashboardTab = () => {
                   {/* Vertical Pill Bars Chart */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', my: 2, px: 0.5, height: 145, position: 'relative' }}>
                     {[...Array(20)].map((_, i) => {
-                      const isActive = i === chart.activeIdx;
+                      const isActive = i === activeIdx;
                       return (
                         <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                           <Box
@@ -331,7 +475,8 @@ const DashboardTab = () => {
                   </Box>
                 </Paper>
               </Grid>
-            ))}
+            );
+            })}
           </Grid>
 
           {/* ================= ROW 3: Patient Summary Status Blocks (3 cards) ================= */}
@@ -340,35 +485,23 @@ const DashboardTab = () => {
               {
                 title: 'Tx Pt',
                 color: '#00786F',
-                count: '11',
-                label: 'treatment visits',
-                rows: [
-                  { name: 'Completed', val: 7 },
-                  { name: 'In chair', val: 2 },
-                  { name: 'Rescheduled', val: 2 }
-                ]
+                count: metrics.patients?.txPt?.count || '0',
+                label: metrics.patients?.txPt?.label || 'treatment visits',
+                rows: metrics.patients?.txPt?.rows || []
               },
               {
                 title: 'Hyg Pt',
                 color: '#7008E7',
-                count: '9',
-                label: 'hygiene visits',
-                rows: [
-                  { name: 'Recare', val: 6 },
-                  { name: 'Perio', val: 2 },
-                  { name: 'New', val: 1 }
-                ]
+                count: metrics.patients?.hygPt?.count || '0',
+                label: metrics.patients?.hygPt?.label || 'hygiene visits',
+                rows: metrics.patients?.hygPt?.rows || []
               },
               {
                 title: 'New Pt',
                 color: '#0F172B',
-                count: '6',
-                label: 'patients today',
-                rows: [
-                  { name: 'Scheduled', val: 4 },
-                  { name: 'Walk-in', val: 1 },
-                  { name: 'No-show', val: 1 }
-                ]
+                count: metrics.patients?.newPt?.count || '0',
+                label: metrics.patients?.newPt?.label || 'patients today',
+                rows: metrics.patients?.newPt?.rows || []
               }
             ].map((card, idx) => (
               <Grid item xs={4} key={`ptcards-${idx}`} sx={{ minWidth: 0, flexBasis: '33.3333%', maxWidth: '33.3333%' }}>
@@ -442,32 +575,33 @@ const DashboardTab = () => {
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
                   height: '100%',
                   boxSizing: 'border-box'
                 }}
               >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, minHeight: 45 }}>
                   <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', fontWeight: 600, color: '#7008E7', lineHeight: '22.5px', letterSpacing: '0px', verticalAlign: 'middle', wordBreak: 'break-word' }}>
                     Hygiene Interval Potential
                   </Typography>
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
-                  <svg width="155px" height="155px" viewBox="-3 -3 42 42">
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#a855f7" strokeWidth="5.2" strokeDasharray="7 93" strokeDashoffset="0" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#d8b4fe" strokeWidth="5.2" strokeDasharray="38 62" strokeDashoffset="-7" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#3b82f6" strokeWidth="5.2" strokeDasharray="40 60" strokeDashoffset="-45" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e293b" strokeWidth="5.2" strokeDasharray="15 85" strokeDashoffset="-85" />
-                  </svg>
-                </Box>
+                <DonutChart
+                  slices={[
+                    { value: metrics.hygienePotential?.onTimeNoPreAppt ?? 0, color: '#a855f7' },
+                    { value: metrics.hygienePotential?.onTimePreAppt ?? 0, color: '#d8b4fe' },
+                    { value: metrics.hygienePotential?.noRecare ?? 0, color: '#3b82f6' },
+                    { value: metrics.hygienePotential?.flaggedNoRecare ?? 0, color: '#93c5fd' },
+                    { value: metrics.hygienePotential?.late12mAppt ?? 0, color: '#64748b' },
+                    { value: metrics.hygienePotential?.late12mBroken ?? 0, color: '#1e293b' }
+                  ]}
+                />
 
-                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'On-Time No Pre-appt (23)', color: '#a855f7' },
-                      { label: 'On-Time Pre-appt (187)', color: '#d8b4fe' },
-                      { label: 'No Recare (162)', color: '#3b82f6' }
+                      { label: `On-Time No Pre-appt (${metrics.hygienePotential?.onTimeNoPreAppt ?? 0})`, color: '#a855f7' },
+                      { label: `On-Time Pre-appt (${metrics.hygienePotential?.onTimePreAppt ?? 0})`, color: '#d8b4fe' },
+                      { label: `No Recare (${metrics.hygienePotential?.noRecare ?? 0})`, color: '#3b82f6' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -479,9 +613,9 @@ const DashboardTab = () => {
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Flagged No-Recare (1)', color: '#93c5fd' },
-                      { label: 'Late >12 months Appt (1)', color: '#64748b' },
-                      { label: 'Late >12 months Broken (43)', color: '#1e293b' }
+                      { label: `Flagged No-Recare (${metrics.hygienePotential?.flaggedNoRecare ?? 0})`, color: '#93c5fd' },
+                      { label: `Late >12 months Appt (${metrics.hygienePotential?.late12mAppt ?? 0})`, color: '#64748b' },
+                      { label: `Late >12 months Broken (${metrics.hygienePotential?.late12mBroken ?? 0})`, color: '#1e293b' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -506,34 +640,34 @@ const DashboardTab = () => {
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
                   height: '100%',
                   boxSizing: 'border-box'
                 }}
               >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5, minHeight: 45 }}>
                   <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', fontWeight: 600, color: '#09121F', lineHeight: '22.5px', letterSpacing: '0px', verticalAlign: 'middle', wordBreak: 'break-word' }}>
-                    New Pt Case Acceptance (62.50%)
+                    New Pt Case Acceptance ({metrics.caseAcceptance?.newPt?.acceptanceRate || '0.00%'})
                   </Typography>
                   <Typography sx={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 }}>
-                    (8 Patient/s · $2,450 accepted)
+                    {metrics.caseAcceptance?.newPt?.summaryText || '(0 Patient/s)'}
                   </Typography>
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
-                  <svg width="155px" height="155px" viewBox="-3 -3 42 42">
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#1e40af" strokeWidth="5.2" strokeDasharray="30 70" strokeDashoffset="0" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#3b82f6" strokeWidth="5.2" strokeDasharray="35 65" strokeDashoffset="-30" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#bfdbfe" strokeWidth="5.2" strokeDasharray="28 72" strokeDashoffset="-65" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#ef4444" strokeWidth="5.2" strokeDasharray="7 93" strokeDashoffset="-93" />
-                  </svg>
-                </Box>
+                <DonutChart
+                  slices={[
+                    { value: metrics.caseAcceptance?.newPt?.statuses?.scheduled ?? 0, color: '#1e40af' },
+                    { value: metrics.caseAcceptance?.newPt?.statuses?.acceptedInProgress ?? 0, color: '#3b82f6' },
+                    { value: metrics.caseAcceptance?.newPt?.statuses?.presented ?? 0, color: '#60a5fa' },
+                    { value: metrics.caseAcceptance?.newPt?.statuses?.reviewed ?? 0, color: '#bfdbfe' },
+                    { value: metrics.caseAcceptance?.newPt?.statuses?.rejected ?? 0, color: '#ef4444' }
+                  ]}
+                />
 
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Scheduled', color: '#1e40af' },
-                      { label: 'Accepted ($2,450)', color: '#3b82f6' }
+                      { label: `Scheduled (${metrics.caseAcceptance?.newPt?.statuses?.scheduled ?? 0})`, color: '#1e40af' },
+                      { label: `Accepted In Progress (${metrics.caseAcceptance?.newPt?.statuses?.acceptedInProgress ?? 0})`, color: '#3b82f6' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -545,8 +679,8 @@ const DashboardTab = () => {
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Presented', color: '#60a5fa' },
-                      { label: 'Pending Review', color: '#bfdbfe' }
+                      { label: `Presented (${metrics.caseAcceptance?.newPt?.statuses?.presented ?? 0})`, color: '#60a5fa' },
+                      { label: `Pending Review (${metrics.caseAcceptance?.newPt?.statuses?.reviewed ?? 0})`, color: '#bfdbfe' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -556,9 +690,9 @@ const DashboardTab = () => {
                       </Box>
                     ))}
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 0.8, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Declined', color: '#ef4444' }
+                      { label: `Declined (${metrics.caseAcceptance?.newPt?.statuses?.rejected ?? 0})`, color: '#ef4444' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -583,38 +717,39 @@ const DashboardTab = () => {
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
                   height: '100%',
                   boxSizing: 'border-box'
                 }}
               >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 0.5, minHeight: 45 }}>
                   <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', fontWeight: 600, color: '#00786F', lineHeight: '22.5px', letterSpacing: '0px', verticalAlign: 'middle', wordBreak: 'break-word' }}>
-                    Existing Pt Case Acceptance (100.00%)
+                    Existing Pt Case Acceptance ({metrics.caseAcceptance?.existingPt?.acceptanceRate || '0.00%'})
                   </Typography>
                   <Typography sx={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 }}>
-                    (1 Patient/s)
+                    {metrics.caseAcceptance?.existingPt?.summaryText || '(0 Patient/s)'}
                   </Typography>
                 </Box>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
-                  <svg width="155px" height="155px" viewBox="-3 -3 42 42">
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#0d9488" strokeWidth="5.2" strokeDasharray="15 85" strokeDashoffset="0" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#10b981" strokeWidth="5.2" strokeDasharray="30 70" strokeDashoffset="-15" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#a7f3d0" strokeWidth="5.2" strokeDasharray="8 92" strokeDashoffset="-45" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#334155" strokeWidth="5.2" strokeDasharray="12 88" strokeDashoffset="-53" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#94a3b8" strokeWidth="5.2" strokeDasharray="20 80" strokeDashoffset="-65" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#ef4444" strokeWidth="5.2" strokeDasharray="6 94" strokeDashoffset="-85" />
-                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#f59e0b" strokeWidth="5.2" strokeDasharray="9 91" strokeDashoffset="-91" />
-                  </svg>
-                </Box>
+                <DonutChart
+                  slices={[
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.scheduled ?? 0, color: '#0d9488' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.acceptedInProgress ?? 0, color: '#2dd4bf' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.completed ?? 0, color: '#10b981' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.acceptedNotScheduled ?? 0, color: '#a7f3d0' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.presented ?? 0, color: '#334155' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.diagnosed ?? 0, color: '#94a3b8' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.rejected ?? 0, color: '#ef4444' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.followUp ?? 0, color: '#f59e0b' },
+                    { value: metrics.caseAcceptance?.existingPt?.statuses?.reviewed ?? 0, color: '#bbf7d0' }
+                  ]}
+                />
 
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1.1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Scheduled', color: '#0d9488' },
-                      { label: 'Accepted In Progress', color: '#2dd4bf' },
-                      { label: 'Completed ($100)', color: '#10b981' }
+                      { label: `Scheduled (${metrics.caseAcceptance?.existingPt?.statuses?.scheduled ?? 0})`, color: '#0d9488' },
+                      { label: `Accepted In Progress (${metrics.caseAcceptance?.existingPt?.statuses?.acceptedInProgress ?? 0})`, color: '#2dd4bf' },
+                      { label: `Completed (${metrics.caseAcceptance?.existingPt?.statuses?.completed ?? 0})`, color: '#10b981' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -624,11 +759,11 @@ const DashboardTab = () => {
                       </Box>
                     ))}
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1.2, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Accepted Not Scheduled', color: '#a7f3d0' },
-                      { label: 'Presented', color: '#334155' },
-                      { label: 'Diagnosed', color: '#94a3b8' }
+                      { label: `Accepted Not Scheduled (${metrics.caseAcceptance?.existingPt?.statuses?.acceptedNotScheduled ?? 0})`, color: '#a7f3d0' },
+                      { label: `Presented (${metrics.caseAcceptance?.existingPt?.statuses?.presented ?? 0})`, color: '#334155' },
+                      { label: `Diagnosed (${metrics.caseAcceptance?.existingPt?.statuses?.diagnosed ?? 0})`, color: '#94a3b8' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
@@ -638,11 +773,11 @@ const DashboardTab = () => {
                       </Box>
                     ))}
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 0.9, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
                     {[
-                      { label: 'Rejected', color: '#ef4444' },
-                      { label: 'Follow Up', color: '#f59e0b' },
-                      { label: 'Reviewed', color: '#bbf7d0' }
+                      { label: `Rejected (${metrics.caseAcceptance?.existingPt?.statuses?.rejected ?? 0})`, color: '#ef4444' },
+                      { label: `Follow Up (${metrics.caseAcceptance?.existingPt?.statuses?.followUp ?? 0})`, color: '#f59e0b' },
+                      { label: `Reviewed (${metrics.caseAcceptance?.existingPt?.statuses?.reviewed ?? 0})`, color: '#bbf7d0' }
                     ].map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
