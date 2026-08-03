@@ -12,7 +12,7 @@ const KpiActionToolbar = ({ subTab, setSubTab, onPrint, onExportCSV }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        mb: 3,
+        mb: 1.5,
         px: 3,
         borderRadius: '12px',
         border: '1px solid #DFE5EC',

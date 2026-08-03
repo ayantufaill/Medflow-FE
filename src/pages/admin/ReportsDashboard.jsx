@@ -91,9 +91,8 @@ const ReportsDashboard = () => {
 
   return (
     <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box', '@media print': { height: 'auto', overflow: 'visible', display: 'block' } }}>
-      {/* Main Reports Area */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', '@media print': { height: 'auto', overflow: 'visible', border: 'none', display: 'block' } }}>
+        <Box sx={{ position: 'relative', border: location.pathname.toLowerCase().includes('/kpi') ? 'none' : '1px solid #e2e8f0', borderRadius: location.pathname.toLowerCase().includes('/kpi') ? 0 : 2, backgroundColor: location.pathname.toLowerCase().includes('/kpi') ? 'transparent' : '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', '@media print': { height: 'auto', overflow: 'visible', border: 'none', display: 'block', backgroundColor: '#fff' } }}>
           
           {!location.pathname.toLowerCase().includes('/kpi') && (
             <Box onMouseLeave={() => setHoveredTab(null)} sx={{ flexShrink: 0, zIndex: 10 }}>
@@ -143,7 +142,7 @@ const ReportsDashboard = () => {
           )}
 
           {/* Page content */}
-          <Box sx={{ flex: 1, p: location.pathname.toLowerCase().includes('/kpi') ? 0 : 3, backgroundColor: '#fff', overflowY: 'auto', overflowX: 'hidden', width: '100%', boxSizing: 'border-box', '@media print': { overflow: 'visible', height: 'auto', display: 'block' } }}>
+          <Box sx={{ flex: 1, p: location.pathname.toLowerCase().includes('/kpi') ? 0 : 3, backgroundColor: location.pathname.toLowerCase().includes('/kpi') ? 'transparent' : '#fff', overflowY: 'auto', overflowX: 'hidden', width: '100%', boxSizing: 'border-box', '@media print': { overflow: 'visible', height: 'auto', display: 'block', backgroundColor: '#fff' } }}>
             {(location.pathname === '/admin/reports' || location.pathname === '/admin/reports/dashboard') ? (
               <Navigate to="/admin/reports/financial/aging" replace />
             ) : location.pathname.toLowerCase().includes('/kpi') ? (
