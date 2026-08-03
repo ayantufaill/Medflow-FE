@@ -6,6 +6,7 @@ import { store } from './store';
 import { queryClient } from './lib/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { SocketProvider } from './contexts/SocketContext';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import theme from './theme';
@@ -31,7 +32,9 @@ function App() {
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <AuthProvider>
               <SnackbarProvider>
-                <RouterProvider router={router} />
+                <SocketProvider>
+                  <RouterProvider router={router} />
+                </SocketProvider>
               </SnackbarProvider>
             </AuthProvider>
           </LocalizationProvider>

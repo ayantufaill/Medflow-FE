@@ -204,6 +204,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
     return (
       <>
         <Box
+          id={`appointment-card-${appointment.id}`}
           ref={(node) => {
             setNodeRef(node);
             cardRef.current = node;
@@ -292,6 +293,7 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
   return (
     <>
       <Box
+        id={`appointment-card-${appointment.id}`}
         ref={(node) => {
           setNodeRef(node);
           cardRef.current = node;
