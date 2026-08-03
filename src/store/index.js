@@ -28,6 +28,7 @@ import othersReportReducer from './slices/othersReportSlice';
 import waitlistReducer from './slices/waitlistSlice';
 import clinicAnalyticsReducer from './slices/clinicAnalyticsSlice';
 import branchReducer from './slices/branchSlice';
+import notificationReducer from './slices/notificationSlice';
 
 const appReducer = combineReducers({
   patient: patientReducer,
@@ -59,6 +60,7 @@ const appReducer = combineReducers({
   waitlist: waitlistReducer,
   clinicAnalytics: clinicAnalyticsReducer,
   branch: branchReducer,
+  notification: notificationReducer,
 });
 
 const rootReducer = (state, action) => {
