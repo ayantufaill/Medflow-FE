@@ -345,7 +345,7 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
             <FormInputLabel label="Email Address" required />
             <TextField fullWidth type="email" placeholder="Enter Email"
               sx={commonInputStyles}
-              {...register('email', { required: 'Required' })}
+              {...register('email', { required: 'Required', pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: 'Invalid email address' } })}
               error={!!errors.email} helperText={errors.email?.message} />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>

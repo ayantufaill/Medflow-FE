@@ -554,7 +554,7 @@ const ProvidersListPage = () => {
         <InactiveProvidersView
           actionLoading={actionLoading}
           onActivate={(provider) => handleToggleActive(provider)}
-          onEdit={(provider) => setEditDialog({ open: true, providerId: provider._id || provider.id, providerName: getProviderName(provider) })}
+          onEdit={setEditDialog}
           getCellValue={getCellValue}
           VerifiedBadge={VerifiedBadge}
           getProviderName={getProviderName}
