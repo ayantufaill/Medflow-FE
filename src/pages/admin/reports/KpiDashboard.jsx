@@ -88,7 +88,7 @@ const KpiDashboard = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: '#FFFFFF', p: '24px', minHeight: '100vh', '@media print': { p: 0, minHeight: 'auto', display: 'block' } }}>
+    <Box sx={{ backgroundColor: 'transparent', p: 0, minHeight: '100vh', '@media print': { p: 0, minHeight: 'auto', display: 'block', backgroundColor: '#ffffff' } }}>
       {/* Print-only Header */}
       <Box sx={{ display: 'none', '@media print': { display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, width: '100%' } }}>
         <img src={LogoImg} alt="Medflow Logo" style={{ height: '40px', marginBottom: '8px' }} />
@@ -98,7 +98,20 @@ const KpiDashboard = () => {
         <Typography sx={{ fontSize: '0.9rem', color: '#64748b' }}>Date: {new Date().toLocaleDateString()}</Typography>
       </Box>
 
-      <Box sx={{ mb: 4, '@media print': { display: 'none' } }}>
+      <Box
+        sx={{
+          width: '100%',
+          px: 2.5,
+          py: 2,
+          mb: 1.5,
+          bgcolor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+          boxSizing: 'border-box',
+          '@media print': { display: 'none' }
+        }}
+      >
         <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 0.5, letterSpacing: '-0.02em', fontSize: '1.75rem' }}>
           KPI Dashboard
         </Typography>
