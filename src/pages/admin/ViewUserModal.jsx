@@ -691,6 +691,9 @@ const ViewUserModal = ({ open, onClose, user: propUser, onEditUser, onAssignRole
                               placeholder: 'Start Date',
                               sx: dateInputSx,
                             },
+                            popper: {
+                              sx: { zIndex: 10005 }
+                            }
                           }}
                         />
                       </Box>
@@ -711,6 +714,9 @@ const ViewUserModal = ({ open, onClose, user: propUser, onEditUser, onAssignRole
                               placeholder: 'End Date',
                               sx: dateInputSx,
                             },
+                            popper: {
+                              sx: { zIndex: 10005 }
+                            }
                           }}
                         />
                       </Box>
@@ -858,6 +864,9 @@ const ViewUserModal = ({ open, onClose, user: propUser, onEditUser, onAssignRole
                               placeholder: 'Start Date',
                               sx: dateInputSx,
                             },
+                            popper: {
+                              sx: { zIndex: 10005 }
+                            }
                           }}
                         />
                       </Box>
@@ -878,6 +887,9 @@ const ViewUserModal = ({ open, onClose, user: propUser, onEditUser, onAssignRole
                               placeholder: 'End Date',
                               sx: dateInputSx,
                             },
+                            popper: {
+                              sx: { zIndex: 10005 }
+                            }
                           }}
                         />
                       </Box>
