@@ -26,6 +26,10 @@ const AuditReport = () => {
       startDate,
       endDate,
       range: dateRange,
+      searchUser: searchUser || undefined,
+      searchPatient: searchPatient || undefined,
+      action: actionFilter !== 'None' ? actionFilter : undefined,
+      category: categoryFilter !== 'None' ? categoryFilter : undefined,
     }));
   };
 

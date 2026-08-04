@@ -58,7 +58,7 @@ const LabProviderForm = ({ register, control, errors }) => {
           <Grid size={4}>
             <Label required>Email</Label>
             <TextField fullWidth type="email" placeholder="Enter Email"
-              {...register('email', { required: 'Required' })}
+              {...register('email', { required: 'Required', pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: 'Invalid email address' } })}
               error={!!errors.email} helperText={errors.email?.message}
               InputProps={inputProps}
             />

@@ -330,6 +330,8 @@ const ProvidersListPage = () => {
   const [search, setSearch] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState('');
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [draggedId, setDraggedId] = useState(null);
+  const [reorderedProviders, setReorderedProviders] = useState(null);
   const [error, setError] = useState('');
   const [expandedRowId, setExpandedRowId] = useState(null);
   const [addDialog, setAddDialog] = useState({ open: false });
@@ -424,10 +426,55 @@ const ProvidersListPage = () => {
     return true;
   });
 
-  const displayedProviders = filteredProviders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  const totalProviders = filteredProviders.length;
+  // When drag reorder is active, use the reordered list; otherwise use filtered
+  const baseProviders = (dragEnabled && reorderedProviders) ? reorderedProviders : filteredProviders;
+  const displayedProviders = baseProviders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const totalProviders = baseProviders.length;
 
   // ─── Handlers ────────────────────────────────────────────────
+
+  // Drag & Drop handlers
+  const handleDragStart = (e, id) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Initialize reordered list from current filtered set if not already set
+    if (!reorderedProviders) {
+      setReorderedProviders([...filteredProviders]);
+    }
+  };
+
+  const handleDragOver = (e, overId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!draggedId || draggedId === overId || !reorderedProviders) return;
+
+    const dragIndex = reorderedProviders.findIndex((p) => (p._id || p.id) === draggedId);
+    const overIndex = reorderedProviders.findIndex((p) => (p._id || p.id) === overId);
+    if (dragIndex === -1 || overIndex === -1 || dragIndex === overIndex) return;
+
+    const updated = [...reorderedProviders];
+    const [draggedItem] = updated.splice(dragIndex, 1);
+    updated.splice(overIndex, 0, draggedItem);
+    setReorderedProviders(updated);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDraggedId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+  };
+
+  // Clear reorder when drag is disabled
+  useEffect(() => {
+    if (!dragEnabled) {
+      setReorderedProviders(null);
+      setDraggedId(null);
+    }
+  }, [dragEnabled]);
+
   const handleSubTabChange = (_, newValue) => {
     setActiveSubTab(newValue);
     setPage(0);
@@ -436,6 +483,8 @@ const ProvidersListPage = () => {
     setLocalProviders([]);
     setLocalError('');
     setExpandedRowId(null);
+    setReorderedProviders(null);
+    setDraggedId(null);
   };
 
   const handleToggleActive = async (provider) => {
@@ -505,7 +554,7 @@ const ProvidersListPage = () => {
         <InactiveProvidersView
           actionLoading={actionLoading}
           onActivate={(provider) => handleToggleActive(provider)}
-          onEdit={(provider) => setEditDialog({ open: true, providerId: provider._id || provider.id, providerName: getProviderName(provider) })}
+          onEdit={setEditDialog}
           getCellValue={getCellValue}
           VerifiedBadge={VerifiedBadge}
           getProviderName={getProviderName}
@@ -538,6 +587,11 @@ const ProvidersListPage = () => {
             displayedProviders={displayedProviders}
             tabConfig={tabConfig}
             dragEnabled={dragEnabled}
+            draggedId={draggedId}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
             expandedRowId={expandedRowId}
             setExpandedRowId={setExpandedRowId}
             getCellValue={getCellValue}
