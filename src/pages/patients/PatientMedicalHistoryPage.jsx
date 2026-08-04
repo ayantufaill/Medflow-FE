@@ -323,6 +323,7 @@ const PatientMedicalHistoryPage = () => {
         };
 
       const data = await update(patientId, payload).unwrap();
+      fetchById(patientId);
       setHasUnsavedChanges(false);
       setMedications(Array.isArray(data?.medications) ? data.medications : []);
       setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);

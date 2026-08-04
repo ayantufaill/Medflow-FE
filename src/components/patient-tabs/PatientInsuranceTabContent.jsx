@@ -93,7 +93,6 @@ const CoverageRow = ({
           ) : (
             <>
               <Button size="small" variant="contained" onClick={() => handleViewPlan(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: 'none' }}>View Plan</Button>
-              <Button size="small" variant="contained" onClick={() => handleInsuranceEdit(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: 'none' }}>Edit Policy</Button>
               <Button size="small" variant="contained" onClick={() => handleInsuranceDeactivate(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.STATUS_ERROR, '&:hover': { backgroundColor: COLORS.STATUS_ERROR, opacity: 0.9 }, boxShadow: 'none' }}>Deactivate</Button>
             </>
           )}
