@@ -156,7 +156,7 @@ const LedgerItemCard = ({
                 refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => setMagicStickAnchorEl(e.currentTarget)}
-                onSettingsClick={(data) => { setEditInvoiceTarget(data); setShowEditInvoice(true); }}
+                onSettingsClick={(data) => { setEditInvoiceTarget({ ...data, id: displayItem.id, invoiceId: displayItem.id }); setShowEditInvoice(true); }}
                 onAdjustmentSelect={(e) => { setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }}
                 onPrintClick={(e) => { setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }}
                 onAttachClick={handleAttachClick}

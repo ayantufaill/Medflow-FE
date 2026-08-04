@@ -76,9 +76,14 @@ const AppointmentRightPanel = ({
         sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredDentist ? "#09121f" : "#9aa3ae" }}
       >
         <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select dentist</MenuItem>
-        {providers.map((p) => (
-          <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
-        ))}
+        {providers.map((p) => {
+          const providerId = String(p.ProvNum || p.providerId || p._id || p.id);
+          return (
+            <MenuItem key={providerId} value={providerId} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
+              {providerLabel(p)}
+            </MenuItem>
+          );
+        })}
       </Select>
     </FieldBox>
 
@@ -90,9 +95,14 @@ const AppointmentRightPanel = ({
         sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredHygienist ? "#09121f" : "#9aa3ae" }}
       >
         <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select hygienist</MenuItem>
-        {providers.map((p) => (
-          <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
-        ))}
+        {providers.map((p) => {
+          const providerId = String(p.ProvNum || p.providerId || p._id || p.id);
+          return (
+            <MenuItem key={providerId} value={providerId} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
+              {providerLabel(p)}
+            </MenuItem>
+          );
+        })}
       </Select>
     </FieldBox>
 

@@ -199,12 +199,13 @@ const AddNewPatientAppointmentForm = ({
             setVisitType(vType);
             
             let provId = "";
-            if (sourceAppt.providerId && typeof sourceAppt.providerId === 'object') provId = sourceAppt.providerId._id || sourceAppt.providerId.id || sourceAppt.providerId.providerId;
+            if (sourceAppt.providerId && typeof sourceAppt.providerId === 'object') provId = sourceAppt.providerId.ProvNum || sourceAppt.providerId._id || sourceAppt.providerId.id || sourceAppt.providerId.providerId;
             else if (sourceAppt.providerId) provId = sourceAppt.providerId;
+            else if (initialAppointment.providerId && typeof initialAppointment.providerId === 'object') provId = initialAppointment.providerId.ProvNum || initialAppointment.providerId._id || initialAppointment.providerId.id;
             else if (initialAppointment.providerId) provId = initialAppointment.providerId;
             else if (initialAppointment.ProvNum) provId = initialAppointment.ProvNum;
-            else if (initialAppointment.provider && typeof initialAppointment.provider === 'object') provId = initialAppointment.provider._id || initialAppointment.provider.id;
-            else if (typeof initialAppointment.provider === 'string' && providers.some(p => String(p._id || p.id) === initialAppointment.provider)) provId = initialAppointment.provider;
+            else if (initialAppointment.provider && typeof initialAppointment.provider === 'object') provId = initialAppointment.provider.ProvNum || initialAppointment.provider._id || initialAppointment.provider.id;
+            else if (typeof initialAppointment.provider === 'string' && providers.some(p => String(p.ProvNum || p.providerId || p._id || p.id) === String(initialAppointment.provider))) provId = initialAppointment.provider;
             
             setProviderRows(provId ? 
               [{ id: Date.now(), providerId: String(provId), time: sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60 }] : 
@@ -625,7 +626,7 @@ const AddNewPatientAppointmentForm = ({
       roomId:     roomId || undefined,
       customFields: {
         visitType,
-        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, completed }) => ({ code, treatment, charge, completed })),
+        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, completed, provider, site }) => ({ code, treatment, charge, completed, provider: provider || '', site: site || '' })),
         preferredDentist,
         preferredHygienist,
         colorTags: [...selectedColorTags],
