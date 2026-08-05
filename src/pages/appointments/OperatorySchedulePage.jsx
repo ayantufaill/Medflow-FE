@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars, no-empty */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton, Backdrop, CircularProgress } from '@mui/material';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
@@ -145,8 +146,32 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
+
+  // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
+  // to jump the calendar to a specific date and flash the relevant appointment card.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightAppointmentId, setHighlightAppointmentId] = useState(null);
+
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    const highlightParam = searchParams.get('highlightAppointmentId');
+
+    if (dateParam && dayjs(dateParam).isValid()) {
+      setSelectedDate(dayjs(dateParam).toISOString());
+    }
+    if (highlightParam) {
+      setHighlightAppointmentId(highlightParam);
+    }
+    if (dateParam || highlightParam) {
+      // Clear the params from the URL so a refresh doesn't re-trigger the jump/highlight.
+      setSearchParams({}, { replace: true });
+    }
+    // Depends on searchParams (not just mount) because clicking a notification while already
+    // on this route updates the query string in place without remounting the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
 
 
@@ -762,6 +787,35 @@ const OperatorySchedulePage = () => {
     console.log("Filters applied:", { providerId, visitType }, "Resulting appointments:", mapped.length);
     return mapped;
   }, [reduxAppointments, frontendFilters]);
+
+  // Once the target appointment has rendered on the grid, scroll to it and flash a highlight
+  // ring around its card so the user can spot it immediately after landing from a notification.
+  useEffect(() => {
+    if (!highlightAppointmentId) return undefined;
+
+    let attempts = 0;
+    const maxAttempts = 20; // ~4s at 200ms intervals, covers async render + fetch delays
+
+    const tryHighlight = () => {
+      const node = document.getElementById(`appointment-card-${highlightAppointmentId}`);
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        node.classList.add('notification-highlight');
+        setTimeout(() => node.classList.remove('notification-highlight'), 2600);
+        setHighlightAppointmentId(null);
+        return;
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        setTimeout(tryHighlight, 200);
+      } else {
+        setHighlightAppointmentId(null);
+      }
+    };
+
+    const timer = setTimeout(tryHighlight, 200);
+    return () => clearTimeout(timer);
+  }, [highlightAppointmentId, mappedAppointments]);
 
   const [appointments, setAppointments] = useState([]);
 
