@@ -61,6 +61,7 @@ const DEFAULT_VALUES = {
   reminderPreference: "", stopReminderAfterConfirmation: false, dontRequestReview: false,
   assignmentRelease: "", photographyRelease: "", socialMediaRelease: "",
   sendWelcome: false, sendWelcomeMethod: "",
+  newPatient: false,
 };
 
 // ─── Field configs consumed by <FormFieldsGrid> ──────────────────────────────
@@ -194,6 +195,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       releaseSpouse: values.releaseSpouse, releaseChildren: values.releaseChildren, releaseParents: values.releaseParents, releaseOther: trimValue(values.releaseOther),
       reminderPreference: values.reminderPreference, stopReminderAfterConfirmation: values.stopReminderAfterConfirmation, dontRequestReview: values.dontRequestReview,
       sendWelcome: values.sendWelcome, sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "",
+      newPatient: values.newPatient,
     });
 
     const address = removeEmptyCustomFields({ line1: trimValue(values.patientAddressLine1) || "", line2: trimValue(values.patientAddressLine2) || "", city: trimValue(values.patientCity) || "", state: trimValue(values.patientState) || "", postalCode: trimValue(values.patientPostalCode) || "" });
@@ -517,6 +519,10 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="sendWelcomeMethod" control={control} render={({ field }) => (
               <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "Email", value: "email"}, {label: "Text Message", value: "text"}]} />
+            )} />
+            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
+            <Controller name="newPatient" control={control} render={({ field }) => (
+              <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="New Patient" />
             )} />
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

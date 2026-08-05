@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -7,21 +7,12 @@ import {
   CalendarMonthOutlined, PendingOutlined, Autorenew, LocalHospitalOutlined
 } from '@mui/icons-material';
 import { usePatient } from '../../../hooks/redux';
+import { useDentalHistory } from '../../../hooks/redux/useDentalHistory';
 import { COLORS } from '../../../constants/colors';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { Tooltip } from '@mui/material';
 import { fontSize, fontWeight, radius, avatarSize } from '../../../constants/styles';
 import RequestUpdatesDialog from '../../patient-detail/RequestUpdatesDialog';
-
-// Patient flag tags shown in the footer row of the card.
-// These will eventually be driven by patient.tags or patient.flags from the API.
-const TAGS = [
-  { label: 'H', color: '#6b7280' },
-  { label: 'P', color: COLORS.STATUS_SUCCESS },
-  { label: 'B', color: COLORS.STATUS_WARNING },
-  { label: 'F', color: '#22c55e' },
-  { label: 'D', color: COLORS.STATUS_UNCONFIRMED },
-];
 
 const ACTION_BUTTONS = [
   { label: 'Call',    icon: <PhoneOutlined sx={{ fontSize: '18px', color: COLORS.ACCENT }} />,         dot: false, disabled: true },
@@ -101,9 +92,46 @@ const ContactRow = ({ icon, text }) => {
 
 const PatientCard = () => {
   const { currentPatient, sendUpdateRequest } = usePatient();
+  const { dentalHistory, fetch: fetchDentalHistory } = useDentalHistory();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const [requestUpdatesOpen, setRequestUpdatesOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentPatient?._id || currentPatient?.id) {
+      fetchDentalHistory(currentPatient._id || currentPatient.id);
+    }
+  }, [currentPatient, fetchDentalHistory]);
+
+  const getFlagColor = (sectionKey) => {
+    if (!dentalHistory || !dentalHistory.isSaved) {
+      return '#cbd5e1'; // disabled gray
+    }
+
+    const risk = dentalHistory.sectionSummaries?.[sectionKey]?.risk;
+    if (risk === 'low') return COLORS.STATUS_SUCCESS;
+    if (risk === 'moderate') return COLORS.STATUS_WARNING;
+    if (risk === 'high') return COLORS.STATUS_ERROR || '#ef4444';
+
+    const sectionItems = dentalHistory[sectionKey] || [];
+    const isSectionAnswered = sectionItems.some(
+      (item) => item.answer && item.answer !== 'not answered' && item.answer !== ''
+    );
+
+    if (!isSectionAnswered) {
+      return '#cbd5e1'; // disabled gray
+    }
+
+    return COLORS.STATUS_SUCCESS;
+  };
+
+  const dynamicTags = [
+    { label: 'H', color: getFlagColor('personalHistory') },
+    { label: 'P', color: getFlagColor('gumAndBone') },
+    { label: 'B', color: getFlagColor('toothStructure') },
+    { label: 'F', color: getFlagColor('biteAndJawJoint') },
+    { label: 'D', color: getFlagColor('smileCharacteristics') },
+  ];
 
   const handleSendUpdateRequest = async (payload) => {
     try {
@@ -185,12 +213,6 @@ const PatientCard = () => {
           </Box>
         </Box>
 
-        {/* Six-dot drag handle / context menu trigger */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 4px)', gap: '3px', cursor: 'pointer', mt: '2px' }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Box key={i} sx={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: COLORS.TEXT_MUTED }} />
-          ))}
-        </Box>
       </Box>
 
       {/* ── Contact info + Hx history indicator ─────────────────────────────── */}
@@ -225,7 +247,7 @@ const PatientCard = () => {
       {/* ── Patient flag tags ────────────────────────────────────────────────── */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', gap: '5px' }}>
-          {TAGS.map(({ label, color }) => (
+          {dynamicTags.map(({ label, color }) => (
             <Box
               key={label}
               sx={{

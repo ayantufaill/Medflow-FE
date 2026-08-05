@@ -820,6 +820,9 @@ const AddNewPatientAppointmentForm = ({
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling}
             setIsRescheduling={setIsRescheduling}
+            appointmentId={initialAppointment?.id || initialAppointment?._id || initialAppointment?.AptNum}
+            status={status}
+            onStatusChange={setStatus}
           />
 
           <AppointmentRightPanel
