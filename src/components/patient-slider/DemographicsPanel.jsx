@@ -18,7 +18,19 @@ const DemographicsPanel = ({ pt }) => (
       {pt.badges.map((b) => <LetterBadge key={b} letter={b} />)}
     </Box>
 
-    <NoteLine icon={<Box component="img" src={PremmedIcon} sx={{ width: "13px", height: "13px" }} />}  text="Premed not required" iconColor="#9aa3ae" />
+    {pt._raw?.medicalHistory?.premed?.requiresPremed ? (
+      <NoteLine
+        icon={<Box component="img" src={PremmedIcon} sx={{ width: "13px", height: "13px" }} />}
+        text="Premed required"
+        iconColor="#ef4444"
+      />
+    ) : (
+      <NoteLine
+        icon={<Box component="img" src={PremmedIcon} sx={{ width: "13px", height: "13px" }} />}
+        text="Premed not required"
+        iconColor="#9aa3ae"
+      />
+    )}
     <NoteLine icon={<Box component="img" src={HeartIcon} sx={{ width: "13px", height: "13px", objectFit: "contain" }} />}  text="No medical alerts"   iconColor="#22c55e" />
     <NoteLine icon={<StarBorder   sx={{ fontSize: "13px" }} />}  text="No request sent"     iconColor="#f59e0b" />
   </Box>

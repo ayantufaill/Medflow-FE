@@ -28,7 +28,7 @@ const headerSx = {
 
 const KpiDataTable = ({ activeGroupsList, months, providerName }) => {
   return (
-    <Box sx={{ mb: 4 }}>
+    <Box sx={{ mb: 1.5, bgcolor: '#ffffff', border: '1px solid #DFE5EC', borderRadius: '12px', p: 2.5, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)', '@media print': { border: 'none', boxShadow: 'none', p: 0 } }}>
       {providerName && (
         <Box sx={{ mb: 2, pl: 1 }}>
           <Typography

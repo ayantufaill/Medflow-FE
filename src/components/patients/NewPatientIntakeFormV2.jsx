@@ -60,7 +60,7 @@ const DEFAULT_VALUES = {
   releaseSpouse: false, releaseChildren: false, releaseParents: false, releaseOther: "",
   reminderPreference: "", stopReminderAfterConfirmation: false, dontRequestReview: false,
   assignmentRelease: "", photographyRelease: "", socialMediaRelease: "",
-  sendWelcome: false, sendWelcomeMethod: "", newPatientFlag: false,
+  sendWelcome: false, sendWelcomeMethod: "",
 };
 
 // ─── Field configs consumed by <FormFieldsGrid> ──────────────────────────────
@@ -193,7 +193,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
       referringSources: values.referringSources, referringPatient: trimValue(values.referringPatient),
       releaseSpouse: values.releaseSpouse, releaseChildren: values.releaseChildren, releaseParents: values.releaseParents, releaseOther: trimValue(values.releaseOther),
       reminderPreference: values.reminderPreference, stopReminderAfterConfirmation: values.stopReminderAfterConfirmation, dontRequestReview: values.dontRequestReview,
-      sendWelcome: values.sendWelcome, sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "", newPatientFlag: values.newPatientFlag,
+      sendWelcome: values.sendWelcome, sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "",
     });
 
     const address = removeEmptyCustomFields({ line1: trimValue(values.patientAddressLine1) || "", line2: trimValue(values.patientAddressLine2) || "", city: trimValue(values.patientCity) || "", state: trimValue(values.patientState) || "", postalCode: trimValue(values.patientPostalCode) || "" });
@@ -269,9 +269,6 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             </Button>
             <Button variant="outlined" onClick={onCancel} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", color: COLORS.TEXT_BODY, borderColor: COLORS.BORDER, "&:hover": { borderColor: COLORS.TEXT_MUTED, backgroundColor: COLORS.SURFACE_HOVER }, fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
               Cancel
-            </Button>
-            <Button type="submit" variant="contained" disabled={loading} sx={{ height: "36px", px: 2.5, borderRadius: radius.md, textTransform: "none", backgroundColor: COLORS.ACCENT, "&:hover": { backgroundColor: COLORS.ACCENT_HOVER }, boxShadow: "none", fontSize: fontSize.md, fontWeight: fontWeight.medium }}>
-              {loading ? <CircularProgress size={18} color="inherit" /> : "Save"}
             </Button>
           </Box>
         </Box>
@@ -520,10 +517,6 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
             <Controller name="sendWelcomeMethod" control={control} render={({ field }) => (
               <CustomRadioGroup value={field.value} onChange={field.onChange} options={[{label: "Email", value: "email"}, {label: "Text Message", value: "text"}]} />
-            )} />
-            <Box sx={{ width: "1px", height: "24px", backgroundColor: COLORS.BORDER, flexShrink: 0 }} />
-            <Controller name="newPatientFlag" control={control} render={({ field }) => (
-              <ColoredChipCheckbox sx={{ width: "auto", minHeight: "36px", py: "6px" }} checked={!!field.value} onChange={field.onChange} label="New Patient" />
             )} />
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

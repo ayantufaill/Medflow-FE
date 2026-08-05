@@ -32,6 +32,7 @@ import { usePatient, useScheduleState } from "../../../../hooks/redux";
 
 import FamilyAppointmentsScheduledTab from './FamilyAppointmentsScheduledTab';
 import FamilyAppointmentsDueTab from './FamilyAppointmentsDueTab';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const FamilyAppointmentsDialog = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -233,7 +234,11 @@ const FamilyAppointmentsDialog = () => {
           `}
         </style>
         <Box className="printable-family-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {tabValue === 0 ? (
+          {/* Print-only Medflow Logo at Top Center */}
+          <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3, pt: 2 } }}>
+            <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
+          </Box>
+          {tabValue === 0 ? (
           <FamilyAppointmentsScheduledTab 
             allAppointments={allAppointments}
             groupedAppointments={groupedAppointments}

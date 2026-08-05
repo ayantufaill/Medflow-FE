@@ -41,10 +41,31 @@ const PatientProfileForm = ({ register, control, PATIENT_TITLES, GENDERS, MARITA
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField label="Sex at Birth" fullWidth size="small" {...register('sexAtBirth')} />
+          <FormControl fullWidth size="small">
+            <InputLabel>Sex at Birth</InputLabel>
+            <Select label="Sex at Birth" defaultValue="" {...register('sexAtBirth')}>
+              <MenuItem value=""><em>None</em></MenuItem>
+              <MenuItem value="male">Male</MenuItem>
+              <MenuItem value="female">Female</MenuItem>
+              <MenuItem value="intersex">Intersex</MenuItem>
+              <MenuItem value="non_binary">Non-binary</MenuItem>
+              <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+              <MenuItem value="unknown">Unknown</MenuItem>
+            </Select>
+          </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField label="Gender Identity" fullWidth size="small" {...register('genderIdentity')} />
+          <FormControl fullWidth size="small">
+            <InputLabel>Gender Identity</InputLabel>
+            <Select label="Gender Identity" defaultValue="" {...register('genderIdentity')}>
+              <MenuItem value=""><em>None</em></MenuItem>
+              <MenuItem value="male">Male / Man</MenuItem>
+              <MenuItem value="female">Female / Woman</MenuItem>
+              <MenuItem value="non_binary">Non-binary</MenuItem>
+              <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+              <MenuItem value="unknown">Unknown</MenuItem>
+            </Select>
+          </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth size="small">

@@ -11,7 +11,7 @@ const MetricCard = ({ title, value, icon, trend, trendLabel, color }) => (
     sx={{
       flex: 1,
       p: 2.5,
-      borderRadius: '22px',
+      borderRadius: '12px',
       border: '1px solid #DFE5EC',
       bgcolor: '#FFFFFF',
       display: 'flex',
@@ -63,7 +63,7 @@ const MetricCard = ({ title, value, icon, trend, trendLabel, color }) => (
 const KpiTopCards = ({ summaryData, loading }) => {
   if (loading) {
     return (
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120 }}>
+      <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120 }}>
         <CircularProgress />
       </Box>
     );
@@ -87,7 +87,7 @@ const KpiTopCards = ({ summaryData, loading }) => {
   const caseAcc = summaryData?.caseAccepted || {};
 
   return (
-    <Box sx={{ mb: 4, display: 'flex', gap: 3, width: '100%', '@media print': { display: 'none' } }}>
+    <Box sx={{ mb: 1.5, display: 'flex', gap: 1.5, width: '100%', '@media print': { display: 'none' } }}>
       <MetricCard
         title="TOTAL NET PRODUCTION"
         value={formatMoney(netProd.current)}
