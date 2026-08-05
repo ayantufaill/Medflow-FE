@@ -144,6 +144,7 @@ const CoverageBookSummary = ({
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             variant="contained"
+            className="view-btn"
             onClick={onViewFullBook}
             sx={{
               bgcolor: '#2563eb',

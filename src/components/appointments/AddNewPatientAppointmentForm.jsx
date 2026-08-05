@@ -621,7 +621,13 @@ const AddNewPatientAppointmentForm = ({
       roomId:     roomId || undefined,
       customFields: {
         visitType,
-        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge }) => ({ code, treatment, charge })),
+        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, provider, site }) => ({
+          code,
+          treatment,
+          charge,
+          provider: provider || '',
+          site: site || '',
+        })),
         preferredDentist,
         preferredHygienist,
         colorTags: [...selectedColorTags],

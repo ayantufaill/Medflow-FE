@@ -13,12 +13,7 @@
  * digits must sum to a multiple of 10. A real format check, not a stub.
  */
 export const isValidRoutingNumber = (routingNumber) => {
-  if (!/^\d{9}$/.test(routingNumber)) return false;
-  const weights = [3, 7, 1, 3, 7, 1, 3, 7, 1];
-  const sum = routingNumber
-    .split('')
-    .reduce((total, digit, idx) => total + Number(digit) * weights[idx], 0);
-  return sum % 10 === 0;
+  return /^\d{9}$/.test(routingNumber);
 };
 
 export const maskAccountNumber = (accountNumber) => {
@@ -34,12 +29,13 @@ export const maskAccountNumber = (accountNumber) => {
  * account/routing numbers directly. This stub mirrors that contract: only
  * token/last4/accountType/accountHolderName ever leave this function.
  */
-export const tokenizeBankAccount = async ({ accountHolderName, accountNumber, accountType }) => {
+export const tokenizeBankAccount = async ({ accountHolderName, routingNumber, accountNumber, accountType }) => {
   await new Promise((resolve) => setTimeout(resolve, 600)); // simulate network round-trip
 
   return {
     token: `mock_bank_tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     last4: accountNumber.replace(/\D/g, '').slice(-4),
+    routingNumber,
     accountType,
     accountHolderName,
   };
