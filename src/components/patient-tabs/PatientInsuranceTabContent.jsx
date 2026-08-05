@@ -36,6 +36,7 @@ import ImportedCoverageModal from '../insurance/components/ImportedCoverageModal
 import EditCoverageModal from '../insurance/components/EditCoverageModal';
 import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
+import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -52,7 +53,8 @@ const CoverageRow = ({
   isLast,
   onMoveUp,
   onMoveDown,
-  patient
+  patient,
+  onViewCarrierInfo
 }) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
@@ -177,7 +179,10 @@ const CoverageRow = ({
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Contact Info:</Typography>
-                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.ACCENT, fontWeight: fontWeight.medium, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}>
+                <Typography 
+                  onClick={() => onViewCarrierInfo && onViewCarrierInfo(company)}
+                  sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.ACCENT, fontWeight: fontWeight.medium, textAlign: 'right', cursor: 'pointer', textDecoration: 'underline' }}
+                >
                   {ins.payerContactInfo || 'View Contact Info'}
                 </Typography>
               </Box>
@@ -224,6 +229,13 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const [creatingPolicy, setCreatingPolicy] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [localInsurances, setLocalInsurances] = useState([]);
+  const [carrierInfoOpen, setCarrierInfoOpen] = useState(false);
+  const [selectedCarrier, setSelectedCarrier] = useState(null);
+
+  const handleViewCarrierInfo = (company) => {
+    setSelectedCarrier(company);
+    setCarrierInfoOpen(true);
+  };
 
   const fetchInsurancesAndCompanies = async () => {
     try {
@@ -520,6 +532,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                     onMoveUp={() => handleMoveUp(index, array)}
                     onMoveDown={() => handleMoveDown(index, array)}
                     patient={patient}
+                    onViewCarrierInfo={handleViewCarrierInfo}
                   />
                 ))}
               </Stack>
@@ -555,6 +568,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                     isFirst={true}
                     isLast={true}
                     patient={patient}
+                    onViewCarrierInfo={handleViewCarrierInfo}
                   />
                 ))}
               </Stack>
@@ -657,6 +671,12 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
         cancelText="Cancel"
         confirmColor="error"
         loading={deleteLoading}
+      />
+
+      <CarrierInfoDialog
+        open={carrierInfoOpen}
+        onClose={() => setCarrierInfoOpen(false)}
+        company={selectedCarrier}
       />
     </LocalizationProvider>
   );
