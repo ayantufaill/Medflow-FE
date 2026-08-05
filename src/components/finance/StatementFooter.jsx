@@ -1,38 +1,42 @@
 import { Box, Typography, Grid, TextField, Button } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const StatementFooter = ({ appointments, notes, showNotesInput, onNotesChange, onSaveNotes, onEditNotes, onCloseNotes }) => {
-  const textDarkBlue = '#40548e';
-  const rowLightBlue = '#f0f4fa';
+  const textDarkBlue = COLORS.TEXT_PRIMARY;
+  const rowLightBlue = COLORS.SURFACE_TINT;
 
   return (
     <>
       {/* Appointments */}
-      <Grid container sx={{ mt: 2, bgcolor: rowLightBlue, border: '1px solid #e0e0e0' }}>
+      <Box sx={{ display: 'flex', border: `1px solid ${COLORS.BORDER}`, borderRadius: '4px', overflow: 'hidden', mt: 2 }}>
         {appointments.map((appointment, index) => (
-          <Grid 
-            item 
-            xs={6} 
+          <Box 
             key={appointment.label}
             sx={{ 
-              p: 1, 
-              borderRight: index === 0 ? '1px solid #e0e0e0' : 'none',
-              minWidth: 0
+              flex: 1, 
+              p: 1.5,
+              bgcolor: '#fff',
+              borderRight: index === 0 ? `1px solid ${COLORS.BORDER}` : 'none'
             }}
           >
-            <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.sm, color: textDarkBlue }}>{appointment.label}</Typography>
-            <Typography sx={{ fontSize: fontSize.sm }}>{appointment.value}</Typography>
-          </Grid>
+            <Typography sx={{ fontWeight: 500, fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
+              {appointment.label}
+            </Typography>
+            <Typography sx={{ fontSize: fontSize.sm, color: COLORS.ACCENT }}>
+              {appointment.value}
+            </Typography>
+          </Box>
         ))}
-      </Grid>
+      </Box>
 
       {/* Notes Section */}
       {(showNotesInput || notes) && (
-        <Box sx={{ mt: 3, border: '1px solid #e0e0e0' }}>
-          <Box sx={{ bgcolor: rowLightBlue, p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontWeight: fontWeight.bold, fontSize: fontSize.sm, color: textDarkBlue }}>Statement Notes:</Typography>
+        <Box sx={{ mt: 3, border: `1px solid ${COLORS.BORDER}`, borderRadius: '4px', overflow: 'hidden' }}>
+          <Box sx={{ bgcolor: COLORS.SURFACE_TINT, p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}` }}>
+            <Typography sx={{ fontWeight: fontWeight.semiBold, fontSize: '14px', color: COLORS.TEXT_PRIMARY, pl: 1 }}>Statement Notes:</Typography>
             <Typography 
-              sx={{ fontWeight: fontWeight.bold, cursor: 'pointer', color: textDarkBlue, px: 1 }}
+              sx={{ fontWeight: fontWeight.semiBold, cursor: 'pointer', color: COLORS.TEXT_SECONDARY, px: 1 }}
               onClick={onCloseNotes}
             >
               x
@@ -58,9 +62,10 @@ const StatementFooter = ({ appointments, notes, showNotesInput, onNotesChange, o
                   <Button 
                     variant="contained" 
                     sx={{ 
-                      bgcolor: textDarkBlue,
+                      bgcolor: COLORS.ACCENT,
                       textTransform: 'none',
-                      fontSize: fontSize.sm
+                      fontSize: fontSize.sm,
+                      '&:hover': { bgcolor: COLORS.ACCENT_HOVER }
                     }}
                     onClick={onSaveNotes}
                   >

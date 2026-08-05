@@ -1,21 +1,28 @@
 import React, { useState, useRef } from 'react';
 import { 
   Box, Typography, Button, Checkbox, FormControlLabel, TextField, Select, MenuItem,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Grid, Divider, InputBase
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Grid, Divider, InputBase,
+  DialogTitle, DialogContent, DialogActions, IconButton
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import ContentCutIcon from '@mui/icons-material/ContentCut';
+import CloseIcon from '@mui/icons-material/Close';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import StatementFooter from './StatementFooter';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const DetailedStatementDialog = ({ onClose }) => {
   const contentRef = useRef(null);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notes, setNotes] = useState('');
   
-  const primaryBlue = '#40548e';
-  const lightBlue = '#abb8d3';
-  const textDarkBlue = '#40548e';
-  const tanButton = '#d2b48c';
-  const tableHeaderBg = '#97a8c3';
+  const primaryBlue = COLORS.ACCENT;
+  const lightBlue = COLORS.BORDER;
+  const textDarkBlue = COLORS.TEXT_PRIMARY;
+  const tanButton = COLORS.ACCENT;
+  const tableHeaderBg = COLORS.SURFACE_TINT;
 
   const LabelInput = ({ label, defaultValue = "" }) => (
     <TextField
@@ -85,33 +92,122 @@ const DetailedStatementDialog = ({ onClose }) => {
   };
 
   return (
-    <Box sx={{ width: '100%', bgcolor: 'white', borderRadius: '4px', overflowY: 'auto', maxHeight: '90vh' }}>
-      <Box ref={contentRef}>
-        <Box sx={{ bgcolor: primaryBlue, color: 'white', py: 1, textAlign: 'center' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 400 }}>Patient Account Statement</Typography>
-        </Box>
+    <Box sx={{ width: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '25px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <PrintOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Detailed Account Statement
+        </Typography>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2, flexWrap: 'wrap' }}>
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <Box ref={contentRef} sx={{ p: '25px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
             <FormControlLabel
               control={<Checkbox size="small" />}
               label={<Typography sx={{ fontSize: '13px' }}>Only Open Invoices</Typography>}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Header Type</Typography>
-              <Select size="small" defaultValue="Detachable Slip" sx={{ fontSize: '13px', height: '32px' }}>
-                <MenuItem value="Detachable Slip">Detachable Slip</MenuItem>
+              <Select 
+                MenuProps={{ 
+                  sx: { zIndex: 1500 },
+                  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                  transformOrigin: { vertical: "top", horizontal: "left" }
+                }} 
+                size="small" 
+                defaultValue="Detachable Slip" 
+                sx={{ 
+                  height: "36px",
+                  width: "180px",
+                  bgcolor: COLORS.SURFACE_TINT,
+                  borderRadius: radius.sm,
+                  "& .MuiSelect-select": {
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "13px",
+                    color: COLORS.TEXT_PRIMARY,
+                    fontWeight: 500,
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: COLORS.BORDER,
+                  }
+                }}
+              >
+                <MenuItem value="Detachable Slip" sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Detachable Slip</MenuItem>
               </Select>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Start Date</Typography>
-              <TextField variant="standard" size="small" defaultValue="05/06/2026" sx={{ width: '100px', '& .MuiInput-input': { fontSize: '13px' } }} />
+              <DatePicker
+                defaultValue={dayjs("2026-04-06")}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1500 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { 
+                      width: '180px', 
+                      '& .MuiInputBase-root': { 
+                        fontSize: '13px', 
+                        borderRadius: '4px', 
+                        height: '36px', 
+                        bgcolor: COLORS.SURFACE_TINT, 
+                        color: COLORS.TEXT_PRIMARY 
+                      }, 
+                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                      '& fieldset': { borderColor: COLORS.BORDER } 
+                    } 
+                  }
+                }}
+              />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>End Date</Typography>
-              <TextField variant="standard" size="small" defaultValue="05/06/2026" sx={{ width: '100px', '& .MuiInput-input': { fontSize: '13px' } }} />
+              <DatePicker
+                defaultValue={dayjs("2026-05-06")}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 1500 } },
+                  textField: { 
+                    size: 'small', 
+                    sx: { 
+                      width: '180px', 
+                      '& .MuiInputBase-root': { 
+                        fontSize: '13px', 
+                        borderRadius: '4px', 
+                        height: '36px', 
+                        bgcolor: COLORS.SURFACE_TINT, 
+                        color: COLORS.TEXT_PRIMARY 
+                      }, 
+                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                      '& fieldset': { borderColor: COLORS.BORDER } 
+                    } 
+                  }
+                }}
+              />
             </Box>
-            <Button variant="contained" sx={{ bgcolor: tanButton, textTransform: 'none', fontSize: '13px', ml: 'auto', boxShadow: 'none' }}>Load Statement</Button>
+              <Button variant="contained" sx={{ bgcolor: tanButton, textTransform: 'none', fontSize: '13px', ml: 'auto', boxShadow: 'none' }}>Load Statement</Button>
+            </Box>
           </Box>
 
           <Divider sx={{ mb: 2 }} />
@@ -199,12 +295,12 @@ const DetailedStatementDialog = ({ onClose }) => {
               <Grid item xs={6}>
                 <Box sx={{ border: `1px solid ${lightBlue}`, borderRadius: '4px', overflow: 'hidden' }}>
                   <Box sx={{ display: 'flex', borderBottom: `1px solid ${lightBlue}` }}>
-                    <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: primaryBlue }}>Patient Name</Typography>
-                    <InputBase defaultValue="Vicky Widener" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: primaryBlue, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
+                    <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>Patient Name</Typography>
+                    <InputBase defaultValue="Vicky Widener" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
                   </Box>
                   <Box sx={{ display: 'flex' }}>
-                    <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: primaryBlue }}>Statement Date</Typography>
-                    <InputBase defaultValue="05/06/2026" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: primaryBlue, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
+                    <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>Statement Date</Typography>
+                    <InputBase defaultValue="05/06/2026" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
                   </Box>
                 </Box>
               </Grid>
@@ -215,12 +311,12 @@ const DetailedStatementDialog = ({ onClose }) => {
               <Table size="small">
                 <TableHead sx={{ bgcolor: tableHeaderBg }}>
                   <TableRow>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px' }}>Date</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px' }}>Description</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px' }}>Provider</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Amount</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Credit</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Balance</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px' }}>Date</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px' }}>Description</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px' }}>Provider</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Amount</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Credit</TableCell>
+                    <TableCell sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: 'bold', fontSize: '12px', textAlign: 'right' }}>Balance</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -290,7 +386,7 @@ const DetailedStatementDialog = ({ onClose }) => {
 
             <TableContainer sx={{ mb: 3 }}>
               <Table size="small">
-                <TableHead sx={{ bgcolor: '#eef2f6' }}>
+                <TableHead sx={{ bgcolor: COLORS.SURFACE_TINT }}>
                   <TableRow>
                     {['Balance 0-30 days', '>30 days', '>60 days', '>90 days', 'Account Credit'].map(h => (
                       <TableCell key={h} sx={{ fontSize: '11px', fontWeight: 'bold', color: '#333' }}>{h}</TableCell>
@@ -333,16 +429,62 @@ const DetailedStatementDialog = ({ onClose }) => {
               onCloseNotes={() => { if (showNotesInput && notes) { setShowNotesInput(false); } else { setShowNotesInput(false); setNotes(''); } }}
             />
           </Box>
-        </Box>
-
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
-          <Button variant="contained" onClick={onClose} sx={{ bgcolor: '#9ca3af', textTransform: 'none', px: 3, boxShadow: 'none' }}>Close</Button>
-          <Button variant="contained" sx={{ bgcolor: primaryBlue, textTransform: 'none', px: 3, boxShadow: 'none' }} onClick={() => setShowNotesInput(true)}>
-            {notes ? 'Edit Notes' : 'Add Notes'}
-          </Button>
-          <Button variant="contained" sx={{ bgcolor: tanButton, textTransform: 'none', px: 3, boxShadow: 'none' }} onClick={handlePrint}>Print</Button>
-        </Box>
       </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => setShowNotesInput(true)}
+          sx={{
+            backgroundColor: primaryBlue,
+            color: COLORS.WHITE,
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: '#334372', boxShadow: 'none' }
+          }}
+        >
+          {notes ? 'Edit Notes' : 'Add Notes'}
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={handlePrint}
+          startIcon={<PrintOutlinedIcon />}
+          sx={{
+            textTransform: 'none',
+            borderColor: COLORS.ACCENT,
+            color: COLORS.ACCENT,
+            fontSize: '13px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            height: '36px',
+            px: 2,
+            '&:hover': { borderColor: COLORS.ACCENT_HOVER, backgroundColor: 'rgba(59, 130, 246, 0.04)' }
+          }}
+        >
+          Print
+        </Button>
+      </DialogActions>
     </Box>
   );
 };

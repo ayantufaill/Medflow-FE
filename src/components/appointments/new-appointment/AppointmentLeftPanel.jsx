@@ -29,6 +29,8 @@ const AppointmentLeftPanel = ({
   procedures, setProcedures, providers,
   showExtendedOptions,
   onDuplicateProcedure,
+  readOnly,
+  setIsRescheduling,
 }) => {
   const [showPastVisits, setShowPastVisits] = useState(false);
 
@@ -43,9 +45,9 @@ const AppointmentLeftPanel = ({
 
   return (
     <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
-
-    {/* Patient / Date / Time row */}
-    <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
+      <Box sx={{ pointerEvents: readOnly ? 'none' : 'auto', opacity: readOnly ? 0.85 : 1 }}>
+        {/* Patient / Date / Time row */}
+        <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
       <PatientSearchField
         patients={patients}
         loadingPatients={loadingPatients}
@@ -145,7 +147,7 @@ const AppointmentLeftPanel = ({
 
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px', pointerEvents: 'auto' }}>
           <Button
             variant="contained"
             disableElevation
@@ -177,12 +179,18 @@ const AppointmentLeftPanel = ({
     )}
 
     {/* Procedure table */}
-    <ProcedureTable procedures={procedures} setProcedures={setProcedures} providers={providers} showExtendedOptions={showExtendedOptions} />
+    <ProcedureTable 
+      procedures={procedures} 
+      setProcedures={setProcedures} 
+      providers={providers} 
+      showExtendedOptions={showExtendedOptions} 
+      setIsRescheduling={setIsRescheduling} 
+    />
 
     {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px', pointerEvents: 'auto' }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -201,6 +209,10 @@ const AppointmentLeftPanel = ({
             <Button
               variant="contained"
               disableElevation
+              onClick={() => {
+                setProcedures((prev) => prev.map((p) => ({ ...p, completed: true })));
+                if (setIsRescheduling) setIsRescheduling(true);
+              }}
               sx={{
                 fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
                 textTransform: 'none', borderRadius: '6px',
@@ -239,7 +251,8 @@ const AppointmentLeftPanel = ({
     {showPastVisits && (
       <PastVisitProceduresSelector patient={patient} onAddProcedure={handleAddPastProcedure} />
     )}
-  </Box>
+      </Box>
+    </Box>
   );
 };
 

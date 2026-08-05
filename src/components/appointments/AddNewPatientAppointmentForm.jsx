@@ -61,6 +61,7 @@ const AddNewPatientAppointmentForm = ({
   const nextId = useRef(10);
 
   /* ── Right panel state ── */
+  const [isRescheduling,     setIsRescheduling]     = useState(false);
   const [status,             setStatus]             = useState(initialShortlistData?.Status || "unconfirmed");
   const [roomId,             setRoomId]             = useState(initialShortlistData?.RoomId ? String(initialShortlistData.RoomId) : initialRoomId != null ? String(initialRoomId) : "");
   const [durationMins,       setDurationMins]       = useState(initialShortlistData?.DurationMins || 60);
@@ -131,6 +132,9 @@ const AddNewPatientAppointmentForm = ({
 
   useEffect(() => {
     if (open) {
+      setIsRescheduling(false);
+      setSubmitAttempted(false);
+      setErrorMessage("");
       if (initialAppointment) {
 
         const applyApptToForm = (sourceAppt, sourceProcedures = []) => {
@@ -195,12 +199,13 @@ const AddNewPatientAppointmentForm = ({
             setVisitType(vType);
             
             let provId = "";
-            if (sourceAppt.providerId && typeof sourceAppt.providerId === 'object') provId = sourceAppt.providerId._id || sourceAppt.providerId.id || sourceAppt.providerId.providerId;
+            if (sourceAppt.providerId && typeof sourceAppt.providerId === 'object') provId = sourceAppt.providerId.ProvNum || sourceAppt.providerId._id || sourceAppt.providerId.id || sourceAppt.providerId.providerId;
             else if (sourceAppt.providerId) provId = sourceAppt.providerId;
+            else if (initialAppointment.providerId && typeof initialAppointment.providerId === 'object') provId = initialAppointment.providerId.ProvNum || initialAppointment.providerId._id || initialAppointment.providerId.id;
             else if (initialAppointment.providerId) provId = initialAppointment.providerId;
             else if (initialAppointment.ProvNum) provId = initialAppointment.ProvNum;
-            else if (initialAppointment.provider && typeof initialAppointment.provider === 'object') provId = initialAppointment.provider._id || initialAppointment.provider.id;
-            else if (typeof initialAppointment.provider === 'string' && providers.some(p => String(p._id || p.id) === initialAppointment.provider)) provId = initialAppointment.provider;
+            else if (initialAppointment.provider && typeof initialAppointment.provider === 'object') provId = initialAppointment.provider.ProvNum || initialAppointment.provider._id || initialAppointment.provider.id;
+            else if (typeof initialAppointment.provider === 'string' && providers.some(p => String(p.ProvNum || p.providerId || p._id || p.id) === String(initialAppointment.provider))) provId = initialAppointment.provider;
             
             setProviderRows(provId ? 
               [{ id: Date.now(), providerId: String(provId), time: sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60 }] : 
@@ -228,6 +233,7 @@ const AddNewPatientAppointmentForm = ({
                 treatment: p.description || p.treatment || p.name || p.title || p.Descript || "Unknown", 
                 charge: p.fee || p.charge || p.amount || "$0.00", 
                 checked: true, 
+                completed: p.completed || false,
                 id: p._id || p.id || (Date.now() + i) 
               };
             });
@@ -385,10 +391,9 @@ const AddNewPatientAppointmentForm = ({
         } else if (Array.isArray(initialShortlistData.Procedures)) {
           initialProcs = initialShortlistData.Procedures;
         }
-        // Ensure they are objects and have checked: true so they aren't filtered out on submit
         initialProcs = initialProcs.map((p, i) => {
           const base = typeof p === 'string' ? { code: "TBD", treatment: p, charge: "$0.00" } : p;
-          return { ...base, checked: true, id: base.id || (Date.now() + i) };
+          return { ...base, checked: true, completed: p.completed || false, id: base.id || (Date.now() + i) };
         });
         
         setProcedures(initialProcs.length > 0 ? initialProcs : INITIAL_PROCEDURES);
@@ -665,6 +670,29 @@ const AddNewPatientAppointmentForm = ({
     if (payload) onSubmit(payload);
   };
 
+  const handleSaveAsDraft = () => {
+    if (!onSubmit) return;
+    setSubmitAttempted(true);
+
+    const checkedProcedures = procedures.filter(p => p.checked);
+    if (checkedProcedures.length === 0) {
+      setErrorMessage("Please select at least one procedure to create an appointment.");
+      return;
+    }
+
+    if (durationMins <= 0) {
+      setErrorMessage("Please enter a valid appointment duration (greater than 0 minutes).");
+      return;
+    }
+
+    if (!patient || !providerRows[0]?.providerId) return;
+    const payload = getAppointmentPayload();
+    if (payload) {
+      payload.status = 'draft';
+      onSubmit(payload);
+    }
+  };
+
   const isShortlistEditMode = Boolean(initialShortlistData);
   const isEditMode = Boolean(initialAppointment || initialShortlistData);
 
@@ -677,17 +705,46 @@ const AddNewPatientAppointmentForm = ({
     try {
       if (isShortlistEditMode) {
         await shortlistService.updateShortlistItem(initialShortlistData.ShortlistNum, payload);
-        alert("Successfully updated shortlist item!");
+        setToastMessage("Successfully updated shortlist item!");
+        window.dispatchEvent(new Event('shortlist-updated'));
+        setTimeout(() => { if (onCancel) onCancel(); }, 1000);
       } else {
         await shortlistService.createShortlistItem(payload);
-        alert("Successfully converted to shortlist!");
+        setToastMessage("Successfully converted to shortlist!");
+        window.dispatchEvent(new Event('shortlist-updated'));
+        
+        if (initialAppointment && onSubmit) {
+          payload.status = 'cancelled';
+          onSubmit(payload);
+        } else {
+          setTimeout(() => { if (onCancel) onCancel(); }, 1000);
+        }
       }
-      // Dispatch event to instantly update the Shortlist panel
-      window.dispatchEvent(new Event('shortlist-updated'));
-      if (onCancel) onCancel(); // Close modal
     } catch (err) {
       console.error("Shortlist operation failed:", err);
-      setErrorMessage(`Failed to ${isShortlistEditMode ? 'update' : 'convert to'} shortlist. See console for details.`);
+      setErrorMessage("Failed to convert to shortlist.");
+    }
+  };
+
+  const handleCopyToShortlist = async () => {
+    if (!patient) {
+      setErrorMessage("Please select a patient first.");
+      return;
+    }
+    const payload = getAppointmentPayload();
+    try {
+      if (isShortlistEditMode) {
+        await shortlistService.updateShortlistItem(initialShortlistData.ShortlistNum, payload);
+        setToastMessage("Successfully updated shortlist item!");
+      } else {
+        await shortlistService.createShortlistItem(payload);
+        setToastMessage("Successfully copied to shortlist!");
+      }
+      window.dispatchEvent(new Event('shortlist-updated'));
+      setTimeout(() => { if (onCancel) onCancel(); }, 1000);
+    } catch (err) {
+      console.error("Shortlist operation failed:", err);
+      setErrorMessage("Failed to copy to shortlist.");
     }
   };
 
@@ -714,7 +771,10 @@ const AddNewPatientAppointmentForm = ({
         <AppointmentModalHeader 
           onCancel={onCancel} 
           onConvertToShortlist={handleConvertToShortlist} 
+          onCopyToShortlist={handleCopyToShortlist}
           isEditMode={isEditMode} 
+          isRescheduling={isRescheduling}
+          onReschedule={() => setIsRescheduling(true)}
           patientDisplayName={patientDisplayName}
           apptDate={apptDate}
           timeHours={timeHours}
@@ -758,6 +818,8 @@ const AddNewPatientAppointmentForm = ({
             providers={providers}
             showExtendedOptions={showExtendedOptions}
             onDuplicateProcedure={setToastMessage}
+            readOnly={isEditMode && !isRescheduling}
+            setIsRescheduling={setIsRescheduling}
           />
 
           <AppointmentRightPanel
@@ -788,6 +850,7 @@ const AddNewPatientAppointmentForm = ({
             tags={tags}
             onTagsChange={setTags}
             showExtendedOptions={showExtendedOptions}
+            readOnly={isEditMode && !isRescheduling}
           />
         </Box>
 
@@ -797,9 +860,11 @@ const AddNewPatientAppointmentForm = ({
           patientId={patientId}
           onCancel={onCancel}
           onSubmit={handleSubmit}
+          onSaveAsDraft={handleSaveAsDraft}
           loading={loading}
           showExtendedOptions={showExtendedOptions}
           isEditMode={isEditMode}
+          readOnly={isEditMode && !isRescheduling}
         />
       </Box>
       <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>

@@ -92,9 +92,10 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
         const getStatusChangeTime = (apt) => {
           if (apt.systemEvents && apt.systemEvents.length > 0) {
             const statusEvents = apt.systemEvents.filter(e => 
-              e.type === 'status_changed' || 
+              (e.type === 'status_changed' || 
               e.action === 'status_changed' || 
-              (e.message && e.message.toLowerCase().includes('status'))
+              (e.message && e.message.toLowerCase().includes('status'))) && 
+              e.action !== 'created' && e.type !== 'created'
             );
             if (statusEvents.length > 0) {
               const latestEvent = statusEvents.reduce((latest, current) => {
@@ -105,10 +106,22 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
               return latestEvent.timestamp || latestEvent.createdAt || latestEvent.date;
             }
           }
-          // Fallback: If no explicit status change, use a very old date so they sink to the bottom
-          // or just use createdAt, but to satisfy the user's mental model, explicit status changes win.
-          // We will use a date 10 years ago for those with no explicit status change.
-          return dayjs(apt.createdAt || apt.date).subtract(10, 'year').toISOString();
+          // Fallback: If no explicit status change events are found, 
+          // we use updatedAt as a proxy for "last status change".
+          // However, if updatedAt is virtually identical to createdAt (or missing), it means the appointment 
+          // was never updated since creation. In that case, we fall back to the actual appointment date.
+          // This prevents newly created appointments from artificially bubbling to the top of the status change sort.
+          const created = dayjs(apt.createdAt || apt.date || dayjs().toISOString());
+          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || dayjs().toISOString());
+          
+          if (apt.updatedAt && updated.diff(created, 'second') > 60) {
+            // It has been updated at least 1 minute after creation! Use the updatedAt time.
+            return updated.toISOString();
+          }
+
+          // No real status updates since creation. Sink it to the bottom by using a very old date, 
+          // but preserve relative ordering using the appointment date, not the creation date.
+          return dayjs(apt.appointmentDate || apt.date).subtract(10, 'year').toISOString();
         };
 
         const timeA = getStatusChangeTime(a);

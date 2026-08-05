@@ -27,6 +27,7 @@ const NewInvoiceDialog = ({ patient, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [addClaim, setAddClaim] = useState(false);
 
   const patientId = patient?._id || patient?.id;
 
@@ -90,6 +91,7 @@ const NewInvoiceDialog = ({ patient, onClose }) => {
 
       const newInvoice = await invoiceService.createInvoiceFromAppointment(selectedApptId, {
         dueDate: dayjs().add(30, 'day').toDate(),
+        addClaim: addClaim,
       });
 
       const totalAmt = newInvoice.totalAmount || 0;
@@ -326,7 +328,7 @@ const NewInvoiceDialog = ({ patient, onClose }) => {
         {/* Right Actions */}
         <Box sx={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <FormControlLabel
-            control={<Checkbox size="small" sx={{ color: '#7788bb', '&.Mui-checked': { color: '#7788bb' } }} />}
+            control={<Checkbox size="small" checked={addClaim} onChange={(e) => setAddClaim(e.target.checked)} sx={{ color: '#7788bb', '&.Mui-checked': { color: '#7788bb' } }} />}
             label="Add Claim"
             sx={{
               margin: 0,

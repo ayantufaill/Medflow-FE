@@ -187,6 +187,11 @@ export const patientService = {
     return response.data.data;
   },
 
+  async purchaseProducts(patientId, products) {
+    const response = await apiClient.post(`/patients/${patientId}/purchase-products`, { products });
+    return response.data.data;
+  },
+
   // ---------------- Patient Insurance ----------------
 
   /**

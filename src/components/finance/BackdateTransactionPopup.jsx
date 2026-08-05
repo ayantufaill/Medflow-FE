@@ -1,30 +1,36 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { 
   Box, 
   Typography, 
-  TextField, 
   Button, 
   Stack, 
   Popover,
-  InputAdornment
+  IconButton
 } from '@mui/material';
-import { CalendarMonth } from '@mui/icons-material';
+import CloseIcon from '@mui/icons-material/Close';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
-  const [date, setDate] = React.useState('');
-  const dateInputRef = useRef(null);
+  const [date, setDate] = React.useState(null);
 
   const handleToday = () => {
-    const today = new Date().toISOString().split('T')[0];
-    setDate(today);
+    setDate(dayjs());
   };
 
   const handleClear = () => {
-    setDate('');
+    setDate(null);
   };
 
   const handleDone = () => {
-    onDone(date);
+    if (date) {
+      onDone(date.format('YYYY-MM-DD'));
+    } else {
+      onDone('');
+    }
     onClose();
   };
 
@@ -44,107 +50,120 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
       PaperProps={{
         sx: {
           width: 320,
-          borderRadius: '4px',
+          borderRadius: radius.md,
           overflow: 'hidden',
-          border: '1px solid #ccc',
-          mt: 1
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          mt: 1,
+          border: `1px solid ${COLORS.BORDER_LIGHT}`
         }
       }}
     >
-      <Box>
-        {/* Blue Header Bar */}
-        <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', bgcolor: 'white' }}>
+        {/* Header */}
+        <Box
+          sx={{
+            boxSizing: 'border-box',
+            px: '20px',
+            py: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_TINT,
+            m: 0,
+            flexShrink: 0,
+          }}
+        >
+          <HistoryOutlinedIcon sx={{ fontSize: '18px', color: COLORS.ACCENT }} />
+          <Typography sx={{ fontSize: '14px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
             Backdate Transaction
           </Typography>
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY, padding: '2px' }}>
+            <CloseIcon sx={{ fontSize: '16px' }} />
+          </IconButton>
         </Box>
 
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ mb: 3 }}>
-            <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ mb: 2 }}>
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: '#5c6bc0', 
-                  fontWeight: 'bold',
-                  pb: 0.5
-                }}
-              >
-                Backdate To:
-              </Typography>
-              <Box sx={{ flexGrow: 1, borderBottom: '1.5px solid #7788bb', cursor: 'pointer' }} onClick={() => dateInputRef.current?.showPicker()}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  variant="standard"
-                  inputRef={dateInputRef}
-                  InputProps={{
-                    disableUnderline: true,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                      </InputAdornment>
-                    ),
-                    sx: { 
-                      fontSize: '13px',
-                      py: 0.5,
-                      '& input::-webkit-calendar-picker-indicator': {
-                        cursor: 'pointer'
-                      }
-                    }
-                  }}
-                />
-              </Box>
-            </Stack>
+        <Box sx={{ p: '20px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px', fontWeight: fontWeight.medium }}>
+              Select Date:
+            </Typography>
+            <DatePicker
+              value={date}
+              onChange={(newValue) => setDate(newValue)}
+              format="MM/DD/YYYY"
+              slotProps={{ 
+                popper: { sx: { zIndex: 15000 } },
+                textField: { 
+                  size: 'small', 
+                  fullWidth: true,
+                  placeholder: "MM/DD/YYYY",
+                  sx: { 
+                    '& .MuiInputBase-root': { 
+                      fontSize: '13px', 
+                      borderRadius: '4px', 
+                      height: '36px', 
+                      bgcolor: COLORS.SURFACE_TINT, 
+                      color: COLORS.TEXT_PRIMARY 
+                    }, 
+                    '& fieldset': { borderColor: COLORS.BORDER } 
+                  } 
+                }
+              }}
+            />
           </Box>
 
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button 
-              size="small" 
-              onClick={handleToday}
-              sx={{ 
-                textTransform: 'none', 
-                color: '#5c6bc0',
-                fontSize: '11px',
-                minWidth: 'auto',
-                px: 1
-              }}
-            >
-              Today
-            </Button>
-            <Button 
-              size="small" 
-              onClick={handleClear}
-              sx={{ 
-                textTransform: 'none', 
-                color: '#d32f2f',
-                fontSize: '11px',
-                minWidth: 'auto',
-                px: 1
-              }}
-            >
-              Clear
-            </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Stack direction="row" spacing={1}>
+              <Button 
+                size="small" 
+                onClick={handleToday}
+                sx={{ 
+                  textTransform: 'none', 
+                  color: COLORS.ACCENT,
+                  fontSize: '12px',
+                  minWidth: 'auto',
+                  px: 1,
+                  '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.04)' }
+                }}
+              >
+                Today
+              </Button>
+              <Button 
+                size="small" 
+                onClick={handleClear}
+                sx={{ 
+                  textTransform: 'none', 
+                  color: '#ef4444',
+                  fontSize: '12px',
+                  minWidth: 'auto',
+                  px: 1,
+                  '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.04)' }
+                }}
+              >
+                Clear
+              </Button>
+            </Stack>
             <Button 
               variant="contained" 
               size="small" 
               onClick={handleDone}
               sx={{ 
                 textTransform: 'none', 
-                bgcolor: '#d4c4a8',
-                fontSize: '11px',
-                borderRadius: '4px',
+                bgcolor: COLORS.ACCENT,
+                color: COLORS.WHITE,
+                fontSize: '12px',
+                fontWeight: fontWeight.medium,
+                borderRadius: radius.sm,
                 px: 2,
-                '&:hover': {
-                  bgcolor: '#c5b396'
-                }
+                height: '30px',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
               }}
             >
               Done
             </Button>
-          </Stack>
+          </Box>
         </Box>
       </Box>
     </Popover>

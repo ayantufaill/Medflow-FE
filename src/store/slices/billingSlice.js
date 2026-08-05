@@ -144,8 +144,11 @@ export const fetchLedgerItems = createAsyncThunk(
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
-          // The inner invoice row should only show procedures where dbi is true
-          const invoiceProcedures = invoice.lineItems.filter(l => l.dbi === true);
+          // The inner invoice row should show procedures where dbi is true
+          // AND procedures where dbi is false BUT no claims exist yet.
+          const invoiceProcedures = invoice.lineItems.filter(l => 
+            l.dbi === true || invoiceClaims.length === 0
+          );
           
           const combinedTitle = invoiceProcedures
             .map((l) => l.description || 'Procedure')

@@ -84,10 +84,10 @@ const FamilyAppointmentsScheduledTab = ({ allAppointments, groupedAppointments, 
       </Box>
 
       {/* Right area: columns per family member */}
-      <Box sx={{ flex: 1, overflowX: "auto", overflowY: "auto", p: "20px 24px" }}>
+      <Box sx={{ flex: 1, overflowX: "hidden", overflowY: "auto", p: "20px 24px", minWidth: 0 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: "24px", width: "100%" }}>
           {groupedAppointments.map((group, idx) => (
-            <Box key={idx} sx={{ width: "100%" }}>
+            <Box key={idx} sx={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
               <Box
                 sx={{
                   display: "flex",
@@ -119,11 +119,11 @@ const FamilyAppointmentsScheduledTab = ({ allAppointments, groupedAppointments, 
               </Box>
 
               {group.appointments.length > 0 ? (
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px", minWidth: 0 }}>
                   {group.appointments.map((appt, i) => (
-                    <Box key={appt._id || i} sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Box key={appt._id || i} sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                       <AppointmentSummaryCard appointment={appt} />
-                      <AppointmentChecklist />
+                      <AppointmentChecklist patientId={appt.patientId?._id || appt.patientId?.id || appt.patientId?.PatNum || appt.patientId || appt.patient?._id || appt.patient?.id || appt.patient?.PatNum || appt.patient} />
                     </Box>
                   ))}
                 </Box>

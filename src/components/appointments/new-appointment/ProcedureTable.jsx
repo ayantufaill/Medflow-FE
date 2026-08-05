@@ -4,12 +4,13 @@ import {
   TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions }) => {
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, setIsRescheduling }) => {
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
 
   const handleToggleCheck = useCallback(
@@ -27,6 +28,13 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   const handleDelete = useCallback(
     () => setProcedures((prev) => prev.filter((p) => p.id !== row.id)),
     [row.id, setProcedures],
+  );
+  const handleToggleCompleted = useCallback(
+    () => {
+      setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, completed: !p.completed } : p));
+      if (setIsRescheduling) setIsRescheduling(true);
+    },
+    [row.id, setProcedures, setIsRescheduling],
   );
 
   const parseCharge = (v) => {
@@ -104,7 +112,13 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
             {fmt(totalCharge)}
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
-            <CheckCircleIcon sx={{ fontSize: "18px", color: "#22c55e" }} />
+            <Box onClick={handleToggleCompleted} sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {row.completed ? (
+                <CheckCircleIcon sx={{ fontSize: "18px", color: "#4ade80" }} />
+              ) : (
+                <CheckCircleOutlineIcon sx={{ fontSize: "18px", color: "#d1d5db" }} />
+              )}
+            </Box>
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
             <IconButton size="small" sx={{ p: "2px", color: "#9aa3ae" }}>
@@ -124,7 +138,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
 });
 
-const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions }) => {
+const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, setIsRescheduling }) => {
   const baseHeaders = [
     { label: "PROCEDURE", width: showExtendedOptions ? "72px" : "88px" },
     { label: "SITE",      width: "18%"  },
@@ -164,6 +178,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
                 providers={providers}
                 setProcedures={setProcedures}
                 showExtendedOptions={showExtendedOptions}
+                setIsRescheduling={setIsRescheduling}
               />
             ))}
             {procedures.length === 0 && (
@@ -187,7 +202,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
               const fmt = (v) => `$${Number(v).toFixed(2)}`;
               return (
                 <TableRow sx={{ backgroundColor: "#f8fafc" }}>
-                  <TableCell colSpan={4} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
+                  <TableCell colSpan={5} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
                   <TableCell sx={{ borderTop: "1px solid #e0e5eb", border: "none", fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", textAlign: "right" }}>
                     {fmt(totalPt)}
                   </TableCell>
