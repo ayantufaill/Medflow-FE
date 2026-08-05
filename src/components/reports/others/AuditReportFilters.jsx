@@ -24,6 +24,77 @@ const AuditReportFilters = ({
   handleApply,
   handleClear
 }) => {
+  const handleRangeChange = (e) => {
+    const newMode = e.target.value;
+    setDateRange(newMode);
+    if (newMode === 'range') return;
+
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    switch (newMode) {
+      case 'Daily':
+      case 'daily':
+        break;
+      case 'this_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        start = new Date(new Date().setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'this_month': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      }
+      case 'last_7_days': {
+        start = new Date(today.getTime());
+        start.setDate(today.getDate() - 6);
+        break;
+      }
+      case 'last_week': {
+        const day = today.getDay();
+        const diffToLastWeekStart = today.getDate() - day - 7 + (day === 0 ? -6 : 1);
+        start = new Date(new Date().setDate(diffToLastWeekStart));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'last_4_weeks': {
+        start = new Date(today.getTime());
+        start.setDate(today.getDate() - 28);
+        break;
+      }
+      case 'last_month': {
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      }
+      case 'last_3_months': {
+        start = new Date(today.getTime());
+        start.setMonth(today.getMonth() - 3);
+        break;
+      }
+      case 'last_12_months': {
+        start = new Date(today.getTime());
+        start.setFullYear(today.getFullYear() - 1);
+        break;
+      }
+      case 'year_to_date': {
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+      }
+      default:
+        break;
+    }
+
+    setStartDate(dayjs(start).format('YYYY-MM-DD'));
+    setEndDate(dayjs(end).format('YYYY-MM-DD'));
+  };
+
   const topFilters = (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <ReportSelect 
@@ -42,7 +113,7 @@ const AuditReportFilters = ({
           { value: 'year_to_date', label: 'Year to date' },
         ]}
         value={dateRange}
-        onChange={(e) => setDateRange(e.target.value)}
+        onChange={handleRangeChange}
         width="180px"
       />
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -51,7 +122,7 @@ const AuditReportFilters = ({
         </Typography>
         <DatePicker
           value={dayjs(startDate)}
-          onChange={(newValue) => setStartDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          onChange={(newValue) => { setStartDate(newValue ? newValue.format('YYYY-MM-DD') : ''); setDateRange('range'); }}
           format="MM/DD/YYYY"
           slotProps={{ 
             popper: { sx: { zIndex: 1400 } },
@@ -79,7 +150,7 @@ const AuditReportFilters = ({
         </Typography>
         <DatePicker
           value={dayjs(endDate)}
-          onChange={(newValue) => setEndDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          onChange={(newValue) => { setEndDate(newValue ? newValue.format('YYYY-MM-DD') : ''); setDateRange('range'); }}
           format="MM/DD/YYYY"
           slotProps={{ 
             popper: { sx: { zIndex: 1400 } },

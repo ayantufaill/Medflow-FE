@@ -116,9 +116,9 @@ const CreateUserPage = () => {
     const isSelected = isRoleSelected(roleId);
 
     if (isSelected) {
-      setSelectedRoleIds((prev) => prev.filter((id) => id !== roleId));
+      setSelectedRoleIds([]);
     } else {
-      setSelectedRoleIds((prev) => [...prev, roleId]);
+      setSelectedRoleIds([roleId]);
     }
   };
 
