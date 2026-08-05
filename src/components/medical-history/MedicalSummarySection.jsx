@@ -129,6 +129,51 @@ const FieldBox = ({ label, value, onChange, placeholder, multiline, minRows, max
 import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import { RadioGroup, Button, Checkbox, FormGroup } from "@mui/material";
 
+const DiabetesReferenceTable = () => (
+  <Box sx={{ mt: 1, backgroundColor: "transparent", p: 0, borderRadius: radius.md }}>
+    <Typography sx={{ fontStyle: "italic", fontWeight: 600, mb: 1, fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
+      Diabetes
+    </Typography>
+    <Table size="small" sx={{ mb: 1.5, backgroundColor: "#fff", border: `1px solid ${COLORS.BORDER}`, "& td, & th": { border: `1px solid ${COLORS.BORDER}`, p: '4px 8px' } }}>
+      <TableHead>
+        <TableRow>
+          <TableCell align="center" sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Hemoglobin A1c</TableCell>
+          <TableCell align="center" sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Average Blood Sugar</TableCell>
+          <TableCell align="center" sx={{ fontWeight: 600, fontSize: "0.75rem" }}>Level of Control</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        <TableRow>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"< 7%"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"< 140 mg/dL ~ 7.8 mmol/L"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>Good</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"7 - 9%"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"140-220 mg/dL ~ 7.8-11.1 mmol/L"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>Fair</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"> 9%"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>{"> 330 mg/dL ~ 12.2 mmol/L"}</TableCell>
+          <TableCell align="center" sx={{ fontSize: "0.75rem" }}>Poor (Red Flag)</TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+    <Box sx={{ pl: 2, display: "flex", flexDirection: "column", gap: 0.5 }}>
+      <Typography sx={{ display: 'list-item', fontFamily: "Inter", fontSize: "0.75rem", color: COLORS.TEXT_BODY, fontStyle: 'italic' }}>
+        Diabetic patients have an increased risk for developing periodontal disease.
+      </Typography>
+      <Typography sx={{ display: 'list-item', fontFamily: "Inter", fontSize: "0.75rem", color: COLORS.TEXT_BODY, fontStyle: 'italic' }}>
+        Epinephrine has a pharmacologic effect opposite to insulin. Local anesthetic with 1:100,000 can be used for well-controlled diabetics.
+      </Typography>
+      <Typography sx={{ display: 'list-item', fontFamily: "Inter", fontSize: "0.75rem", color: COLORS.TEXT_BODY, fontStyle: 'italic' }}>
+        Periodontitis is associated with elevated serum HbA1c levels both in diabetic patients
+      </Typography>
+    </Box>
+  </Box>
+);
+
 const MedicalAccordionRow = ({ section, index, onSectionChange }) => {
   const [expanded, setExpanded] = useState(false);
   const onToggle = () => setExpanded(!expanded);
@@ -180,20 +225,25 @@ const MedicalAccordionRow = ({ section, index, onSectionChange }) => {
           {options ? (
             <Box sx={{ mb: 3, pt: 1, ml: 4 }}>
               <FormGroup>
-                {options.map(opt => (
-                  <FormControlLabel
-                    key={opt}
-                    control={
-                      <Checkbox 
-                        size="small" 
-                        checked={selectedOptions.includes(opt)}
-                        onChange={(e) => handleOptionChange(opt, e.target.checked)}
-                        sx={{ p: 0.5 }}
-                      />
-                    }
-                    label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter", color: COLORS.TEXT_PRIMARY }}>{opt}</Typography>}
-                  />
-                ))}
+                {options.map(opt => {
+                  if (opt === '---') {
+                    return <Box key="divider" sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, my: 1, ml: 4, width: '100%', maxWidth: 200 }} />;
+                  }
+                  return (
+                    <FormControlLabel
+                      key={opt}
+                      control={
+                        <Checkbox 
+                          size="small" 
+                          checked={selectedOptions.includes(opt)}
+                          onChange={(e) => handleOptionChange(opt, e.target.checked)}
+                          sx={{ p: 0.5 }}
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: fontSize.sm, fontFamily: "Inter", color: COLORS.TEXT_PRIMARY }}>{opt}</Typography>}
+                    />
+                  );
+                })}
               </FormGroup>
             </Box>
           ) : (
@@ -263,16 +313,19 @@ const MedicalAccordionRow = ({ section, index, onSectionChange }) => {
               />
             </Box>
             
-            <FieldBox
-              label="Additional Information"
-              placeholder="No additional information."
-              value={section.additionalInfo}
-              onChange={(e) => onSectionChange(section.id || section.number || index, "additionalInfo", e.target.value)}
-              multiline
-              maxRows={6}
-              sx={{ height: '100%' }}
-              textFieldSx={{ height: 'calc(100% - 20px)', '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' } }}
-            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, height: '100%' }}>
+              <FieldBox
+                label="Additional Information"
+                placeholder="No additional information."
+                value={section.additionalInfo}
+                onChange={(e) => onSectionChange(section.id || section.number || index, "additionalInfo", e.target.value)}
+                multiline
+                maxRows={6}
+                sx={{ flex: section.id === 'diabetes' ? 0 : 1 }}
+                textFieldSx={section.id === 'diabetes' ? undefined : { height: 'calc(100% - 20px)', '& .MuiInputBase-root': { height: '100%', alignItems: 'flex-start' } }}
+              />
+              {section.id === 'diabetes' && <DiabetesReferenceTable />}
+            </Box>
           </Box>
           <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
             <Button variant="contained" disableElevation size="small" onClick={onToggle} sx={{ textTransform: 'none', px: 3, bgcolor: '#1d4ed8', '&:hover': { bgcolor: '#1e40af' }, fontWeight: 600, borderRadius: '6px' }}>
@@ -465,9 +518,14 @@ const MedicalSummarySection = ({
                             {section.additionalInfo}
                           </Typography>
                         </Box>
+                        {section.id === 'diabetes' && <DiabetesReferenceTable />}
                       </Box>
                     ) : (
-                      <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>—</Typography>
+                      section.id === 'diabetes' ? (
+                        <DiabetesReferenceTable />
+                      ) : (
+                        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>—</Typography>
+                      )
                     )}
                   </TableCell>
                 </TableRow>

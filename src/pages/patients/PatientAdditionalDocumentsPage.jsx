@@ -27,7 +27,7 @@ import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 import SectionCard from "../../components/shared/SectionCard";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
-import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog } from "../../components/patients";
+import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -65,6 +65,8 @@ const PatientAdditionalDocumentsPage = () => {
   const [viewMode, setViewMode] = useState("thumbnails");
   const [sortMode, setSortMode] = useState("category");
   const [signature, setSignature] = useState(null);
+
+  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [] });
 
   const claimAttachments = documents.filter(d => d.category.includes('claim') || d.category === 'attachment');
   const consents = documents.filter(d => d.category.includes('consent'));
@@ -134,34 +136,38 @@ const PatientAdditionalDocumentsPage = () => {
     input.type = "file";
     input.accept = "image/*,.pdf";
     input.multiple = true;
-    input.onchange = async () => {
+    input.onchange = () => {
       const files = input.files;
       if (!files?.length || !patientId) return;
-      try {
-        setUploading(true);
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("patientId", patientId);
-          formData.append("documentType", "other");
-          formData.append("documentName", file.name || `Additional document ${i + 1}`);
-          await documentService.uploadDocument(formData);
-        }
-        await refreshDocuments();
-        showSnackbar(`Uploaded ${files.length} document(s)`, "success");
-      } catch (err) {
-        showSnackbar(
-          err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload document",
-          "error",
-        );
-      } finally {
-        setUploading(false);
-      }
+      setUploadDialog({ open: true, files: Array.from(files) });
     };
     input.click();
+  };
+
+  const handleConfirmUpload = async ({ name, category, files }) => {
+    try {
+      setUploading(true);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("patientId", patientId);
+        formData.append("documentType", category || "other");
+        formData.append("documentName", name || file.name || `Additional document ${i + 1}`);
+        await documentService.uploadDocument(formData);
+      }
+      await refreshDocuments();
+      showSnackbar(`Uploaded ${files.length} document(s)`, "success");
+    } catch (err) {
+      showSnackbar(
+        err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          "Failed to upload document",
+        "error",
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleOpenDocument = (row) => {
@@ -550,6 +556,13 @@ const PatientAdditionalDocumentsPage = () => {
         category={editDialog.category}
         onClose={() => setEditDialog((prev) => ({ ...prev, open: false }))}
         onSave={handleSaveEditDialog}
+      />
+
+      <UploadAdditionalDocumentDialog
+        open={uploadDialog.open}
+        files={uploadDialog.files}
+        onClose={() => setUploadDialog({ open: false, files: [] })}
+        onSave={handleConfirmUpload}
       />
 
       <ConfirmationDialog
