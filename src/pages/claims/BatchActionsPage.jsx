@@ -1,6 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import React from 'react';
 import { claimService } from '../../services/claim.service';
+import BatchTabs from '../../components/claims/batch-actions/BatchTabs';
+import BatchPaymentsTab from '../../components/claims/batch-actions/BatchPaymentsTab';
+import BatchInvoicesTab from '../../components/claims/batch-actions/BatchInvoicesTab';
+import BatchClaimsTab from '../../components/claims/batch-actions/BatchClaimsTab';
+import { COLORS } from '../../constants/colors';
+import { radius, headingPrimarySx, headingSecondarySx, fontSize, fontWeight } from '../../constants/styles';
+import { ReportFilterBar } from '../../components/reports/ui';
 import {
   Box,
   Typography,
@@ -595,179 +602,105 @@ export default function BatchActionsPage() {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
-      {/* Top Banner / Breadcrumb - Identical to Claim Management Page */}
-      <Box sx={{ borderBottom: '1px solid #e0e6ed', pb: 1, mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a3a6b' }}>
-          Batch Actions
-        </Typography>
+    <Box sx={{ p: '8px', bgcolor: COLORS.SURFACE_PAGE, minHeight: 'calc(100vh - 65px)', width: '100%', boxSizing: 'border-box' }}>
+      {/* Header Card */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        backgroundColor: COLORS.SURFACE_CARD, 
+        borderRadius: radius.lg, 
+        border: `1px solid ${COLORS.BORDER}`, 
+        p: '8px',
+        px: 2,
+        mb: '8px',
+      }}>
+        <Typography sx={headingPrimarySx}>Batch Actions</Typography>
       </Box>
 
-      {/* Styled Horizontal Sub-Tabs - 100% Identical to Claim Management Sub-tabs */}
-      <Box
-        sx={{
-          borderBottom: '2px solid #e0e6ed',
-          display: 'flex',
-          gap: 4,
-          overflowX: 'auto',
-          mb: 2,
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
-        }}
-      >
-        {['INSURANCE BATCH PAYMENT', 'BATCH INVOICES', 'BATCH CLAIMS'].map((tab) => {
-          const isActive = activeTab === tab;
-          return (
-            <Box
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setSearchQuery('');
-              }}
-              sx={{
-                pb: 1.5,
-                fontSize: '0.85rem',
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#1a3a6b' : '#8898aa',
-                cursor: 'pointer',
-                borderBottom: isActive ? '3px solid #1a3a6b' : '3px solid transparent',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  color: '#1a3a6b',
-                },
-              }}
-            >
-              {tab}
-            </Box>
-          );
-        })}
-      </Box>
+      {/* Main Content Card */}
+      <Box sx={{ backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, p: '8px' }}>
+        {/* Tabs */}
+        <Box sx={{ px: '8px' }}>
+          <BatchTabs 
+            activeTab={activeTab} 
+            setActiveTab={(tab) => {
+              setActiveTab(tab);
+              setSearchQuery('');
+            }} 
+          />
+        </Box>
 
-      {/* Dynamic Sub-tab Configurations & Action Controls */}
+        {/* Filter & action bars */}
+        <Box sx={{ px: '8px' }}>
       {activeTab === 'INSURANCE BATCH PAYMENT' ? (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 2.5,
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-              onClick={() => setOpenAddPaymentModal(true)}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#ffffff',
-                backgroundColor: '#1a3a6b',
-                borderRadius: '4px',
-                px: 2.5,
-                py: 0.7,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#11274c' },
-              }}
+        <Box sx={{ mb: 2, border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.md, overflow: 'hidden' }}>
+          {/* Top row: action buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, bgcolor: COLORS.SURFACE_CARD, flexWrap: 'wrap' }}>
+            <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 15 }} />} onClick={() => setOpenAddPaymentModal(true)}
+              sx={{ textTransform: 'none', bgcolor: COLORS.ACCENT, borderRadius: radius.md, px: 2, boxShadow: 'none', fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}
             >
               Add New Payment
             </Button>
-
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
-              onClick={handleRefreshBatchPayments}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#1a3a6b',
-                borderColor: '#e2e8f0',
-                backgroundColor: '#f7fafc',
-                py: 0.7,
-                px: 2,
-                '&:hover': { borderColor: '#cbd5e1', backgroundColor: '#edf2f7' },
-              }}
+            <Button variant="outlined" size="small" startIcon={<RefreshIcon sx={{ fontSize: 15 }} />} onClick={handleRefreshBatchPayments}
+              sx={{ textTransform: 'none', borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, px: 2, fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { borderColor: COLORS.ACCENT, color: COLORS.ACCENT } }}
             >
               Refresh
             </Button>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Button
-              variant="outlined"
-              startIcon={<FilterIcon sx={{ fontSize: 16 }} />}
-              onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#1a3a6b',
-                borderColor: '#e2e8f0',
-                backgroundColor: '#f7fafc',
-                py: 0.7,
-                px: 2,
-                '&:hover': { borderColor: '#cbd5e1', backgroundColor: '#edf2f7' },
-              }}
+            <Box sx={{ flexGrow: 1 }} />
+            <TextField size="small" placeholder="Search payments…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ width: '220px', '& .MuiOutlinedInput-root': { bgcolor: COLORS.SURFACE_INPUT, fontSize: fontSize.md, borderRadius: radius.md, '& fieldset': { borderColor: COLORS.BORDER }, '&:hover fieldset': { borderColor: COLORS.TEXT_MUTED }, '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT } } }}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: COLORS.TEXT_MUTED, fontSize: 16 }} /></InputAdornment> }}
+            />
+            <Button variant="outlined" size="small" startIcon={<FilterIcon sx={{ fontSize: 15 }} />} onClick={() => setShowFilterDrawer(!showFilterDrawer)}
+              sx={{ textTransform: 'none', borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, px: 2, fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { borderColor: COLORS.ACCENT, color: COLORS.ACCENT } }}
             >
               Filter
             </Button>
-
-            <TextField
-              size="small"
-              placeholder="Search For Payment"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{
-                width: '280px',
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#ffffff',
-                  fontSize: '0.82rem',
-                  borderRadius: '4px',
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#a0aec0', fontSize: 18 }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
           </Box>
+          {/* Collapsible filter drawer */}
+          <Collapse in={showFilterDrawer}>
+            <Box sx={{ borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#f8fafc', p: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Carrier / Payer</Typography>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <Select value={filterCarrier} onChange={(e) => setFilterCarrier(e.target.value)} sx={{ fontSize: fontSize.md, borderRadius: radius.md, bgcolor: COLORS.SURFACE_CARD }}>
+                    <MenuItem value="All">All Carriers</MenuItem>
+                    <MenuItem value="Delta Dental Ins. Co. - Georgia">Delta Dental Ins. Co.</MenuItem>
+                    <MenuItem value="MetLife">MetLife</MenuItem>
+                    <MenuItem value="Blue Cross Blue Shield of Texas">Blue Cross Blue Shield</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Date Range</Typography>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <Select value={filterDate} onChange={(e) => setFilterDate(e.target.value)} sx={{ fontSize: fontSize.md, borderRadius: radius.md, bgcolor: COLORS.SURFACE_CARD }}>
+                    <MenuItem value="All">All Dates</MenuItem>
+                    <MenuItem value="today">Today</MenuItem>
+                    <MenuItem value="last7">Last 7 Days</MenuItem>
+                    <MenuItem value="thisMonth">This Month</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ flexGrow: 1 }} />
+              <Button size="small" variant="outlined" onClick={() => { setFilterCarrier('All'); setFilterDate('All'); }}
+                sx={{ textTransform: 'none', fontSize: fontSize.md, fontWeight: fontWeight.semibold, borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, height: 36 }}
+              >Reset</Button>
+              <Button size="small" variant="contained" onClick={() => setShowFilterDrawer(false)}
+                sx={{ textTransform: 'none', bgcolor: COLORS.ACCENT, fontSize: fontSize.md, fontWeight: fontWeight.semibold, borderRadius: radius.md, height: 36, boxShadow: 'none', '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}
+              >Apply</Button>
+            </Box>
+          </Collapse>
         </Box>
       ) : activeTab === 'BATCH INVOICES' ? (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 2.5,
-          }}
-        >
-          {/* Sort dropdown */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 500, color: '#1a3a6b' }}>
-              Sort Report by:
-            </Typography>
-            <FormControl variant="standard" size="small" sx={{ minWidth: 120 }}>
-              <Select
-                value={sortReportBy}
-                onChange={(e) => setSortReportBy(e.target.value)}
-                sx={{
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  color: '#1a3a6b',
-                  '&:before': { borderBottom: 'none' },
-                  '&:after': { borderBottom: 'none' },
-                  '& .MuiSelect-select': { py: 0 }
-                }}
+        <Box sx={{ mb: 2, border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.md, overflow: 'hidden' }}>
+          {/* Top row: sort filter */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, pb: 1.5, bgcolor: COLORS.SURFACE_CARD }}>
+            <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>SORT BY</Typography>
+            <FormControl variant="standard" size="small" sx={{ minWidth: 140 }}>
+              <Select value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} disableUnderline
+                sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, '& .MuiSelect-select': { py: 0 } }}
               >
                 <MenuItem value="Date of Service">Date of Service</MenuItem>
                 <MenuItem value="Patient Name">Patient Name</MenuItem>
@@ -775,901 +708,118 @@ export default function BatchActionsPage() {
               </Select>
             </FormControl>
           </Box>
-
-          {/* Action buttons */}
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button
-              variant="contained"
-              disabled={!hasSelectedPatients}
-              onClick={handleUncompleteProcedures}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: '#ffffff',
-                backgroundColor: hasSelectedPatients ? '#bc9363' : '#dbcaaf',
-                borderRadius: '4px',
-                px: 2,
-                py: 0.7,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#a67d4e' },
-                '&.Mui-disabled': { backgroundColor: '#dbcaaf', color: 'rgba(255,255,255,0.7)' }
-              }}
-            >
-              Un-complete Procedures
-            </Button>
-            <Button
-              variant="contained"
-              disabled={!hasSelectedPatients}
-              onClick={() => setOpenAddInvoiceModal(true)}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: '#ffffff',
-                backgroundColor: hasSelectedPatients ? '#bc9363' : '#dbcaaf',
-                borderRadius: '4px',
-                px: 2,
-                py: 0.7,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#a67d4e' },
-                '&.Mui-disabled': { backgroundColor: '#dbcaaf', color: 'rgba(255,255,255,0.7)' }
-              }}
-            >
-              Batch Invoices
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => alert('Opening invoice print generation spooler...')}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: '#ffffff',
-                backgroundColor: '#1a3a6b',
-                borderRadius: '4px',
-                px: 2,
-                py: 0.7,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#11274c' }
-              }}
-            >
-              Print
-            </Button>
+          {/* Bottom row: actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, pt: 1.5, bgcolor: '#f8fafc', borderTop: `1px solid ${COLORS.BORDER}` }}>
+            <Button variant="outlined" size="small" disabled={!hasSelectedPatients} onClick={handleUncompleteProcedures}
+              sx={{ textTransform: 'none', borderColor: COLORS.STATUS_ERROR, color: COLORS.STATUS_ERROR, borderRadius: radius.md, px: 2, fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { bgcolor: 'rgba(239,68,68,0.05)' }, '&.Mui-disabled': { opacity: 0.4 } }}
+            >Un-complete</Button>
+            <Button variant="contained" size="small" disabled={!hasSelectedPatients} onClick={() => setOpenAddInvoiceModal(true)}
+              sx={{ textTransform: 'none', bgcolor: COLORS.ACCENT, borderRadius: radius.md, px: 2, boxShadow: 'none', fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }, '&.Mui-disabled': { opacity: 0.45 } }}
+            >Batch Invoices</Button>
+            <Button variant="outlined" size="small" onClick={() => alert('Opening invoice print generation spooler...')} startIcon={<PrintIcon sx={{ fontSize: 15 }} />}
+              sx={{ textTransform: 'none', borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, px: 2, fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { borderColor: COLORS.ACCENT, color: COLORS.ACCENT } }}
+            >Print</Button>
           </Box>
         </Box>
       ) : (
-        // ------------------ TAB 3: BATCH CLAIMS CONTROLS (1:1 with Screenshot) ------------------
-        <Box sx={{ mb: 2.5 }}>
-          {/* Row 1: Filters on left, Refresh on right */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 3.5 }}>
-              {/* Sort By */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: '#1a3a6b' }}>
-                  Sort Report by:
-                </Typography>
-                <FormControl variant="standard" size="small" sx={{ minWidth: 110 }}>
-                  <Select
-                    value={sortReportBy}
-                    onChange={(e) => setSortReportBy(e.target.value)}
-                    sx={{
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      color: '#1a3a6b',
-                      '&:before': { borderBottom: 'none' },
-                      '&:after': { borderBottom: 'none' },
-                    }}
-                  >
-                    <MenuItem value="Date of Service">Date of Service</MenuItem>
-                    <MenuItem value="Patient Name">Patient Name</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* Filter by Claim Type */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: '#1a3a6b' }}>
-                  Filter by Claim Type:
-                </Typography>
-                <FormControl variant="standard" size="small" sx={{ minWidth: 80 }}>
-                  <Select
-                    value={filterClaimType}
-                    onChange={(e) => setFilterClaimType(e.target.value)}
-                    sx={{
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      color: '#1a3a6b',
-                      '&:before': { borderBottom: 'none' },
-                      '&:after': { borderBottom: 'none' },
-                    }}
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    <MenuItem value="Manual & Electronic">Manual & Electronic</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* Filter by Carrier */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: '#1a3a6b' }}>
-                  Filter by Carrier:
-                </Typography>
-                <FormControl variant="standard" size="small" sx={{ minWidth: 80 }}>
-                  <Select
-                    value={filterClaimsCarrier}
-                    onChange={(e) => setFilterClaimsCarrier(e.target.value)}
-                    sx={{
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      color: '#1a3a6b',
-                      '&:before': { borderBottom: 'none' },
-                      '&:after': { borderBottom: 'none' },
-                    }}
-                  >
-                    <MenuItem value="All">All</MenuItem>
-                    <MenuItem value="Membership Payer">Membership Payer</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
+        <Box sx={{ mb: 2, border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.md, overflow: 'hidden' }}>
+          {/* Top row: filters */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, pb: 1.5, bgcolor: COLORS.SURFACE_CARD, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>SORT BY</Typography>
+              <FormControl variant="standard" size="small" sx={{ minWidth: 130 }}>
+                <Select value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} disableUnderline sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, '& .MuiSelect-select': { py: 0 } }}>
+                  <MenuItem value="Date of Service">Date of Service</MenuItem>
+                  <MenuItem value="Patient Name">Patient Name</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
-
-            {/* Refresh Link exactly as screenshot */}
-            <Button
-              onClick={() => alert('Refreshing pending claims...')}
-              startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
-              sx={{
-                textTransform: 'none',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: '#1a3a6b',
-                minWidth: 'auto',
-                p: 0,
-                '&:hover': { background: 'none', textDecoration: 'underline' }
-              }}
-            >
-              Refresh
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>CLAIM TYPE</Typography>
+              <FormControl variant="standard" size="small" sx={{ minWidth: 130 }}>
+                <Select value={filterClaimType} onChange={(e) => setFilterClaimType(e.target.value)} disableUnderline sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, '& .MuiSelect-select': { py: 0 } }}>
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="Manual & Electronic">Manual & Electronic</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>CARRIER</Typography>
+              <FormControl variant="standard" size="small" sx={{ minWidth: 130 }}>
+                <Select value={filterClaimsCarrier} onChange={(e) => setFilterClaimsCarrier(e.target.value)} disableUnderline sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY, '& .MuiSelect-select': { py: 0 } }}>
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="Membership Payer">Membership Payer</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flexGrow: 1 }} />
+            <TextField size="small" placeholder="Search claims…" value={claimsSearchQuery} onChange={(e) => setClaimsSearchQuery(e.target.value)}
+              sx={{ width: '200px', '& .MuiOutlinedInput-root': { bgcolor: COLORS.SURFACE_INPUT, fontSize: fontSize.md, borderRadius: radius.md, '& fieldset': { borderColor: COLORS.BORDER }, '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT } } }}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: COLORS.TEXT_MUTED, fontSize: 16 }} /></InputAdornment> }}
+            />
           </Box>
-
-          {/* Row 2: Exclude Closed Checkbox on left, Send Claims & Print Buttons on right */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 1.5 }}>
+          {/* Bottom row: actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, pt: 1.5, bgcolor: '#f8fafc', borderTop: `1px solid ${COLORS.BORDER}` }}>
             <FormControlLabel
-              control={
-                <Checkbox
-                  checked={excludeClosedInvoices}
-                  onChange={(e) => setExcludeClosedInvoices(e.target.checked)}
-                  sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#1a3a6b' }, p: 0.5 }}
-                />
-              }
-              label={
-                <Typography sx={{ fontSize: '0.82rem', color: '#1a3a6b', fontWeight: 600 }}>
-                  Exclude closed invoices
-                </Typography>
-              }
+              control={<Checkbox checked={excludeClosedInvoices} onChange={(e) => setExcludeClosedInvoices(e.target.checked)} size="small" sx={{ color: COLORS.BORDER, '&.Mui-checked': { color: COLORS.ACCENT }, p: 0.5 }} />}
+              label={<Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>Exclude closed invoices</Typography>}
             />
-
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Button
-                variant="contained"
-                disabled={!hasSelectedClaims}
-                onClick={handlePackAndSubmitClaims}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  color: '#ffffff',
-                  backgroundColor: hasSelectedClaims ? '#bc9363' : '#dbcaaf',
-                  borderRadius: '4px',
-                  px: 2.2,
-                  py: 0.7,
-                  boxShadow: 'none',
-                  '&:hover': { backgroundColor: '#a67d4e' },
-                  '&.Mui-disabled': { backgroundColor: '#dbcaaf', color: 'rgba(255,255,255,0.7)' }
-                }}
-              >
-                Send Claims ▾
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => alert('Opening claim forms print queue spooler...')}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  color: '#ffffff',
-                  backgroundColor: '#1a3a6b',
-                  borderRadius: '4px',
-                  px: 2.2,
-                  py: 0.7,
-                  boxShadow: 'none',
-                  '&:hover': { backgroundColor: '#11274c' }
-                }}
-              >
-                Print
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Row 3: Full Width Search input */}
-          <Box sx={{ mb: 2 }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="Search by name, invoice number, or date"
-              value={claimsSearchQuery}
-              onChange={(e) => setClaimsSearchQuery(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#ffffff',
-                  fontSize: '0.82rem',
-                  borderRadius: '4px',
-                  borderColor: '#e2e8f0',
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#a0aec0', fontSize: 18 }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
-
-          {/* Results count text directly below search bar */}
-          <Typography sx={{ color: '#1a3a6b', fontSize: '0.82rem', fontWeight: 700, fontStyle: 'italic' }}>
-            ({filteredClaimsList.length} claim/s)
-          </Typography>
-        </Box>
-      )}
-
-      {/* Advanced Filter Drawer (For Tab 1) */}
-      {activeTab === 'INSURANCE BATCH PAYMENT' && (
-        <Collapse in={showFilterDrawer}>
-          <Paper sx={{ p: 2.5, mb: 3, borderRadius: '8px', border: '1px solid #e0e6ed', boxShadow: 'none' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#1a3a6b' }}>
-              Filter Batch Payments
+            <Box sx={{ flexGrow: 1 }} />
+            <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, fontWeight: fontWeight.medium, mr: 1 }}>
+              {filteredClaimsList.length} claim(s)
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
-                  Carrier / Payer:
-                </Typography>
-                <FormControl size="small" fullWidth>
-                  <Select value={filterCarrier} onChange={(e) => setFilterCarrier(e.target.value)}>
-                    <MenuItem value="All">All Carriers</MenuItem>
-                    <MenuItem value="Delta Dental Ins. Co. - Georgia">Delta Dental Ins. Co. - Georgia</MenuItem>
-                    <MenuItem value="MetLife">MetLife</MenuItem>
-                    <MenuItem value="Blue Cross Blue Shield of Texas">Blue Cross Blue Shield of Texas</MenuItem>
-                    <MenuItem value="2 Payers">Multi-Payers (2 Payers)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', display: 'block', mb: 0.5 }}>
-                  Date Range:
-                </Typography>
-                <FormControl size="small" fullWidth>
-                  <Select value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
-                    <MenuItem value="All">All Dates</MenuItem>
-                    <MenuItem value="today">Today</MenuItem>
-                    <MenuItem value="last7">Last 7 Days</MenuItem>
-                    <MenuItem value="thisMonth">This Month</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'flex-end', gap: 1.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    setFilterCarrier('All');
-                    setFilterDate('All');
-                  }}
-                  sx={{ textTransform: 'none', height: 38, fontWeight: 600 }}
-                >
-                  Reset
-                </Button>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => setShowFilterDrawer(false)}
-                  sx={{ textTransform: 'none', bgcolor: '#1a3a6b', height: 38, fontWeight: 600, '&:hover': { bgcolor: '#11274c' } }}
-                >
-                  Apply
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Collapse>
+            <Button variant="contained" size="small" disabled={!hasSelectedClaims} onClick={handlePackAndSubmitClaims}
+              sx={{ textTransform: 'none', bgcolor: COLORS.ACCENT, borderRadius: radius.md, px: 2, boxShadow: 'none', fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }, '&.Mui-disabled': { opacity: 0.45 } }}
+            >Send Claims ▾</Button>
+            <Button variant="outlined" size="small" onClick={() => alert('Opening claim forms print queue spooler...')} startIcon={<PrintIcon sx={{ fontSize: 15 }} />}
+              sx={{ textTransform: 'none', borderColor: COLORS.BORDER, color: COLORS.TEXT_SECONDARY, borderRadius: radius.md, px: 2, fontWeight: fontWeight.semibold, fontSize: fontSize.md, '&:hover': { borderColor: COLORS.ACCENT, color: COLORS.ACCENT } }}
+            >Print</Button>
+          </Box>
+        </Box>
+      )}{/* end filter bars */}
+
+      {/* Tab Tables */}
+      {activeTab === 'INSURANCE BATCH PAYMENT' && (
+        <BatchPaymentsTab 
+          filteredBatchPayments={filteredBatchPayments}
+          setSelectedBatchPayment={setSelectedBatchPayment}
+          setOpenDetailsModal={setOpenDetailsModal}
+          setOpenEOBModal={setOpenEOBModal}
+        />
       )}
 
-      {/* Main Table Container */}
-      <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'hidden' }}>
-        {/* Tab 1 Table: Insurance Batch Payments */}
-        {activeTab === 'INSURANCE BATCH PAYMENT' && (
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
-              <TableRow>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>PAYMENT REF #</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>DATE</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>STATUS</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>CARRIER</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>PATIENTS</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>TOTAL PAYMENTS</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>CLAIM BREAKDOWN</TableCell>
-                <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>EOB</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredBatchPayments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
-                      No batch payments found. Click "Add New Payment" to record a bulk check.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredBatchPayments.map((payment) => (
-                  <TableRow
-                    key={payment.id}
-                    hover
-                    sx={{
-                      '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                      transition: 'background-color 0.2s',
-                    }}
-                  >
-                    <TableCell sx={{ py: 1.5, minWidth: '200px' }}>
-                      <Typography
-                        sx={{
-                          fontSize: '0.82rem',
-                          fontWeight: 500,
-                          color: '#334155',
-                          fontFamily: 'monospace',
-                          wordBreak: 'break-all',
-                          lineHeight: 1.3,
-                          maxWidth: '180px',
-                        }}
-                      >
-                        {payment.paymentRef}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
-                        {payment.date}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Chip
-                        label={payment.status}
-                        size="small"
-                        sx={{
-                          bgcolor: payment.status === 'COMPLETED' ? '#dcfce7' : '#fee2e2',
-                          color: payment.status === 'COMPLETED' ? '#15803d' : '#b91c1c',
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
-                          borderRadius: '4px',
-                          height: '24px',
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      {payment.carrier.includes('Payers') ? (
-                        <Link
-                          component="button"
-                          variant="body2"
-                          onClick={() => alert(`Payers details for ${payment.paymentRef}: Cigna, MetLife, Guardian.`)}
-                          sx={{
-                            color: '#1a3a6b',
-                            fontWeight: 700,
-                            textDecoration: 'none',
-                            fontSize: '0.82rem',
-                            textAlign: 'left',
-                            '&:hover': { textDecoration: 'underline' },
-                          }}
-                        >
-                          {payment.carrier}
-                        </Link>
-                      ) : (
-                        <Typography sx={{ fontSize: '0.82rem', color: '#4a5568', fontWeight: 500 }}>
-                          {payment.carrier}
-                        </Typography>
-                      )}
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Link
-                        component="button"
-                        variant="body2"
-                        onClick={() => {
-                          setSelectedBatchPayment(payment);
-                          setOpenDetailsModal(true);
-                        }}
-                        sx={{
-                          color: '#1a3a6b',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          fontSize: '0.82rem',
-                          textAlign: 'left',
-                          '&:hover': { textDecoration: 'underline' },
-                        }}
-                      >
-                        {payment.patientsText}
-                      </Link>
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#4a5568' }}>
-                        ${payment.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell sx={{ py: 1.5 }}>
-                      <Button
-                        variant="text"
-                        onClick={() => {
-                          setSelectedBatchPayment(payment);
-                          setOpenDetailsModal(true);
-                        }}
-                        sx={{
-                          color: '#1a3a6b',
-                          fontWeight: 700,
-                          textTransform: 'none',
-                          fontSize: '0.82rem',
-                          padding: 0,
-                          minWidth: 'auto',
-                          '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-
-                    <TableCell align="right" sx={{ py: 1.5 }}>
-                      <Button
-                        variant="text"
-                        onClick={() => {
-                          setSelectedBatchPayment(payment);
-                          setOpenEOBModal(true);
-                        }}
-                        sx={{
-                          color: '#1a3a6b',
-                          fontWeight: 700,
-                          textTransform: 'none',
-                          fontSize: '0.82rem',
-                          padding: 0,
-                          minWidth: 'auto',
-                          '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-                        }}
-                      >
-                        Manage EOB
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        )}
-
-        {/* Tab 2 Table: Batch Invoices (Grouped Procedures) */}
-        {activeTab === 'BATCH INVOICES' && (
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
-              <TableRow>
-                <TableCell sx={{ width: 50, color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
-                  <input
-                    type="checkbox"
-                    checked={invoicePatients.length > 0 && invoicePatients.every(p => selectedPatients[p.id])}
-                    onChange={(e) => {
-                      const updated = {};
-                      invoicePatients.forEach(p => {
-                        updated[p.id] = e.target.checked;
-                      });
-                      setSelectedPatients(updated);
-                    }}
-                    style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                  />
-                </TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Patient</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>DOS</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Procedure</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Description</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Provider</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Note</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoicePatients.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
-                      No pending procedures for batch invoicing.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invoicePatients.map((patient) => {
-                  return patient.procedures.map((proc, procIdx) => {
-                    const isLastProc = procIdx === patient.procedures.length - 1;
-                    return (
-                      <TableRow
-                        key={`${patient.id}-${procIdx}`}
-                        hover
-                        sx={{
-                          '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                          transition: 'background-color 0.2s',
-                        }}
-                      >
-                        {procIdx === 0 && (
-                          <TableCell
-                            rowSpan={patient.procedures.length}
-                            sx={{
-                              verticalAlign: 'top',
-                              py: 2,
-                              borderBottom: '1px solid #e0e6ed',
-                              width: 50,
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedPatients[patient.id] || false}
-                              onChange={(e) => {
-                                setSelectedPatients(prev => ({
-                                  ...prev,
-                                  [patient.id]: e.target.checked,
-                                }));
-                              }}
-                              style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                            />
-                          </TableCell>
-                        )}
-
-                        {procIdx === 0 && (
-                          <TableCell
-                            rowSpan={patient.procedures.length}
-                            sx={{
-                              verticalAlign: 'top',
-                              py: 2,
-                              borderBottom: '1px solid #e0e6ed',
-                              minWidth: '220px',
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                              <Link
-                                component="button"
-                                variant="body2"
-                                onClick={() => alert(`Opening patient chart for ${patient.name}`)}
-                                sx={{
-                                  color: '#1a3a6b',
-                                  fontWeight: 700,
-                                  textDecoration: 'none',
-                                  fontSize: '0.85rem',
-                                  textAlign: 'left',
-                                  width: 'fit-content',
-                                  '&:hover': { textDecoration: 'underline' },
-                                }}
-                              >
-                                {patient.name}
-                              </Link>
-                              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, color: '#8898aa' }}>
-                                <Tooltip title="Appointments">
-                                  <CalendarIcon sx={{ fontSize: 13, cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} onClick={() => alert(`Opening appointments for ${patient.name}`)} />
-                                </Tooltip>
-                                <Tooltip title="Ledger">
-                                  <DollarIcon sx={{ fontSize: 13, cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} onClick={() => alert(`Opening Ledger for ${patient.name}`)} />
-                                </Tooltip>
-                                <Tooltip title="Treatment Plan">
-                                  <TxIcon sx={{ fontSize: 13, cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} onClick={() => alert(`Opening Treatment Plan for ${patient.name}`)} />
-                                </Tooltip>
-                                <Tooltip title="Communications">
-                                  <ChatIcon sx={{ fontSize: 13, cursor: 'pointer', '&:hover': { color: '#1a3a6b' } }} onClick={() => alert(`Opening Communication log for ${patient.name}`)} />
-                                </Tooltip>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                        )}
-
-                        <TableCell sx={{ py: 1.5, borderBottom: isLastProc ? '1px solid #e0e6ed' : 'none' }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568' }}>
-                            {proc.dos}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.5, borderBottom: isLastProc ? '1px solid #e0e6ed' : 'none' }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568', fontWeight: 600 }}>
-                            {proc.code}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.5, borderBottom: isLastProc ? '1px solid #e0e6ed' : 'none' }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568' }}>
-                            {proc.description}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.5, borderBottom: isLastProc ? '1px solid #e0e6ed' : 'none' }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568' }}>
-                            {proc.provider}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.5, borderBottom: isLastProc ? '1px solid #e0e6ed' : 'none' }}>
-                          {proc.hasNote ? (
-                            <Tooltip title="View completed procedure note">
-                              <IconButton
-                                size="small"
-                                onClick={() => alert(`Procedure Note snippet for ${patient.name} (${proc.code}): Checked note entry signed on ${proc.dos}.`)}
-                                sx={{ p: 0, color: '#7d9cc4' }}
-                              >
-                                <NoteIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          ) : '—'}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  });
-                })
-              )}
-            </TableBody>
-          </Table>
-        )}
-
-        {/* ------------------ Tab 3 Table: Batch Claims (1:1 with Screenshot) ------------------ */}
-        {activeTab === 'BATCH CLAIMS' && (
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
-              <TableRow>
-                <TableCell sx={{ width: 50, color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
-                  <input
-                    type="checkbox"
-                    checked={filteredClaimsList.length > 0 && filteredClaimsList.every(c => selectedClaims[c.id])}
-                    onChange={(e) => {
-                      const updated = {};
-                      filteredClaimsList.forEach(c => {
-                        updated[c.id] = e.target.checked;
-                      });
-                      setSelectedClaims(updated);
-                    }}
-                    style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                  />
-                </TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Patient</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Invoice # (date)</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Claim Type</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Carrier</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Plan name (#)</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Procedures</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Note</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredClaimsList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
-                      No pending claims found matching criteria.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredClaimsList.map((claim) => {
-                  const isExpanded = expandedProcedures[claim.id];
-                  return (
-                    <React.Fragment key={claim.id}>
-                      <TableRow
-                        hover
-                        sx={{
-                          '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                          transition: 'background-color 0.2s',
-                        }}
-                      >
-                        {/* Checkbox */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedClaims[claim.id] || false}
-                            onChange={(e) => {
-                              setSelectedClaims(prev => ({
-                                ...prev,
-                                [claim.id]: e.target.checked
-                              }));
-                            }}
-                            style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
-                          />
-                        </TableCell>
-
-                        {/* Patient Link with micro-icons under */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                            <Link
-                              component="button"
-                              variant="body2"
-                              onClick={() => alert(`Opening Patient Profile: ${claim.patient}`)}
-                              sx={{
-                                color: '#1a3a6b',
-                                fontWeight: 700,
-                                textDecoration: 'none',
-                                fontSize: '0.85rem',
-                                textAlign: 'left',
-                                '&:hover': { textDecoration: 'underline' }
-                              }}
-                            >
-                              {claim.patient}
-                            </Link>
-                            {/* Tiny grey icons inline */}
-                            <Box sx={{ display: 'flex', gap: 1, mt: 0.3, color: '#8898aa' }}>
-                              <CalendarIcon sx={{ fontSize: 13, cursor: 'pointer' }} onClick={() => alert(`Appointments: ${claim.patient}`)} />
-                              <DollarIcon sx={{ fontSize: 13, cursor: 'pointer' }} onClick={() => alert(`Ledger: ${claim.patient}`)} />
-                              <TxIcon sx={{ fontSize: 13, cursor: 'pointer' }} onClick={() => alert(`Treatment Plan: ${claim.patient}`)} />
-                              <ChatIcon sx={{ fontSize: 13, cursor: 'pointer' }} onClick={() => alert(`Logs: ${claim.patient}`)} />
-                            </Box>
-                          </Box>
-                        </TableCell>
-
-                        {/* Invoice # (date) */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568', fontWeight: 500 }}>
-                            {claim.invoiceNumber}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Claim Type */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568' }}>
-                            {claim.claimType}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Carrier */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568', fontWeight: 500 }}>
-                            {claim.carrier}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Plan Name */}
-                        <TableCell sx={{ py: 1.5, maxWidth: '240px' }}>
-                          <Typography sx={{ fontSize: '0.82rem', color: '#4a5568', lineHeight: 1.3 }}>
-                            {claim.planName}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Procedures Toggle */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Button
-                            variant="text"
-                            onClick={() => toggleClaimProcedures(claim.id)}
-                            startIcon={isExpanded ? <ExpandLessIcon sx={{ fontSize: 14 }} /> : <ExpandMoreIcon sx={{ fontSize: 14 }} />}
-                            sx={{
-                              color: '#1a3a6b',
-                              fontWeight: 700,
-                              textTransform: 'none',
-                              fontSize: '0.82rem',
-                              p: 0,
-                              minWidth: 'auto',
-                              '&:hover': { background: 'none', textDecoration: 'underline' }
-                            }}
-                          >
-                            {isExpanded ? 'Hide' : 'Show'}
-                          </Button>
-                        </TableCell>
-
-                        {/* Note & Ignore actions exactly as screenshot */}
-                        <TableCell sx={{ py: 1.5 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Link
-                              component="button"
-                              variant="body2"
-                              onClick={() => alert(`Ignoring Claim for Invoice ${claim.invoiceNumber}`)}
-                              sx={{
-                                color: '#1a3a6b',
-                                fontWeight: 700,
-                                textDecoration: 'none',
-                                fontSize: '0.82rem',
-                                '&:hover': { textDecoration: 'underline' }
-                              }}
-                            >
-                              Ignore
-                            </Link>
-                            <Tooltip title="View completed claim document note">
-                              <IconButton
-                                size="small"
-                                onClick={() => alert(`Claim note: Procedure verified for submission.`)}
-                                sx={{ p: 0, color: '#7d9cc4' }}
-                              >
-                                <NoteIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Collapsible procedures drawer */}
-                      <TableRow>
-                        <TableCell colSpan={8} sx={{ py: 0, px: 4, bgcolor: '#fafbfe' }}>
-                          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                            <Box sx={{ py: 1.5, borderLeft: '3px solid #1a3a6b', pl: 2, my: 1 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1a3a6b', fontSize: '0.8rem' }}>
-                                Claim Treatment Details:
-                              </Typography>
-                              <Table size="small" sx={{ maxWidth: '700px' }}>
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>DOS</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Tooth#</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Surface</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Pt. Balance</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, color: '#4a5568', fontSize: '0.75rem' }}>Ins. Balance</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {claim.procedures.map((proc, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{proc.dos || '—'}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.tooth || '—'}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.surface || '—'}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.ptBalance || '—'}</TableCell>
-                                      <TableCell sx={{ fontSize: '0.75rem' }}>{proc.insBalance || '—'}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </Box>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </TableContainer>
-
-      {/* Pagination for Batch Invoices */}
       {activeTab === 'BATCH INVOICES' && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2.5, gap: 1.5 }}>
-          <Button
-            disabled
-            size="small"
-            sx={{
-              textTransform: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              color: '#a0aec0',
-              minWidth: 'auto',
-              '&.Mui-disabled': { color: '#cbd5e1' }
-            }}
-          >
+        <BatchInvoicesTab 
+          invoicePatients={invoicePatients}
+          selectedPatients={selectedPatients}
+          setSelectedPatients={setSelectedPatients}
+        />
+      )}
+
+      {activeTab === 'BATCH CLAIMS' && (
+        <BatchClaimsTab 
+          filteredClaimsList={filteredClaimsList}
+          selectedClaims={selectedClaims}
+          setSelectedClaims={setSelectedClaims}
+        />
+      )}
+
+      {activeTab === 'BATCH INVOICES' && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2, gap: 1.5 }}>
+          <Button disabled size="small" sx={{ textTransform: 'none', fontSize: fontSize.sm, fontWeight: fontWeight.semibold, '&.Mui-disabled': { color: COLORS.TEXT_MUTED } }}>
             ‹ Prev
           </Button>
-          <Typography sx={{ fontSize: '0.85rem', color: '#718096', fontWeight: 500 }}>
-            Page 1 of 1 · <strong style={{ color: '#1a3a6b' }}>{invoicePatients.length} patients total</strong>
+          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>
+            Page 1 of 1 · <strong style={{ color: COLORS.TEXT_PRIMARY }}>{invoicePatients.length} patients total</strong>
           </Typography>
-          <Button
-            disabled
-            size="small"
-            sx={{
-              textTransform: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              color: '#a0aec0',
-              minWidth: 'auto',
-              '&.Mui-disabled': { color: '#cbd5e1' }
-            }}
-          >
+          <Button disabled size="small" sx={{ textTransform: 'none', fontSize: fontSize.sm, fontWeight: fontWeight.semibold, '&.Mui-disabled': { color: COLORS.TEXT_MUTED } }}>
             Next ›
           </Button>
         </Box>
       )}
+
+      </Box>{/* close px:'8px' inner wrapper */}
+      </Box>{/* close Main Content Card */}
 
       {/* -------------------- MODALS & DIALOGS -------------------- */}
 
