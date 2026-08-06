@@ -6,72 +6,97 @@ import {
   Stack,
   Button,
   Box,
+  DialogTitle,
+  IconButton
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
   return (
     <Dialog 
       open={open} 
       onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      sx={{ zIndex: 130000 }}
       PaperProps={{
         sx: {
-          borderRadius: '4px',
-          width: '500px',
+          borderRadius: '8px',
           overflow: 'hidden'
         }
       }}
     >
-      <Box sx={{ bgcolor: '#7788bb', p: 1.5, display: 'flex', justifyContent: 'center' }}>
-        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.9rem' }}>
-          Transfer Credit
-        </Typography>
-      </Box>
-      <DialogContent sx={{ p: 3 }}>
+      <DialogTitle sx={{ 
+        m: 0, 
+        p: '16px 20px',
+        bgcolor: '#f3f8fd',
+        color: '#000000',
+        fontWeight: 600,
+        fontSize: '15px'
+      }}>
+        Transfer Credit
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 10,
+            color: '#64748B',
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      
+      <DialogContent sx={{ px: 4, pt: 4, pb: 3 }}>
         <Typography 
           variant="body1" 
           sx={{ 
-            color: '#1a237e', 
+            color: '#475569', 
             textAlign: 'center', 
-            mb: 4, 
-            fontSize: '1rem',
+            mb: 4,
+            mt: 2,
+            fontSize: '15px',
             fontWeight: 400
           }}
         >
-          Are you sure you want to 'transfer' the outstanding credit to the patient?
+          Are you sure you want to transfer the outstanding credit to the patient?
         </Typography>
 
-        <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+        <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Button 
+            variant="outlined" 
+            onClick={onClose}
+            sx={{ 
+              color: '#64748B', 
+              borderColor: '#CBD5E1',
+              textTransform: 'none', 
+              px: 3,
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+              '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' }
+            }}
+          >
+            Cancel
+          </Button>
           <Button 
             variant="contained" 
             onClick={onConfirm}
             sx={{ 
-              bgcolor: '#d2b48c', 
+              bgcolor: '#2362EF', 
               color: '#fff', 
               textTransform: 'none', 
-              px: 4,
+              px: 3,
               boxShadow: 'none',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-              '&:hover': { bgcolor: '#c4a47c' }
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+              '&:hover': { bgcolor: '#1A4FCA', boxShadow: 'none' }
             }}
           >
             Transfer
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={onClose}
-            sx={{ 
-              bgcolor: '#9e9e9e', 
-              color: '#fff', 
-              textTransform: 'none', 
-              px: 4,
-              boxShadow: 'none',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-              '&:hover': { bgcolor: '#8e8e8e' }
-            }}
-          >
-            Cancel
           </Button>
         </Stack>
       </DialogContent>

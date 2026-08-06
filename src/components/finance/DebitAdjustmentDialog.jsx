@@ -21,7 +21,7 @@ import { radius, fontWeight } from '../../constants/styles';
 const HeaderLabel = ({ label, color }) => (
   <Typography
     variant="caption"
-    sx={{ color: color, fontWeight: fontWeight.semiBold, fontSize: "11px" }}
+    sx={{ color: color, fontWeight: "bold", fontSize: "11px" }}
   >
     {label}
   </Typography>
@@ -77,7 +77,7 @@ const DebitAdjustmentDialog = ({ onClose }) => {
         }}
       >
         <EditNoteOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Adjust invoice {headerInfo.invoiceNum}
         </Typography>
         {onClose && (
@@ -90,12 +90,12 @@ const DebitAdjustmentDialog = ({ onClose }) => {
       <DialogContent sx={{ px: '24px', py: '20px', pt: '24px !important', overflow: 'visible' }}>
         {/* Top Input Row: Date, Type, Reason */}
         <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 3 }}>
-          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold, fontSize: '13px' }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
             {headerInfo.adjustmentDate}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold, fontSize: '13px' }}>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
               {headerInfo.adjustmentType}
             </Typography>
             <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>type</Typography>
@@ -187,14 +187,14 @@ const DebitAdjustmentDialog = ({ onClose }) => {
               '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
             }}
           />
-          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold }}>
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
             = $0
           </Typography>
         </Stack>
 
         {/* Financial Category Headers */}
         <Stack direction="row" sx={{ mb: 1, width: "100%", alignItems: 'flex-end' }}>
-          <Typography sx={{ fontWeight: fontWeight.semiBold, fontSize: "12px", color: COLORS.TEXT_PRIMARY, width: 220 }}>
+          <Typography sx={{ fontWeight: "bold", fontSize: "12px", color: COLORS.TEXT_PRIMARY, width: 220 }}>
             Invoice {headerInfo.invoiceNum} : {headerInfo.invoiceDate} for
           </Typography>
 

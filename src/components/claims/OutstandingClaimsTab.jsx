@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
@@ -264,27 +264,100 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         ]}
       />
 
-      <StandardClaimsTable
-        activeTab={4} // Outstanding is index 4
-        filteredClaims={filteredClaims}
-        dateRange={filters.dateRange}
-        selectedClaims={selectedClaims}
-        handleSelectAll={handleSelectAll}
-        handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
-        isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
-        handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
-        handleSelectSubset={handleSelectSubset}
-        selectAllAnchorEl={selectAllAnchorEl}
-        handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
-        toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
-        expandedProcedures={expandedProcedures}
-        handleRevalidate={(id) => {}}
-        handleNoteOpen={() => {}}
-        handleOpenEdit={onOpenEdit}
-        handleOpenAttach={onOpenAttach}
-        handleOpenPreview={onOpenPreview}
-        handleToggleHide={toggleHide}
-      />
+      {filters.dateRange === 'dos' ? (
+        (() => {
+          const buckets = { "0-30 days": [], "31-60 days": [], "61-90 days": [], ">90 days": [], "Unknown": [] };
+          const getAgeBucket = (dateStr) => {
+            if (!dateStr) return "Unknown";
+            const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 3600 * 24));
+            if (days <= 30) return "0-30 days";
+            if (days <= 60) return "31-60 days";
+            if (days <= 90) return "61-90 days";
+            return ">90 days";
+          };
+          filteredClaims.forEach(c => {
+            buckets[getAgeBucket(c.createdDate)].push(c);
+          });
+          const activeBuckets = ["0-30 days", "31-60 days", "61-90 days", ">90 days", "Unknown"].filter(b => buckets[b].length > 0);
+          
+          if (activeBuckets.length === 0) {
+            return (
+              <StandardClaimsTable
+                activeTab={4} // Outstanding is index 4
+                filteredClaims={[]}
+                dateRange="none"
+                selectedClaims={selectedClaims}
+                handleSelectAll={handleSelectAll}
+                handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
+                isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
+                handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
+                handleSelectSubset={handleSelectSubset}
+                selectAllAnchorEl={selectAllAnchorEl}
+                handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
+                toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
+                expandedProcedures={expandedProcedures}
+                handleRevalidate={(id) => {}}
+                handleNoteOpen={() => {}}
+                handleOpenEdit={onOpenEdit}
+                handleOpenAttach={onOpenAttach}
+                handleOpenPreview={onOpenPreview}
+                handleToggleHide={toggleHide}
+              />
+            );
+          }
+
+          return activeBuckets.map(bucket => (
+            <Box key={bucket} sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
+                {bucket} Group
+              </Typography>
+              <StandardClaimsTable
+                activeTab={4}
+                filteredClaims={buckets[bucket]}
+                dateRange="none"
+                selectedClaims={selectedClaims}
+                handleSelectAll={handleSelectAll}
+                handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
+                isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
+                handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
+                handleSelectSubset={handleSelectSubset}
+                selectAllAnchorEl={selectAllAnchorEl}
+                handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
+                toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
+                expandedProcedures={expandedProcedures}
+                handleRevalidate={(id) => {}}
+                handleNoteOpen={() => {}}
+                handleOpenEdit={onOpenEdit}
+                handleOpenAttach={onOpenAttach}
+                handleOpenPreview={onOpenPreview}
+                handleToggleHide={toggleHide}
+              />
+            </Box>
+          ));
+        })()
+      ) : (
+        <StandardClaimsTable
+          activeTab={4} // Outstanding is index 4
+          filteredClaims={filteredClaims}
+          dateRange="none"
+          selectedClaims={selectedClaims}
+          handleSelectAll={handleSelectAll}
+          handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
+          isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
+          handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
+          handleSelectSubset={handleSelectSubset}
+          selectAllAnchorEl={selectAllAnchorEl}
+          handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
+          toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
+          expandedProcedures={expandedProcedures}
+          handleRevalidate={(id) => {}}
+          handleNoteOpen={() => {}}
+          handleOpenEdit={onOpenEdit}
+          handleOpenAttach={onOpenAttach}
+          handleOpenPreview={onOpenPreview}
+          handleToggleHide={toggleHide}
+        />
+      )}
     </Box>
   );
 };

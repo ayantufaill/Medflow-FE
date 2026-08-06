@@ -16,12 +16,22 @@ import {
   TableRow,
   Checkbox,
   InputAdornment,
-  Select
+  Select,
+  Divider,
+  Menu
 } from '@mui/material';
+import { ReportSelect } from '../../reports/ui/ReportInputs';
 import {
   KeyboardArrowDown as ExpandMoreIcon,
-  MoreVert as MoreVertIcon
+  MoreVert as MoreVertIcon,
+  ScienceOutlined as ScienceIcon,
+  ShieldOutlined as ShieldIcon,
+  IosShare as ShareIcon,
+  PrintOutlined as PrintIcon,
+  DragIndicator as DragIndicatorIcon,
+  Sync as SyncIcon
 } from '@mui/icons-material';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 
 import { OutlinedSelect, OutlinedInput } from '../../patients/form-components/formInputs';
 
@@ -33,9 +43,38 @@ import editSvg from '../../../assets/treatmentplan/edit.svg';
 import toggleViewSvg from '../../../assets/treatmentplan/toggle_view.svg';
 import arrowUpSvg from '../../../assets/treatmentplan/Arrow_up.svg';
 
+const STATUS_OPTIONS = [
+  'Unconfirmed',
+  'Confirmed',
+  'Arrived',
+  'Ready',
+  'In Chair',
+  'Checkout',
+  'Ask for Review',
+  'Completed',
+  'Canceled'
+];
+
+const NEW_TEMPLATE_OPTIONS = [
+  'New Patient Exam 12yo+',
+  'New Pediatric Patient Exam <12yo',
+  'Periodic Exam 12yo+',
+  'Periodic Exam <12yo',
+  'Referral / Consultation',
+  'Limited Exam',
+  'Emergency Exam',
+  'SDF',
+  'N2O Operative',
+  'Operative 1- No N2O',
+  'Operative 2- Quick Resto',
+  'OR Follow Up'
+];
+
 const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onUpdateItemStatus }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [currentVisitStatus, setCurrentVisitStatus] = useState('Unconfirmed');
+  const [selectedNewTemplate, setSelectedNewTemplate] = useState('New Patient Exam 12yo+');
   const providersList = useSelector(selectProviderDropdownList) || [];
 
   const getProviderName = (providerId) => {
@@ -89,82 +128,95 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
   };
   return (
     <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3 }}>
-      {/* Search Bar (Moved from Procedures pane if preferred, but originally was in Procedures pane. Wait, in original it was in Right Pane. Let me check the structure. Ah, the search bar was in Right Pane under Procedures grid! Let me adjust this. Let's just render the Table here.) */}
-      
-      <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600, mb: 3 }}>Treatment Plan</Typography>
-      
-      {/* Table Filters/Actions */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        <Box sx={{ minWidth: 160 }}>
-          <OutlinedSelect value="All Procedures">
-            <MenuItem value="All Procedures">All Procedures</MenuItem>
+      {/* Top Toolbar matching screenshot */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ width: 260 }}>
+          <OutlinedSelect 
+            value="active"
+            sx={{ 
+              bgcolor: '#fff',
+              '& .MuiSelect-select': { display: 'flex', alignItems: 'center', gap: 1.5, py: 0, px: 1.5, minHeight: '32px !important' },
+              '& .MuiOutlinedInput-root': { minHeight: '32px' },
+              '& .MuiOutlinedInput-notchedOutline': { borderRadius: '8px' }
+            }}
+          >
+            <MenuItem value="active" sx={{ py: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 400, color: '#0f172a', fontSize: '0.875rem' }}>
+                <RadioButtonCheckedIcon sx={{ color: '#10b981', fontSize: '1rem' }} />
+                Active Treatment Plan
+              </Box>
+            </MenuItem>
           </OutlinedSelect>
         </Box>
-        <Box sx={{ minWidth: 120 }}>
-          <OutlinedSelect value="Status" onChange={handleStatusSelect}>
-            <MenuItem value="Status" disabled>Status</MenuItem>
-            <MenuItem value="Planned">Planned</MenuItem>
-            <MenuItem value="Scheduled">Scheduled</MenuItem>
-            <MenuItem value="Completed">Completed</MenuItem>
-            <MenuItem value="Referred">Referred</MenuItem>
-          </OutlinedSelect>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small"><Box component="img" src={plusSvg} alt="add" sx={{ width: 18, height: 18 }} /></IconButton>
-          <IconButton size="small"><Box component="img" src={toggleViewSvg} alt="toggle view" sx={{ width: 18, height: 18 }} /></IconButton>
-          <IconButton size="small" onClick={() => {
-            if (selectedRows.length > 0 && onMoveToTop) {
-              onMoveToTop(selectedRows);
-              setSelectedRows([]); // Clear selection after moving
-            }
-          }}>
-            <Box component="img" src={arrowUpSvg} alt="arrow up" sx={{ width: 18, height: 18 }} />
-          </IconButton>
-          <IconButton size="small"><Box component="img" src={uploadSvg} alt="upload" sx={{ width: 18, height: 18 }} /></IconButton>
-          <IconButton size="small"><Box component="img" src={documentSvg} alt="copy" sx={{ width: 18, height: 18 }} /></IconButton>
+        
+        <IconButton size="small" sx={{ border: '1px solid #0f172a', borderRadius: '50%', width: 24, height: 24, p: 0, ml: 2 }}>
+          <Box component="img" src={plusSvg} alt="add" sx={{ width: 14, height: 14 }} />
+        </IconButton>
+        
+        <Divider orientation="vertical" flexItem sx={{ mx: 3, my: 0.5, borderColor: '#cbd5e1' }} />
+        
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           <IconButton size="small" onClick={() => {
             if (selectedRows.length > 0 && onDeleteItems) {
               onDeleteItems(selectedRows);
-              setSelectedRows([]); // Clear selection
+              setSelectedRows([]);
             }
           }}>
-            <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 18, height: 18 }} />
+            <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
           </IconButton>
-          
-          <Chip label={`${filteredPlans.length} procedures`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 600, ml: 1, borderRadius: '4px' }} />
-          {activeFilters.length > 0 && (
-            <>
-              <Typography variant="caption" sx={{ color: '#64748b', ml: 1 }}>Filtered results</Typography>
-              <Typography 
-                variant="caption" 
-                onClick={handleClearFilters}
-                sx={{ color: '#3b82f6', ml: 1, cursor: 'pointer', fontWeight: 600 }}
-              >
-                Clear all filters
-              </Typography>
-              
-              {activeFilters.map(status => (
-                <Chip 
-                  key={status}
-                  label={status} 
-                  onDelete={() => handleRemoveFilter(status)}
-                  size="small" 
-                  sx={{ bgcolor: '#eff6ff', color: '#2563eb', borderRadius: '4px', ml: 1, '& .MuiChip-deleteIcon': { color: '#2563eb' } }} 
-                />
-              ))}
-            </>
-          )}
+          <IconButton size="small">
+            <ShieldIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+          </IconButton>
+          <IconButton size="small">
+            <ShareIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+          </IconButton>
+          <IconButton size="small">
+            <PrintIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+          </IconButton>
         </Box>
-        <IconButton size="small">
-          <Box component="img" src={editSvg} alt="edit" sx={{ width: 18, height: 18 }} />
+      </Box>
+
+      {/* Phase / Visit Header Row */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1.5 }}>
+        <DragIndicatorIcon sx={{ color: '#cbd5e1', cursor: 'grab', fontSize: '1.2rem' }} />
+        
+        <ReportSelect 
+          options={STATUS_OPTIONS} 
+          value={currentVisitStatus} 
+          onChange={(e) => setCurrentVisitStatus(e.target.value)} 
+          width={180}
+        />
+        
+        <ReportSelect 
+          options={NEW_TEMPLATE_OPTIONS} 
+          value={selectedNewTemplate} 
+          onChange={(e) => setSelectedNewTemplate(e.target.value)} 
+          width={240}
+        />
+        
+        <Box sx={{ 
+          bgcolor: '#f8fafc', color: '#475569', 
+          borderRadius: '4px', px: 2, py: 0.5, fontWeight: 500
+        }}>
+          Mon Aug 10, 9:00 am
+        </Box>
+        
+        <Box sx={{ 
+          display: 'flex', alignItems: 'center', gap: 1, 
+          bgcolor: '#f8fafc', color: '#475569', 
+          borderRadius: '4px', px: 1.5, py: 0.5, fontWeight: 500
+        }}>
+          60 min <SyncIcon sx={{ fontSize: '1rem' }} />
+        </Box>
+        
+        <IconButton size="small" sx={{ ml: 1 }}>
+          <MoreVertIcon />
         </IconButton>
+
       </Box>
 
       {/* Table */}
-      <TableContainer>
+      <TableContainer sx={{ maxHeight: 240, overflowY: 'auto' }}>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
@@ -189,7 +241,9 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
               <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>INS EST</TableCell>
               <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>PT EST</TableCell>
               <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>PRE-AUTH</TableCell>
-              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>LAB CASE</TableCell>
+              <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textAlign: 'center' }}>
+                <ScienceIcon sx={{ fontSize: '1.2rem', color: '#64748b' }} />
+              </TableCell>
               <TableCell align="right"></TableCell>
             </TableRow>
           </TableHead>
@@ -218,11 +272,11 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
                       '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
                     }}
                   >
-                    <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
-                    <MenuItem value="Existing" sx={{ fontSize: '0.8rem' }}>Existing</MenuItem>
+                    <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
+                    <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
+                    <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
+                    <MenuItem value="Existing Other" sx={{ fontSize: '0.8rem' }}>Existing Other</MenuItem>
                     <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
-                    <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
-                    <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
                   </Select>
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.created}</TableCell>

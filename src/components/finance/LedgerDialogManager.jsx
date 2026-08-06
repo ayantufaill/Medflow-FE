@@ -35,7 +35,7 @@ const LedgerDialogManager = ({
   showEditDeposit, handleEditDepositCancel, handleEditDepositSave, editDepositTarget,
   showInvoiceModal, handleInvoiceModalCancel, handleInvoiceModalSave, invoiceModalData,
   magicStickAnchorEl, setMagicStickAnchorEl,
-  showTransferConfirmation, setShowTransferConfirmation,
+  showTransferConfirmation, setShowTransferConfirmation, handleTransferConfirm,
   showEditInvoice, setShowEditInvoice, editInvoiceTarget,
   showAttachDialog, setShowAttachDialog, attachTarget
 }) => (
@@ -52,7 +52,7 @@ const LedgerDialogManager = ({
       { open: showMembershipDialog, onClose: () => setShowMembershipDialog(false), Component: MembershipAdjustmentDialog },
       { open: showWriteOffDialog,   onClose: () => setShowWriteOffDialog(false),   Component: InsuranceWriteOffDialog },
     ].map(({ open, onClose, Component }, i) => (
-      <Dialog key={i} open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 130000 }} PaperProps={{ sx: { borderRadius: '4px', overflow: 'hidden' } }}>
+      <Dialog key={i} open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 130000 }} PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}>
         <DialogContent sx={{ p: 0 }}><Component onClose={onClose} /></DialogContent>
       </Dialog>
     ))}
@@ -74,7 +74,7 @@ const LedgerDialogManager = ({
       { open: showDetailedStatement, onClose: () => setShowDetailedStatement(false), Component: DetailedStatement },
     ].map(({ open, onClose, Component }, i) => (
       <Dialog key={i} open={open} onClose={onClose} maxWidth={false} fullWidth
-        PaperProps={{ sx: { borderRadius: 0, overflow: 'hidden', maxHeight: '90vh', margin: 0, bgcolor: '#f5f5f5', width: '880px', maxWidth: '90vw' } }}
+        PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden', maxHeight: '90vh', margin: 0, bgcolor: '#f5f5f5', width: '880px', maxWidth: '90vw' } }}
         sx={{ zIndex: 130000, '& .MuiDialog-paper': { margin: 0, maxWidth: '100%' } }}>
         <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}><Component onClose={onClose} /></DialogContent>
       </Dialog>
@@ -105,7 +105,7 @@ const LedgerDialogManager = ({
     <TransferCreditConfirmationDialog
       open={showTransferConfirmation}
       onClose={() => setShowTransferConfirmation(false)}
-      onConfirm={() => setShowTransferConfirmation(false)}
+      onConfirm={handleTransferConfirm}
     />
 
     {showEditInvoice && (
