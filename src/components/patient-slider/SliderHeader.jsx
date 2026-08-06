@@ -1,10 +1,7 @@
 import { Box, Chip, IconButton, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import {
-  Close,
-  Refresh,
-} from "@mui/icons-material";
-import { Close, Refresh } from "@mui/icons-material";
+import Close from "@mui/icons-material/Close";
+import Refresh from "@mui/icons-material/Refresh";
 import InitialsAvatar from "../shared/InitialsAvatar";
 import { ActionBtn, VDiv } from "./helpers";
 import ToothSvg from "../../assets/patientslidericons/tabler_dental.svg";
