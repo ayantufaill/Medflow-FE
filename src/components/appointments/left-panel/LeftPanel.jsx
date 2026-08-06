@@ -81,8 +81,22 @@ const LeftPanel = () => {
                 Deliberately NOT gated on currentPatient to avoid timing races. */}
             {selectedAppointment && (
               <>
+                {console.log('--- LEFT PANEL DEBUG ---')}
+                {console.log('selectedAppointment:', selectedAppointment)}
+                {console.log('currentPatient:', currentPatient)}
+                {console.log('computed patientId:', currentPatient?._id || currentPatient?.id || currentPatient?.PatNum || 
+                  (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
+                  (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient))}
                 <AppointmentSummaryCard appointment={selectedAppointment} />
-                <AppointmentChecklist />
+                <AppointmentChecklist 
+                  patientId={
+                    currentPatient?._id || 
+                    currentPatient?.id ||
+                    currentPatient?.PatNum ||
+                    (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
+                    (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient)
+                  } 
+                />
               </>
             )}
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button, Tabs, Tab } from '@mui/material';
 import PrintIcon from '@mui/icons-material/Print';
-import DownloadIcon from '@mui/icons-material/Download';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 const KpiActionToolbar = ({ subTab, setSubTab, onPrint, onExportCSV }) => {
   return (
@@ -12,7 +12,7 @@ const KpiActionToolbar = ({ subTab, setSubTab, onPrint, onExportCSV }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        mb: 3,
+        mb: 1.5,
         px: 3,
         borderRadius: '12px',
         border: '1px solid #DFE5EC',
@@ -59,50 +59,43 @@ const KpiActionToolbar = ({ subTab, setSubTab, onPrint, onExportCSV }) => {
         </Tabs>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <Button
-          variant="outlined"
-          onClick={onPrint}
-          startIcon={<PrintIcon sx={{ fontSize: 18 }} />}
+          onClick={onExportCSV}
+          variant="contained"
+          size="small"
+          startIcon={<FileDownloadIcon />}
           sx={{
-            color: '#1A1A1A',
-            borderColor: '#DFE5EC',
             textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 400,
-            borderRadius: '6px',
-            height: '36px',
+            bgcolor: '#3CA2E0',
+            borderRadius: '8px',
             px: 2,
             boxShadow: 'none',
+            fontWeight: 600,
+            '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' }
+          }}
+        >
+          Export as CSV
+        </Button>
+        <Button
+          onClick={onPrint}
+          variant="outlined"
+          size="small"
+          startIcon={<PrintIcon />}
+          sx={{
+            textTransform: 'none',
+            borderColor: '#3b82f6',
+            color: '#3b82f6',
+            borderRadius: '8px',
+            px: 2,
+            fontWeight: 600,
             '&:hover': {
-              backgroundColor: '#F8FAFC',
-              borderColor: '#DFE5EC',
+              borderColor: '#2563eb',
+              bgcolor: 'rgba(59, 130, 246, 0.04)'
             }
           }}
         >
           Print
-        </Button>
-        <Button
-          variant="contained"
-          onClick={onExportCSV}
-          startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
-          sx={{
-            backgroundColor: '#2362EF',
-            color: '#FFFFFF',
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 400,
-            borderRadius: '6px',
-            height: '36px',
-            px: 2,
-            boxShadow: 'none',
-            '&:hover': {
-              backgroundColor: '#1b4ecc',
-              boxShadow: 'none'
-            }
-          }}
-        >
-          Export CSV
         </Button>
       </Box>
     </Box>

@@ -1,5 +1,6 @@
 import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper } from '@mui/material';
-import { fontSize, fontWeight } from '../../constants/styles';
+import { fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const TransactionTable = ({ transactions, outstandingBalance, showOutstandingBalance = true, showAmount = true, showBalance = true }) => {
   const textDarkBlue = '#40548e';
@@ -7,61 +8,72 @@ const TransactionTable = ({ transactions, outstandingBalance, showOutstandingBal
   const rowLightBlue = '#f0f4fa';
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ border: 'none', mb: 2 }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: '8px', mb: 2, overflow: 'hidden' }}>
       <Table size="small">
         <TableHead>
-          <TableRow sx={{ bgcolor: headerBlue }}>
-            <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Date</TableCell>
-            <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Description</TableCell>
-            <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Provider</TableCell>
+          <TableRow sx={{ bgcolor: COLORS.SURFACE_TINT }}>
+            <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Date</TableCell>
+            <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Description</TableCell>
+            <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Provider</TableCell>
             {showAmount && (
-              <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Amount</TableCell>
+              <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Amount</TableCell>
             )}
-            <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Credit</TableCell>
+            <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Credit</TableCell>
             {showBalance && (
-              <TableCell sx={{ color: textDarkBlue, fontWeight: fontWeight.bold, fontSize: fontSize.sm, border: 'none' }}>Balance</TableCell>
+              <TableCell sx={{ color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', borderBottom: `1px solid ${COLORS.BORDER}` }}>Balance</TableCell>
             )}
           </TableRow>
         </TableHead>
         <TableBody>
           {transactions.map((transaction) => (
-            <TableRow key={transaction.id} sx={{ bgcolor: transaction.bgcolor }}>
-              <TableCell sx={{ color: textDarkBlue, border: 'none', fontSize: fontSize.sm }}>{transaction.date}</TableCell>
-              <TableCell sx={{ border: 'none' }}>
+            <TableRow key={transaction.id} sx={{ bgcolor: transaction.bgcolor === '#f0f4fa' ? 'rgba(0,0,0,0.02)' : 'transparent' }}>
+              <TableCell sx={{ color: COLORS.TEXT_PRIMARY, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, fontSize: '13px' }}>{transaction.date}</TableCell>
+              <TableCell sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
                 {transaction.descriptionSub ? (
                   <>
-                    <Typography sx={{ fontWeight: fontWeight.bold, color: textDarkBlue, fontSize: fontSize.sm }}>{transaction.description}</Typography>
-                    <Typography variant="caption" sx={{ color: textDarkBlue, fontSize: fontSize.xs }}>{transaction.descriptionSub}</Typography>
+                    <Typography sx={{ fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.description}</Typography>
+                    <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '12px' }}>{transaction.descriptionSub}</Typography>
                   </>
                 ) : (
-                  <Typography sx={{ color: textDarkBlue, fontSize: fontSize.sm }}>{transaction.description}</Typography>
+                  <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.description}</Typography>
                 )}
               </TableCell>
-              <TableCell sx={{ border: 'none' }}>
+              <TableCell sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
                 {transaction.provider ? (
                   <>
-                    <Typography sx={{ color: textDarkBlue, fontSize: fontSize.sm }}>{transaction.provider}</Typography>
+                    <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.provider}</Typography>
                     {transaction.providerSub && (
-                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#888', fontSize: fontSize.xs }}>{transaction.providerSub}</Typography>
+                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: COLORS.TEXT_SECONDARY, fontSize: '12px' }}>{transaction.providerSub}</Typography>
                     )}
                   </>
                 ) : null}
               </TableCell>
               {showAmount && (
-                <TableCell sx={{ border: 'none' }}>
+                <TableCell sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
                   {transaction.amount ? (
                     <>
-                      <Typography sx={{ color: textDarkBlue, fontSize: fontSize.sm }}>{transaction.amount}</Typography>
+                      <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.amount}</Typography>
                       {transaction.amountSub && (
-                        <Typography variant="caption" sx={{ color: '#999', fontSize: fontSize.xs }}>{transaction.amountSub}</Typography>
+                        <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '12px' }}>{transaction.amountSub}</Typography>
                       )}
                     </>
                   ) : null}
                 </TableCell>
               )}
-              <TableCell sx={{ color: textDarkBlue, border: 'none', fontSize: fontSize.sm }}>{transaction.credit}</TableCell>
+              <TableCell sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+                {transaction.credit ? (
+                  <>
+                    <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.credit}</Typography>
+                    {transaction.creditSub && (
+                      <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '12px' }}>{transaction.creditSub}</Typography>
+                    )}
+                  </>
+                ) : null}
+              </TableCell>
               {showBalance && (
-                <TableCell sx={{ color: textDarkBlue, border: 'none', fontSize: fontSize.sm }}>{transaction.balance}</TableCell>
+                <TableCell sx={{ borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+                  <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>{transaction.balance}</Typography>
+                </TableCell>
               )}
             </TableRow>
           ))}
@@ -69,17 +81,17 @@ const TransactionTable = ({ transactions, outstandingBalance, showOutstandingBal
           {showOutstandingBalance && (
             <TableRow 
               sx={{ 
-                bgcolor: headerBlue, 
-                borderTop: '2px solid rgba(0,0,0,0.05)', 
+                bgcolor: COLORS.SURFACE_TINT, 
+                borderTop: `1px solid ${COLORS.BORDER}`
               }}
             >
               <TableCell 
                 colSpan={showAmount && showBalance ? 5 : showAmount || showBalance ? 4 : 3} 
                 align="right" 
                 sx={{ 
-                  fontWeight: fontWeight.bold, 
-                  color: textDarkBlue, 
-                  fontSize: fontSize.lg,
+                  fontWeight: fontWeight.semiBold, 
+                  color: COLORS.TEXT_PRIMARY, 
+                  fontSize: '14px',
                   py: 1.5,
                   border: 'none'
                 }}
@@ -89,9 +101,9 @@ const TransactionTable = ({ transactions, outstandingBalance, showOutstandingBal
               <TableCell 
                 align="left" 
                 sx={{ 
-                  fontWeight: fontWeight.bold, 
-                  color: textDarkBlue, 
-                  fontSize: fontSize.lg,
+                  fontWeight: fontWeight.semiBold, 
+                  color: COLORS.TEXT_PRIMARY, 
+                  fontSize: '14px',
                   py: 1.5,
                   border: 'none',
                   pl: 2 

@@ -46,13 +46,12 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
                 <TextField 
                   fullWidth
                   size="small" 
-                  value={formData.coverage.individual.usedAmount}
-                  disabled
-                  placeholder="Auto-"
+                  value={formData.coverage.individual.usedAmount || ''}
+                  onChange={(e) => handleCoverageChange('individual', 'usedAmount', e.target.value)}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#555' }}>$</Typography></InputAdornment>,
                   }}
-                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#aaa' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
+                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
                 />
               </TableCell>
               <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
@@ -97,13 +96,12 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
                 <TextField 
                   fullWidth
                   size="small" 
-                  value={formData.coverage.family.usedAmount}
-                  disabled
-                  placeholder="Auto-"
+                  value={formData.coverage.family.usedAmount || ''}
+                  onChange={(e) => handleCoverageChange('family', 'usedAmount', e.target.value)}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#555' }}>$</Typography></InputAdornment>,
                   }}
-                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#aaa' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
+                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
                 />
               </TableCell>
               <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
@@ -148,13 +146,12 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
                 <TextField 
                   fullWidth
                   size="small" 
-                  value={formData.coverage.ortho.usedAmount}
-                  disabled
-                  placeholder="Auto-"
+                  value={formData.coverage.ortho?.usedAmount || ''}
+                  onChange={(e) => handleCoverageChange('ortho', 'usedAmount', e.target.value)}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#555' }}>$</Typography></InputAdornment>,
                   }}
-                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#aaa' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
+                  sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
                 />
               </TableCell>
               <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
@@ -208,13 +205,12 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
                     <TextField 
                       fullWidth
                       size="small" 
-                      value=""
-                      disabled
-                      placeholder="Auto-"
+                      value={formData.coverage[catKey]?.usedAmount || ''}
+                      onChange={(e) => handleCoverageChange(catKey, 'usedAmount', e.target.value)}
                       InputProps={{
-                        startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#aaa' }}>$</Typography></InputAdornment>,
+                        startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#555' }}>$</Typography></InputAdornment>,
                       }}
-                      sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#aaa' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
+                      sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
                     />
                   </TableCell>
                   <TableCell sx={{ borderBottom: 'none', py: 1.5, color: '#999', fontSize: '0.7rem' }}>

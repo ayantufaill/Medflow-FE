@@ -8,15 +8,6 @@ import {
   CircularProgress,
   FormControlLabel,
   IconButton,
-  Paper,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Tabs,
-  TextField,
 } from "@mui/material";
 import {
   Assignment as ChecklistIcon,
@@ -103,8 +94,8 @@ const FloatingActions = (props) => (
       gap: 8,
       zIndex: 10,
       ...(props.sx || {}),
-      '@media print': {
-        display: 'none !important',
+      "@media print": {
+        display: "none !important",
       },
     }}
   />
@@ -130,9 +121,13 @@ const PatientMedicalHistoryPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const { medicalHistory, loading, error, fetch, update, uploadDocument } = useMedicalHistory();
+  const { medicalHistory, loading, error, fetch, update, uploadDocument } =
+    useMedicalHistory();
   const { currentPatient: patient, fetchById } = usePatient();
-  const { data: patientAppointments = [] } = usePatientAppointments(patientId, 20);
+  const { data: patientAppointments = [] } = usePatientAppointments(
+    patientId,
+    20,
+  );
 
   const [historyTab, setHistoryTab] = useState(0); // 0 = Summary, 1 = Full Medical History
   const [medications, setMedications] = useState([]);
@@ -186,20 +181,30 @@ const PatientMedicalHistoryPage = () => {
 
   useEffect(() => {
     if (!patientId) return;
-    
+
     // Fetch both patient info and medical history concurrently
     fetchById(patientId);
-    
+
     // The Redux fetch will return a promise we can unwrap to populate local editing state
-    fetch(patientId).unwrap()
+    fetch(patientId)
+      .unwrap()
       .then((data) => {
-        setMedications(Array.isArray(data?.medications) ? data.medications : []);
-        setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);
+        setMedications(
+          Array.isArray(data?.medications) ? data.medications : [],
+        );
+        setSupplements(
+          Array.isArray(data?.supplements) ? data.supplements : [],
+        );
         setSignature(data?.review?.signatureDataUrl || null);
       })
       .catch((err) => {
-        if (err?.name === 'ConditionError') return;
-        showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to load medical history", "error");
+        if (err?.name === "ConditionError") return;
+        showSnackbar(
+          typeof err === "string"
+            ? err
+            : err?.message || "Failed to load medical history",
+          "error",
+        );
       });
   }, [patientId, fetchById, fetch, showSnackbar]);
 
@@ -277,7 +282,10 @@ const PatientMedicalHistoryPage = () => {
 
   // loading starts as false in Redux, so we check if medicalHistory is actually present
   const isActuallyLoading = loading || (!medicalHistory && !error);
-  const isEmptyState = !isActuallyLoading && (!medicalHistory?.sections || medicalHistory.sections.length === 0) && !isStartingNewHistory;
+  const isEmptyState =
+    !isActuallyLoading &&
+    (!medicalHistory?.sections || medicalHistory.sections.length === 0) &&
+    !isStartingNewHistory;
 
   const dobText = patient?.dateOfBirth
     ? `DOB: ${formatDate(patient.dateOfBirth)}`
@@ -285,44 +293,65 @@ const PatientMedicalHistoryPage = () => {
 
   const [uploading, setUploading] = useState(false);
 
-  const saveMedicalHistory = async (reviewedWithPatient = false) => {
+  const markAllUnansweredAsNo = () => {
+    setHasUnsavedChanges(true);
+    const nextSections = (
+      Array.isArray(localSections) ? localSections : []
+    ).map((section) => {
+      const currentAnswer = (section.answer || "").toString().trim();
+      const isUnanswered =
+        currentAnswer === "" || currentAnswer.toLowerCase() === "not answered";
+      return isUnanswered ? { ...section, answer: "No" } : section;
+    });
+
+    setLocalSections(nextSections);
+    saveMedicalHistory(false, nextSections);
+  };
+
+  const saveMedicalHistory = async (
+    reviewedWithPatient = false,
+    sectionsOverride = null,
+  ) => {
     if (!patientId || !medicalHistory) return;
     try {
       const baseReview = medicalHistory.review || {};
       const review = reviewedWithPatient
         ? {
-          ...baseReview,
-          reviewedWithPatient: true,
-          reviewedAt: new Date().toISOString(),
-          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-        }
+            ...baseReview,
+            reviewedWithPatient: true,
+            reviewedAt: new Date().toISOString(),
+            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+          }
         : {
-          ...baseReview,
-          signatureDataUrl: signature || baseReview.signatureDataUrl || null,
-        };
+            ...baseReview,
+            signatureDataUrl: signature || baseReview.signatureDataUrl || null,
+          };
 
-      const sectionsForSave = Array.isArray(localSections)
-        ? localSections
-        : summarySections;
+      const sectionsForSave = Array.isArray(sectionsOverride)
+        ? sectionsOverride
+        : Array.isArray(localSections)
+          ? localSections
+          : summarySections;
 
       const payload = {
-          generalInfo: localGeneralInfo || {},
-          premed: localPremed || {},
-          risk: medicalHistory.risk,
-          sections: sectionsForSave.map((section) => ({
-            ...section,
-            additionalInfo: Array.isArray(section.additionalInfo)
-              ? section.additionalInfo
-              : section.additionalInfo
-                ? [section.additionalInfo]
-                : [],
-          })),
-          medications,
-          supplements,
-          review,
-        };
+        generalInfo: localGeneralInfo || {},
+        premed: localPremed || {},
+        risk: medicalHistory.risk,
+        sections: sectionsForSave.map((section) => ({
+          ...section,
+          additionalInfo: Array.isArray(section.additionalInfo)
+            ? section.additionalInfo
+            : section.additionalInfo
+              ? [section.additionalInfo]
+              : [],
+        })),
+        medications,
+        supplements,
+        review,
+      };
 
       const data = await update(patientId, payload).unwrap();
+      fetchById(patientId);
       setHasUnsavedChanges(false);
       setMedications(Array.isArray(data?.medications) ? data.medications : []);
       setSupplements(Array.isArray(data?.supplements) ? data.supplements : []);
@@ -335,7 +364,12 @@ const PatientMedicalHistoryPage = () => {
       );
       setHistoryTab(0);
     } catch (err) {
-      showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to update medical history", "error");
+      showSnackbar(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to update medical history",
+        "error",
+      );
     }
   };
 
@@ -365,7 +399,12 @@ const PatientMedicalHistoryPage = () => {
           "success",
         );
       } catch (err) {
-        showSnackbar(typeof err === 'string' ? err : err?.message || "Failed to upload document", "error");
+        showSnackbar(
+          typeof err === "string"
+            ? err
+            : err?.message || "Failed to upload document",
+          "error",
+        );
       } finally {
         setUploading(false);
       }
@@ -397,8 +436,11 @@ const PatientMedicalHistoryPage = () => {
 
   return (
     <PageContainer id="medical-history-page-root">
-      <Box className="print-only" sx={{ display: 'none', textAlign: 'center', mb: 3 }}>
-        <img src={medflowLogo} alt="Medflow" style={{ height: '40px' }} />
+      <Box
+        className="print-only"
+        sx={{ display: "none", textAlign: "center", mb: 3 }}
+      >
+        <img src={medflowLogo} alt="Medflow" style={{ height: "40px" }} />
       </Box>
       <style>
         {`
@@ -514,7 +556,10 @@ const PatientMedicalHistoryPage = () => {
           }
         `}
       </style>
-      <UnsavedChangesPrompt when={hasUnsavedChanges} onSave={() => saveMedicalHistory(false)} />
+      <UnsavedChangesPrompt
+        when={hasUnsavedChanges}
+        onSave={() => saveMedicalHistory(false)}
+      />
       <Box className="no-print">
         <PatientSectionTabs activeTab="medical" patientId={patientId} />
       </Box>
@@ -557,31 +602,43 @@ const PatientMedicalHistoryPage = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
+          <Typography
+            sx={{
+              fontFamily: "Inter",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.lg,
+              color: COLORS.TEXT_PRIMARY,
+            }}
+          >
             Medical History
           </Typography>
-          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, mt: 0.25 }}>
+          <Typography
+            sx={{
+              fontFamily: "Inter",
+              fontSize: fontSize.base,
+              color: COLORS.TEXT_MUTED,
+              mt: 0.25,
+            }}
+          >
             {patientName} · {dobText}
           </Typography>
         </Box>
 
-        <Box className="no-print" sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+        <Box
+          className="no-print"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+          }}
+        >
           <Button
-            variant={hasUnsavedChanges ? "contained" : "outlined"}
+            variant="outlined"
             size="small"
-            startIcon={<RefreshIcon fontSize="small" />}
-            onClick={() => saveMedicalHistory(false)}
-            sx={hasUnsavedChanges ? {
-              textTransform: "none",
-              fontFamily: "Inter",
-              fontWeight: fontWeight.semibold,
-              fontSize: fontSize.base,
-              borderRadius: radius.md,
-              backgroundColor: '#1d4ed8',
-              color: COLORS.WHITE,
-              boxShadow: "none",
-              "&:hover": { backgroundColor: '#1e40af' },
-            } : {
+            startIcon={<CheckIcon fontSize="small" />}
+            onClick={markAllUnansweredAsNo}
+            sx={{
               textTransform: "none",
               fontFamily: "Inter",
               fontWeight: fontWeight.semibold,
@@ -591,10 +648,14 @@ const PatientMedicalHistoryPage = () => {
               color: COLORS.TEXT_BODY,
               backgroundColor: COLORS.SURFACE_CARD,
               boxShadow: "none",
-              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+              whiteSpace: "nowrap",
+              "&:hover": {
+                backgroundColor: COLORS.SURFACE_HOVER,
+                borderColor: COLORS.TEXT_MUTED,
+              },
             }}
           >
-            Update Hx
+            MARK ALL UNANSWERED AS NO
           </Button>
           <Button
             variant="contained"
@@ -609,10 +670,13 @@ const PatientMedicalHistoryPage = () => {
               borderRadius: radius.md,
               boxShadow: "none",
               backgroundColor: COLORS.STATUS_SUCCESS,
-              "&:hover": { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 },
+              "&:hover": {
+                backgroundColor: COLORS.STATUS_SUCCESS,
+                opacity: 0.9,
+              },
             }}
           >
-            Reviewed With Patient
+            MARK AS REVIEWED WITH PATIENT
           </Button>
           <Button
             variant="outlined"
@@ -629,7 +693,10 @@ const PatientMedicalHistoryPage = () => {
               color: COLORS.TEXT_BODY,
               backgroundColor: COLORS.SURFACE_CARD,
               boxShadow: "none",
-              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+              "&:hover": {
+                backgroundColor: COLORS.SURFACE_HOVER,
+                borderColor: COLORS.TEXT_MUTED,
+              },
             }}
           >
             Print
@@ -660,10 +727,31 @@ const PatientMedicalHistoryPage = () => {
           starts below it. Ratio matches the Figma spec (~77:23 main:sidebar,
           ~69:31 Timeline:Premedication) and the same ~4:1 split the
           Task List/Messages cards use on the schedule operatory page. */}
-      <Box id="medical-history-grid" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" }, gap: 2, alignItems: "start" }}>
+      <Box
+        id="medical-history-grid"
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "3fr 1fr" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
         <Box sx={{ minWidth: 0 }}>
-          <Box id="medical-history-top-row" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" }, gap: 2, mb: 2, alignItems: "start" }}>
-            <SectionCard icon={HistoryTimelineIcon} title="History Timeline" sx={{ mb: 0 }}>
+          <Box
+            id="medical-history-top-row"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "7fr 3fr" },
+              gap: 2,
+              mb: 2,
+              alignItems: "start",
+            }}
+          >
+            <SectionCard
+              icon={HistoryTimelineIcon}
+              title="History Timeline"
+              sx={{ mb: 0 }}
+            >
               {visitDates.length ? (
                 <VisitDatesTimeline visitDates={visitDates} />
               ) : (
@@ -683,48 +771,76 @@ const PatientMedicalHistoryPage = () => {
                     sx={{ p: 0.5 }}
                   />
                 }
-                label={<Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.TEXT_PRIMARY }}>Requires premed</Typography>}
+                label={
+                  <Typography
+                    sx={{
+                      fontFamily: "Inter",
+                      fontSize: fontSize.base,
+                      fontWeight: fontWeight.medium,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Requires premed
+                  </Typography>
+                }
               />
-              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.5 }}>
-                Assess prior to invasive procedures based on the patient&apos;s medical history.
+              <Typography
+                sx={{
+                  fontFamily: "Inter",
+                  fontSize: fontSize.base,
+                  color: COLORS.TEXT_SECONDARY,
+                  mt: 0.5,
+                }}
+              >
+                Assess prior to invasive procedures based on the patient&apos;s
+                medical history.
               </Typography>
             </SectionCard>
           </Box>
 
           {isActuallyLoading && !patient ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4, flex: 1 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "center", py: 4, flex: 1 }}
+            >
               <CircularProgress />
             </Box>
           ) : isEmptyState ? (
             <Box
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
                 pt: 10,
                 pb: 20,
-                textAlign: 'center',
-                flex: 1
+                textAlign: "center",
+                flex: 1,
               }}
             >
-              <Typography sx={{ mb: 2.5, color: '#444', fontSize: '1rem', fontWeight: 500 }}>
+              <Typography
+                sx={{
+                  mb: 2.5,
+                  color: "#444",
+                  fontSize: "1rem",
+                  fontWeight: 500,
+                }}
+              >
                 Patient doesn't have a medical history:
               </Typography>
               <Button
                 variant="contained"
                 onClick={() => setIsStartingNewHistory(true)}
                 sx={{
-                  bgcolor: '#00346a',
-                  color: 'white',
+                  bgcolor: "#00346a",
+                  color: "white",
                   px: 3.5,
                   py: 1,
-                  borderRadius: '25px',
-                  textTransform: 'none',
+                  borderRadius: "25px",
+                  textTransform: "none",
                   fontWeight: 600,
-                  fontSize: '0.9rem',
-                  boxShadow: 'none',
-                  '&:hover': { bgcolor: '#00264d', boxShadow: 'none' }
+                  fontSize: "0.9rem",
+                  boxShadow: "none",
+                  "&:hover": { bgcolor: "#00264d", boxShadow: "none" },
                 }}
               >
                 Start Medical History
@@ -744,7 +860,15 @@ const PatientMedicalHistoryPage = () => {
                 onSectionChange={handleSummarySectionChange}
               />
 
-              <Box id="medical-history-meds-grid" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mt: 2 }}>
+              <Box
+                id="medical-history-meds-grid"
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 2,
+                  mt: 2,
+                }}
+              >
                 <MedicationListCard
                   title="Medication List"
                   rows={medications}
@@ -783,9 +907,15 @@ const PatientMedicalHistoryPage = () => {
         {/* Sidebar — same Task List / Messages cards as the schedule
             operatory pages, plus a Signature card in the same card shell.
             One column spanning both rows above, not re-declared per row. */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          <Box className="no-print"><TaskList /></Box>
-          <Box className="no-print"><Messages /></Box>
+        <Box
+          sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}
+        >
+          <Box className="no-print">
+            <TaskList />
+          </Box>
+          <Box className="no-print">
+            <Messages />
+          </Box>
           <PatientSignatureCard
             value={signature}
             onChange={setSignature}

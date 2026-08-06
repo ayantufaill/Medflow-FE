@@ -4,6 +4,7 @@ export { default as DeletedProfilesTab } from './DeletedProfilesTab';
 export { DocumentTable } from './DocumentTable';
 export { DocumentThumbnail } from './DocumentThumbnail';
 export { EditDocumentDialog } from './EditDocumentDialog';
+export { default as UploadAdditionalDocumentDialog } from './UploadAdditionalDocumentDialog';
 export { FloatingActions } from './FloatingActions';
 export { default as IncompleteProfilesTab } from './IncompleteProfilesTab';
 export { default as MedicationListCard } from './MedicationListCard';

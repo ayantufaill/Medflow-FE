@@ -82,7 +82,7 @@ const billingRoutes = [
   <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingDoctor(<ViewEstimatePage />)} />,
 
   <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />, true)} />,
-  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />)} />,
+  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />, true)} />,
   <Route key="/claims/denied" path="/claims/denied" element={adminBilling(<DeniedClaimsPage />)} />,
   <Route key="/claims/secondary" path="/claims/secondary" element={adminBilling(<SecondaryClaimsPage />)} />,
   <Route key="/claims/:claimId" path="/claims/:claimId" element={adminBilling(<ViewClaimPage />)} />,

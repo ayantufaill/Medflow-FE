@@ -7,13 +7,21 @@ import {
   MenuItem,
   Stack,
   Divider,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 // Helper for the colored financial column headers
 const HeaderLabel = ({ label, color }) => (
   <Typography
     variant="caption"
-    sx={{ color: color, fontWeight: "bold", fontSize: "10px" }}
+    sx={{ color: color, fontWeight: "bold", fontSize: "11px" }}
   >
     {label}
   </Typography>
@@ -21,12 +29,12 @@ const HeaderLabel = ({ label, color }) => (
 
 const DebitAdjustmentDialog = ({ onClose }) => {
   const columns = [
-    { label: "Ins Writeoff", width: 80, color: "#d38c7d" },
-    { label: "Patient:", width: 80, color: "#d38c7d" },
-    { label: "Insurance:", width: 80, color: "#d38c7d" },
-    { label: "Charges: $100.00", width: 100, color: "#d38c7d" },
-    { label: "Payment: $0.00", width: 80, color: "#81c784", align: "right" },
-    { label: "Adjust: $0.00", width: 80, color: "#7e57c2", align: "right" },
+    { label: "Ins Writeoff", width: 80, color: COLORS.TEXT_SECONDARY },
+    { label: "Patient:", width: 80, color: COLORS.TEXT_SECONDARY },
+    { label: "Insurance:", width: 80, color: COLORS.TEXT_SECONDARY },
+    { label: "Charges: $100.00", width: 100, color: COLORS.TEXT_SECONDARY },
+    { label: "Payment: $0.00", width: 80, color: '#22c55e', align: "right" },
+    { label: "Adjust: $0.00", width: 80, color: COLORS.ACCENT, align: "right" },
   ];
 
   const headerInfo = {
@@ -45,201 +53,193 @@ const DebitAdjustmentDialog = ({ onClose }) => {
         { val: "$100.00", width: 80 },
         { val: "$0.00", width: 80 },
         { val: "$100.00", width: 100, bold: true },
-        { val: "$0.00", width: 80, bold: true, color: "#81c784" },
+        { val: "$0.00", width: 80, bold: true, color: '#22c55e' },
       ],
       percent: "0%",
     },
   ];
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        bgcolor: "#fff",
-        border: "1px solid #ccc",
-        borderRadius: "4px",
-        overflow: "hidden",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      {/* Blue Header Bar */}
-      <Box
-        sx={{ bgcolor: "#7788bb", color: "#fff", p: 1, textAlign: "center" }}
+    <Box sx={{ width: "100%", bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: "hidden" }}>
+      {/* Header Bar */}
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '24px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
       >
-        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "12px" }}>
+        <EditNoteOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Adjust invoice {headerInfo.invoiceNum}
         </Typography>
-      </Box>
+        {onClose && (
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: '18px' }} />
+          </IconButton>
+        )}
+      </DialogTitle>
 
-      <Box sx={{ p: 2 }}>
+      <DialogContent sx={{ px: '24px', py: '20px', pt: '24px !important', overflow: 'visible' }}>
         {/* Top Input Row: Date, Type, Reason */}
-        <Stack direction="row" spacing={3} alignItems="flex-end" sx={{ mb: 2 }}>
-          <Typography
-            variant="caption"
-            sx={{ color: "#7788bb", fontWeight: "bold" }}
-          >
+        <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 3 }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
             {headerInfo.adjustmentDate}
           </Typography>
 
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "flex-end",
-              borderBottom: "1px solid #7788bb",
-              pb: 0.2,
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ color: "#7788bb", mr: 1, fontWeight: "bold" }}
-            >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
               {headerInfo.adjustmentType}
             </Typography>
-            <Typography variant="caption" sx={{ color: "#666" }}>
-              type
-            </Typography>
+            <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>type</Typography>
             <Select
-              variant="standard"
+              variant="outlined"
+              size="small"
               defaultValue=""
-              sx={{ width: 150, ml: 1, height: 20, fontSize: "11px" }}
+              sx={{ 
+                width: 150, 
+                height: '36px',
+                borderRadius: radius.sm,
+                fontSize: "13px",
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                bgcolor: COLORS.SURFACE_TINT
+              }}
+              MenuProps={{ 
+                sx: { zIndex: 150000 },
+                PaperProps: {
+                  sx: {
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    border: `1px solid ${COLORS.BORDER_LIGHT}`,
+                    borderRadius: radius.sm,
+                    mt: 0.5,
+                    '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
+                  }
+                }
+              }}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
+              <MenuItem value=""><em>None</em></MenuItem>
             </Select>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "flex-end",
-              borderBottom: "1px solid #333",
-              pb: 0.2,
-              flexGrow: 1,
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ color: "#333", whiteSpace: "nowrap" }}
-            >
-              Reason:{" "}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px', whiteSpace: "nowrap" }}>
+              Reason:
             </Typography>
             <TextField
-              variant="standard"
+              variant="outlined"
+              size="small"
               fullWidth
-              InputProps={{
-                disableUnderline: true,
-                sx: { fontSize: "11px", px: 1, height: 20 },
+              sx={{ 
+                '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
               }}
             />
-            <Typography
-              variant="caption"
-              sx={{ color: "#333", ml: 2, whiteSpace: "nowrap" }}
-            >
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px', whiteSpace: "nowrap" }}>
               for invoice: {headerInfo.invoiceNum}:
             </Typography>
           </Box>
         </Stack>
 
         {/* Calculation Logic Row */}
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
           <Select
-            variant="standard"
+            variant="outlined"
+            size="small"
             defaultValue="Percentage"
-            sx={{ fontSize: "11px", height: 25 }}
+            sx={{ 
+              fontSize: "13px", 
+              height: '36px',
+              borderRadius: radius.sm,
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+              bgcolor: COLORS.SURFACE_TINT
+            }}
+            MenuProps={{ 
+              sx: { zIndex: 150000 },
+              PaperProps: {
+                sx: {
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  border: `1px solid ${COLORS.BORDER_LIGHT}`,
+                  borderRadius: radius.sm,
+                  mt: 0.5,
+                  '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
+                }
+              }
+            }}
           >
             <MenuItem value="Percentage">Percentage</MenuItem>
           </Select>
-          <Typography variant="caption" sx={{ pt: 1 }}>
-            %
-          </Typography>
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>%</Typography>
           <TextField
-            variant="standard"
+            variant="outlined"
+            size="small"
             defaultValue="0"
             sx={{
-              width: 30,
-              "& input": { textAlign: "center", py: 0, fontSize: "12px" },
+              width: 50,
+              '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
+              '& input': { textAlign: "center", py: 0 },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
             }}
           />
-          <Typography variant="caption" sx={{ pt: 1 }}>
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
             = $0
           </Typography>
         </Stack>
 
         {/* Financial Category Headers */}
-        <Stack direction="row" sx={{ mb: 1, width: "100%" }}>
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: "bold", fontSize: "11px", width: 220 }}
-          >
+        <Stack direction="row" sx={{ mb: 1, width: "100%", alignItems: 'flex-end' }}>
+          <Typography sx={{ fontWeight: "bold", fontSize: "12px", color: COLORS.TEXT_PRIMARY, width: 220 }}>
             Invoice {headerInfo.invoiceNum} : {headerInfo.invoiceDate} for
           </Typography>
 
           <Stack direction="row" spacing={0} sx={{ flexGrow: 1 }}>
             {columns.map((col, idx) => (
-              <Box
-                key={idx}
-                sx={{ width: col.width, textAlign: col.align || "left" }}
-              >
+              <Box key={idx} sx={{ width: col.width, textAlign: col.align || "left" }}>
                 <HeaderLabel label={col.label} color={col.color} />
               </Box>
             ))}
           </Stack>
         </Stack>
 
-        <Divider sx={{ mb: 1.5, mt: 0.5, bgcolor: "#1e1b24ff" }} />
+        <Divider sx={{ mb: 1.5, mt: 0.5, borderColor: COLORS.BORDER_LIGHT }} />
 
         {/* Detailed Line Items */}
         {lineItems.map((item, idx) => (
-          <Box
-            key={idx}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              py: 1,
-              borderBottom: "1px solid #eee",
-            }}
-          >
-            <Box
-              sx={{ width: 220, display: "flex", alignItems: "center", gap: 2 }}
-            >
-              <Typography variant="caption" sx={{ color: "#444" }}>
+          <Box key={idx} sx={{ display: "flex", alignItems: "center", py: 1.5, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+            <Box sx={{ width: 220, display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '12px', fontWeight: fontWeight.medium }}>
                 {item.code}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{ color: "#999", fontSize: "10px" }}
-              >
+              <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: "11px" }}>
                 {item.patient}
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={0} sx={{ flexGrow: 1 }}>
+            <Stack direction="row" spacing={0} sx={{ flexGrow: 1, alignItems: 'center' }}>
               {item.values.map((v, vIdx) => (
                 <Typography
                   key={vIdx}
-                  variant="caption"
                   sx={{
-                    color: v.color || "#444",
+                    color: v.color || COLORS.TEXT_PRIMARY,
                     width: v.width,
                     textAlign: "right",
                     pr: 1,
-                    fontWeight: v.bold ? "bold" : "normal",
+                    fontSize: '12px',
+                    fontWeight: v.bold ? fontWeight.semiBold : fontWeight.regular,
                   }}
                 >
                   {v.val}
                 </Typography>
               ))}
-              <Box
-                sx={{
-                  width: 80,
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  pr: 1,
-                }}
-              >
-                <Box sx={{ border: "1px dashed #999", px: 1, py: 0.2 }}>
-                  <Typography variant="caption" sx={{ fontSize: "10px" }}>
+              <Box sx={{ width: 80, display: "flex", justifyContent: "flex-end", pr: 1 }}>
+                <Box sx={{ border: `1px dashed ${COLORS.BORDER}`, px: 1, py: 0.5, borderRadius: '4px', bgcolor: COLORS.SURFACE_TINT }}>
+                  <Typography sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY }}>
                     {item.percent}
                   </Typography>
                 </Box>
@@ -247,51 +247,51 @@ const DebitAdjustmentDialog = ({ onClose }) => {
             </Stack>
           </Box>
         ))}
+      </DialogContent>
 
-        {/* Footer with Description and Actions */}
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mt: 3 }}
-        >
-          <Typography
-            variant="caption"
-            sx={{ color: "#1976d2", cursor: "pointer", fontWeight: 500 }}
+      {/* Footer with Description and Actions */}
+      <DialogActions sx={{ p: '16px 24px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'space-between' }}>
+        <Typography sx={{ color: COLORS.ACCENT, cursor: "pointer", fontWeight: fontWeight.medium, fontSize: '13px', '&:hover': { textDecoration: 'underline' } }}>
+          + Add description
+        </Typography>
+        
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
+              textTransform: "none",
+              fontSize: "13px",
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              px: 3,
+              "&:hover": { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' },
+            }}
           >
-            + Add description
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              size="small"
-              variant="contained"
-              sx={{
-                bgcolor: "#7788bb",
-                textTransform: "none",
-                fontSize: "11px",
-                px: 2,
-                "&:hover": { bgcolor: "#6577aa" },
-              }}
-            >
-              Adjust
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              onClick={onClose}
-              sx={{
-                bgcolor: "#9e9e9e",
-                textTransform: "none",
-                fontSize: "11px",
-                px: 2,
-                "&:hover": { bgcolor: "#757575" },
-              }}
-            >
-              Cancel
-            </Button>
-          </Stack>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              textTransform: "none",
+              fontSize: "13px",
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              px: 3,
+              boxShadow: 'none',
+              "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
+            }}
+          >
+            Adjust
+          </Button>
         </Stack>
-      </Box>
+      </DialogActions>
     </Box>
   );
 };

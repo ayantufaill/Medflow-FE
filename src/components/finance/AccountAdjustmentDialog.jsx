@@ -11,8 +11,16 @@ import {
   InputBase,
   Button,
   TextField,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import { invoiceService } from "../../services/invoice.service";
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
   const [adjustmentType, setAdjustmentType] = useState("Un-Collected");
@@ -44,11 +52,6 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
     fetchBalance();
   }, [patient]);
 
-  const blueHeader = "#7788bb";
-  const labelBlue = "#5c6bc0";
-  const adjustmentRed = "#c0392b";
-  const goldButton = "#d4af37";
-
   // Adjustment type options - can be fetched from API
   const adjustmentTypeOptions = [
     "Un-Collected",
@@ -75,11 +78,7 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
   // Outstanding type options
   const outstandingTypeOptions = [
     { value: "total", label: "Total Outstanding", amount: totalOutstanding },
-    {
-      value: "patient",
-      label: "Patient Outstanding",
-      amount: patientOutstanding,
-    },
+    { value: "patient", label: "Patient Outstanding", amount: patientOutstanding },
     { value: "specific", label: "Specific", amount: null },
   ];
 
@@ -107,165 +106,166 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
   };
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        border: "1px solid #ddd",
-        borderRadius: "4px",
-        overflow: "hidden",
-        bgcolor: "#fff",
-      }}
-    >
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden' }}>
       {/* Header Bar */}
-      <Box sx={{ bgcolor: blueHeader, py: 1, textAlign: "center" }}>
-        <Typography sx={{ color: "#fff", fontWeight: 500 }}>
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '25px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <AccountBalanceWalletOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Account Adjustment
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
-      <Box sx={{ p: 2 }}>
+      <DialogContent sx={{ px: '25px', py: '20px', pt: '25px !important', display: 'flex', flexDirection: 'column', gap: 3 }}>
         {/* First Row: Date and Adjustment Type */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
             gap: 4,
-            mb: 1,
-            borderBottom: "1px solid #7788bb",
-            pb: 1,
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            pb: 2,
           }}
         >
-          <Typography sx={{ color: labelBlue, fontSize: "0.9rem" }}>
+          <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: "13px", fontWeight: fontWeight.medium }}>
             04/15/2026
           </Typography>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography sx={{ color: labelBlue, fontSize: "0.9rem" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexGrow: 1 }}>
+            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: "13px", fontWeight: fontWeight.medium }}>
               Adjustment Type
             </Typography>
-            <Box sx={{ flexGrow: 1, borderBottom: "1.5px solid #7788bb" }}>
-              <Select
-                variant="standard"
-                value={adjustmentType}
-                onChange={(e) => setAdjustmentType(e.target.value)}
-                sx={{
-                  fontSize: "0.9rem",
-                  minWidth: 200,
-                  height: 25,
-                  "& .MuiSelect-select": { pb: 0.5 },
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      zIndex: 1301,
-                      bgcolor: "#fff",
-                      "& .MuiMenuItem-root": {
-                        fontSize: "12px",
-                        py: 0.5,
-                        borderBottom: "1px solid #eee",
-                      },
-                      "& .Mui-selected": {
-                        bgcolor: "#7788bb !important",
-                        color: "#fff",
-                      },
-                    },
+            <Select
+              variant="outlined"
+              size="small"
+              value={adjustmentType}
+              onChange={(e) => setAdjustmentType(e.target.value)}
+              sx={{
+                width: '240px',
+                height: '36px',
+                fontSize: "13px",
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                bgcolor: COLORS.SURFACE_TINT
+              }}
+              MenuProps={{
+                sx: { zIndex: 15000 },
+                PaperProps: {
+                  sx: {
+                    mt: 1,
+                    '& .MuiMenuItem-root': { fontSize: '13px' }
                   },
-                }}
-              >
-                {adjustmentTypeOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Box>
+                },
+              }}
+            >
+              {adjustmentTypeOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
           </Box>
         </Box>
 
         {/* Second Row: Calculation Logic */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "nowrap",
-            gap: 3,
-            py: 1.5,
-          }}
-        >
-          <Select
-            variant="standard"
-            value={rateType}
-            onChange={(e) => setRateType(e.target.value)}
-            sx={{ fontSize: "0.85rem", minWidth: 120 }}
-            MenuProps={{
-              PaperProps: {
-                sx: { zIndex: 1301 },
-              },
-            }}
-          >
-            {rateTypeOptions.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
-              </MenuItem>
-            ))}
-          </Select>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <Select
+              variant="outlined"
+              size="small"
+              value={rateType}
+              onChange={(e) => setRateType(e.target.value)}
+              sx={{ 
+                height: '36px',
+                fontSize: "13px",
+                width: '140px',
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                bgcolor: COLORS.SURFACE_TINT
+              }}
+              MenuProps={{
+                sx: { zIndex: 15000 },
+                PaperProps: {
+                  sx: { mt: 1, '& .MuiMenuItem-root': { fontSize: '13px' } },
+                },
+              }}
+            >
+              {rateTypeOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
 
-          <RadioGroup
-            row
-            value={outstandingType}
-            onChange={(e) => setOutstandingType(e.target.value)}
-            sx={{ alignItems: "center", flexWrap: "nowrap", gap: 2 }}
-          >
-            {outstandingTypeOptions.map((option) => (
-              <Box
-                key={option.value}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: option.value === "specific" ? 1 : 0,
-                }}
-              >
-                <FormControlLabel
-                  value={option.value}
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{ color: "#666", "&.Mui-checked": { color: "#444" } }}
-                    />
-                  }
-                  label={
-                    <Typography
-                      sx={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}
-                    >
-                      {option.label}
-                      {option.amount !== null && (
-                        <>
-                          {" "}
-                          ( <b>${option.amount.toFixed(2)}</b> )
-                        </>
-                      )}
-                    </Typography>
-                  }
-                />
-                {option.value === "specific" && (
-                  <InputBase
-                    value={specificAmount}
-                    onChange={(e) => setSpecificAmount(e.target.value)}
-                    placeholder="$ 0"
-                    sx={{
-                      width: 100,
-                      fontSize: "0.85rem",
-                      borderBottom: "1.5px solid #7788bb",
-                      px: 0.5,
-                      "&:focus": {
-                        borderBottomColor: "#5c6bc0",
-                      },
-                    }}
+            <RadioGroup
+              row
+              value={outstandingType}
+              onChange={(e) => setOutstandingType(e.target.value)}
+              sx={{ gap: 2 }}
+            >
+              {outstandingTypeOptions.map((option) => (
+                <Box
+                  key={option.value}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: option.value === "specific" ? 1 : 0,
+                  }}
+                >
+                  <FormControlLabel
+                    value={option.value}
+                    control={
+                      <Radio
+                        size="small"
+                        sx={{ color: COLORS.ACCENT, "&.Mui-checked": { color: COLORS.ACCENT } }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontSize: "13px", color: COLORS.TEXT_PRIMARY }}>
+                        {option.label}
+                        {option.amount !== null && (
+                          <span style={{ fontWeight: fontWeight.semiBold, marginLeft: '4px' }}>
+                            (${option.amount.toFixed(2)})
+                          </span>
+                        )}
+                      </Typography>
+                    }
+                    sx={{ m: 0 }}
                   />
-                )}
-              </Box>
-            ))}
-          </RadioGroup>
+                  {option.value === "specific" && (
+                    <TextField
+                      variant="outlined"
+                      size="small"
+                      value={specificAmount}
+                      onChange={(e) => setSpecificAmount(e.target.value)}
+                      placeholder="$ 0.00"
+                      sx={{
+                        width: '100px',
+                        '& .MuiInputBase-root': { 
+                          height: '30px', 
+                          fontSize: '13px',
+                          bgcolor: COLORS.SURFACE_TINT
+                        }
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+            </RadioGroup>
+          </Box>
 
           <FormControlLabel
             control={
@@ -273,83 +273,96 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
                 size="small"
                 checked={includeCourtesy}
                 onChange={(e) => setIncludeCourtesy(e.target.checked)}
+                sx={{ color: COLORS.ACCENT, '&.Mui-checked': { color: COLORS.ACCENT } }}
               />
             }
             label={
-              <Typography sx={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>
-                Include the Courtesy Credit ( ${courtesyCredit.toFixed(2)} )
+              <Typography sx={{ fontSize: "13px", color: COLORS.TEXT_PRIMARY }}>
+                Include the Courtesy Credit (${courtesyCredit.toFixed(2)})
               </Typography>
             }
+            sx={{ m: 0 }}
           />
         </Box>
 
-        {/* Third Row: Description and Actions */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mt: 2,
-          }}
-        >
+        {/* Third Row: Description */}
+        <Box sx={{ mt: 1 }}>
           <TextField
-            placeholder="Description"
+            variant="outlined"
+            placeholder="Add description..."
             size="small"
+            fullWidth
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             sx={{
-              width: "250px",
-              "& .MuiInputBase-root": { height: "30px", fontSize: "0.85rem" },
+              '& .MuiInputBase-root': { 
+                fontSize: '13px',
+                bgcolor: COLORS.SURFACE_TINT
+              }
             }}
           />
-
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography
-              sx={{
-                color: adjustmentRed,
-                fontWeight: "bold",
-                fontSize: "0.9rem",
-              }}
-            >
-              Adjustment Value: ${calculateAdjustmentValue()}
-            </Typography>
-
-            <Button
-              variant="contained"
-              onClick={() => {
-                const value = parseFloat(calculateAdjustmentValue()) || 0;
-                if (onSave) {
-                  onSave({
-                    adjustmentType,
-                    amount: value,
-                    description,
-                  });
-                }
-              }}
-              sx={{
-                bgcolor: goldButton,
-                "&:hover": { bgcolor: "#b3a247" },
-                textTransform: "none",
-                px: 3,
-              }}
-            >
-              Apply
-            </Button>
-            <Button
-              variant="contained"
-              onClick={onClose}
-              sx={{
-                bgcolor: "#a6a6a6",
-                "&:hover": { bgcolor: "#919191" },
-                textTransform: "none",
-                px: 3,
-              }}
-            >
-              Cancel
-            </Button>
-          </Box>
         </Box>
-      </Box>
+      </DialogContent>
+
+      {/* Footer */}
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'space-between' }}>
+        <Typography
+          sx={{
+            color: '#dc2626',
+            fontWeight: fontWeight.semiBold,
+            fontSize: "14px",
+          }}
+        >
+          Adjustment Value: ${calculateAdjustmentValue()}
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              px: 3,
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const value = parseFloat(calculateAdjustmentValue()) || 0;
+              if (onSave) {
+                onSave({
+                  adjustmentType,
+                  amount: value,
+                  description,
+                });
+              }
+            }}
+            sx={{
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              px: 3,
+              boxShadow: 'none',
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
+            }}
+          >
+            Apply
+          </Button>
+        </Box>
+      </DialogActions>
     </Box>
   );
 };

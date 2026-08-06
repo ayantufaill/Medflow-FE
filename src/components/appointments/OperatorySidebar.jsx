@@ -1094,12 +1094,12 @@ const OperatorySidebar = ({
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>TIME:</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchAm} onChange={(e) => setSearchAm(e.target.checked)} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>AM</Typography></Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}><Checkbox size="small" checked={searchPm} onChange={(e) => setSearchPm(e.target.checked)} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} /><Typography sx={{ fontSize: '0.75rem', fontWeight: 700 }}>PM</Typography></Box>
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: -1 }}>
-                  <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5 }} />
+                  <Checkbox size="small" checked={searchDoubleBooking} onChange={(e) => setSearchDoubleBooking(e.target.checked)} sx={{ p: 0.5, color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#4a678d' }}>ALLOW DOUBLE BOOKING</Typography>
                 </Box>
 

@@ -16,8 +16,8 @@ export const VDiv = () => (
 );
 
 /* ── icon button used in the header action strip ──────────── */
-export const ActionBtn = ({ icon, title, active }) => (
-  <IconButton title={title} size="small" sx={{
+export const ActionBtn = ({ icon, title, active, onClick }) => (
+  <IconButton title={title} size="small" onClick={onClick} sx={{
     width: "26px", height: "26px", borderRadius: "6px", p: 0,
     color: active ? "#2262ef" : "#6b7280",
     backgroundColor: active ? "rgba(34,98,239,0.10)" : "transparent",

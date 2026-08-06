@@ -70,8 +70,8 @@ const ClaimsListPage = () => {
       
       {/* LEFT COLUMN - Main Claim Content (~75%) */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 2, flex: 1, overflowY: 'auto' }}>
+        <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ p: 3, flex: 1, overflowY: 'auto' }}>
             <ClaimManagementHeader />
           <ClaimTabBar 
             activeTab={activeTab} 

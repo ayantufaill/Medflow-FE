@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -14,48 +15,261 @@ import {
   TextField,
   Chip,
   IconButton,
+  CircularProgress,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { KeyboardArrowDown } from '@mui/icons-material';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import CloseIcon from '@mui/icons-material/Close';
 import EditEstimatesDialog from './EditEstimatesDialog';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
+import { invoiceService } from '../../services/invoice.service';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
 
 const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const [showEstimates, setShowEstimates] = useState(false);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [items, setItems] = useState([]);
+  const [selectedItemIds, setSelectedItemIds] = useState([]);
+
+  const dispatch = useDispatch();
+  const providersList = useSelector(selectProviderDropdownList);
+
+  useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (invoiceId) {
+      loadInvoice();
+    }
+  }, [invoiceId]);
+
+  const loadInvoice = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Fetching invoice ID:', invoiceId);
+      const data = await invoiceService.getInvoiceById(invoiceId);
+      console.log('Fetched invoice data:', data);
+      const initialItems = (data.lineItems || []).map(item => ({
+        ...item,
+        editDate: item.date ? new Date(item.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '',
+        editCptCode: item.cptCode || item.code || '',
+        editSite: item.site || '',
+        editDescription: item.description || '',
+        editProvider: item.provider || '',
+        editTotalCharge: Number(item.totalPrice || item.unitPrice || item.total || 0).toFixed(2),
+        editDbi: item.dbi || false
+      }));
+      setItems(initialItems);
+    } catch (err) {
+      console.error('Error fetching invoice details:', err);
+      setError(err.message || 'Failed to load invoice items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFieldChange = (itemId, field, value) => {
+    setItems(prev => prev.map(item => {
+      const id = item.id || item._id;
+      if (id === itemId) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
+  };
+
+  const handleTotalChargeChange = (itemId, value) => {
+    const val = value.replace(/[^0-9.-]/g, '');
+    handleFieldChange(itemId, 'editTotalCharge', val);
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedItemIds(items.map(item => item.id || item._id));
+    } else {
+      setSelectedItemIds([]);
+    }
+  };
+
+  const handleToggleSelection = (itemId) => {
+    setSelectedItemIds(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleToggleDbi = () => {
+    setItems(prev => prev.map(item => {
+      const id = item.id || item._id;
+      if (selectedItemIds.includes(id)) {
+        return { ...item, editDbi: !item.editDbi };
+      }
+      return item;
+    }));
+    // Optionally clear selection after toggling
+    setSelectedItemIds([]);
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      
+      for (const item of items) {
+        const itemId = item.id || item._id;
+        if (!itemId) continue;
+
+        const updates = {
+          provider: item.editProvider || undefined,
+          unitPrice: Number(item.editTotalCharge) || 0,
+          dbi: item.editDbi
+        };
+
+        await invoiceService.updateInvoiceItem(invoiceId, itemId, updates);
+      }
+
+      await invoiceService.recalculateInvoice(invoiceId);
+      window.dispatchEvent(new CustomEvent('refresh-ledger'));
+      onClose();
+    } catch (err) {
+      console.error('Error saving invoice details:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const ProviderDropdown = ({ value, onChange }) => {
+    return (
+      <Select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        displayEmpty
+        variant="outlined"
+        size="small"
+        MenuProps={{ 
+          style: { zIndex: 150000 }, 
+          sx: { zIndex: 150000 },
+          anchorOrigin: { vertical: "bottom", horizontal: "left" },
+          transformOrigin: { vertical: "top", horizontal: "left" }
+        }}
+        renderValue={(selected) => {
+          if (!selected) return "Sel";
+          return selected.substring(0, 2).toUpperCase();
+        }}
+        sx={{
+          bgcolor: "white",
+          color: COLORS.TEXT_PRIMARY,
+          borderRadius: "4px",
+          fontSize: "12px",
+          width: "70px",
+          "& .MuiSelect-select": {
+            py: 0.5,
+            px: 1,
+            display: "flex",
+            alignItems: "center",
+          },
+          "& .MuiSvgIcon-root": {
+            color: COLORS.TEXT_SECONDARY,
+            fontSize: "16px",
+          },
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.BORDER,
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: '#9ca3af',
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.ACCENT,
+          }
+        }}
+      >
+        <MenuItem value="" disabled sx={{ fontSize: "12px" }}>
+          <em>Select Provider</em>
+        </MenuItem>
+        {providersList.map((p) => {
+          const firstName = p.userId?.firstName || p.firstName || "";
+          const lastName = p.userId?.lastName || p.lastName || "";
+          const name =
+            `${firstName} ${lastName}`.trim() ||
+            p.name ||
+            `Provider ${p._id || p.id}`;
+          return (
+            <MenuItem
+              key={p._id || p.id}
+              value={name}
+              sx={{ fontSize: "12px" }}
+            >
+              {name}
+            </MenuItem>
+          );
+        })}
+      </Select>
+    );
+  };
+
   return (
-    <Box sx={{ width: '1000px', bgcolor: '#fff', borderRadius: '4px', overflow: 'hidden' }}>
+    <Box sx={{ width: '1000px', bgcolor: '#fff', borderRadius: radius.md, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: '#7788bb', p: 1, display: 'flex', justifyContent: 'center' }}>
-        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.85rem' }}>
+      <Box 
+        sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <ReceiptIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Edit invoice #{invoiceId}
         </Typography>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
       </Box>
 
       {/* Content */}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: '24px', flex: 1, overflowY: 'auto' }}>
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <Button 
-            variant="contained" 
+            variant="outlined" 
+            size="small"
             onClick={() => setShowEstimates(true)}
             sx={{ 
-              bgcolor: '#d2b48c', 
-              color: '#fff', 
-              textTransform: 'none', 
-              px: 2, 
-              py: 0.5,
-              fontSize: '0.8rem',
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#c4a47c' }
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #f97316", color: "#f97316",
+              px: "16px", py: "4px", bgcolor: 'white',
+              "&:hover": { borderColor: "#ea6c00", backgroundColor: "#fff7ed" }
             }}
           >
-            Edit Estimates
+            Re-estimate
           </Button>
         </Stack>
 
-        <TableContainer sx={{ border: 'none' }}>
+        <TableContainer sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.sm }}>
           <Table size="small">
-            <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', py: 1, color: '#333', fontWeight: 'bold', fontSize: '0.85rem' } }}>
+            <TableHead sx={{ bgcolor: COLORS.SURFACE_TINT }}>
+              <TableRow sx={{ '& th': { borderBottom: `1px solid ${COLORS.BORDER}`, py: 1.5, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '12px' } }}>
                 <TableCell padding="checkbox">
-                  <Checkbox size="small" />
+                  <Checkbox 
+                    size="small" 
+                    checked={items.length > 0 && selectedItemIds.length === items.length}
+                    indeterminate={selectedItemIds.length > 0 && selectedItemIds.length < items.length}
+                    onChange={handleSelectAll}
+                    sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT }, '&.MuiCheckbox-indeterminate': { color: COLORS.ACCENT } }} 
+                  />
                 </TableCell>
                 <TableCell>DOS</TableCell>
                 <TableCell>Procedure</TableCell>
@@ -66,66 +280,87 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow sx={{ '& td': { borderBottom: '1px solid #eee', py: 1.5, fontSize: '0.85rem' } }}>
-                <TableCell padding="checkbox">
-                  <Checkbox size="small" />
-                </TableCell>
-                <TableCell>
-                  <TextField 
-                    size="small" 
-                    value="05/06/2026" 
-                    sx={{ 
-                      width: '110px',
-                      '& .MuiInputBase-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }
-                    }} 
-                  />
-                </TableCell>
-                <TableCell>L5002</TableCell>
-                <TableCell></TableCell>
-                <TableCell>Finance charge- Late cancellation</TableCell>
-                <TableCell>
-                  <Chip 
-                    label="SAB" 
-                    size="small"
-                    onDelete={() => {}}
-                    deleteIcon={<KeyboardArrowDown />}
-                    sx={{ 
-                      bgcolor: '#c8e6c9', 
-                      color: '#2e7d32', 
-                      borderRadius: '4px',
-                      height: '24px',
-                      '& .MuiChip-label': { px: 1, fontSize: '0.75rem', fontWeight: 'bold' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <TextField 
-                    size="small" 
-                    value="$100.00" 
-                    sx={{ 
-                      width: '80px',
-                      '& .MuiInputBase-input': { py: 0.5, px: 1, fontSize: '0.85rem', textAlign: 'right' },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }
-                    }} 
-                  />
-                </TableCell>
-              </TableRow>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={24} sx={{ color: COLORS.ACCENT }} />
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'red' }}>
+                    Error: {error}
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
+                    No items found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((item) => {
+                  const id = item.id || item._id;
+                  const isSelected = selectedItemIds.includes(id);
+
+                  return (
+                    <TableRow key={id} sx={{ '& td': { borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.5, fontSize: '13px', color: COLORS.TEXT_PRIMARY } }}>
+                      <TableCell padding="checkbox">
+                        <Checkbox 
+                          size="small" 
+                          checked={isSelected}
+                          onChange={() => handleToggleSelection(id)}
+                          sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} 
+                        />
+                      </TableCell>
+                      <TableCell>{item.editDate || '-'}</TableCell>
+                      <TableCell>{item.editCptCode || '-'}</TableCell>
+                      <TableCell>{item.editSite || '-'}</TableCell>
+                      <TableCell>{item.editDescription || 'Service'}</TableCell>
+                      <TableCell>
+                        <ProviderDropdown 
+                          value={item.editProvider} 
+                          onChange={(val) => handleFieldChange(id, 'editProvider', val)}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <TextField 
+                          size="small" 
+                          value={item.editTotalCharge}
+                          onChange={(e) => handleTotalChargeChange(id, e.target.value)}
+                          variant="outlined"
+                          sx={{ 
+                            width: '80px',
+                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
+                            '& .MuiInputBase-input': { textAlign: 'right' },
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
+                          }} 
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </TableContainer>
 
         {/* Footer Actions */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3, pt: 2, borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>
           <Button 
-            variant="contained" 
+            variant="outlined" 
+            onClick={handleToggleDbi}
+            disabled={selectedItemIds.length === 0}
             sx={{ 
-              bgcolor: '#90a4ae', 
-              color: '#fff', 
+              borderColor: COLORS.BORDER, 
+              color: COLORS.TEXT_PRIMARY, 
               textTransform: 'none', 
               minWidth: '60px',
-              boxShadow: 'none',
-              fontSize: '0.85rem'
+              height: '36px',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
             }}
           >
             DBI
@@ -133,44 +368,38 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
 
           <Stack direction="row" spacing={1.5}>
             <Button 
-              variant="contained" 
+              variant="contained"
+              onClick={handleSave}
+              disabled={isSaving || loading}
               sx={{ 
-                bgcolor: '#d2b48c', 
-                color: '#fff', 
+                bgcolor: COLORS.ACCENT, 
+                color: COLORS.WHITE, 
                 textTransform: 'none', 
                 px: 3,
+                height: '36px',
+                fontSize: '13px',
+                fontWeight: fontWeight.medium,
                 boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#c4a47c' }
+                borderRadius: radius.sm,
+                '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
+                '&.Mui-disabled': { bgcolor: 'rgba(59, 130, 246, 0.5)', color: '#fff' }
               }}
             >
-              Re-estimate
+              {isSaving ? <CircularProgress size={20} color="inherit" /> : 'Save'}
             </Button>
             <Button 
-              variant="contained" 
-              sx={{ 
-                bgcolor: '#d2b48c', 
-                color: '#fff', 
-                textTransform: 'none', 
-                px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#c4a47c' }
-              }}
-            >
-              Save
-            </Button>
-            <Button 
-              variant="contained" 
+              variant="outlined" 
               onClick={onClose}
               sx={{ 
-                bgcolor: '#9e9e9e', 
-                color: '#fff', 
+                borderColor: COLORS.BORDER, 
+                color: COLORS.TEXT_PRIMARY, 
                 textTransform: 'none', 
                 px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#8e8e8e' }
+                height: '36px',
+                fontSize: '13px',
+                fontWeight: fontWeight.medium,
+                borderRadius: radius.sm,
+                '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
               }}
             >
               Cancel
@@ -192,7 +421,7 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            zIndex: 1400
+            zIndex: 140000
           }}
           onClick={() => setShowEstimates(false)}
         >

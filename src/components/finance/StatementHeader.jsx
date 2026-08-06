@@ -1,5 +1,6 @@
 import { Box, Typography, TextField, Grid, InputBase } from '@mui/material';
 import { fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 const StatementHeader = ({ patientInfo, statementInfo, outstandingInfo, showOutstanding = true }) => {
   const primaryBlue = '#40548e';
@@ -65,36 +66,37 @@ const StatementHeader = ({ patientInfo, statementInfo, outstandingInfo, showOuts
           <LabelInput label="signature" />
 
           {/* Estimates Table */}
-          <Box sx={{ mt: 2, border: `1px solid ${lightBlue}`, borderRadius: '6px', overflow: 'hidden', width: '100%', maxWidth: 400 }}>
+          <Box sx={{ mt: 2, border: `1px solid ${COLORS.BORDER}`, borderRadius: '6px', overflow: 'hidden', width: '100%', maxWidth: 400 }}>
             {/* Header Row */}
-            <Box sx={{ bgcolor: lightBlue, display: 'flex' }}>
+            <Box sx={{ bgcolor: COLORS.SURFACE_TINT, display: 'flex', borderBottom: `1px solid ${COLORS.BORDER}` }}>
               {showOutstanding && (
                 <Box sx={{ flex: 1, p: 1.5 }}>
-                  <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Outstanding:</Typography>
-                  <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.outstanding}</Typography>
+                  <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>Outstanding:</Typography>
+                  <Typography sx={{ fontSize: '14px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY }}>{outstandingInfo.outstanding}</Typography>
                 </Box>
               )}
               <Box sx={{ flex: 1, p: 1.5 }}>
-                <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Insurance Estimate:</Typography>
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.insuranceEstimate}</Typography>
+                <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>Insurance Estimate:</Typography>
+                <Typography sx={{ fontSize: '14px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY }}>{outstandingInfo.insuranceEstimate}</Typography>
               </Box>
               <Box sx={{ flex: 1, p: 1.5 }}>
-                <Typography sx={{ fontSize: fontSize.sm, color: '#2c3e50' }}>Your Portion:</Typography>
-                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: '#2c3e50' }}>{outstandingInfo.yourPortion}</Typography>
+                <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY }}>Your Portion:</Typography>
+                <Typography sx={{ fontSize: '14px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY }}>{outstandingInfo.yourPortion}</Typography>
               </Box>
             </Box>
 
             {/* Enclosed Amount Row */}
             <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: fontSize.md, color: '#1a237e', mr: 1 }}>
+              <Typography sx={{ fontSize: '14px', color: COLORS.ACCENT, mr: 1, fontWeight: fontWeight.medium }}>
                 Enclosed amount:
               </Typography>
               <InputBase
                 defaultValue={outstandingInfo.enclosedAmount}
                 sx={{ 
-                  fontSize: fontSize.md, 
-                  color: '#1a237e',
-                  flexGrow: 1 
+                  fontSize: '14px', 
+                  color: COLORS.ACCENT,
+                  flexGrow: 1,
+                  fontWeight: fontWeight.semiBold
                 }}
               />
             </Box>

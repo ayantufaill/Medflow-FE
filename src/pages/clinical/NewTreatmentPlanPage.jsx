@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Snackbar, Alert } from '@mui/material';
+import { Box, Snackbar, Alert, Tabs, Tab, Grid } from '@mui/material';
 import dayjs from 'dayjs';
 
 import NewTreatmentPlanHeader from '../../components/clinical/new-treatment-plan/NewTreatmentPlanHeader';
 import NewTreatmentPlanOdontogram from '../../components/clinical/new-treatment-plan/NewTreatmentPlanOdontogram';
 import NewTreatmentPlanProcedures from '../../components/clinical/new-treatment-plan/NewTreatmentPlanProcedures';
 import NewTreatmentPlanTable from '../../components/clinical/new-treatment-plan/NewTreatmentPlanTable';
+import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable';
+import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
@@ -28,6 +30,7 @@ const NewTreatmentPlanPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(1); // 0: Charts, 1: Treatment Plan, 2: Perio Charts
 
   useEffect(() => {
     const fetchTreatmentPlans = async () => {
@@ -352,13 +355,46 @@ const NewTreatmentPlanPage = () => {
 
       </Box>
 
-      {/* Bottom Section (Data Table) */}
-      <NewTreatmentPlanTable 
-        treatmentPlans={treatmentPlans} 
-        onDeleteItems={handleDeleteItems}
-        onMoveToTop={handleMoveToTop}
-        onUpdateItemStatus={handleUpdateItemStatus}
-      />
+      {/* Bottom Section (Tabs & Data Table) */}
+      <Box sx={{ width: '100%', mt: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} aria-label="treatment plan tabs">
+            <Tab label="Chart" sx={{ textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.875rem' }} />
+            <Tab label="Treatment Plan" sx={{ textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.875rem' }} />
+            <Tab label="Perio Charts" sx={{ textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.875rem' }} />
+          </Tabs>
+        </Box>
+        {activeTab === 0 && (
+          <Box sx={{ p: 0 }}>
+            <ChartTable 
+              treatmentPlans={treatmentPlans}
+              onUpdateItemStatus={handleUpdateItemStatus}
+            />
+          </Box>
+        )}
+        {activeTab === 1 && (
+          <Box sx={{ p: 2, overflowX: 'auto' }}>
+            <Grid container spacing={3} wrap="nowrap" sx={{ minWidth: 900 }}>
+              <Grid item xs={7}>
+                <NewTreatmentPlanTable 
+                  treatmentPlans={treatmentPlans} 
+                  onDeleteItems={handleDeleteItems}
+                  onMoveToTop={handleMoveToTop}
+                  onUpdateItemStatus={handleUpdateItemStatus}
+                />
+              </Grid>
+              <Grid item xs={5}>
+                <UnplannedProceduresSidebar procedures={treatmentPlans} />
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+        {activeTab === 2 && (
+          <Box sx={{ p: 2 }}>
+            <div>Perio Charts Content</div>
+          </Box>
+        )}
+      </Box>
       
       <Snackbar 
         open={toast.open} 

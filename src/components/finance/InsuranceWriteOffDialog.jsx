@@ -6,90 +6,134 @@ import {
   MenuItem,
   Stack,
   Divider,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const InsuranceWriteOffDialog = ({ onClose }) => {
   return (
     <Box sx={{ 
       width: '100%', 
-      bgcolor: '#fff', 
-      border: '1px solid #ccc', 
-      borderRadius: '4px', 
-      overflow: 'hidden', 
-      fontFamily: 'Arial, sans-serif' 
+      bgcolor: COLORS.WHITE, 
+      borderRadius: radius.md, 
+      overflow: 'hidden' 
     }}>
-      {/* Blue Header Bar */}
-      <Box sx={{ bgcolor: '#7788bb', color: '#fff', p: 1, textAlign: 'center' }}>
-        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '12px' }}>
+      {/* Header Bar */}
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '24px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <DescriptionOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Insurance Write-Off invoice #24635
         </Typography>
-      </Box>
+        {onClose && (
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: '18px' }} />
+          </IconButton>
+        )}
+      </DialogTitle>
 
-      <Box sx={{ p: 2 }}>
+      <DialogContent sx={{ px: '24px', py: '24px', pt: '24px !important' }}>
         {/* Main Input Row */}
-        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="caption" sx={{ color: '#7788bb', fontWeight: 'bold' }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
             04/15/2026
           </Typography>
           
-          <Typography variant="caption" sx={{ color: '#333' }}>claim:</Typography>
+          <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>claim:</Typography>
           
           <Box sx={{ position: 'relative' }}>
             <Select 
               variant="outlined" 
               defaultValue="select a claim" 
+              size="small"
               sx={{ 
-                height: 24, 
-                fontSize: '11px', 
-                bgcolor: '#fff',
-                '.MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7788bb' }
+                height: '36px',
+                borderRadius: radius.sm,
+                fontSize: '13px', 
+                bgcolor: COLORS.SURFACE_TINT,
+                '.MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER_HOVER },
+              }}
+              MenuProps={{ 
+                sx: { zIndex: 150000 },
+                PaperProps: {
+                  sx: {
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    border: `1px solid ${COLORS.BORDER_LIGHT}`,
+                    borderRadius: radius.sm,
+                    mt: 0.5,
+                    '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
+                  }
+                }
               }}
             >
-              <MenuItem value="select a claim" sx={{ fontSize: '11px' }}>select a claim</MenuItem>
+              <MenuItem value="select a claim" sx={{ fontSize: '13px' }}>select a claim</MenuItem>
             </Select>
           </Box>
 
-          <Typography variant="caption" sx={{ color: '#333', ml: 1 }}>for invoice: #</Typography>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>for invoice: #</Typography>
         </Stack>
 
-        {/* Blue Bottom Border Line */}
-        <Divider sx={{ borderBottom: '1.5px solid #7788bb', mt: 2, mb: 3 }} />
+        {/* Divider */}
+        <Divider sx={{ mt: 3, mb: 1, borderColor: COLORS.BORDER_LIGHT }} />
+      </DialogContent>
 
-        {/* Action Buttons Row */}
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
+      <DialogActions sx={{ p: '16px 24px', borderTop: `1px solid ${COLORS.BORDER}` }}>
+        <Stack direction="row" spacing={1.5}>
           <Button 
-            size="small" 
-            variant="contained" 
-            sx={{ 
-              bgcolor: '#7788bb',
-              color: '#fff !important',
-              textTransform: 'none', 
-              fontSize: '11px',
-              minWidth: 70,
-              borderRadius: '4px',
-              '&:hover': { bgcolor: '#6577aa' }
-            }}
-          >
-            Adjust
-          </Button>
-          <Button 
-            size="small" 
-            variant="contained" 
+            variant="outlined" 
             onClick={onClose}
             sx={{ 
-              bgcolor: '#9e9e9e', 
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
               textTransform: 'none', 
-              fontSize: '11px',
-              minWidth: 70,
-              borderRadius: '4px',
-              '&:hover': { bgcolor: '#757575' }
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              height: '36px',
+              px: 3,
+              borderRadius: radius.sm,
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
             }}
           >
             Cancel
           </Button>
+          <Button 
+            variant="contained" 
+            sx={{ 
+              bgcolor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              textTransform: 'none', 
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              height: '36px',
+              px: 3,
+              borderRadius: radius.sm,
+              boxShadow: 'none',
+              '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
+            }}
+          >
+            Adjust
+          </Button>
         </Stack>
-      </Box>
+      </DialogActions>
     </Box>
   );
 };

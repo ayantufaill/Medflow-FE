@@ -32,6 +32,11 @@ const ProvidersTable = ({
   displayedProviders,
   tabConfig,
   dragEnabled,
+  draggedId,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
   expandedRowId,
   setExpandedRowId,
   getCellValue,
@@ -72,17 +77,25 @@ const ProvidersTable = ({
                 displayedProviders.map((provider) => {
                   const id = provider._id || provider.id;
                   const isExpanded = expandedRowId === id;
+                  const isDragged = draggedId === id;
                   
                   return (
                     <React.Fragment key={id}>
                       <TableRow
                         hover
+                        draggable={dragEnabled}
+                        onDragStart={dragEnabled ? (e) => onDragStart?.(e, id) : undefined}
+                        onDragOver={dragEnabled ? (e) => onDragOver?.(e, id) : undefined}
+                        onDrop={dragEnabled ? (e) => onDrop?.(e, id) : undefined}
+                        onDragEnd={dragEnabled ? () => onDragEnd?.() : undefined}
                         onClick={() => setExpandedRowId(isExpanded ? null : id)}
                         sx={{
-                          cursor: 'pointer',
+                          cursor: dragEnabled ? 'grab' : 'pointer',
                           height: '60px',
                           '& .MuiTableCell-root': { fontSize: '13px', py: 0, color: '#4B5563', borderBottom: '1px solid #F3F4F6' },
                           ...(isExpanded && { backgroundColor: '#f0f4fa' }),
+                          ...(isDragged && { opacity: 0.5, backgroundColor: '#e8f0fe' }),
+                          '&:active': { cursor: dragEnabled ? 'grabbing' : 'pointer' },
                         }}
                       >
                         {dragEnabled && (
@@ -138,3 +151,4 @@ const ProvidersTable = ({
 };
 
 export default ProvidersTable;
+

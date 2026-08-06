@@ -105,5 +105,31 @@ export const reportingService = {
   async getArchivedReportById(id) {
     const response = await apiClient.get(`/reports/archive/${id}`);
     return response.data.data;
+  },
+
+  /**
+   * Get dashboard metrics and graph data
+   * @param {Object} params - Query params: { date, range, providerId, startDate, endDate }
+   */
+  async getDashboardMetrics(params = {}) {
+    const response = await apiClient.get('/reports/dashboard/metrics', { params });
+    return response.data.data;
+  },
+
+  /**
+   * Get dashboard target goals settings
+   */
+  async getDashboardGoals() {
+    const response = await apiClient.get('/reports/dashboard/goals');
+    return response.data.data;
+  },
+
+  /**
+   * Update dashboard target goals settings
+   * @param {Object} goals - Partial dashboard goals object
+   */
+  async updateDashboardGoals(goals) {
+    const response = await apiClient.put('/reports/dashboard/goals', goals);
+    return response.data.data;
   }
 };

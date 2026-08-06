@@ -65,14 +65,41 @@ const CoveragePanel = ({ pt }) => {
     navigate(url);
   };
 
-  const handleViewCoverage = () => {
+  const handleViewCoverage = async () => {
     const patientId = pt.rawId;
-    const insuranceId = firstInsuranceId;
+    let insuranceId = firstInsuranceId || pt.insuranceId;
+
+    if (patientId && !insuranceId) {
+      const cached = getInsurances(patientId);
+      if (cached && cached.length > 0) {
+        const ins = cached[0];
+        insuranceId = ins._id || ins.id || ins.insuranceId || ins.coverageId || ins.planId;
+      }
+      
+      if (!insuranceId) {
+        try {
+          // Note: If data is cached, this thunk may be cancelled by the slice condition and return no payload.
+          const action = await fetchInsurances(patientId, false);
+          const insurances = action?.payload?.insurances || action?.payload || [];
+          if (Array.isArray(insurances) && insurances.length > 0) {
+            const ins = insurances[0];
+            insuranceId = ins._id || ins.id || ins.insuranceId || ins.coverageId || ins.planId;
+            if (insuranceId) setFirstInsuranceId(insuranceId);
+          }
+        } catch (err) {
+          console.error("Failed to fetch insurances on click", err);
+        }
+      }
+    }
+
     console.log('[CoveragePanel] handleViewCoverage →', { patientId, insuranceId, pt });
+    
     if (patientId && insuranceId) {
       navigate(`/patients/${patientId}/insurance/${insuranceId}/edit`);
     } else if (patientId) {
-      navigate(`/patients/${patientId}/insurance`);
+      // If we somehow still don't have the insurance ID (e.g. legacy patient record with just insuranceName),
+      // fallback to creating a new insurance record on the AddCoveragePage
+      navigate(`/patients/${patientId}/insurance/new`);
     } else {
       navigate("/insurance");
     }

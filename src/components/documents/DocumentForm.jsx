@@ -36,6 +36,100 @@ const ILLEGAL_CHARS_PATTERN = /[\/:\*\?"<>\|\\]/g;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_DOCUMENT_NAME_LENGTH = 100;
 
+const Label = ({ children, required }) => (
+  <Typography sx={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '11.5px', lineHeight: '17.25px', color: '#4b5563', display: 'block', mb: 0.5 }}>
+    {children}{required && <span style={{ color: '#e53935' }}> *</span>}
+  </Typography>
+);
+
+const sharedInputSx = {
+  backgroundColor: '#fff',
+  '&.MuiOutlinedInput-root, & .MuiOutlinedInput-root': {
+    borderRadius: '4px !important',
+    height: '38px !important',
+    boxSizing: 'border-box !important',
+  },
+  '& .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#E5E7EB !important',
+    borderWidth: '1px !important',
+    borderRadius: '4px !important',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#D1D5DB !important',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#2563EB !important',
+  },
+  '& .MuiInputBase-input, & .MuiAutocomplete-input, & input, & textarea': {
+    color: '#111827 !important',
+    WebkitTextFillColor: '#111827 !important',
+    padding: '10px 14px !important',
+    fontSize: '0.875rem',
+    fontFamily: 'Inter',
+    height: '36px !important',
+    boxSizing: 'border-box !important',
+  },
+  '& .MuiInputBase-input::placeholder, & .MuiAutocomplete-input::placeholder, & input::placeholder, & textarea::placeholder': {
+    color: '#374151 !important',
+    opacity: '1 !important',
+    WebkitTextFillColor: '#374151 !important',
+  },
+  '& .MuiSelect-select': {
+    padding: '10px 14px !important',
+    fontSize: '0.875rem',
+    fontFamily: 'Inter',
+    boxSizing: 'border-box !important',
+    display: 'flex !important',
+    alignItems: 'center !important',
+    color: '#111827 !important',
+    WebkitTextFillColor: '#111827 !important',
+    height: '36px !important',
+    lineHeight: '36px !important',
+  },
+};
+
+const tagsInputSx = {
+  ...sharedInputSx,
+  '&.MuiOutlinedInput-root, & .MuiOutlinedInput-root': {
+    borderRadius: '4px !important',
+    minHeight: '40px !important',
+    height: 'auto !important',
+    boxSizing: 'border-box !important',
+  },
+  '& .MuiAutocomplete-inputRoot': {
+    padding: '3px 8px !important',
+    borderRadius: '4px !important',
+    minHeight: '40px !important',
+    height: 'auto !important',
+    boxSizing: 'border-box !important',
+  },
+  '& .MuiAutocomplete-input, & input': {
+    height: '28px !important',
+    padding: '0px 6px !important',
+    color: '#111827 !important',
+    WebkitTextFillColor: '#111827 !important',
+  },
+};
+
+const multilineInputSx = {
+  ...sharedInputSx,
+  '&.MuiOutlinedInput-root, & .MuiOutlinedInput-root': {
+    borderRadius: '4px !important',
+    minHeight: '80px !important',
+    height: 'auto !important',
+    boxSizing: 'border-box !important',
+  },
+  '& .MuiInputBase-input, & textarea': {
+    color: '#111827 !important',
+    WebkitTextFillColor: '#111827 !important',
+    padding: '10px 14px !important',
+    fontSize: '0.875rem',
+    fontFamily: 'Inter',
+    height: 'auto !important',
+    boxSizing: 'border-box !important',
+  },
+};
+
 const SUGGESTED_TAGS = [
   'urgent',
   'follow-up',
@@ -359,46 +453,52 @@ const DocumentForm = ({
     <form onSubmit={handleSubmit}>
       <Grid container spacing={1.5}>
         <Grid size={{ xs: 12, md: 6 }}>
+          <Label required>Patient</Label>
           <Autocomplete
             options={patients}
             getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
             value={selectedPatient}
             onChange={handlePatientChange}
             disabled={!!prefilledPatient || isEditMode}
+            sx={sharedInputSx}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Patient *"
+                placeholder="Search patient..."
                 error={!!errors.patientId}
                 helperText={errors.patientId || (prefilledPatient ? 'Pre-selected from context' : '')}
+                FormHelperTextProps={{ sx: { ml: 0.5, mt: 0.25 } }}
               />
             )}
           />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormControl fullWidth>
-            <InputLabel>Appointment (Optional)</InputLabel>
-            <Select
-              value={formData.appointmentId}
-              onChange={handleChange('appointmentId')}
-              label="Appointment (Optional)"
-              disabled={!formData.patientId || !!prefilledAppointment}
-            >
-              <MenuItem value="">No Appointment</MenuItem>
-              {appointments.map((apt) => (
-                <MenuItem key={apt._id} value={apt._id}>
-                  {new Date(apt.appointmentDate).toLocaleDateString()} - {apt.startTime || 'N/A'}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Label>Appointment (Optional)</Label>
+          <Select
+            fullWidth
+            size="small"
+            value={formData.appointmentId}
+            onChange={handleChange('appointmentId')}
+            disabled={!formData.patientId || !!prefilledAppointment}
+            displayEmpty
+            sx={sharedInputSx}
+          >
+            <MenuItem value="">No Appointment</MenuItem>
+            {appointments.map((apt) => (
+              <MenuItem key={apt._id} value={apt._id}>
+                {new Date(apt.appointmentDate).toLocaleDateString()} - {apt.startTime || 'N/A'}
+              </MenuItem>
+            ))}
+          </Select>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
+          <Label required>Document Name</Label>
           <TextField
             fullWidth
-            label="Document Name *"
+            size="small"
+            placeholder="Enter document name..."
             value={formData.documentName}
             onChange={handleDocumentNameChange}
             error={!!errors.documentName}
@@ -407,41 +507,60 @@ const DocumentForm = ({
               `${formData.documentName.length}/${MAX_DOCUMENT_NAME_LENGTH} characters. Only letters, numbers, spaces, and -_.(), allowed.`
             }
             inputProps={{ maxLength: MAX_DOCUMENT_NAME_LENGTH }}
+            sx={sharedInputSx}
+            FormHelperTextProps={{ sx: { ml: 0.5, mt: 0.25 } }}
           />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <FormControl fullWidth error={!!errors.documentType}>
-            <InputLabel>Document Type *</InputLabel>
-            <Select
-              value={formData.documentType}
-              onChange={handleChange('documentType')}
-              label="Document Type *"
-            >
-              {DOCUMENT_TYPES.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </Select>
-            {errors.documentType && (
-              <FormHelperText>{errors.documentType}</FormHelperText>
-            )}
-          </FormControl>
+          <Label required>Document Type</Label>
+          <Select
+            fullWidth
+            size="small"
+            value={formData.documentType}
+            onChange={handleChange('documentType')}
+            displayEmpty
+            sx={sharedInputSx}
+            error={!!errors.documentType}
+          >
+            <MenuItem value="" disabled>Select document type...</MenuItem>
+            {DOCUMENT_TYPES.map((type) => (
+              <MenuItem key={type.value} value={type.value}>
+                {type.label}
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.documentType && (
+            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 0.5, display: 'block' }}>
+              {errors.documentType}
+            </Typography>
+          )}
         </Grid>
 
         {!isEditMode && (
           <Grid size={12}>
+            <Label required>File</Label>
             <Button
               component="label"
               variant="outlined"
               startIcon={<UploadIcon />}
               fullWidth
               sx={{
-                p: 1,
-                justifyContent: 'flex-start',
+                p: 1.5,
+                justifyContent: 'center',
                 borderStyle: errors.file ? 'solid' : 'dashed',
-                borderColor: errors.file ? 'error.main' : 'divider',
+                borderColor: errors.file ? 'error.main' : '#E5E7EB',
+                borderRadius: '8px',
+                color: '#4b5563',
+                backgroundColor: '#f9fafb',
+                fontFamily: 'Inter',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: '#2563EB',
+                  backgroundColor: '#f3f8fd',
+                }
               }}
             >
               {selectedFile ? selectedFile.name : 'Click to select file'}
@@ -453,12 +572,12 @@ const DocumentForm = ({
               />
             </Button>
             {errors.file && (
-              <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 0.5, display: 'block' }}>
                 {errors.file}
               </Typography>
             )}
             {selectedFile && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 0.5, display: 'block' }}>
                 File size: {(selectedFile.size / 1024).toFixed(1)} KB
               </Typography>
             )}
@@ -466,34 +585,39 @@ const DocumentForm = ({
         )}
 
         <Grid size={12}>
+          <Label>Description</Label>
           <TextField
             fullWidth
             multiline
-            minRows={1}
+            minRows={2}
             maxRows={10}
-            label="Description"
+            placeholder="Add description..."
             value={formData.description}
             onChange={handleDescriptionChange}
             error={!!errors.description}
             helperText={errors.description}
             inputProps={{ maxLength: MAX_DESCRIPTION_LENGTH }}
+            sx={multilineInputSx}
+            FormHelperTextProps={{ sx: { ml: 0.5, mt: 0.25 } }}
           />
           <Typography
             variant="caption"
             color={descriptionCharCount > MAX_DESCRIPTION_LENGTH ? 'error' : 'text.secondary'}
-            sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}
+            sx={{ display: 'block', textAlign: 'right', mt: 0.5, mr: 0.5 }}
           >
             {descriptionCharCount}/{MAX_DESCRIPTION_LENGTH} characters
           </Typography>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
+          <Label>Tags</Label>
           <Autocomplete
             multiple
             freeSolo
             options={SUGGESTED_TAGS}
             value={formData.tags}
             onChange={handleTagsChange}
+            sx={tagsInputSx}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
@@ -502,81 +626,124 @@ const DocumentForm = ({
                   size="small"
                   {...getTagProps({ index })}
                   key={option}
+                  sx={{ borderRadius: '6px', fontFamily: 'Inter', fontSize: '0.75rem' }}
                 />
               ))
             }
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Tags"
-                placeholder="Add tags..."
+                placeholder={formData.tags.length === 0 ? "Add tags..." : ""}
                 helperText="Press Enter to add custom tags"
+                FormHelperTextProps={{ sx: { ml: 0.5, mt: 0.25 } }}
               />
             )}
           />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
+          <Label>Expiration Date</Label>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DatePicker
-              label="Expiration Date"
               value={formData.expirationDate}
               onChange={handleExpirationDateChange}
               minDate={dayjs()}
               slotProps={{
                 textField: {
                   fullWidth: true,
+                  size: 'small',
+                  placeholder: 'MM/DD/YYYY',
                   error: !!errors.expirationDate,
                   helperText: errors.expirationDate,
+                  sx: sharedInputSx,
+                  FormHelperTextProps: { sx: { ml: 0.5, mt: 0.25 } }
                 },
               }}
             />
           </LocalizationProvider>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
           <FormControlLabel
             control={
               <Switch
                 checked={formData.isConfidential}
                 onChange={handleChange('isConfidential')}
+                color="primary"
               />
             }
-            label="Mark as Confidential"
+            label={
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
+                Mark as Confidential
+              </Typography>
+            }
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }} sx={{ mt: 1 }}>
           <FormControlLabel
             control={
               <Switch
                 checked={formData.enableOCR}
                 onChange={handleChange('enableOCR')}
+                color="primary"
               />
             }
-            label="Enable OCR (Optical Character Recognition)"
+            label={
+              <Typography sx={{ fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
+                Enable OCR (Optical Character Recognition)
+              </Typography>
+            }
           />
-          <Typography variant="caption" color="text.secondary" display="block">
+          <Typography variant="caption" sx={{ color: '#6b7280', ml: 7, display: 'block', mt: -0.5 }}>
             Extract text from images and PDFs automatically
           </Typography>
         </Grid>
 
-        <Grid size={12}>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Grid size={12} sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
             <Button
               variant="outlined"
               onClick={handleCancelClick}
               disabled={loading}
+              sx={{
+                textTransform: 'none',
+                fontFamily: 'Inter',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                borderRadius: '8px',
+                px: 3,
+                borderColor: '#DFE5EC',
+                color: '#374151',
+                '&:hover': {
+                  borderColor: '#cbd5e1',
+                  backgroundColor: '#f9fafb',
+                }
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
-              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
               disabled={loading}
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+              sx={{
+                textTransform: 'none',
+                fontFamily: 'Inter',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                borderRadius: '8px',
+                px: 3,
+                backgroundColor: '#2563EB',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#1d4ed8',
+                  boxShadow: 'none',
+                }
+              }}
             >
-              {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Document' : 'Create Document')}
+              {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Document')}
             </Button>
           </Box>
         </Grid>

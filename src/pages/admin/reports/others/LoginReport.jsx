@@ -21,6 +21,7 @@ const LoginReport = () => {
       startDate,
       endDate,
       range: dateRange,
+      searchQuery: searchQuery || undefined,
     }));
   };
 
@@ -64,7 +65,7 @@ const LoginReport = () => {
   const renderRow = (row, index) => (
     <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username || 'Unknown'}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.date || row.createdAt ? dayjs(row.createdAt).format('MM/DD/YYYY h:mm A') : 'N/A'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.date || (row.createdAt ? dayjs(row.createdAt).format('MM/DD/YYYY h:mm A') : 'N/A')}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem', color: row.status === 'Success' ? '#166534' : '#d93025', fontWeight: 500 }}>{row.status || 'Success'}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem' }}>{row.ip || 'N/A'}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem', maxWidth: 400, wordBreak: 'break-all', color: '#666' }}>{row.machine || row.userAgent || 'N/A'}</TableCell>

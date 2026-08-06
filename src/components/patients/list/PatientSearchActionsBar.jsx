@@ -87,9 +87,17 @@ const PatientSearchActionsBar = ({
         onClick={onDeactivateSelected}
         sx={{
           ...actionButtonSx,
-          backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_MUTED, boxShadow: 'none',
-          '&:hover': { backgroundColor: COLORS.SURFACE_INPUT, boxShadow: 'none' },
-          '&.Mui-disabled': { backgroundColor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_MUTED },
+          backgroundColor: deactivateDisabled ? COLORS.SURFACE_INPUT : COLORS.STATUS_ERROR,
+          color: deactivateDisabled ? COLORS.TEXT_MUTED : '#ffffff',
+          boxShadow: 'none',
+          '&:hover': {
+            backgroundColor: deactivateDisabled ? COLORS.SURFACE_INPUT : '#dc2626',
+            boxShadow: 'none',
+          },
+          '&.Mui-disabled': {
+            backgroundColor: COLORS.SURFACE_INPUT,
+            color: COLORS.TEXT_MUTED,
+          },
         }}
       >
         Deactivate Patient(s)

@@ -20,6 +20,7 @@ import TemplatesAndMessageColumn from './TemplatesAndMessageColumn';
 import { useSelector } from 'react-redux';
 import { selectAppointmentList } from '../../../../store/slices/appointmentSlice';
 import { useDropdownData } from '../../../../hooks/redux';
+import api from "../../../../config/api";
 
 const TEMPLATES = [
   {
@@ -40,6 +41,7 @@ const SendBulkTextModal = ({ open, onClose }) => {
   const [patients, setPatients] = useState([]);
   
   const [loading, setLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   
   const appointments = useSelector(selectAppointmentList) || [];
   const { providers = [] } = useDropdownData({ providers: true });
@@ -235,11 +237,22 @@ const SendBulkTextModal = ({ open, onClose }) => {
         </Button>
         <Button
           variant="contained"
-          onClick={() => {
-            console.log('Sending message to', selectedPatients.length, 'patients:', message);
-            onClose();
+          onClick={async () => {
+            try {
+              setIsSending(true);
+              await api.post('/communication/bulk-text', {
+                patientIds: selectedPatients,
+                message
+              });
+              onClose();
+            } catch (error) {
+              console.error('Failed to send bulk text:', error);
+              // Handle error if needed (e.g., toast)
+            } finally {
+              setIsSending(false);
+            }
           }}
-          disabled={!message || selectedPatients.length === 0}
+          disabled={!message || selectedPatients.length === 0 || isSending}
           sx={{
             backgroundColor: COLORS.ACCENT,
             color: COLORS.WHITE,
@@ -251,7 +264,7 @@ const SendBulkTextModal = ({ open, onClose }) => {
             '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
           }}
         >
-          Send Text
+          {isSending ? 'Sending...' : 'Send Text'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -62,6 +62,22 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
 
   const filteredPatients = useMemo(() => {
     return patients.filter((p) => {
+      // 0. Tab (Visit Type)
+      const tabVisitType = tab === 0 ? "treatment" : "recare";
+      let pVisitType = String(
+        p.visitType || p.AppointmentType || p.appointmentType || 
+        p.customFields?.visitType || p.CustomFields?.visitType || ""
+      ).toLowerCase();
+      
+      if (!pVisitType && typeof p.CustomFields === 'string') {
+        try {
+          const cf = JSON.parse(p.CustomFields);
+          pVisitType = String(cf.visitType || "").toLowerCase();
+        } catch (e) { /* ignore */ }
+      }
+      
+      const actualVisitType = pVisitType.includes("recare") ? "recare" : "treatment";
+      if (actualVisitType !== tabVisitType) return false;
       // 1. Search Name
       if (filters.searchName) {
         const name = p.PatientName || p.patientName || p.name || `Patient #${p.PatNum || ''}`;
@@ -130,7 +146,7 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
 
       return true;
     });
-  }, [patients, filters]);
+  }, [patients, filters, tab]);
 
   const toggleAll = () =>
     setSelected((prev) => prev.length === patients.length ? [] : patients.map((p) => p.ShortlistNum || p.id));

@@ -76,6 +76,7 @@ const PlanFeeGuideSection = ({
             <Button 
               variant="outlined" 
               size="small" 
+              className="view-btn"
               disabled={!formData.planFeeGuide || formData.planFeeGuide === 'None'}
               onClick={() => setIsFeeGuideModalOpen(true)}
               sx={{ 

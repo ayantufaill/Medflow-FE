@@ -22,6 +22,7 @@ const LedgerItemCard = ({
   handleEditClick,
   handleRefreshClick,
   setMagicStickAnchorEl,
+  setTransferTarget,
   setEditInvoiceTarget,
   setShowEditInvoice,
   setAdjAnchorEl,
@@ -155,8 +156,11 @@ const LedgerItemCard = ({
                 editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 isAdjustment={displayItem.isAdjustment}
-                onMagicStickClick={(e) => setMagicStickAnchorEl(e.currentTarget)}
-                onSettingsClick={(data) => { setEditInvoiceTarget(data); setShowEditInvoice(true); }}
+                onMagicStickClick={(e) => {
+                  setMagicStickAnchorEl(e.currentTarget);
+                  setTransferTarget({ ...detail, invoiceId: displayItem.id });
+                }}
+                onSettingsClick={(data) => { setEditInvoiceTarget({ ...data, id: displayItem.id, invoiceId: displayItem.id }); setShowEditInvoice(true); }}
                 onAdjustmentSelect={(e) => { setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }}
                 onPrintClick={(e) => { setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }}
                 onAttachClick={handleAttachClick}

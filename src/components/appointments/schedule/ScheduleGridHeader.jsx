@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { AccessTime as AccessTimeIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import ViewToggle from './ViewToggle';
 import DateNavigation from './DateNavigation';
@@ -8,6 +9,7 @@ import NewAppointmentButton from './NewAppointmentButton';
 import VerticalDivider from '../../common/VerticalDivider';
 import { useScheduleState } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
+import { radius, fontSize, fontWeight } from '../../../constants/styles';
 
 // ScheduleGridHeader owns the top toolbar: view-toggle, date navigation, and
 // the new-appointment button. Calendar view and selected date are lifted into
@@ -16,6 +18,15 @@ import { COLORS } from '../../../constants/colors';
 
 const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, privacyMode, setPrivacyMode, hideBlocks, setHideBlocks, showGhosted, setShowGhosted }) => {
   const { calendarView, selectedDate, setCalendarView, setSelectedDate } = useScheduleState();
+
+  const [currentTime, setCurrentTime] = useState(() => dayjs().format('h:mm A'));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(dayjs().format('h:mm A'));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
   const dayjsDate = dayjs(selectedDate);
@@ -61,6 +72,32 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
         }}
       >
         <ViewToggle value={viewLabel} onChange={handleViewChange} />
+        
+        {/* Live Current Time Display - clean text on background */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            px: '6px',
+            py: '4px',
+            flexShrink: 0,
+            userSelect: 'none',
+          }}
+        >
+          <AccessTimeIcon sx={{ fontSize: '15px', color: COLORS.TEXT_SECONDARY }} />
+          <Typography
+            sx={{
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.medium,
+              color: COLORS.TEXT_PRIMARY,
+              whiteSpace: 'nowrap',
+              fontFamily: 'Inter',
+            }}
+          >
+            {currentTime}
+          </Typography>
+        </Box>
         <DateNavigation
           date={dayjsDate}
           onPrev={handlePrev}
