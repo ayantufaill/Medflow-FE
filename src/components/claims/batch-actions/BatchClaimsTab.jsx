@@ -6,7 +6,7 @@ import {
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
-const headerCellSx = {
+const headerCellSx = { backgroundColor: '#f8f9fa', 
   py: '10px',
   fontFamily: 'Inter',
   fontSize: fontSize.sm,
@@ -28,7 +28,7 @@ const BatchClaimsTab = ({ filteredClaimsList, selectedClaims, setSelectedClaims 
   const [expandedId, setExpandedId] = React.useState(null);
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ border: 'none', backgroundColor: 'transparent' }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: 'none', overflowX: 'auto', width: '100%' }}>
       <Table size="small" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow sx={{ '& .MuiTableCell-head': headerCellSx }}>

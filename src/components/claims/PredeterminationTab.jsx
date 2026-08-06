@@ -89,6 +89,19 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     applyFilters(claims, newFilters, showHidden);
   };
 
+  const handleClearAll = () => {
+    const defaultFilters = {
+      claimType: 'all',
+      carrier: 'all',
+      attachment: 'all',
+      status: 'all',
+      searchPatient: '',
+      searchClaim: '',
+    };
+    setFilters(defaultFilters);
+    applyFilters(claims, defaultFilters, showHidden);
+  };
+
   const handleToggleHidden = (val) => {
     setShowHidden(val);
     applyFilters(claims, filters, val);
@@ -120,7 +133,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'claimType',
       label: 'Filter by Claim Type:',
-      width: '220px',
+      width: '140px',
       value: filters.claimType,
       options: CLAIM_TYPES,
       onChange: (val) => handleFilterChange('claimType', val),
@@ -128,7 +141,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'carrier',
       label: 'Filter by Carrier:',
-      width: '260px',
+      width: '140px',
       value: filters.carrier,
       options: CARRIERS,
       onChange: (val) => handleFilterChange('carrier', val),
@@ -136,7 +149,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'attachment',
       label: 'Filter by Claim Attachment:',
-      width: '260px',
+      width: '140px',
       value: filters.attachment,
       options: [
         { value: 'all', label: 'All' },
@@ -148,7 +161,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'status',
       label: 'Filter by Claim Status:',
-      width: '260px',
+      width: '140px',
       value: filters.status,
       options: [
         { value: 'all', label: 'All' },
@@ -179,6 +192,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           { label: 'Show Hidden Claims', checked: showHidden, onChange: handleToggleHidden }
         ]}
         onRefresh={loadData}
+        onClearAll={handleClearAll}
       />
 
       <ClaimAlertBar
@@ -203,7 +217,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             onClick: () => sendClaims(selectedIds),
           },
           {
-            label: 'Print Page',
+            label: 'Print',
             variant: 'print',
             icon: 'print',
             onClick: () => printPage(),

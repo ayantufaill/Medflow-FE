@@ -20,24 +20,24 @@ import {
 export const EraReportsTable = ({ filteredEraReports }) => {
   return (
             // ERA REPORTS Table Layout (1:1 with Screenshot)
-        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", overflowX: "auto" }}>
+          <Table size="small" sx={{ minWidth: 1600 }}>
+            <TableHead sx={{ backgroundColor: "#f8f9fa", "& .MuiTableCell-root": { py: 1, px: 1, fontSize: "0.7rem", fontWeight: 700, borderBottom: "1px solid #e2e8f0", color: "inherit", whiteSpace: "nowrap" } }}>
               <TableRow>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>PATIENT ID</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>PATIENT NAME</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>CLAIM #</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>CARRIER</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>STATUS</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>AMOUNT SUBMITTED</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>AMOUNT PAID</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>PATIENT RESPONSIBILITY</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>WRITE OFF</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>DATE RECEIVED</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>PAYMENT TYPE</TableCell>
+                <TableCell>PATIENT ID</TableCell>
+                <TableCell>PATIENT NAME</TableCell>
+                <TableCell>CLAIM #</TableCell>
+                <TableCell>CARRIER</TableCell>
+                <TableCell>STATUS</TableCell>
+                <TableCell>AMOUNT SUBMITTED</TableCell>
+                <TableCell>AMOUNT PAID</TableCell>
+                <TableCell>PATIENT RESPONSIBILITY</TableCell>
+                <TableCell>WRITE OFF</TableCell>
+                <TableCell>DATE RECEIVED</TableCell>
+                <TableCell>PAYMENT TYPE</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ "& .MuiTableCell-root": { py: 1.5, px: 1, fontSize: "0.75rem", verticalAlign: "middle", borderBottom: "1px solid #e2e8f0", color: "#1e293b", whiteSpace: "nowrap" } }}>
               {filteredEraReports.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
@@ -53,36 +53,32 @@ export const EraReportsTable = ({ filteredEraReports }) => {
                   return (
                     <TableRow
                       key={era.id}
-                      hover
-                      sx={{
-                        '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                        transition: 'background-color 0.2s',
-                      }}
+                      hover={false}
                     >
                       {/* Patient ID */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>
                           {era.patientId}
                         </Typography>
                       </TableCell>
 
                       {/* Patient Name */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a3a6b' }}>
+                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#3b82f6' }}>
                           {era.patientName}
                         </Typography>
                       </TableCell>
 
                       {/* Claim # */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 600 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>
                           {era.claimNumber}
                         </Typography>
                       </TableCell>
 
                       {/* Carrier */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>
                           {era.carrier}
                         </Typography>
                       </TableCell>
@@ -102,21 +98,21 @@ export const EraReportsTable = ({ filteredEraReports }) => {
 
                       {/* Amount Submitted */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 600 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>
                           ${era.amountSubmitted.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </Typography>
                       </TableCell>
 
                       {/* Amount Paid */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 700 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 700 }}>
                           ${era.amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </Typography>
                       </TableCell>
 
                       {/* Patient Responsibility */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>
                           ${era.patientResponsibility.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </Typography>
                       </TableCell>
@@ -130,14 +126,14 @@ export const EraReportsTable = ({ filteredEraReports }) => {
 
                       {/* Date Received */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>
                           {era.dateReceived}
                         </Typography>
                       </TableCell>
 
                       {/* Payment Type */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>
                           {era.paymentType}
                         </Typography>
                       </TableCell>
