@@ -71,45 +71,61 @@ const InactiveSectionTable = ({ section, onEdit, onActivate, actionLoading, getC
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography
-        variant="subtitle1"
-        fontWeight={700}
-        sx={{ mb: 1.5, color: '#1a6b9e', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-      >
-        {section.heading}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', lineHeight: '24px', color: '#111827' }}>
+          {section.heading.replace(':', '')}
+        </Typography>
+        {!loading && (
+          <Box sx={{
+            ml: 1.5,
+            px: 1.2,
+            py: 0.2,
+            bgcolor: '#F3F4F6',
+            borderRadius: '12px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: '#6B7280',
+            border: '1px solid #E5E7EB',
+            fontFamily: 'Inter'
+          }}>
+            {rows.length}
+          </Box>
+        )}
+      </Box>
       <Paper variant="outlined" sx={{ borderRadius: '8px', border: '1px solid #e0e0e0', boxShadow: 'none' }}>
         {loading ? (
-          <Box display="flex" justifyContent="center" p={3}><CircularProgress size={24} /></Box>
+          <Box display="flex" justifyContent="center" p={4}><CircularProgress sx={{ color: '#2262EF' }} /></Box>
         ) : (
           <TableContainer>
             <Table size="small" sx={{ borderCollapse: 'separate' }}>
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#F8F9FB' }}>
+                <TableRow sx={{ backgroundColor: '#F1F6FC', height: '60px' }}>
                   {section.columns.map((col) => (
-                    <TableCell key={col} sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#6B7280', py: 1.5, borderBottom: 'none' }}>
+                    <TableCell key={col} sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#6B7280', py: 1.5, borderBottom: 'none', fontFamily: 'Inter' }}>
                       {COLUMN_HEADERS[col]}
                     </TableCell>
                   ))}
-                  <TableCell align="center" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#6B7280', py: 1.5, borderBottom: 'none' }}>ACTIONS</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700, fontSize: '0.75rem', color: '#6B7280', py: 1.5, borderBottom: 'none', fontFamily: 'Inter' }}>ACTIONS</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={section.columns.length + 1} sx={{ py: 2, color: 'text.secondary', fontSize: '0.82rem', borderBottom: 'none' }} align="center">
-                      No inactive providers found
+                    <TableCell colSpan={section.columns.length + 1} align="center" sx={{ py: 4, borderBottom: 'none' }}>
+                      <Typography sx={{ fontFamily: 'Inter', color: 'text.secondary', fontSize: '13px' }}>
+                        No inactive providers found
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((provider) => {
                     const id = provider._id || provider.id;
                     return (
-                      <TableRow key={id} hover sx={{ '& .MuiTableCell-root': { fontSize: '0.82rem', py: 1.2, color: '#4B5563', borderBottom: '1px solid #F3F4F6' } }}>
+                      <TableRow key={id} hover sx={{ height: '60px', '& .MuiTableCell-root': { fontSize: '13px', py: 0, color: '#4B5563', borderBottom: '1px solid #F3F4F6', fontFamily: 'Inter' } }}>
                         {section.columns.map((col) => (
                           <TableCell key={col}>
                             {col === 'provider' ? (
-                              <Typography variant="body2" sx={{ color: '#6B7280', fontWeight: 500 }}>
+                              <Typography variant="body2" sx={{ fontFamily: 'Inter', color: '#6B7280', fontWeight: 500, fontSize: '13px' }}>
                                 {getCellValue(provider, col)}
                               </Typography>
                             ) : col === 'verified' ? (
@@ -143,6 +159,9 @@ const InactiveSectionTable = ({ section, onEdit, onActivate, actionLoading, getC
 
 const InactiveProvidersView = ({ onEdit, onActivate, actionLoading, getCellValue, VerifiedBadge, getProviderName }) => (
   <Box>
+    <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '18px', lineHeight: '32px', color: '#111', mb: '24px' }}>
+      Inactive Providers
+    </Typography>
     {INACTIVE_SECTIONS.map((section) => (
       <InactiveSectionTable
         key={section.key}

@@ -11,6 +11,9 @@ import PatientSearchField from "./PatientSearchField";
 import ProcedureTagStrip from "./ProcedureTagStrip";
 import ProcedureTable from "./ProcedureTable";
 import PastVisitProceduresSelector from "./PastVisitProceduresSelector";
+import { invoiceService } from '../../../services/invoice.service';
+import { paymentService } from '../../../services/payment.service';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
 
 const AppointmentLeftPanel = ({
   // Patient
@@ -29,8 +32,66 @@ const AppointmentLeftPanel = ({
   procedures, setProcedures, providers,
   showExtendedOptions,
   onDuplicateProcedure,
+  readOnly,
+  setIsRescheduling,
+  appointmentId,
+  status,
+  onStatusChange,
 }) => {
   const [showPastVisits, setShowPastVisits] = useState(false);
+  const { showSnackbar } = useSnackbar();
+
+  const handleCollectPayment = async () => {
+    if (!appointmentId) {
+      showSnackbar("Please save the appointment first before collecting payment.", "warning");
+      return;
+    }
+
+    const totalPortion = procedures.reduce((sum, p) => {
+      const val = p.ptPart != null ? p.ptPart : (p.charge != null ? p.charge : 0);
+      const num = Number(String(val).replace(/[$,]/g, ''));
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+
+    if (totalPortion <= 0) {
+      showSnackbar("No procedure charges to collect payment for.", "warning");
+      return;
+    }
+
+    try {
+      let invoice;
+      try {
+        invoice = await invoiceService.generateFromAppointment(appointmentId);
+      } catch (err) {
+        const patId = patient.id || patient._id || patient.PatNum;
+        const result = await invoiceService.getAllInvoices({ patientId: patId, limit: 100 });
+        invoice = (result.invoices || []).find(inv => String(inv.appointmentId) === String(appointmentId));
+      }
+
+      if (!invoice) {
+        showSnackbar("Could not generate or locate the invoice for this appointment.", "error");
+        return;
+      }
+
+      const payload = {
+        patientId: parseInt(patient.id || patient._id || patient.PatNum),
+        invoiceId: parseInt(invoice.id || invoice._id),
+        amount: totalPortion,
+        paymentMethod: 'cash',
+        method: 'Cash',
+        paymentDate: new Date().toISOString(),
+        status: 'completed',
+        notes: 'Payment collected from appointment checkout'
+      };
+
+      await paymentService.recordPayment(payload);
+      showSnackbar(`Successfully collected payment of $${totalPortion.toFixed(2)}!`, "success");
+      window.dispatchEvent(new CustomEvent('add-ledger-item'));
+    } catch (err) {
+      console.error("Failed to collect payment:", err);
+      showSnackbar(err.response?.data?.message || err.message || "Failed to collect payment", "error");
+    }
+  };
 
   const handleAddPastProcedure = (proc) => {
     const exists = procedures.some((p) => p.code === proc.code);
@@ -43,9 +104,9 @@ const AppointmentLeftPanel = ({
 
   return (
     <Box sx={{ flex: 1, p: "20px", overflowY: "auto", borderRight: "1px solid #e0e5eb", minWidth: 0 }}>
-
-    {/* Patient / Date / Time row */}
-    <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
+      <Box sx={{ pointerEvents: readOnly ? 'none' : 'auto', opacity: readOnly ? 0.85 : 1 }}>
+        {/* Patient / Date / Time row */}
+        <Box sx={{ display: "flex", gap: "12px", mb: "20px", alignItems: "flex-end" }}>
       <PatientSearchField
         patients={patients}
         loadingPatients={loadingPatients}
@@ -145,7 +206,7 @@ const AppointmentLeftPanel = ({
 
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px', pointerEvents: 'auto' }}>
           <Button
             variant="contained"
             disableElevation
@@ -177,12 +238,18 @@ const AppointmentLeftPanel = ({
     )}
 
     {/* Procedure table */}
-    <ProcedureTable procedures={procedures} setProcedures={setProcedures} providers={providers} showExtendedOptions={showExtendedOptions} />
+    <ProcedureTable 
+      procedures={procedures} 
+      setProcedures={setProcedures} 
+      providers={providers} 
+      showExtendedOptions={showExtendedOptions} 
+      setIsRescheduling={setIsRescheduling} 
+    />
 
     {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
     {showExtendedOptions && (
       <>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'right', mt: '10px', pointerEvents: 'auto' }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -201,6 +268,11 @@ const AppointmentLeftPanel = ({
             <Button
               variant="contained"
               disableElevation
+              onClick={() => {
+                setProcedures((prev) => prev.map((p) => ({ ...p, completed: true })));
+                if (onStatusChange) onStatusChange('completed');
+                if (setIsRescheduling) setIsRescheduling(true);
+              }}
               sx={{
                 fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
                 textTransform: 'none', borderRadius: '6px',
@@ -214,6 +286,7 @@ const AppointmentLeftPanel = ({
             <Button
               variant="contained"
               disableElevation
+              onClick={handleCollectPayment}
               sx={{
                 fontFamily: 'Inter', fontSize: '12px', fontWeight: 600,
                 textTransform: 'none', borderRadius: '6px',
@@ -239,7 +312,8 @@ const AppointmentLeftPanel = ({
     {showPastVisits && (
       <PastVisitProceduresSelector patient={patient} onAddProcedure={handleAddPastProcedure} />
     )}
-  </Box>
+      </Box>
+    </Box>
   );
 };
 

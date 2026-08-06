@@ -140,7 +140,7 @@ const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen
 };
 
 // Main AppointmentChecklist component
-const AppointmentChecklist = () => {
+const AppointmentChecklist = ({ patientId }) => {
   const [preApptOpen, setPreApptOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
@@ -242,8 +242,15 @@ const AppointmentChecklist = () => {
             All done
           </Typography>
           <Typography
-            sx={{ fontSize: '12px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, cursor: 'pointer' }}
+            sx={{
+              fontSize: '12px',
+              fontWeight: fontWeight.semibold,
+              color: totalDone > 0 ? COLORS.TEXT_SECONDARY : '#d1d5db',
+              cursor: totalDone > 0 ? 'pointer' : 'default',
+              pointerEvents: totalDone > 0 ? 'auto' : 'none',
+            }}
             onClick={() => {
+              if (totalDone === 0) return;
               setPreApptState({});
               setCheckInState({});
               setCheckOutState({});
@@ -257,6 +264,7 @@ const AppointmentChecklist = () => {
       <PurchaseProductDialog 
         open={purchaseProductOpen} 
         onClose={() => setPurchaseProductOpen(false)} 
+        patientId={patientId}
       />
     </Box>
   );

@@ -144,8 +144,11 @@ export const fetchLedgerItems = createAsyncThunk(
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
-          // The inner invoice row should only show procedures where dbi is true
-          const invoiceProcedures = invoice.lineItems.filter(l => l.dbi === true);
+          // The inner invoice row should show procedures where dbi is true
+          // AND procedures where dbi is false BUT no claims exist yet.
+          const invoiceProcedures = invoice.lineItems.filter(l => 
+            l.dbi === true || invoiceClaims.length === 0
+          );
           
           const combinedTitle = invoiceProcedures
             .map((l) => l.description || 'Procedure')
@@ -431,6 +434,21 @@ export const voidTransaction = createAsyncThunk(
       await dispatch(fetchLedgerItems(patientId));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to void transaction');
+    }
+  }
+);
+/**
+ * Transfer outstanding insurance balance to the patient.
+ */
+export const transferOutstandingToPatient = createAsyncThunk(
+  'billing/transferOutstandingToPatient',
+  async ({ invoiceId, procedureId, patientId }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post(`/invoices/${invoiceId}/items/${procedureId}/transfer-outstanding`);
+      await dispatch(fetchLedgerItems(patientId));
+      return { procedureId, invoiceId };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to transfer outstanding balance to patient');
     }
   }
 );

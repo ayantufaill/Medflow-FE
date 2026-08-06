@@ -2,21 +2,22 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  Tabs,
-  Tab,
   Box,
   Typography,
+  Tabs,
+  Tab,
   CircularProgress,
   Alert,
   IconButton,
+  Button,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import {
+  Close as CloseIcon,
+  Save as SaveIcon,
+  Edit as EditIcon,
+} from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
-import { providerService } from '../../services/provider.service';
 import EditProviderForm from './EditProviderForm';
 import OnlineProviderForm from './OnlineProviderForm';
 import {
@@ -57,9 +58,8 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       onSaved?.(updated);
       onClose();
     } catch (err) {
-      // The unwrap() handles the ConditionError object safely
       let msg = 'Failed to update provider. Please try again.';
-      if (err?.name === 'ConditionError') return; // Aborted by Redux internally
+      if (err?.name === 'ConditionError') return;
       
       if (typeof err === 'string') {
         msg = err;
@@ -82,36 +82,65 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { maxHeight: '90vh' } }}
-    >
-      {/* Header */}
-      <DialogTitle
-        sx={{
-          backgroundColor: '#1a3a6b',
-          color: 'white',
-          py: 1.5,
-          px: 3,
+      sx={{ zIndex: 9999 }}
+      PaperProps={{
+        sx: {
+          borderRadius: '14px',
+          boxShadow: '0px 10px 30px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
+          maxHeight: '88vh',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight={600}>
-          Edit {providerName || 'Provider'}
-        </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: 'white' }}>
-          <CloseIcon fontSize="small" />
+          flexDirection: 'column',
+        }
+      }}
+    >
+      {/* Modal Header */}
+      <Box sx={{
+        px: '24px', height: '73px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        backgroundColor: '#f8fafc',
+        borderBottom: '1px solid #e2e8f0',
+        flexShrink: 0
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{
+            width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#eff6ff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', mr: '16px', flexShrink: 0
+          }}>
+            <EditIcon sx={{ fontSize: '22px', color: '#3b82f6' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '18px', color: '#0f172a', lineHeight: 1 }}>
+              Edit {providerName || 'Provider'}
+            </Typography>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '13px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
+              Update provider information, credentials, and settings
+            </Typography>
+          </Box>
+        </Box>
+        <IconButton onClick={onClose} size="small" disabled={saving} sx={{ color: '#64748b', '&:hover': { color: '#0f172a', bgcolor: 'rgba(0,0,0,0.05)' } }}>
+          <CloseIcon sx={{ fontSize: '20px' }} />
         </IconButton>
-      </DialogTitle>
+      </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, backgroundColor: '#fafafa' }}>
+      <Box sx={{ borderBottom: '1px solid #e2e8f0', px: '24px', backgroundColor: '#ffffff', flexShrink: 0 }}>
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
           sx={{
-            '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '0.875rem', minHeight: 40 },
-            minHeight: 40,
+            minHeight: 44,
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,
+              fontSize: '13px',
+              color: '#64748b',
+              minHeight: 44,
+              px: 2,
+              '&.Mui-selected': { color: '#1d4ed8' },
+            },
+            '& .MuiTabs-indicator': { backgroundColor: '#1d4ed8', height: '2.5px', borderRadius: '2px' },
           }}
         >
           <Tab label="Provider" disableRipple />
@@ -120,20 +149,20 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       </Box>
 
       {/* Content */}
-      <DialogContent sx={{ px: 3, py: 2 }}>
+      <DialogContent sx={{ p: '24px', bgcolor: '#f8fafc', flex: 1, overflowY: 'auto' }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          <Alert severity="error" sx={{ mb: 2.5, borderRadius: '8px', fontFamily: 'Inter, sans-serif' }} onClose={() => setError('')}>
             {error}
           </Alert>
         )}
 
         {activeTab === 0 && (
           isLoading ? (
-            <Box display="flex" justifyContent="center" py={6}>
+            <Box display="flex" justifyContent="center" alignItems="center" py={8}>
               <CircularProgress />
             </Box>
           ) : !provider ? (
-            <Alert severity="error">Provider data could not be loaded.</Alert>
+            <Alert severity="error" sx={{ borderRadius: '8px' }}>Provider data could not be loaded.</Alert>
           ) : (
             <EditProviderForm
               formId={FORM_ID}
@@ -146,11 +175,11 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
 
         {activeTab === 1 && (
           isLoading ? (
-            <Box display="flex" justifyContent="center" py={6}>
+            <Box display="flex" justifyContent="center" alignItems="center" py={8}>
               <CircularProgress />
             </Box>
           ) : !provider ? (
-            <Alert severity="error">Provider data could not be loaded.</Alert>
+            <Alert severity="error" sx={{ borderRadius: '8px' }}>Provider data could not be loaded.</Alert>
           ) : (
             <OnlineProviderForm
               formId={ONLINE_FORM_ID}
@@ -161,26 +190,48 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
         )}
       </DialogContent>
 
-      {/* Footer */}
-      <DialogActions sx={{ px: 3, py: 1.5, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+      {/* Modal Footer Actions */}
+      <Box sx={{
+        height: '57px', px: '24px', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e2e8f0'
+      }}>
+        <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: 500, color: '#94a3b8' }}>
           * required field
         </Typography>
-        <Button onClick={onClose} disabled={saving} variant="outlined" size="small">
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          form={activeTab === 0 ? FORM_ID : ONLINE_FORM_ID}
-          variant="contained"
-          size="small"
-          disabled={saving || isLoading || !provider}
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
-          sx={{ backgroundColor: '#1a3a6b' }}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </DialogActions>
+        <Box sx={{ display: 'flex', gap: '12px' }}>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            disabled={saving}
+            sx={{
+              textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '13px',
+              borderColor: '#cbd5e1', color: '#0f172a', borderRadius: '6px',
+              px: '16px', height: '36px',
+              '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={activeTab === 0 ? FORM_ID : ONLINE_FORM_ID}
+            variant="contained"
+            disableElevation
+            disabled={saving || isLoading || !provider}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '17px !important' }} />}
+            sx={{
+              textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '13px',
+              bgcolor: '#1d4ed8', color: '#ffffff', borderRadius: '6px',
+              px: '24px', height: '36px',
+              '&:hover': { bgcolor: '#1e40af' }
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </Box>
+      </Box>
     </Dialog>
   );
 };

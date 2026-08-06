@@ -259,7 +259,6 @@ const DEFAULT_VALUES = {
   socialMediaRelease: "",
   sendWelcome: false,
   sendWelcomeMethod: "email",
-  newPatientFlag: true,
 };
 
 const trimValue = (value) => (typeof value === "string" ? value.trim() : value);
@@ -624,7 +623,6 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
       dontRequestReview: values.dontRequestReview,
       sendWelcome: values.sendWelcome,
       sendWelcomeMethod: values.sendWelcome ? values.sendWelcomeMethod : "",
-      newPatientFlag: values.newPatientFlag,
     });
 
     const address = removeEmptyCustomFields({
@@ -1761,22 +1759,6 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                     { label: "Email", value: "email" },
                     { label: "Text Message", value: "text" },
                   ]}
-                />
-              )}
-            />
-
-            <Controller
-              name="newPatientFlag"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={!!field.value}
-                      onChange={(event) => field.onChange(event.target.checked)}
-                    />
-                  }
-                  label="New Patient"
                 />
               )}
             />

@@ -22,6 +22,7 @@ import { providerLabel } from '../../new-appointment/helpers';
 
 import { SectionHeader, InfoRow, SectionContainer } from './RouteSlipShared';
 import { RouteSlipApptDisplay } from './RouteSlipApptDisplay';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const RouteSlipDialog = () => {
   const { routeSlipDialogOpen, setRouteSlipDialogOpen } = useScheduleState();
@@ -255,6 +256,11 @@ const RouteSlipDialog = () => {
 
       {/* MODAL BODY (Print Target) */}
       <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+
+        {/* Print-only Medflow Logo at Top Center */}
+        <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>
+          <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
+        </Box>
 
         {/* Print Layout Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 3 }}>

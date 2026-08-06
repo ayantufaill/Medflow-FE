@@ -24,6 +24,10 @@ import { Close as CloseIcon, ShoppingCart as ShoppingCartIcon, CheckCircle as Ch
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { patientService } from '../../../services/patient.service';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
+
+import { usePatient, useScheduleState } from '../../../hooks/redux';
 
 const PRODUCTS = [
   'FI- Varnish',
@@ -38,9 +42,21 @@ const PRODUCTS = [
   'Toothpaste (1.1% NaF)'
 ];
 
-const PurchaseProductDialog = ({ open, onClose }) => {
+const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
   const dispatch = useDispatch();
   const providers = useSelector(selectProviderDropdownList) || [];
+  const { showSnackbar } = useSnackbar();
+  
+  const { currentPatient } = usePatient();
+  const { selectedAppointment } = useScheduleState();
+
+  const resolvedPatientId = 
+    propPatientId ||
+    currentPatient?._id || 
+    currentPatient?.id || 
+    currentPatient?.PatNum ||
+    (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
+    (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient);
 
   const [rows, setRows] = useState([]);
   
@@ -73,6 +89,36 @@ const PurchaseProductDialog = ({ open, onClose }) => {
 
   const updateRow = (id, field, value) => {
     setRows(rows.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const [buyingRowId, setBuyingRowId] = useState(null);
+
+  const handleBuy = async (row) => {
+    if (!resolvedPatientId) {
+      showSnackbar("Patient ID is missing. Cannot purchase.", "error");
+      return;
+    }
+    try {
+      setBuyingRowId(row.id);
+      const unitPrice = getPrice(row.product);
+      const parsedQuantity = parseInt(row.quantity, 10) || 0;
+      
+      const payload = {
+        productName: row.product,
+        providerName: row.provider,
+        quantity: parsedQuantity,
+        price: unitPrice
+      };
+      
+      await patientService.purchaseProducts(resolvedPatientId, [payload]);
+      showSnackbar(`Successfully purchased ${row.product}`, "success");
+      updateRow(row.id, 'isBought', true);
+    } catch (error) {
+      console.error("Error purchasing product:", error);
+      showSnackbar(error.response?.data?.message || "Failed to purchase product", "error");
+    } finally {
+      setBuyingRowId(null);
+    }
   };
 
   return (
@@ -266,17 +312,19 @@ const PurchaseProductDialog = ({ open, onClose }) => {
                           ) : (
                             <Button 
                               variant="contained"
-                              onClick={() => updateRow(row.id, 'isBought', true)}
+                              onClick={() => handleBuy(row)}
+                              disabled={buyingRowId === row.id || !row.product || !row.provider || !row.quantity}
                               sx={{ 
                                 backgroundColor: '#cda87c', 
                                 color: COLORS.WHITE,
                                 textTransform: 'none',
                                 minWidth: '60px',
                                 boxShadow: 'none',
-                                '&:hover': { backgroundColor: '#b89467', boxShadow: 'none' }
+                                '&:hover': { backgroundColor: '#b89467', boxShadow: 'none' },
+                                '&:disabled': { backgroundColor: '#e2e8f0', color: '#94a3b8' }
                               }}
                             >
-                              buy
+                              {buyingRowId === row.id ? '...' : 'buy'}
                             </Button>
                           )
                         ) : null}

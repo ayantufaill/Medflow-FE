@@ -43,6 +43,7 @@ const AddCoveragePage = () => {
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
   const { create: createInsurance, update: updateInsurance } = usePatientInsurance(patientId);
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(!insuranceId);
 
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
@@ -599,9 +600,35 @@ const AddCoveragePage = () => {
 
       <Box sx={{ display: 'flex', gap: '8px', p: 1.5, maxWidth: '1857px', margin: '0 auto' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: 0 }}>
-          <AddCoverageHeader onSave={handleSave} onCancel={handleCancel} loading={loading || saving} />
+          <AddCoverageHeader
+            isEditing={isEditing}
+            onEditToggle={() => setIsEditing(true)}
+            showEditButton={Boolean(insuranceId)}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            loading={loading || saving}
+            title={insuranceId ? (isEditing ? "Edit Coverage for Insurance" : "View Coverage for Insurance") : "Add a Coverage for Insurance"}
+          />
 
-          <Box sx={{ display: 'flex', gap: '8px' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '8px',
+              '& .MuiInputBase-root, & .MuiCheckbox-root, & .MuiFormControlLabel-root, & .MuiButton-root:not(.view-btn), & .MuiIconButton-root:not(.view-btn)': {
+                pointerEvents: isEditing ? 'auto' : 'none',
+              },
+              '& .MuiInputBase-root': {
+                backgroundColor: isEditing ? undefined : '#f3f4f6 !important',
+                color: isEditing ? undefined : '#6b7280 !important',
+                '& fieldset': {
+                  borderColor: isEditing ? undefined : '#e5e7eb !important'
+                }
+              },
+              '& .MuiCheckbox-root': {
+                color: isEditing ? undefined : '#d1d5db !important'
+              }
+            }}
+          >
             <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <InsuranceInformation
                 formData={{

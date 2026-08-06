@@ -1,15 +1,17 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   Box, IconButton, MenuItem, Select, Table, TableBody,
   TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions }) => {
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, setIsRescheduling }) => {
+  const [isEditing, setIsEditing] = useState(!showExtendedOptions);
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
 
   const handleToggleCheck = useCallback(
@@ -27,6 +29,13 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   const handleDelete = useCallback(
     () => setProcedures((prev) => prev.filter((p) => p.id !== row.id)),
     [row.id, setProcedures],
+  );
+  const handleToggleCompleted = useCallback(
+    () => {
+      setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, completed: !p.completed } : p));
+      if (setIsRescheduling) setIsRescheduling(true);
+    },
+    [row.id, setProcedures, setIsRescheduling],
   );
 
   const parseCharge = (v) => {
@@ -48,50 +57,73 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
       </TableCell>
       {/* Site column — always shown */}
       <TableCell sx={cellSx}>
-        <TextField
-          size="small"
-          value={row.site || ""}
-          onChange={handleSiteChange}
-          placeholder="—"
-          disabled={row.treatArea === "MOUTH"}
-          sx={{
-            width: "100%",
-            "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", px: "8px" },
-            "& .MuiInputBase-input::placeholder": { color: "#374151", opacity: 1 },
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "6px",
-              backgroundColor: row.treatArea === "MOUTH" ? "#f1f5f9" : "transparent",
-            },
-            "& .Mui-disabled": { WebkitTextFillColor: "#9aa3ae" },
-          }}
-        />
+        {isEditing ? (
+          <TextField
+            size="small"
+            value={row.site || ""}
+            onChange={handleSiteChange}
+            placeholder="—"
+            disabled={row.treatArea === "MOUTH"}
+            sx={{
+              width: "100%",
+              "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "5px", px: "8px" },
+              "& .MuiInputBase-input::placeholder": { color: "#374151", opacity: 1 },
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "6px",
+                backgroundColor: row.treatArea === "MOUTH" ? "#f1f5f9" : "transparent",
+              },
+              "& .Mui-disabled": { WebkitTextFillColor: "#9aa3ae" },
+            }}
+          />
+        ) : (
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>
+            {row.site || "—"}
+          </Typography>
+        )}
       </TableCell>
       <TableCell sx={cellSx}>
-        <Select
-          size="small"
-          value={row.treatment}
-          MenuProps={{ sx: { zIndex: 1400 } }}
-          sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
-        >
-          <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
-        </Select>
+        {isEditing ? (
+          <Select
+            size="small"
+            value={row.treatment}
+            MenuProps={{ sx: { zIndex: 1400 } }}
+            sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
+          >
+            <MenuItem value={row.treatment} sx={{ fontFamily: "Inter", fontSize: "12px" }}>{row.treatment}</MenuItem>
+          </Select>
+        ) : (
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>
+            {row.treatment || "—"}
+          </Typography>
+        )}
       </TableCell>
       <TableCell sx={cellSx}>
-        <Select
-          size="small"
-          displayEmpty
-          value={row.provider}
-          onChange={handleProviderChange}
-          MenuProps={{ sx: { zIndex: 1400 } }}
-          sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
-        >
-          <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
-          {providers.map((p) => (
-            <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
-              {providerLabel(p)}
-            </MenuItem>
-          ))}
-        </Select>
+        {isEditing ? (
+          <Select
+            size="small"
+            displayEmpty
+            value={row.provider || ""}
+            onChange={handleProviderChange}
+            MenuProps={{ sx: { zIndex: 1400 } }}
+            sx={{ fontFamily: "Inter", fontSize: "12px", height: "32px", width: "100%", borderRadius: "6px", "& .MuiSelect-select": { py: "5px" } }}
+          >
+            <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
+            {providers.map((p) => (
+              <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
+                {providerLabel(p)}
+              </MenuItem>
+            ))}
+          </Select>
+        ) : (
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151" }}>
+            {row.provider 
+              ? (() => {
+                  const p = providers.find((prov) => String(prov._id || prov.id) === String(row.provider));
+                  return p ? providerLabel(p) : "—";
+                })()
+              : "—"}
+          </Typography>
+        )}
       </TableCell>
 
       {/* Extended columns: Pt Part + Total Charge + status icons */}
@@ -104,10 +136,20 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
             {fmt(totalCharge)}
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
-            <CheckCircleIcon sx={{ fontSize: "18px", color: "#22c55e" }} />
+            <Box onClick={handleToggleCompleted} sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {row.completed ? (
+                <CheckCircleIcon sx={{ fontSize: "18px", color: "#4ade80" }} />
+              ) : (
+                <CheckCircleOutlineIcon sx={{ fontSize: "18px", color: "#d1d5db" }} />
+              )}
+            </Box>
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
-            <IconButton size="small" sx={{ p: "2px", color: "#9aa3ae" }}>
+            <IconButton 
+              size="small" 
+              onClick={() => setIsEditing(!isEditing)} 
+              sx={{ p: "2px", color: isEditing ? "#2262ef" : "#9aa3ae", backgroundColor: isEditing ? "#eef2ff" : "transparent" }}
+            >
               <SettingsOutlinedIcon sx={{ fontSize: "16px" }} />
             </IconButton>
           </TableCell>
@@ -124,7 +166,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
 });
 
-const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions }) => {
+const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, setIsRescheduling }) => {
   const baseHeaders = [
     { label: "PROCEDURE", width: showExtendedOptions ? "72px" : "88px" },
     { label: "SITE",      width: "18%"  },
@@ -140,7 +182,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
   const allHeaders = [...baseHeaders, ...extendedHeaders];
 
   return (
-    <Box sx={{ mb: "16px" }}>
+    <Box sx={{ mb: "16px", pointerEvents: "auto" }}>
       <Label sx={{ mb: "8px" }}>New procedures</Label>
       <Box sx={{ border: "1px solid #e0e5eb", borderRadius: "8px", overflow: "hidden" }}>
         <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
@@ -164,6 +206,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
                 providers={providers}
                 setProcedures={setProcedures}
                 showExtendedOptions={showExtendedOptions}
+                setIsRescheduling={setIsRescheduling}
               />
             ))}
             {procedures.length === 0 && (
@@ -187,7 +230,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
               const fmt = (v) => `$${Number(v).toFixed(2)}`;
               return (
                 <TableRow sx={{ backgroundColor: "#f8fafc" }}>
-                  <TableCell colSpan={4} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
+                  <TableCell colSpan={5} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
                   <TableCell sx={{ borderTop: "1px solid #e0e5eb", border: "none", fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", textAlign: "right" }}>
                     {fmt(totalPt)}
                   </TableCell>

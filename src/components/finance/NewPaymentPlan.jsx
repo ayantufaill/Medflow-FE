@@ -115,7 +115,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
         const data = await invoiceService.getInvoicesByPatient(patientId);
         const list = data.invoices || [];
         setInvoices(list);
-        setSelectedInvoiceIds(list.map(inv => inv.id));
+        setSelectedInvoiceIds(list.map(inv => inv.id || inv._id));
       } catch (err) {
         console.error('Error fetching invoices for payment plan:', err);
       } finally {
@@ -321,7 +321,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
         {/* Calculation summary */}
         {(() => {
           const totalSelectedBalance = planItems
-            .filter(item => selectedInvoiceIds.includes(item.id))
+            .filter(item => selectedInvoiceIds.includes(item.id || item._id))
             .reduce((sum, item) => sum + (item.balanceDue || 0), 0);
           const numDownPayment = parseFloat(downPayment) || 0;
           const numExcludeAmount = parseFloat(excludeAmount) || 0;
@@ -363,7 +363,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
             variant="contained"
             onClick={() => {
               const totalSelectedBalance = planItems
-                .filter(item => selectedInvoiceIds.includes(item.id))
+                .filter(item => selectedInvoiceIds.includes(item.id || item._id))
                 .reduce((sum, item) => sum + (item.balanceDue || 0), 0);
               const numDownPayment = parseFloat(downPayment) || 0;
               const numExcludeAmount = parseFloat(excludeAmount) || 0;

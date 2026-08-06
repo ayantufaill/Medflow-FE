@@ -88,7 +88,34 @@ const InsuranceCarrierSetting = ({ register, control, watch, setValue }) => {
          {carriers.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 3 }}>
             {carriers.map((c) => (
-              <Chip key={c} label={c} size="small" onDelete={() => setCarriers((prev) => prev.filter((x) => x !== c))} />
+              <Chip
+                key={c}
+                label={c}
+                size="small"
+                onDelete={() => setCarriers((prev) => prev.filter((x) => x !== c))}
+                sx={{
+                  backgroundColor: 'rgba(35, 98, 239, 0.08)',
+                  border: '1.2px solid #2362EF',
+                  color: '#2362EF',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  borderRadius: '16px',
+                  height: '28px',
+                  '& .MuiChip-label': {
+                    color: '#2362EF',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    px: 1,
+                  },
+                  '& .MuiChip-deleteIcon': {
+                    color: '#2362EF',
+                    fontSize: '16px',
+                    '&:hover': {
+                      color: '#1a50cc',
+                    },
+                  },
+                }}
+              />
             ))}
           </Box>
         )}

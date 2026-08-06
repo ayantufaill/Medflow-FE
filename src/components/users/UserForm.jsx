@@ -5,7 +5,6 @@ import {
   Grid,
   TextField,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   FormHelperText,
@@ -13,8 +12,8 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
-  FormControlLabel,
   Switch,
+  Typography,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -25,6 +24,33 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { userValidations } from "../../validations/userValidations";
 import { useRoles } from "../../hooks/queries/useRoles";
+
+const inputFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    height: '40px',
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '13px',
+    '& fieldset': { borderWidth: '1px', borderColor: '#e2e8f0' },
+    '&:hover fieldset': { borderColor: '#94a3b8' },
+    '&.Mui-focused fieldset': { borderColor: '#1d4ed8', borderWidth: '1.5px' },
+    '&.Mui-error fieldset': { borderColor: '#ef4444' },
+    '&.Mui-disabled': { backgroundColor: '#f8fafc', opacity: 0.75 },
+  },
+  '& .MuiOutlinedInput-input': { padding: '9px 12px', fontSize: '13px', color: '#0f172a', height: 'auto' },
+  '& .MuiOutlinedInput-input::placeholder': { color: '#94a3b8', opacity: 1 },
+  '& .MuiFormHelperText-root': { fontFamily: 'Inter, sans-serif', fontSize: '11px', mt: '4px', mx: 0 },
+};
+
+const fieldLabelSx = {
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '13px',
+  fontWeight: 600,
+  color: '#475569',
+  mb: '6px',
+  display: 'block',
+};
 
 const UserForm = ({
   onSubmit,
@@ -109,37 +135,44 @@ const UserForm = ({
       id={formId}
       onSubmit={handleSubmit(handleFormSubmit)}
     >
-      <Grid container spacing={2}>
+      <Grid container spacing={2.5}>
         <Grid size={{xs: 12, sm: 6}}>
+          <Typography sx={fieldLabelSx}>First Name</Typography>
           <TextField
             fullWidth
-            label="First Name"
+            placeholder="Enter first name"
             {...register("firstName", userValidations.firstName)}
             error={!!errors.firstName}
             helperText={errors.firstName?.message}
+            sx={inputFieldSx}
           />
         </Grid>
         <Grid size={{xs: 12, sm: 6}}>
+          <Typography sx={fieldLabelSx}>Last Name</Typography>
           <TextField
             fullWidth
-            label="Last Name"
+            placeholder="Enter last name"
             {...register("lastName", userValidations.lastName)}
             error={!!errors.lastName}
             helperText={errors.lastName?.message}
+            sx={inputFieldSx}
           />
         </Grid>
         <Grid size={{xs: 12, sm: 6}}>
+          <Typography sx={fieldLabelSx}>Email Address</Typography>
           <TextField
             fullWidth
-            label="Email"
+            placeholder="Enter email address"
             type="email"
             {...register("email", userValidations.email)}
             error={!!errors.email}
             helperText={errors.email?.message}
             disabled={disableEmail}
+            sx={inputFieldSx}
           />
         </Grid>
         <Grid size={{xs: 12, sm: 6}}>
+          <Typography sx={fieldLabelSx}>Phone Number</Typography>
           <Controller
             name="phone"
             control={control}
@@ -166,14 +199,19 @@ const UserForm = ({
                     width: "100%",
                     "& .react-tel-input": {
                       width: "100% !important",
+                      fontFamily: "Inter, sans-serif !important",
                     },
                     "& .form-control": {
                       width: "100% !important",
+                    },
+                    "& .special-label": {
+                      display: "none !important",
                     },
                   }}
                 >
                   <PhoneInput
                     {...field}
+                    specialLabel={""}
                     country={"us"}
                     enableSearch={true}
                     disableSearchIcon={false}
@@ -185,15 +223,32 @@ const UserForm = ({
                     value={field.value || ""}
                     inputStyle={{
                       width: "100%",
-                      borderColor: errors.phone ? "#d32f2f" : undefined,
+                      height: "40px",
+                      borderRadius: "8px",
+                      border: `1px solid ${errors.phone ? "#ef4444" : "#e2e8f0"}`,
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "13px",
+                      color: "#0f172a",
+                      backgroundColor: "#ffffff",
                     }}
                     buttonStyle={{
-                      borderColor: errors.phone ? "#d32f2f" : undefined,
+                      borderTopLeftRadius: "8px",
+                      borderBottomLeftRadius: "8px",
+                      border: `1px solid ${errors.phone ? "#ef4444" : "#e2e8f0"}`,
+                      borderRight: "none",
+                      backgroundColor: "#f8fafc",
+                    }}
+                    dropdownStyle={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "13px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
                     }}
                   />
                 </Box>
                 {errors.phone && (
-                  <FormHelperText error sx={{ mt: 0.5, mx: 1.75 }}>
+                  <FormHelperText error sx={{ mt: "4px", mx: 0, fontFamily: "Inter, sans-serif", fontSize: "11px" }}>
                     {errors.phone.message}
                   </FormHelperText>
                 )}
@@ -202,29 +257,42 @@ const UserForm = ({
           />
         </Grid>
         {isEditMode && (
-          <Grid size={{xs: 12, sm: 6}} sx={{ display: "flex", alignItems: "center", pl: 1 }}>
-            <Controller
-              name="isActive"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={field.value}
-                      onChange={(e) => field.onChange(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="User Active Status"
-                />
-              )}
-            />
+          <Grid size={{xs: 12, sm: 6}}>
+            <Box sx={{
+              height: "40px",
+              mt: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              px: "16px",
+              bgcolor: "#f8fafc",
+              borderRadius: "8px",
+              border: "1px solid #e2e8f0",
+            }}>
+              <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "13px", fontWeight: 600, color: "#0f172a" }}>
+                Account Active Status
+              </Typography>
+              <Controller
+                name="isActive"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    sx={{
+                      "& .MuiSwitch-switchBase.Mui-checked": { color: "#1d4ed8" },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#1d4ed8" },
+                    }}
+                  />
+                )}
+              />
+            </Box>
           </Grid>
         )}
         {!isEditMode && !hideRoleSelection && (
           <Grid size={{xs: 12, sm: 6}}>
+            <Typography sx={fieldLabelSx}>Select Role</Typography>
             <FormControl fullWidth>
-              <InputLabel>Select Role</InputLabel>
               <Controller
                 name="roleId"
                 control={control}
@@ -233,10 +301,39 @@ const UserForm = ({
                     {...field}
                     value={field.value || ""}
                     onChange={(e) => field.onChange(e.target.value)}
-                    label="Select Role"
+                    displayEmpty
+                    sx={{
+                      height: "40px",
+                      borderRadius: "8px",
+                      backgroundColor: "#ffffff",
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: "13px",
+                      color: field.value ? "#0f172a" : "#94a3b8",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e2e8f0" },
+                      "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#94a3b8" },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#1d4ed8", borderWidth: "1.5px" },
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          mt: "4px",
+                          borderRadius: "8px",
+                          border: "1px solid #e2e8f0",
+                          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                          "& .MuiMenuItem-root": {
+                            fontFamily: "Inter, sans-serif",
+                            fontSize: "13px",
+                            color: "#0f172a",
+                            py: "10px",
+                            "&:hover": { bgcolor: "#f8fafc" },
+                            "&.Mui-selected": { bgcolor: "#eff6ff", color: "#1d4ed8", fontWeight: 600 },
+                          },
+                        },
+                      },
+                    }}
                   >
                     <MenuItem value="">
-                      <em>--None--</em>
+                      <em style={{ color: "#94a3b8", fontStyle: "normal" }}>-- Select Role --</em>
                     </MenuItem>
                     {roles.map((role) => (
                       <MenuItem
@@ -255,13 +352,15 @@ const UserForm = ({
         {!isEditMode && !hidePassword && (
           <>
             <Grid size={{xs: 12, sm: 6}}>
+              <Typography sx={fieldLabelSx}>Password</Typography>
               <TextField
                 fullWidth
-                label="Password"
+                placeholder="Enter password"
                 type={showPassword ? "text" : "password"}
                 {...register("password", userValidations.password)}
                 error={!!errors.password}
                 helperText={errors.password?.message}
+                sx={inputFieldSx}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -270,8 +369,10 @@ const UserForm = ({
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         tabIndex={-1}
+                        size="small"
+                        sx={{ color: "#64748b", mr: "2px" }}
                       >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showPassword ? <VisibilityOff sx={{ fontSize: "18px" }} /> : <Visibility sx={{ fontSize: "18px" }} />}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -279,9 +380,10 @@ const UserForm = ({
               />
             </Grid>
             <Grid size={{xs: 12, sm: 6}}>
+              <Typography sx={fieldLabelSx}>Confirm Password</Typography>
               <TextField
                 fullWidth
-                label="Confirm Password"
+                placeholder="Re-enter password"
                 type={showConfirmPassword ? "text" : "password"}
                 {...register(
                   "confirmPassword",
@@ -289,6 +391,7 @@ const UserForm = ({
                 )}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword?.message}
+                sx={inputFieldSx}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -299,42 +402,53 @@ const UserForm = ({
                         }
                         edge="end"
                         tabIndex={-1}
+                        size="small"
+                        sx={{ color: "#64748b", mr: "2px" }}
                       >
-                        {showConfirmPassword ? (
-                          <VisibilityOff />
-                        ) : (
-                          <Visibility />
-                        )}
+                        {showConfirmPassword ? <VisibilityOff sx={{ fontSize: "18px" }} /> : <Visibility sx={{ fontSize: "18px" }} />}
                       </IconButton>
                     </InputAdornment>
                   ),
-                }}
-              />
+                  }}
+                />
             </Grid>
           </>
         )}
         {!hideButtons && (
           <Grid size={12}>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "12px", pt: "8px" }}>
               <Button
                 type="button"
                 variant="outlined"
                 onClick={handleBack}
                 disabled={loading}
+                sx={{
+                  textTransform: "none", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px",
+                  borderColor: "#cbd5e1", color: "#0f172a", borderRadius: "6px",
+                  px: "16px", height: "36px",
+                  "&:hover": { bgcolor: "#f8fafc", borderColor: "#cbd5e1" },
+                }}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="contained"
+                disableElevation
                 startIcon={
                   loading ? (
-                    <CircularProgress size={20} color="inherit" />
+                    <CircularProgress size={16} color="inherit" />
                   ) : (
-                    <SaveIcon />
+                    <SaveIcon sx={{ fontSize: "17px !important" }} />
                   )
                 }
                 disabled={loading}
+                sx={{
+                  textTransform: "none", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "13px",
+                  bgcolor: "#1d4ed8", color: "#ffffff", borderRadius: "6px",
+                  px: "24px", height: "36px",
+                  "&:hover": { bgcolor: "#1e40af" },
+                }}
               >
                 {loading
                   ? "Saving..."

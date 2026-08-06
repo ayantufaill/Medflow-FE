@@ -39,11 +39,14 @@ const ProviderTimesCard = ({ providerRows, setProviderRows, providers, error }) 
             }}
           >
             <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>— Select —</MenuItem>
-            {providers.map((p) => (
-              <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
-                {providerLabel(p)}
-              </MenuItem>
-            ))}
+            {providers.map((p) => {
+              const providerId = String(p.ProvNum || p.providerId || p._id || p.id);
+              return (
+                <MenuItem key={providerId} value={providerId} sx={{ fontFamily: "Inter", fontSize: "12px" }}>
+                  {providerLabel(p)}
+                </MenuItem>
+              );
+            })}
           </Select>
 
           <TextField
