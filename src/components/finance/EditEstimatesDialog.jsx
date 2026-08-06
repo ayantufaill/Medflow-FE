@@ -88,6 +88,8 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
         await invoiceService.updateInvoiceItem(invoiceId, itemId, updates);
       }
 
+      await invoiceService.recalculateInvoice(invoiceId);
+      window.dispatchEvent(new CustomEvent('refresh-ledger'));
       onClose(); // Close on success
     } catch (err) {
       console.error('Error saving invoice items:', err);
@@ -126,7 +128,7 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
         }}
       >
         <EditNoteOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Edit invoice #{invoice?.invoiceNumber || invoiceId}
         </Typography>
         {onClose && (

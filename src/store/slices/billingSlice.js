@@ -437,6 +437,21 @@ export const voidTransaction = createAsyncThunk(
     }
   }
 );
+/**
+ * Transfer outstanding insurance balance to the patient.
+ */
+export const transferOutstandingToPatient = createAsyncThunk(
+  'billing/transferOutstandingToPatient',
+  async ({ invoiceId, procedureId, patientId }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post(`/invoices/${invoiceId}/items/${procedureId}/transfer-outstanding`);
+      await dispatch(fetchLedgerItems(patientId));
+      return { procedureId, invoiceId };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to transfer outstanding balance to patient');
+    }
+  }
+);
 
 /**
  * Apply a courtesy credit adjustment for a procedure.

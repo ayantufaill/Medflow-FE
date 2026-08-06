@@ -40,7 +40,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
         }}
       >
         <DescriptionOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Insurance Write-Off invoice #24635
         </Typography>
         {onClose && (
@@ -53,7 +53,7 @@ const InsuranceWriteOffDialog = ({ onClose }) => {
       <DialogContent sx={{ px: '24px', py: '24px', pt: '24px !important' }}>
         {/* Main Input Row */}
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold, fontSize: '13px' }}>
+          <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
             04/15/2026
           </Typography>
           

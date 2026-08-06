@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -14,13 +15,18 @@ import {
   TextField,
   Chip,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { KeyboardArrowDown } from '@mui/icons-material';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import CloseIcon from '@mui/icons-material/Close';
 import EditEstimatesDialog from './EditEstimatesDialog';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { invoiceService } from '../../services/invoice.service';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
 
 const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const [showEstimates, setShowEstimates] = useState(false);
@@ -30,6 +36,13 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [items, setItems] = useState([]);
   const [selectedItemIds, setSelectedItemIds] = useState([]);
+
+  const dispatch = useDispatch();
+  const providersList = useSelector(selectProviderDropdownList);
+
+  useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+  }, [dispatch]);
 
   useEffect(() => {
     if (invoiceId) {
@@ -113,10 +126,6 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
         if (!itemId) continue;
 
         const updates = {
-          date: item.editDate || undefined,
-          cptCode: item.editCptCode || undefined,
-          site: item.editSite || undefined,
-          description: item.editDescription || undefined,
           provider: item.editProvider || undefined,
           unitPrice: Number(item.editTotalCharge) || 0,
           dbi: item.editDbi
@@ -125,6 +134,8 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
         await invoiceService.updateInvoiceItem(invoiceId, itemId, updates);
       }
 
+      await invoiceService.recalculateInvoice(invoiceId);
+      window.dispatchEvent(new CustomEvent('refresh-ledger'));
       onClose();
     } catch (err) {
       console.error('Error saving invoice details:', err);
@@ -133,42 +144,124 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
     }
   };
 
+  const ProviderDropdown = ({ value, onChange }) => {
+    return (
+      <Select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        displayEmpty
+        variant="outlined"
+        size="small"
+        MenuProps={{ 
+          style: { zIndex: 150000 }, 
+          sx: { zIndex: 150000 },
+          anchorOrigin: { vertical: "bottom", horizontal: "left" },
+          transformOrigin: { vertical: "top", horizontal: "left" }
+        }}
+        renderValue={(selected) => {
+          if (!selected) return "Sel";
+          return selected.substring(0, 2).toUpperCase();
+        }}
+        sx={{
+          bgcolor: "white",
+          color: COLORS.TEXT_PRIMARY,
+          borderRadius: "4px",
+          fontSize: "12px",
+          width: "70px",
+          "& .MuiSelect-select": {
+            py: 0.5,
+            px: 1,
+            display: "flex",
+            alignItems: "center",
+          },
+          "& .MuiSvgIcon-root": {
+            color: COLORS.TEXT_SECONDARY,
+            fontSize: "16px",
+          },
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.BORDER,
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: '#9ca3af',
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.ACCENT,
+          }
+        }}
+      >
+        <MenuItem value="" disabled sx={{ fontSize: "12px" }}>
+          <em>Select Provider</em>
+        </MenuItem>
+        {providersList.map((p) => {
+          const firstName = p.userId?.firstName || p.firstName || "";
+          const lastName = p.userId?.lastName || p.lastName || "";
+          const name =
+            `${firstName} ${lastName}`.trim() ||
+            p.name ||
+            `Provider ${p._id || p.id}`;
+          return (
+            <MenuItem
+              key={p._id || p.id}
+              value={name}
+              sx={{ fontSize: "12px" }}
+            >
+              {name}
+            </MenuItem>
+          );
+        })}
+      </Select>
+    );
+  };
+
   return (
     <Box sx={{ width: '1000px', bgcolor: '#fff', borderRadius: radius.md, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: COLORS.SURFACE_TINT, borderBottom: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-        <Typography variant="subtitle1" sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semiBold, fontSize: '15px' }}>
+      <Box 
+        sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <ReceiptIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Edit invoice #{invoiceId}
         </Typography>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
       </Box>
 
       {/* Content */}
       <Box sx={{ p: '24px', flex: 1, overflowY: 'auto' }}>
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <Button 
-            variant="contained" 
+            variant="outlined" 
+            size="small"
             onClick={() => setShowEstimates(true)}
             sx={{ 
-              bgcolor: COLORS.ACCENT, 
-              color: COLORS.WHITE, 
-              textTransform: 'none', 
-              px: 2, 
-              height: '32px',
-              fontSize: '13px',
-              fontWeight: fontWeight.medium,
-              boxShadow: 'none',
-              borderRadius: radius.sm,
-              '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #f97316", color: "#f97316",
+              px: "16px", py: "4px", bgcolor: 'white',
+              "&:hover": { borderColor: "#ea6c00", backgroundColor: "#fff7ed" }
             }}
           >
-            Edit Estimates
+            Re-estimate
           </Button>
         </Stack>
 
-        <TableContainer sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: '6px', overflow: 'hidden' }}>
+        <TableContainer sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.sm }}>
           <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: COLORS.SURFACE_TINT, '& th': { borderBottom: `1px solid ${COLORS.BORDER}`, py: 1.5, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '13px', whiteSpace: 'nowrap' } }}>
+            <TableHead sx={{ bgcolor: COLORS.SURFACE_TINT }}>
+              <TableRow sx={{ '& th': { borderBottom: `1px solid ${COLORS.BORDER}`, py: 1.5, color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.semiBold, fontSize: '12px' } }}>
                 <TableCell padding="checkbox">
                   <Checkbox 
                     size="small" 
@@ -211,7 +304,7 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                   const isSelected = selectedItemIds.includes(id);
 
                   return (
-                    <TableRow key={id} sx={{ '& td': { borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.5, fontSize: '13px', color: COLORS.TEXT_PRIMARY }, bgcolor: item.editDbi ? 'rgba(239, 68, 68, 0.05)' : 'inherit' }}>
+                    <TableRow key={id} sx={{ '& td': { borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.5, fontSize: '13px', color: COLORS.TEXT_PRIMARY } }}>
                       <TableCell padding="checkbox">
                         <Checkbox 
                           size="small" 
@@ -220,71 +313,14 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                           sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} 
                         />
                       </TableCell>
+                      <TableCell>{item.editDate || '-'}</TableCell>
+                      <TableCell>{item.editCptCode || '-'}</TableCell>
+                      <TableCell>{item.editSite || '-'}</TableCell>
+                      <TableCell>{item.editDescription || 'Service'}</TableCell>
                       <TableCell>
-                        <TextField 
-                          size="small" 
-                          value={item.editDate} 
-                          onChange={(e) => handleFieldChange(id, 'editDate', e.target.value)}
-                          variant="outlined"
-                          sx={{ 
-                            width: '100px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField 
-                          size="small" 
-                          value={item.editCptCode} 
-                          onChange={(e) => handleFieldChange(id, 'editCptCode', e.target.value)}
-                          variant="outlined"
-                          sx={{ 
-                            width: '80px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField 
-                          size="small" 
-                          value={item.editSite} 
-                          onChange={(e) => handleFieldChange(id, 'editSite', e.target.value)}
-                          variant="outlined"
-                          sx={{ 
-                            width: '70px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField 
-                          size="small" 
-                          value={item.editDescription} 
-                          onChange={(e) => handleFieldChange(id, 'editDescription', e.target.value)}
-                          variant="outlined"
-                          fullWidth
-                          sx={{ 
-                            minWidth: '200px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField 
-                          size="small" 
+                        <ProviderDropdown 
                           value={item.editProvider} 
-                          onChange={(e) => handleFieldChange(id, 'editProvider', e.target.value)}
-                          variant="outlined"
-                          placeholder="e.g. SAB"
-                          sx={{ 
-                            width: '80px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
+                          onChange={(val) => handleFieldChange(id, 'editProvider', val)}
                         />
                       </TableCell>
                       <TableCell align="right">
@@ -331,22 +367,6 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
           </Button>
 
           <Stack direction="row" spacing={1.5}>
-            <Button 
-              variant="outlined" 
-              sx={{ 
-                borderColor: COLORS.ACCENT, 
-                color: COLORS.ACCENT, 
-                textTransform: 'none', 
-                px: 3,
-                height: '36px',
-                fontSize: '13px',
-                fontWeight: fontWeight.medium,
-                borderRadius: radius.sm,
-                '&:hover': { borderColor: COLORS.ACCENT_HOVER, bgcolor: 'rgba(59, 130, 246, 0.04)' }
-              }}
-            >
-              Re-estimate
-            </Button>
             <Button 
               variant="contained"
               onClick={handleSave}
