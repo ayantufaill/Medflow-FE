@@ -64,27 +64,57 @@ export const StandardClaimsTable = ({
   handleOpenPreview = () => {},
   handleDeletePredetermination = () => {},
   handleToggleHide = () => {},
+  dateRange = 'none',
 }) => {
+  let renderList = [];
+  if (dateRange === 'dos') {
+    const buckets = { "0-30 days": [], "31-60 days": [], "61-90 days": [], ">90 days": [], "Unknown": [] };
+    const getAgeBucket = (dateStr) => {
+      if (!dateStr) return "Unknown";
+      const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 3600 * 24));
+      if (days <= 30) return "0-30 days";
+      if (days <= 60) return "31-60 days";
+      if (days <= 90) return "61-90 days";
+      return ">90 days";
+    };
+    filteredClaims.forEach(c => {
+      buckets[getAgeBucket(c.createdDate)].push(c);
+    });
+    ["0-30 days", "31-60 days", "61-90 days", ">90 days", "Unknown"].forEach(b => {
+      if (buckets[b].length > 0) {
+        renderList.push({ type: 'header', label: b });
+        buckets[b].forEach(c => renderList.push({ type: 'claim', claim: c }));
+      }
+    });
+  } else {
+    filteredClaims.forEach(c => renderList.push({ type: 'claim', claim: c }));
+  }
+
   return (
     // STANDARD CLAIMS Data Table
     <TableContainer
       component={Paper}
+      elevation={0}
       sx={{
         boxShadow: "none",
-        border: "1px solid #e0e6ed",
-        borderRadius: "6px",
-        overflow: "hidden",
+        border: "1px solid #e2e8f0",
+        borderRadius: "8px",
+        width: "100%",
+        overflowX: "auto",
       }}
     >
-      <Table size="small">
+      <Table size="small" sx={{ minWidth: 1800 }}>
         <TableHead
           sx={{
-            backgroundColor: "#fafbfe",
+            backgroundColor: "#f8f9fa",
             "& .MuiTableCell-root": {
-              py: 0.8,
-              px: 0.5,
-              fontSize: "0.73rem",
-              lineHeight: 1.2,
+              py: 1,
+              px: 1,
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              borderBottom: "1px solid #e2e8f0",
+              color: 'inherit',
+              whiteSpace: "nowrap",
             },
           }}
         >
@@ -126,7 +156,7 @@ export const StandardClaimsTable = ({
                 <IconButton
                   size="small"
                   onClick={handleSelectAllMenuOpen}
-                  sx={{ p: 0.2, color: "#4a5568", mt: 0.2 }}
+                  sx={{ p: 0.2, color: "#475569", mt: 0.2 }}
                 >
                   <ArrowDropDownIcon sx={{ fontSize: 16 }} />
                 </IconButton>
@@ -168,56 +198,56 @@ export const StandardClaimsTable = ({
                 </MenuItem>
               </Menu>
             </TableCell>
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Patient Name
             </TableCell>
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               {activeTab === 4 ? "Claim # (created date)" : "Claim #"}
             </TableCell>
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Claim Type
             </TableCell>
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               {activeTab === 0 ? "Created Date" : "Sent on"}
             </TableCell>
             {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Printed on
               </TableCell>
             )}
             {activeTab === 4 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Subscriber
               </TableCell>
             )}
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Carrier
             </TableCell>
             {activeTab === 4 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Plan Name (#)
               </TableCell>
             )}
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Procedures
             </TableCell>
             {activeTab === 5 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Treating Provider
               </TableCell>
             )}
             {activeTab !== 0 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Status
               </TableCell>
             )}
             {activeTab === 0 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700, pl: 3 }}>
+              <TableCell sx={{ pl: 3 }}>
                 Alerts
               </TableCell>
             )}
             {(activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 ERA Status
               </TableCell>
             )}
@@ -226,22 +256,22 @@ export const StandardClaimsTable = ({
               activeTab === 3 ||
               activeTab === 4 ||
               activeTab === 5) && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Clearing House Status Message
               </TableCell>
             )}
             {activeTab === 4 && (
-              <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+              <TableCell>
                 Submitted Value
               </TableCell>
             )}
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Notes
             </TableCell>
-            <TableCell sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell>
               Description
             </TableCell>
-            <TableCell align="right" sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+            <TableCell align="right">
               Actions
             </TableCell>
           </TableRow>
@@ -249,10 +279,13 @@ export const StandardClaimsTable = ({
         <TableBody
           sx={{
             "& .MuiTableCell-root": {
-              py: 0.5,
-              px: 0.4,
-              fontSize: "0.73rem",
-              lineHeight: 1.2,
+              py: 1.5,
+              px: 1,
+              fontSize: "0.75rem",
+              verticalAlign: "middle",
+              borderBottom: "1px solid #e2e8f0",
+              color: "#1e293b",
+              whiteSpace: "nowrap",
             },
           }}
         >
@@ -285,7 +318,7 @@ export const StandardClaimsTable = ({
                 >
                   <Typography
                     variant="body2"
-                    sx={{ color: "#718096", fontStyle: "italic" }}
+                    sx={{ color: "#64748b", fontStyle: "italic" }}
                   >
                     No claims found matching the selection criteria.
                   </Typography>
@@ -312,7 +345,17 @@ export const StandardClaimsTable = ({
               </TableCell>
             </TableRow>
           ) : (
-            filteredClaims.map((claim) => {
+            renderList.map((item, index) => {
+              if (item.type === 'header') {
+                return (
+                  <TableRow key={`header-${item.label}`}>
+                    <TableCell colSpan={20} sx={{ backgroundColor: "#f1f5f9", fontWeight: 700, py: 1.5, pl: 2, color: "#1e293b", borderBottom: '1px solid #e2e8f0' }}>
+                      {item.label}
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+              const claim = item.claim;
               const isSelected = !!selectedClaims[claim.id];
               const isExpanded = !!expandedProcedures[claim.id];
               const isError =
@@ -343,15 +386,9 @@ export const StandardClaimsTable = ({
               return (
                 <React.Fragment key={claim.id}>
                   <TableRow
-                    hover
+                    hover={false}
                     sx={{
-                      backgroundColor: isSelected
-                        ? "rgba(26, 58, 107, 0.03)"
-                        : "transparent",
-                      "&:hover": {
-                        backgroundColor: "rgba(26, 58, 107, 0.05) !important",
-                      },
-                      transition: "background-color 0.2s",
+                      ...(isSelected && { backgroundColor: "rgba(59, 130, 246, 0.08)" })
                     }}
                   >
                     {/* Checkbox column */}
@@ -379,7 +416,7 @@ export const StandardClaimsTable = ({
                         <IconButton
                           size="small"
                           onClick={() => toggleProcedures(claim.id)}
-                          sx={{ p: 0.2, color: "#4a5568", mt: 0.2 }}
+                          sx={{ p: 0.2, color: "#475569", mt: 0.2 }}
                         >
                           {isExpanded ? (
                             <ArrowDropDownIcon
@@ -398,15 +435,16 @@ export const StandardClaimsTable = ({
                         sx={{
                           fontWeight: 600,
                           color:
-                            isError && activeTab === 0 ? "#e53e3e" : "#2d3748",
-                          fontSize: "0.74rem",
+                            isError && activeTab === 0 ? "#e53e3e" : "#3b82f6",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
                         }}
                       >
                         {claim.patientName}
                       </Typography>
                       <Typography
                         sx={{
-                          color: "#718096",
+                          color: "#64748b",
                           fontWeight: 400,
                           fontSize: "0.68rem",
                         }}
@@ -417,7 +455,7 @@ export const StandardClaimsTable = ({
                         claim.patientDob && (
                           <Typography
                             sx={{
-                              color: "#718096",
+                              color: "#64748b",
                               mt: 0.2,
                               fontSize: "0.68rem",
                             }}
@@ -432,9 +470,8 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           fontWeight: 600,
-                          color:
-                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
-                          fontSize: "0.72rem",
+                          color: isError && activeTab === 0 ? "#e53e3e" : "#1e293b",
+                          fontSize: "0.75rem",
                           "&:hover": { textDecoration: "underline" },
                         }}
                       >
@@ -445,7 +482,7 @@ export const StandardClaimsTable = ({
                       {activeTab === 4 && claim.createdDate && (
                         <Typography
                           sx={{
-                            color: "#718096",
+                            color: "#64748b",
                             fontStyle: "normal",
                             fontSize: "0.68rem",
                           }}
@@ -460,7 +497,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#e53e3e" : "#718096",
+                            isError && activeTab === 0 ? "#e53e3e" : "#64748b",
                           display: "flex",
                           flexDirection: "column",
                           fontSize: "0.7rem",
@@ -480,7 +517,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
+                            isError && activeTab === 0 ? "#e53e3e" : "#475569",
                         }}
                       >
                         {activeTab === 0 ? claim.createdDate : claim.sentDate}
@@ -492,7 +529,7 @@ export const StandardClaimsTable = ({
                       activeTab === 3 ||
                       activeTab === 4) && (
                       <TableCell>
-                        <Typography sx={{ color: "#4a5568" }}>
+                        <Typography sx={{ color: "#475569" }}>
                           {claim.printedDate || "—"}
                         </Typography>
                       </TableCell>
@@ -501,7 +538,7 @@ export const StandardClaimsTable = ({
                     {/* Subscriber */}
                     {activeTab === 4 && (
                       <TableCell>
-                        <Typography sx={{ color: "#4a5568", fontWeight: 500 }}>
+                        <Typography sx={{ color: "#475569", fontWeight: 500 }}>
                           {claim.subscriber || "—"}
                         </Typography>
                       </TableCell>
@@ -512,7 +549,7 @@ export const StandardClaimsTable = ({
                       <Typography
                         sx={{
                           color:
-                            isError && activeTab === 0 ? "#e53e3e" : "#4a5568",
+                            isError && activeTab === 0 ? "#e53e3e" : "#475569",
                           fontWeight: 500,
                           fontSize: "0.72rem",
                         }}
@@ -526,7 +563,7 @@ export const StandardClaimsTable = ({
                       <TableCell>
                         <Typography
                           sx={{
-                            color: "#4a5568",
+                            color: "#475569",
                             fontStyle: "normal",
                             fontSize: "0.7rem",
                           }}
@@ -571,7 +608,7 @@ export const StandardClaimsTable = ({
                     {/* Treating Provider */}
                     {activeTab === 5 && (
                       <TableCell>
-                        <Typography sx={{ color: "#4a5568", fontWeight: 500 }}>
+                        <Typography sx={{ color: "#475569", fontWeight: 500 }}>
                           {claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() || '—' : "—"}
                         </Typography>
                       </TableCell>
@@ -603,7 +640,7 @@ export const StandardClaimsTable = ({
                                   claim.status === "denied" ||
                                   claim.status === "rejected"
                                     ? "#d93838"
-                                    : "#2d3748",
+                                    : "#1e293b",
                                 "& .MuiSelect-select": { py: 0.5, pr: 2 },
                               }}
                             >
@@ -661,7 +698,7 @@ export const StandardClaimsTable = ({
                           <Typography
                             sx={{
                               fontWeight: 500,
-                              color: "#2d3748",
+                              color: "#1e293b",
                               fontSize: "0.72rem",
                             }}
                           >
@@ -715,7 +752,7 @@ export const StandardClaimsTable = ({
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography sx={{ color: "#718096" }}>—</Typography>
+                          <Typography sx={{ color: "#64748b" }}>—</Typography>
                         )}
                       </TableCell>
                     )}
@@ -727,7 +764,7 @@ export const StandardClaimsTable = ({
                       <TableCell>
                         <Typography
                           sx={{
-                            color: claim.eraStatus ? "#d93838" : "#718096",
+                            color: claim.eraStatus ? "#d93838" : "#64748b",
                             fontWeight: 600,
                             fontSize: "0.72rem",
                           }}
@@ -749,7 +786,7 @@ export const StandardClaimsTable = ({
                         <Typography
                           noWrap={!isExpanded && !expandAllMessages}
                           sx={{
-                            color: "#2d3748",
+                            color: "#1e293b",
                             fontWeight: 500,
                             whiteSpace:
                               isExpanded || expandAllMessages
@@ -826,7 +863,7 @@ export const StandardClaimsTable = ({
                             >
                               <Typography
                                 sx={{
-                                  color: "#4a5568",
+                                  color: "#475569",
                                   fontStyle: "italic",
                                   fontSize: "0.72rem",
                                 }}
@@ -836,7 +873,7 @@ export const StandardClaimsTable = ({
                               {longDesc && (
                                 <Typography
                                   sx={{
-                                    color: "#2d3748",
+                                    color: "#1e293b",
                                     whiteSpace: "normal",
                                     wordBreak: "break-word",
                                     lineHeight: 1.3,
@@ -862,7 +899,7 @@ export const StandardClaimsTable = ({
                           <Typography
                             noWrap
                             sx={{
-                              color: "#4a5568",
+                              color: "#475569",
                               fontStyle: "italic",
                               cursor: "pointer",
                             }}

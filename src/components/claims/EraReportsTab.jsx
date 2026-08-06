@@ -68,17 +68,20 @@ const EraReportsTab = () => {
   return (
     <Box>
       <Paper
+        elevation={0}
         sx={{
-          p: 2,
-          mb: 2,
+          p: 1.5,
+          mb: 1.5,
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 1.5,
           backgroundColor: '#ffffff',
           borderRadius: '8px',
           boxShadow: 'none',
-          border: '1px solid #e0e6ed',
-          flexWrap: 'wrap',
+          border: '1px solid #e2e8f0',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          minWidth: 0,
         }}
       >
         {/* ERA Sub-tabs */}
@@ -93,8 +96,8 @@ const EraReportsTab = () => {
               py: 0.5,
               borderRadius: '4px',
               color: activeEraTab === 'active' ? '#ffffff' : '#64748b',
-              backgroundColor: activeEraTab === 'active' ? '#1a3a6b' : 'transparent',
-              '&:hover': { backgroundColor: activeEraTab === 'active' ? '#1a3a6b' : 'rgba(0,0,0,0.05)' },
+              backgroundColor: activeEraTab === 'active' ? '#3b82f6' : 'transparent',
+              '&:hover': { backgroundColor: activeEraTab === 'active' ? '#3b82f6' : 'rgba(0,0,0,0.05)' },
             }}
           >
             Active ({counts.active})
@@ -109,8 +112,8 @@ const EraReportsTab = () => {
               py: 0.5,
               borderRadius: '4px',
               color: activeEraTab === 'voided' ? '#ffffff' : '#64748b',
-              backgroundColor: activeEraTab === 'voided' ? '#1a3a6b' : 'transparent',
-              '&:hover': { backgroundColor: activeEraTab === 'voided' ? '#1a3a6b' : 'rgba(0,0,0,0.05)' },
+              backgroundColor: activeEraTab === 'voided' ? '#3b82f6' : 'transparent',
+              '&:hover': { backgroundColor: activeEraTab === 'voided' ? '#3b82f6' : 'rgba(0,0,0,0.05)' },
             }}
           >
             Voided ({counts.voided})
@@ -120,10 +123,10 @@ const EraReportsTab = () => {
         {/* Filter Button */}
         <Button
           variant="outlined"
-          startIcon={<FilterIcon sx={{ color: '#1a3a6b' }} />}
+          startIcon={<FilterIcon sx={{ color: '#3b82f6' }} />}
           sx={{
             textTransform: 'none',
-            color: '#1a3a6b',
+            color: '#3b82f6',
             borderColor: '#e2e8f0',
             fontWeight: 600,
             fontSize: '0.85rem',
@@ -148,7 +151,16 @@ const EraReportsTab = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ '& .MuiOutlinedInput-root': { backgroundColor: '#ffffff', fontSize: '0.85rem' } }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                '& fieldset': { borderColor: '#e2e8f0' },
+                '&:hover fieldset': { borderColor: '#cbd5e1' },
+                '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+              },
+            }}
           />
         </Box>
 
@@ -156,13 +168,15 @@ const EraReportsTab = () => {
           onClick={loadData}
           sx={{
             textTransform: 'none',
-            fontSize: '0.8rem',
+            fontSize: '0.85rem',
             fontWeight: 600,
-            color: '#1a3a6b',
-            padding: '4px 8px',
-            minWidth: 'auto',
-            gap: 0.5,
-            '&:hover': { background: 'none', textDecoration: 'underline' },
+            color: '#64748b',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            gap: 1,
+            '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
           }}
         >
           <Box component="img" src={refreshIcon} alt="refresh" sx={{ width: 14, height: 14 }} />
@@ -171,30 +185,22 @@ const EraReportsTab = () => {
       </Paper>
 
       {/* ERA REPORTS Table */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          boxShadow: 'none',
-          border: '1px solid #e0e6ed',
-          borderRadius: '6px',
-          overflow: 'auto',
-        }}
-      >
-        <Table>
-          <TableHead sx={{ backgroundColor: '#fafbfe' }}>
+      <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth: 1600 }}>
+          <TableHead sx={{ backgroundColor: "#f8f9fa", "& .MuiTableCell-root": { py: 1, px: 1, fontSize: "0.7rem", fontWeight: 700, borderBottom: "1px solid #e2e8f0", color: "inherit", whiteSpace: "nowrap" } }}>
             <TableRow>
               {['PATIENT ID', 'PATIENT NAME', 'CLAIM #', 'CARRIER', 'STATUS', 'AMOUNT SUBMITTED', 'AMOUNT PAID', 'PATIENT RESPONSIBILITY', 'WRITE OFF', 'DATE RECEIVED', 'PAYMENT TYPE'].map((head) => (
-                <TableCell key={head} sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>
+                <TableCell key={head} >
                   {head}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
-          <TableBody>
+          <TableBody sx={{ "& .MuiTableCell-root": { py: 1.5, px: 1, fontSize: "0.75rem", verticalAlign: "middle", borderBottom: "1px solid #e2e8f0", color: "#1e293b", whiteSpace: "nowrap" } }}>
             {filteredReports.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                  <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
+                  <Typography variant="body2" sx={{ color: '#64748b', fontStyle: 'italic' }}>
                     No ERA reports found matching the selection criteria.
                   </Typography>
                 </TableCell>
@@ -204,18 +210,18 @@ const EraReportsTab = () => {
                 const isVoided = era.status === 'Voided';
                 const isDenial = era.status === 'Denial';
                 return (
-                  <TableRow key={era.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' }, transition: 'background-color 0.2s' }}>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>{era.patientId}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a3a6b' }}>{era.patientName}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 600 }}>{era.claimNumber}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{era.carrier}</Typography></TableCell>
+                  <TableRow key={era.id} hover={false}>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>{era.patientId}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#3b82f6' }}>{era.patientName}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>{era.claimNumber}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>{era.carrier}</Typography></TableCell>
                     <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: isVoided ? '#e53e3e' : isDenial ? '#dd6b20' : '#319795' }}>{era.status}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 600 }}>${(era.amountSubmitted || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1a3a6b', fontWeight: 700 }}>${(era.amountPaid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>${(era.patientResponsibility || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#718096' }}>${(era.writeOff || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{era.dateReceived}</Typography></TableCell>
-                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#4a5568', fontWeight: 500 }}>{era.paymentType}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>${(era.amountSubmitted || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 700 }}>${(era.amountPaid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>${(era.patientResponsibility || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>${(era.writeOff || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>{era.dateReceived}</Typography></TableCell>
+                    <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>{era.paymentType}</Typography></TableCell>
                   </TableRow>
                 );
               })

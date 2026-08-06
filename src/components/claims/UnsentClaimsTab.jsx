@@ -34,7 +34,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   
   // Use shared actions
   const {
-    loading, changeStatus, sendClaims, convertType, toggleHide, printPage, showMessage
+    loading, changeStatus, sendClaims, convertType, toggleHide, printPage, exportCSV, showMessage
   } = useClaimActions(loadData);
 
   useEffect(() => {
@@ -99,6 +99,18 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     applyFilters(claims, newFilters, showHidden, showReadyOnly);
   };
 
+  const handleClearAll = () => {
+    const defaultFilters = {
+      carrier: 'all',
+      claimType: 'all',
+      attachment: 'all',
+      status: 'all',
+      search: '',
+    };
+    setFilters(defaultFilters);
+    applyFilters(claims, defaultFilters, showHidden, showReadyOnly);
+  };
+
   const handleSearchChange = (value) => {
     handleFilterChange('search', value);
   };
@@ -152,7 +164,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'sort',
       label: 'Sort Report By:',
-      width: '243px',
+      width: '140px',
       value: filters.sort || 'none',
       options: [
         { value: 'none', label: 'None' },
@@ -164,7 +176,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'attachment',
       label: 'Claim Attachment:',
-      width: '260px',
+      width: '140px',
       value: filters.attachment,
       options: [
         { value: 'all', label: 'All' },
@@ -176,7 +188,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'status',
       label: 'Claim Status:',
-      width: '260px',
+      width: '140px',
       value: filters.status,
       options: [
         { value: 'all', label: 'All' },
@@ -189,7 +201,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'claimType',
       label: 'Filter by Claim Type:',
-      width: '220px',
+      width: '140px',
       value: filters.claimType,
       options: CLAIM_TYPES,
       onChange: (val) => handleFilterChange('claimType', val),
@@ -197,7 +209,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'carrier',
       label: 'Filter by Carrier:',
-      width: '260px',
+      width: '140px',
       value: filters.carrier,
       options: CARRIERS,
       onChange: (val) => handleFilterChange('carrier', val),
@@ -214,6 +226,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           { label: 'Show Hidden Claims', checked: showHidden, onChange: handleToggleHidden }
         ]}
         onRefresh={loadData}
+        onClearAll={handleClearAll}
       />
 
       <ClaimAlertBar
@@ -239,10 +252,24 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             onClick: () => sendClaims(selectedIds),
           },
           {
-            label: 'Print Claims',
+            label: 'Export CSV',
+            variant: 'export',
+            icon: 'export',
+            onClick: () => {
+              if (typeof exportCSV === 'function') {
+                exportCSV(filteredClaims);
+              } else {
+                console.warn('exportCSV not defined');
+              }
+            },
+            disabled: false,
+          },
+          {
+            label: 'Print',
             variant: 'print',
             icon: 'print',
             onClick: () => printPage(),
+            disabled: false,
           },
         ]}
       />

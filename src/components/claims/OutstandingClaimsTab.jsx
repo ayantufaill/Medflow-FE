@@ -95,6 +95,22 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     applyFilters(claims, newFilters);
   };
 
+  const handleClearAll = () => {
+    const defaultFilters = {
+      sort: 'none',
+      claimType: 'all',
+      carrier: 'all',
+      attachment: 'all',
+      status: 'all',
+      dateRange: 'none',
+      groupBy: 'none',
+      searchPatient: '',
+      searchClaim: '',
+    };
+    setFilters(defaultFilters);
+    applyFilters(claims, defaultFilters);
+  };
+
   // Selection
   const handleSelectAll = (event) => {
     if (event.target.checked) {
@@ -121,7 +137,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'sort',
       label: 'Sort Report By:',
-      width: '243px',
+      width: '140px',
       value: filters.sort || 'none',
       options: [
         { value: 'none', label: 'None' },
@@ -133,7 +149,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'claimType',
       label: 'Filter by Claim Type:',
-      width: '220px',
+      width: '140px',
       value: filters.claimType,
       options: CLAIM_TYPES,
       onChange: (val) => handleFilterChange('claimType', val),
@@ -141,7 +157,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'carrier',
       label: 'Filter by Carrier:',
-      width: '260px',
+      width: '140px',
       value: filters.carrier,
       options: CARRIERS,
       onChange: (val) => handleFilterChange('carrier', val),
@@ -149,7 +165,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'attachment',
       label: 'Filter by Claim Attachment:',
-      width: '260px',
+      width: '140px',
       value: filters.attachment,
       options: [
         { value: 'all', label: 'All' },
@@ -161,7 +177,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'status',
       label: 'Filter by Claim Status:',
-      width: '260px',
+      width: '140px',
       value: filters.status,
       options: [
         { value: 'all', label: 'All' },
@@ -177,10 +193,11 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'dateRange',
       label: 'Group Date By Range:',
-      width: '243px',
+      width: '140px',
       value: filters.dateRange,
       options: [
         { value: 'none', label: 'None' },
+        { value: 'dos', label: 'DOS' },
         { value: '0-30', label: '0-30 days' },
         { value: '31-60', label: '31-60 days' },
         { value: '61-90', label: '61-90 days' },
@@ -191,6 +208,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'groupBy',
       label: 'Group By:',
+      width: '140px',
       value: filters.groupBy,
       options: [
         { value: 'none', label: 'None' },
@@ -221,6 +239,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           { label: 'Show Claims for Inactive Policies', checked: showInactivePolicies, onChange: setShowInactivePolicies }
         ]}
         onRefresh={loadData}
+        onClearAll={handleClearAll}
       />
 
       <ClaimAlertBar
@@ -229,16 +248,17 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         selectedCount={selectedIds.length}
         actions={[
           {
-            label: 'Print Page',
-            variant: 'print',
-            icon: 'print',
-            onClick: () => printPage(),
+            label: 'Export CSV',
+            variant: 'export',
+            icon: 'export',
+            onClick: () => exportCSV(filteredClaims),
             disabled: false,
           },
           {
-            label: 'Export CSV',
-            variant: 'outlined',
-            onClick: () => exportCSV(filteredClaims),
+            label: 'Print',
+            variant: 'print',
+            icon: 'print',
+            onClick: () => printPage(),
             disabled: false,
           },
         ]}
@@ -247,6 +267,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       <StandardClaimsTable
         activeTab={4} // Outstanding is index 4
         filteredClaims={filteredClaims}
+        dateRange={filters.dateRange}
         selectedClaims={selectedClaims}
         handleSelectAll={handleSelectAll}
         handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
