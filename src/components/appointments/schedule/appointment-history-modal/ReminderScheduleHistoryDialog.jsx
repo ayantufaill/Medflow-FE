@@ -13,22 +13,17 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
-  Alert,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
-import apiClient from "../../config/api";
-import { COLORS } from "../../constants/colors";
+import { COLORS } from "../../../../constants/colors";
 import {
   fontSize,
   fontWeight,
   radius,
   roundedSelectMenuProps,
-} from "../../constants/styles";
+} from "../../../../constants/styles";
+import dayjs from "dayjs";
 
-// Nested Key/Old/New sub-header for the "Difference" column group — same idea as
-// before, restyled to match the table header convention (see below) instead of
-// hardcoded hex colors.
 const diffSubHeaderSx = {
   fontFamily: "Inter",
   fontSize: fontSize.xs,
@@ -49,14 +44,6 @@ const diffCellSx = {
   wordBreak: "break-word",
 };
 
-/**
- * AuditPatientHistoryDialog — audit log of patient-record changes.
- * @param {Object} props
- * @param {boolean} props.open
- * @param {Function} props.onClose
- * @param {Array} [props.auditData] - defaults to sample data when not provided
- * @param {String} [props.patientId]
- */
 const formatValue = (val) => {
   if (val === null || val === undefined) return "";
   if (typeof val === "object") return JSON.stringify(val);
@@ -64,9 +51,7 @@ const formatValue = (val) => {
 };
 
 const normalizeAuditData = (payload) => {
-  const list = Array.isArray(payload)
-    ? payload
-    : payload?.auditEvents || payload?.data?.auditEvents || [];
+  const list = Array.isArray(payload) ? payload : [];
 
   return (list || []).map((entry, index) => {
     let differences = [];
@@ -105,8 +90,6 @@ const normalizeAuditData = (payload) => {
           }
         });
 
-        // If there are truly no measurable differences between the keys we can compare,
-        // we don't dump the whole object. We just show that the update happened.
         if (differences.length === 0) {
           differences.push({
             key: "Update logged",
@@ -123,6 +106,14 @@ const normalizeAuditData = (payload) => {
           },
         ];
       }
+    } else if (entry?.message) {
+      differences = [
+        {
+          key: "Message",
+          old: "-",
+          new: formatValue(entry.message),
+        }
+      ]
     }
 
     return {
@@ -140,73 +131,42 @@ const normalizeAuditData = (payload) => {
         entry?.userName ||
         entry?.user ||
         "System",
-      name: entry?.name || entry?.section || entry?.patientName || "Patient",
+      name: entry?.name || entry?.section || entry?.patientName || "Appointment",
       action: entry?.action || entry?.type || "Update",
       differences,
     };
   });
 };
 
-const AuditPatientHistoryDialog = ({
+const ReminderScheduleHistoryDialog = ({
   open,
   onClose,
-  auditData: propAuditData,
-  patientId,
+  appointment,
 }) => {
-  const [auditData, setAuditData] = useState(propAuditData || []);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [auditData, setAuditData] = useState([]);
+  const [filterAction, setFilterAction] = useState("All");
 
   useEffect(() => {
-    if (!open) {
-      setAuditData(propAuditData || []);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    if (propAuditData) {
-      setAuditData(propAuditData);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    if (!patientId) {
+    if (!open || !appointment) {
       setAuditData([]);
-      setError(null);
-      setLoading(false);
       return;
     }
 
-    const controller = new AbortController();
-    const loadAuditHistory = async () => {
-      setLoading(true);
-      setError(null);
+    // Reminders could be in reminders, communications, or systemEvents
+    const reminders = appointment?.reminders || appointment?.communications || [];
+    if (reminders.length > 0) {
+      setAuditData(normalizeAuditData(reminders));
+    } else {
       setAuditData([]);
+    }
+  }, [open, appointment]);
 
-      try {
-        const response = await apiClient.get(
-          `/patients/${patientId}/audit-history`,
-          { signal: controller.signal },
-        );
-        const payload = response?.data?.data || response?.data || {};
-        setAuditData(normalizeAuditData(payload));
-      } catch (err) {
-        if (err?.name === "CanceledError") return;
-        setError(
-          err?.response?.data?.message ||
-            "Failed to load patient audit history.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+  const allActions = ["All", ...new Set(auditData.map((d) => d.action))];
 
-    loadAuditHistory();
-
-    return () => controller.abort();
-  }, [open, patientId, propAuditData]);
+  const filteredData = auditData.filter((row) => {
+    if (filterAction !== "All" && row.action !== filterAction) return false;
+    return true;
+  });
 
   return (
     <Dialog
@@ -219,7 +179,6 @@ const AuditPatientHistoryDialog = ({
         sx: { borderRadius: radius.lg, p: 0, maxHeight: "calc(80vh - 96px)" },
       }}
     >
-      {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}
       <Box
         sx={{
           display: "flex",
@@ -240,7 +199,7 @@ const AuditPatientHistoryDialog = ({
             color: COLORS.TEXT_PRIMARY,
           }}
         >
-          Audit Patient History
+          Reminder Schedule History
         </Typography>
         <IconButton
           size="small"
@@ -259,7 +218,6 @@ const AuditPatientHistoryDialog = ({
           flexDirection: "column",
         }}
       >
-        {/* Filter row */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
           <Typography
             sx={{
@@ -277,7 +235,8 @@ const AuditPatientHistoryDialog = ({
           </Typography>
           <Select
             size="small"
-            defaultValue="Update"
+            value={filterAction}
+            onChange={(e) => setFilterAction(e.target.value)}
             MenuProps={
               roundedSelectMenuProps.PaperProps
                 ? roundedSelectMenuProps
@@ -291,31 +250,19 @@ const AuditPatientHistoryDialog = ({
               borderRadius: radius.md,
             }}
           >
-            <MenuItem
-              value="Update"
-              sx={{ fontFamily: "Inter", fontSize: fontSize.md }}
-            >
-              Update
-            </MenuItem>
+            {allActions.map((action) => (
+              <MenuItem
+                key={action}
+                value={action}
+                sx={{ fontFamily: "Inter", fontSize: fontSize.md }}
+              >
+                {action}
+              </MenuItem>
+            ))}
           </Select>
         </Box>
 
-        {loading ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              py: 8,
-            }}
-          >
-            <CircularProgress size={24} />
-          </Box>
-        ) : error ? (
-          <Box sx={{ py: 4 }}>
-            <Alert severity="info">{error}</Alert>
-          </Box>
-        ) : auditData.length === 0 ? (
+        {auditData.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 8 }}>
             <Typography
               sx={{
@@ -324,7 +271,7 @@ const AuditPatientHistoryDialog = ({
                 color: COLORS.TEXT_MUTED,
               }}
             >
-              No audit history available
+              No reminder records found.
             </Typography>
           </Box>
         ) : (
@@ -358,7 +305,7 @@ const AuditPatientHistoryDialog = ({
                   <TableCell sx={{ width: 140 }}>Name</TableCell>
                   <TableCell sx={{ width: 170 }}>Action</TableCell>
                   <TableCell colSpan={3} sx={{ p: 0 }}>
-                    <Box sx={{ py: 1, px: 1.5 }}>Difference</Box>
+                    <Box sx={{ py: 1, px: 1.5 }}>Details</Box>
                     <Box
                       sx={{
                         display: "flex",
@@ -392,96 +339,119 @@ const AuditPatientHistoryDialog = ({
                   </TableCell>
                 </TableRow>
               </TableHead>
+
               <TableBody>
-                {auditData.map((row, rowIndex) => (
-                  <TableRow key={row.id || rowIndex} hover>
+                {filteredData.map((row) => (
+                  <TableRow key={row.id} hover>
                     <TableCell
                       sx={{
                         fontFamily: "Inter",
                         fontSize: fontSize.sm,
                         color: COLORS.TEXT_BODY,
-                        verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                        whiteSpace: "nowrap",
+                        verticalAlign: "top",
                       }}
                     >
-                      {row.date}
+                      {row.date ? dayjs(row.date).format("MM/DD/YYYY") : "---"}
+                      <br />
+                      <Typography
+                        component="span"
+                        sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.xs }}
+                      >
+                        {row.date ? dayjs(row.date).format("hh:mm:ss A") : ""}
+                      </Typography>
                     </TableCell>
                     <TableCell
                       sx={{
                         fontFamily: "Inter",
                         fontSize: fontSize.sm,
                         color: COLORS.TEXT_BODY,
-                        verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                        verticalAlign: "top",
                       }}
                     >
-                      {row.user}
+                      {row.user || "---"}
                     </TableCell>
                     <TableCell
                       sx={{
                         fontFamily: "Inter",
                         fontSize: fontSize.sm,
                         color: COLORS.TEXT_BODY,
-                        verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
-                        wordBreak: "break-word",
+                        verticalAlign: "top",
                       }}
                     >
-                      {row.name}
+                      {row.name || "---"}
                     </TableCell>
                     <TableCell
                       sx={{
                         fontFamily: "Inter",
                         fontSize: fontSize.sm,
                         color: COLORS.TEXT_BODY,
-                        verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
-                        wordBreak: "break-word",
+                        verticalAlign: "top",
                       }}
                     >
-                      {row.action}
+                      {row.action || "---"}
                     </TableCell>
+
                     <TableCell
                       colSpan={3}
                       sx={{
                         p: 0,
-                        verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                        verticalAlign: "top",
                       }}
                     >
-                      {row.differences.map((diff, diffIndex) => (
-                        <Box
-                          key={diffIndex}
-                          sx={{
-                            display: "flex",
-                            width: "100%",
-                            borderTop:
-                              diffIndex > 0
-                                ? `1px solid ${COLORS.BORDER_VERY_LIGHT}`
-                                : "none",
-                          }}
-                        >
-                          <Box sx={{ ...diffCellSx, flex: 1 }}>{diff.key}</Box>
-                          <Box
-                            sx={{
-                              ...diffCellSx,
-                              flex: 1,
-                              borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
-                            }}
-                          >
-                            {diff.old}
-                          </Box>
-                          <Box
-                            sx={{
-                              ...diffCellSx,
-                              flex: 1,
-                              borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
-                            }}
-                          >
-                            {diff.new}
-                          </Box>
+                      {row.differences && row.differences.length > 0 ? (
+                        row.differences.map((diff, idx) => {
+                          const isLast = idx === row.differences.length - 1;
+                          return (
+                            <Box
+                              key={idx}
+                              sx={{
+                                display: "flex",
+                                width: "100%",
+                                borderBottom: isLast
+                                  ? "none"
+                                  : `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  flex: 1,
+                                  ...diffCellSx,
+                                }}
+                              >
+                                {diff.key}
+                              </Box>
+                              <Box
+                                sx={{
+                                  flex: 1,
+                                  ...diffCellSx,
+                                  borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                                }}
+                              >
+                                {diff.old || "-"}
+                              </Box>
+                              <Box
+                                sx={{
+                                  flex: 1,
+                                  ...diffCellSx,
+                                  borderLeft: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                                }}
+                              >
+                                {diff.new || "-"}
+                              </Box>
+                            </Box>
+                          );
+                        })
+                      ) : (
+                        <Box sx={{ p: 1, color: COLORS.TEXT_MUTED, fontSize: fontSize.sm }}>
+                          No specific changes recorded.
                         </Box>
-                      ))}
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -491,32 +461,29 @@ const AuditPatientHistoryDialog = ({
         )}
       </Box>
 
-      {/* Footer — same treatment as AddCreditCardModal.jsx / AddBankAccountModal.jsx */}
       <Box
         sx={{
+          display: "flex",
+          justifyContent: "flex-end",
           px: 2.5,
           py: 1.5,
           borderTop: `1px solid ${COLORS.BORDER}`,
-          display: "flex",
-          justifyContent: "flex-end",
-          backgroundColor: COLORS.SURFACE_FOOTER,
         }}
       >
         <Button
-          variant="outlined"
-          size="small"
           onClick={onClose}
+          variant="outlined"
           sx={{
-            borderRadius: radius.sm,
-            textTransform: "none",
-            fontSize: fontSize.md,
-            fontWeight: fontWeight.medium,
-            px: 2,
+            color: COLORS.TEXT_SECONDARY,
             borderColor: COLORS.BORDER,
-            color: COLORS.TEXT_PRIMARY,
+            textTransform: "none",
+            fontFamily: "Inter",
+            fontWeight: fontWeight.medium,
+            px: 3,
+            borderRadius: radius.md,
             "&:hover": {
-              borderColor: COLORS.TEXT_MUTED,
-              backgroundColor: "rgba(0,0,0,0.02)",
+              backgroundColor: COLORS.SURFACE_HOVER,
+              borderColor: COLORS.BORDER_HOVER,
             },
           }}
         >
@@ -527,4 +494,4 @@ const AuditPatientHistoryDialog = ({
   );
 };
 
-export default AuditPatientHistoryDialog;
+export default ReminderScheduleHistoryDialog;

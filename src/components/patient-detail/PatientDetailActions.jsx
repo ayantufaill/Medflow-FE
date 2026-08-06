@@ -1,4 +1,14 @@
-import { Box, Button, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox, Tooltip } from '@mui/material';
+import {
+  Box,
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
+  Tooltip,
+} from "@mui/material";
 import {
   Edit as EditIcon,
   PersonOff as PersonOffIcon,
@@ -11,27 +21,32 @@ import {
   PrintOutlined as PrintIcon,
   DescriptionOutlined as FileIcon,
   AccountBox as AccountBoxIcon,
-} from '@mui/icons-material';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import MyChartFileDialog from './MyChartFileDialog';
-import AuditPatientHistoryDialog from './AuditPatientHistoryDialog';
-import PatientChat from '../shared/PatientChat';
-import RouteSlipDialog from '../appointments/schedule/route-slip-modal/RouteSlipDialog';
-import { useScheduleState } from '../../hooks/redux';
-import { COLORS } from '../../constants/colors';
-import { radius, fontSize, fontWeight } from '../../constants/styles';
+} from "@mui/icons-material";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import MyChartFileDialog from "./MyChartFileDialog";
+import AuditPatientHistoryDialog from "./AuditPatientHistoryDialog";
+import RequestUpdatesDialog from "./RequestUpdatesDialog";
+import PatientChat from "../shared/PatientChat";
+import RouteSlipDialog from "../appointments/schedule/route-slip-modal/RouteSlipDialog";
+import { useScheduleState } from "../../hooks/redux";
+import { COLORS } from "../../constants/colors";
+import { radius, fontSize, fontWeight } from "../../constants/styles";
 
 const actionButtonSx = {
-  textTransform: 'none',
-  fontFamily: 'Inter',
+  textTransform: "none",
+  fontFamily: "Inter",
   fontWeight: fontWeight.semibold,
   fontSize: fontSize.base,
   borderRadius: radius.md,
-  boxShadow: 'none',
+  boxShadow: "none",
 };
 
-const iconButtonSx = { p: 0.5, color: COLORS.TEXT_SECONDARY, '&:hover': { color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG } };
+const iconButtonSx = {
+  p: 0.5,
+  color: COLORS.TEXT_SECONDARY,
+  "&:hover": { color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG },
+};
 
 /**
  * Compact icon toolbar (edit + utility icons) on the left, Deactivate/Convert/
@@ -55,6 +70,7 @@ export default function PatientDetailActions({
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [patientChatOpen, setPatientChatOpen] = useState(false);
+  const [requestUpdatesOpen, setRequestUpdatesOpen] = useState(false);
   const { setRouteSlipDialogOpen } = useScheduleState();
   const navigate = useNavigate();
 
@@ -67,7 +83,9 @@ export default function PatientDetailActions({
 
   const patientId = patient?._id || patient?.id;
   const patientName = patient
-    ? (patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || undefined)
+    ? patient.name ||
+      `${patient.firstName || ""} ${patient.lastName || ""}`.trim() ||
+      undefined
     : undefined;
   const handleOpenAdditionalDocs = () => {
     if (patientId) navigate(`/patients/${patientId}/additional-documents`);
@@ -75,15 +93,29 @@ export default function PatientDetailActions({
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          flexWrap: "wrap",
+        }}
+      >
         {isEditMode ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
             <Button
               variant="contained"
               size="small"
               startIcon={<CheckCircleIcon fontSize="small" />}
               onClick={onSave}
-              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
+              sx={{
+                ...actionButtonSx,
+                backgroundColor: COLORS.STATUS_SUCCESS,
+                "&:hover": {
+                  backgroundColor: COLORS.STATUS_SUCCESS,
+                  opacity: 0.9,
+                },
+              }}
             >
               Save
             </Button>
@@ -92,33 +124,46 @@ export default function PatientDetailActions({
               size="small"
               startIcon={<CloseIcon fontSize="small" />}
               onClick={onCancelEdit}
-              sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
+              sx={{
+                ...actionButtonSx,
+                borderColor: COLORS.BORDER,
+                color: COLORS.TEXT_BODY,
+                backgroundColor: COLORS.SURFACE_CARD,
+                "&:hover": {
+                  backgroundColor: COLORS.SURFACE_HOVER,
+                  borderColor: COLORS.TEXT_MUTED,
+                },
+              }}
             >
               Cancel
             </Button>
           </Box>
         ) : (
           /* Icon Toolbar — Edit + small utility icons, all in one compact row */
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            <Tooltip title="Edit patient details">
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+            <Tooltip title="EDIT">
               <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
                 <EditIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
-            {/* Hx (Communication) Icon — opens patient communication/chat */}
-            <Tooltip title="Patient communication">
-              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
-                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            {/* Hx (Communication) Icon — opens the request-updates dialog */}
+            <Tooltip title="SEND UPDATE REQUEST">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={() => setRequestUpdatesOpen(true)}
+              >
+                <Box sx={{ position: "relative", display: "inline-flex" }}>
                   <SyncIcon sx={{ fontSize: 20 }} />
                   <Box
                     sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: '6px',
-                      fontWeight: 'bold',
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      fontSize: "6px",
+                      fontWeight: "bold",
                       color: COLORS.ACCENT,
                     }}
                   >
@@ -129,8 +174,12 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Chat Icon */}
-            <Tooltip title="Messages & communication history">
-              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
+            <Tooltip title="COMMUNICATION ACTIVITY">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={handlePatientChatOpen}
+              >
                 <ChatIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
@@ -140,18 +189,22 @@ export default function PatientDetailActions({
                 history already shows email confirmations (the checkmark this icon
                 itself displays), so this opens the same dialog rather than a fake
                 "resend email" action that wouldn't actually send anything. */}
-            <Tooltip title="Email confirmations">
-              <IconButton size="small" sx={iconButtonSx} onClick={handlePatientChatOpen}>
-                <Box sx={{ position: 'relative' }}>
+            <Tooltip title="PATIENT MISSING EMAIL">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={handlePatientChatOpen}
+              >
+                <Box sx={{ position: "relative" }}>
                   <MailIcon sx={{ fontSize: 18 }} />
                   <CheckCircleIcon
                     sx={{
-                      position: 'absolute',
+                      position: "absolute",
                       bottom: -2,
                       right: -2,
                       fontSize: 10,
-                      fontWeight: 'bold',
-                      color: 'inherit',
+                      fontWeight: "bold",
+                      color: "inherit",
                     }}
                   />
                 </Box>
@@ -159,36 +212,55 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Print Icon */}
-            <Tooltip title="Print route slip">
-              <IconButton size="small" sx={iconButtonSx} onClick={() => setRouteSlipDialogOpen(true)}>
+            <Tooltip title="PRINT">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={() => setRouteSlipDialogOpen(true)}
+              >
                 <PrintIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
             {/* Document/File Icon — opens patient history audit dialog */}
-            <Tooltip title="View patient history">
-              <IconButton size="small" sx={iconButtonSx} onClick={handleAuditDialogOpen}>
+            <Tooltip title="PATIENT INFO AUDIT">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={handleAuditDialogOpen}
+              >
                 <FileIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
             {/* Profile/User Icon */}
-            <Tooltip title="MyChart profile">
-              <IconButton size="small" sx={iconButtonSx} onClick={handleMyChartFileOpen}>
+            <Tooltip title="MYCHART FILE">
+              <IconButton
+                size="small"
+                sx={iconButtonSx}
+                onClick={handleMyChartFileOpen}
+              >
                 <AccountBoxIcon sx={{ fontSize: 20 }} />
               </IconButton>
             </Tooltip>
           </Box>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isActive ? (
             <Button
               variant="contained"
               size="small"
               startIcon={<PersonOffIcon fontSize="small" />}
               onClick={onDeactivate}
-              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_ERROR, '&:hover': { backgroundColor: COLORS.STATUS_ERROR, opacity: 0.9 } }}
+              sx={{
+                ...actionButtonSx,
+                backgroundColor: COLORS.STATUS_ERROR,
+                "&:hover": {
+                  backgroundColor: COLORS.STATUS_ERROR,
+                  opacity: 0.9,
+                },
+              }}
             >
               Deactivate
             </Button>
@@ -198,7 +270,14 @@ export default function PatientDetailActions({
               size="small"
               startIcon={<CheckCircleIcon fontSize="small" />}
               onClick={onActivate}
-              sx={{ ...actionButtonSx, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 } }}
+              sx={{
+                ...actionButtonSx,
+                backgroundColor: COLORS.STATUS_SUCCESS,
+                "&:hover": {
+                  backgroundColor: COLORS.STATUS_SUCCESS,
+                  opacity: 0.9,
+                },
+              }}
             >
               Activate
             </Button>
@@ -207,33 +286,35 @@ export default function PatientDetailActions({
             variant="contained"
             size="small"
             onClick={onConvertToNonPatient}
-            sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
+            sx={{
+              ...actionButtonSx,
+              backgroundColor: COLORS.ACCENT,
+              "&:hover": { backgroundColor: COLORS.ACCENT_HOVER },
+            }}
           >
-            Convert
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            endIcon={<ExpandMoreIcon />}
-            onClick={onRequestUpdatesClick}
-            sx={{ ...actionButtonSx, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, backgroundColor: COLORS.SURFACE_CARD, '&:hover': { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED } }}
-          >
-            Request updates
+            Convert to non patient
           </Button>
         </Box>
       </Box>
-      
+
+      <RequestUpdatesDialog
+        open={requestUpdatesOpen}
+        onClose={() => setRequestUpdatesOpen(false)}
+        onSend={onSendUpdateRequest}
+      />
+
       {/* MyChart File Dialog */}
-      <MyChartFileDialog 
-        open={myChartFileDialogOpen} 
+      <MyChartFileDialog
+        open={myChartFileDialogOpen}
         onClose={handleMyChartFileClose}
         patient={patient}
       />
-      
+
       {/* Audit Patient History Dialog */}
       <AuditPatientHistoryDialog
         open={auditDialogOpen}
         onClose={handleAuditDialogClose}
+        patientId={patientId}
       />
 
       {/* Patient Chat — communication hub, shared by both the Chat and Mail icons */}

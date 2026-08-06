@@ -1,10 +1,10 @@
 import { Box, Typography, IconButton } from "@mui/material";
-import { RadioButtonUnchecked, CalendarTodayOutlined, PeopleOutline, DeleteOutline, AddLinkOutlined } from "@mui/icons-material";
+import { RadioButtonUnchecked, CheckCircle, CalendarTodayOutlined, PeopleOutline, DeleteOutline, AddLinkOutlined } from "@mui/icons-material";
 import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
 
-const TaskCard = ({ task }) => (
+const TaskCard = ({ task, onToggleComplete }) => (
   <Box sx={{
-    backgroundColor: "rgba(34, 98, 239, 0.10)",
+    backgroundColor: task.completed ? "#f9fafb" : "rgba(34, 98, 239, 0.10)",
     borderRadius: "10px",
     px: "14px", py: "12px",
     display: "flex",
@@ -12,17 +12,21 @@ const TaskCard = ({ task }) => (
     alignItems: "flex-start",
   }}>
     {/* Circle checkbox */}
-    <RadioButtonUnchecked sx={{ fontSize: "22px", color: "#2262ef", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
+    {task.completed ? (
+      <CheckCircle onClick={() => onToggleComplete?.(task.id)} sx={{ fontSize: "22px", color: "#9ca3af", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
+    ) : (
+      <RadioButtonUnchecked onClick={() => onToggleComplete?.(task.id)} sx={{ fontSize: "22px", color: "#2262ef", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
+    )}
 
     {/* Content */}
     <Box sx={{ flex: 1, minWidth: 0 }}>
       {/* Title */}
-      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", mb: "2px" }}>
+      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: task.completed ? "#9ca3af" : "#09121f", textDecoration: task.completed ? "line-through" : "none", mb: "2px" }}>
         {task.title}
       </Typography>
 
       {/* Subtitle */}
-      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#09121f", mb: "10px" }}>
+      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: task.completed ? "#9ca3af" : "#09121f", mb: "10px" }}>
         {task.sub}
       </Typography>
 
