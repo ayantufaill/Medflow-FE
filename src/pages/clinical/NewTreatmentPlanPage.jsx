@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Snackbar, Alert, Tabs, Tab, Grid } from '@mui/material';
+import { Box, Snackbar, Alert, Tabs, Tab, Grid, Paper, IconButton, Divider, MenuItem } from '@mui/material';
 import dayjs from 'dayjs';
+import {
+  ShieldOutlined as ShieldIcon,
+  IosShare as ShareIcon,
+  PrintOutlined as PrintIcon,
+  ArchiveOutlined as ArchiveIcon,
+  KeyboardArrowDown as ExpandMoreIcon
+} from '@mui/icons-material';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import { OutlinedSelect } from '../../components/patients/form-components/formInputs';
+import plusSvg from '../../assets/treatmentplan/plus.svg';
+import deleteSvg from '../../assets/treatmentplan/delete.svg';
 
 import NewTreatmentPlanHeader from '../../components/clinical/new-treatment-plan/NewTreatmentPlanHeader';
 import NewTreatmentPlanOdontogram from '../../components/clinical/new-treatment-plan/NewTreatmentPlanOdontogram';
@@ -8,6 +19,8 @@ import NewTreatmentPlanProcedures from '../../components/clinical/new-treatment-
 import NewTreatmentPlanTable from '../../components/clinical/new-treatment-plan/NewTreatmentPlanTable';
 import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable';
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
+import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
+import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
@@ -27,6 +40,9 @@ const NewTreatmentPlanPage = () => {
   
   const currentPatient = useSelector(selectCurrentPatient);
   const [activePlanId, setActivePlanId] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
+  const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
@@ -329,6 +345,7 @@ const NewTreatmentPlanPage = () => {
       <NewTreatmentPlanHeader 
         showOdontogram={showOdontogram} 
         setShowOdontogram={setShowOdontogram} 
+        onNotesClick={() => setIsNotesDrawerOpen(true)}
       />
 
       {/* Top Section (Odontogram + Navigation) */}
@@ -374,19 +391,79 @@ const NewTreatmentPlanPage = () => {
         )}
         {activeTab === 1 && (
           <Box sx={{ p: 2, overflowX: 'auto' }}>
-            <Grid container spacing={3} wrap="nowrap" sx={{ minWidth: 900 }}>
-              <Grid item xs={7}>
-                <NewTreatmentPlanTable 
-                  treatmentPlans={treatmentPlans} 
-                  onDeleteItems={handleDeleteItems}
-                  onMoveToTop={handleMoveToTop}
-                  onUpdateItemStatus={handleUpdateItemStatus}
-                />
-              </Grid>
-              <Grid item xs={5}>
-                <UnplannedProceduresSidebar procedures={treatmentPlans} />
-              </Grid>
-            </Grid>
+            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900 }}>
+              {/* Top Toolbar matching screenshot */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ width: 260 }}>
+                  <OutlinedSelect 
+                    value="active"
+                    sx={{ 
+                      bgcolor: '#fff',
+                      '& .MuiSelect-select': { display: 'flex', alignItems: 'center', gap: 1.5, py: 0, px: 1.5, minHeight: '32px !important' },
+                      '& .MuiOutlinedInput-root': { minHeight: '32px' },
+                      '& .MuiOutlinedInput-notchedOutline': { borderRadius: '8px' }
+                    }}
+                  >
+                    <MenuItem value="active" sx={{ py: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 400, color: '#0f172a', fontSize: '0.875rem' }}>
+                        <RadioButtonCheckedIcon sx={{ color: '#10b981', fontSize: '1rem' }} />
+                        Active Treatment Plan
+                      </Box>
+                    </MenuItem>
+                  </OutlinedSelect>
+                </Box>
+                
+                <IconButton size="small" sx={{ border: '1px solid #0f172a', borderRadius: '50%', width: 24, height: 24, p: 0, ml: 2 }}>
+                  <Box component="img" src={plusSvg} alt="add" sx={{ width: 14, height: 14 }} />
+                </IconButton>
+                
+                <Divider orientation="vertical" flexItem sx={{ mx: 3, my: 0.5, borderColor: '#cbd5e1' }} />
+                
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <IconButton size="small" onClick={() => {
+                    if (selectedRows.length > 0) {
+                      handleDeleteItems(selectedRows);
+                      setSelectedRows([]);
+                    }
+                  }}>
+                    <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
+                  </IconButton>
+                  <IconButton size="small">
+                    <ShieldIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+                  </IconButton>
+                  <IconButton size="small">
+                    <ShareIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+                  </IconButton>
+                  <IconButton size="small">
+                    <PrintIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+                  </IconButton>
+                </Box>
+
+                <Box sx={{ flexGrow: 1 }} />
+
+                <IconButton size="small" onClick={() => setIsArchiveDrawerOpen(true)}>
+                  <ArchiveIcon sx={{ fontSize: '1.35rem', color: '#94a3b8' }} />
+                </IconButton>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 3 }}>
+                <Box sx={{ width: '65%', minWidth: 0 }}>
+                  <NewTreatmentPlanTable 
+                    treatmentPlans={treatmentPlans} 
+                    onMoveToTop={handleMoveToTop}
+                    onUpdateItemStatus={handleUpdateItemStatus}
+                    selectedRows={selectedRows}
+                    setSelectedRows={setSelectedRows}
+                  />
+                </Box>
+
+                <Divider orientation="vertical" flexItem sx={{ borderColor: '#e2e8f0' }} />
+
+                <Box sx={{ width: '35%', minWidth: 0 }}>
+                  <UnplannedProceduresSidebar procedures={treatmentPlans} />
+                </Box>
+              </Box>
+            </Paper>
           </Box>
         )}
         {activeTab === 2 && (
@@ -396,6 +473,13 @@ const NewTreatmentPlanPage = () => {
         )}
       </Box>
       
+      <ArchiveDrawer open={isArchiveDrawerOpen} onClose={() => setIsArchiveDrawerOpen(false)} />
+      <NotesDrawer 
+        open={isNotesDrawerOpen} 
+        onClose={() => setIsNotesDrawerOpen(false)} 
+        patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
+      />
+
       <Snackbar 
         open={toast.open} 
         autoHideDuration={6000} 

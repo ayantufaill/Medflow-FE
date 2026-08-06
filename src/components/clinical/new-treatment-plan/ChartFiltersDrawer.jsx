@@ -11,6 +11,8 @@ import {
   Switch
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import TuneIcon from '@mui/icons-material/Tune';
+import { COLORS } from '../../../constants/colors';
 
 const ChartFiltersDrawer = ({ open, onClose, onApply }) => {
   const [tabValue, setTabValue] = useState(0);
@@ -223,14 +225,28 @@ const ChartFiltersDrawer = ({ open, onClose, onApply }) => {
       onClose={onClose}
       sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: { width: 500, display: 'flex', flexDirection: 'column' }
+        sx: { width: { xs: '100%', sm: 600 }, display: 'flex', flexDirection: 'column' }
       }}
     >
       {/* Header */}
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>Adjust chart</Typography>
-        <IconButton onClick={onClose} sx={{ border: '1px solid #e2e8f0', borderRadius: 1, color: '#2262ef' }} size="small">
-          <CloseIcon fontSize="small" />
+      <Box sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+      }}>
+        <TuneIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Adjust chart
+        </Typography>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </Box>
 
@@ -322,11 +338,11 @@ const ChartFiltersDrawer = ({ open, onClose, onApply }) => {
 
       {/* Footer */}
       <Divider />
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', gap: 2, bgcolor: '#fff' }}>
-        <Button variant="outlined" onClick={onClose} sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#2262ef', fontWeight: 600, px: 4, py: 1 }}>
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff' }}>
+        <Button variant="outlined" onClick={onClose} sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#2262ef', fontWeight: 600, px: 3, py: 0.75 }}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleApply} sx={{ textTransform: 'none', bgcolor: '#2262ef', boxShadow: 'none', fontWeight: 600, px: 4, py: 1, '&:hover': { bgcolor: '#1a50c7' } }}>
+        <Button variant="contained" onClick={handleApply} sx={{ textTransform: 'none', bgcolor: '#2262ef', boxShadow: 'none', fontWeight: 600, px: 3, py: 0.75, '&:hover': { bgcolor: '#1a50c7' } }}>
           Apply
         </Button>
       </Box>

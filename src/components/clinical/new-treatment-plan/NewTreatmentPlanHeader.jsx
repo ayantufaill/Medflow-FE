@@ -4,7 +4,7 @@ import { Box, Paper, Typography, Button } from '@mui/material';
 import calenderSvg from '../../../assets/treatmentplan/calender.svg';
 import notesSvg from '../../../assets/treatmentplan/mdi_notes-outline.svg';
 
-const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram }) => {
+const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram, onNotesClick }) => {
   return (
     <Paper elevation={0} sx={{ p: 2, mb: 1, borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -27,6 +27,7 @@ const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram }) => {
         <Button 
           variant="outlined" 
           size="small" 
+          onClick={onNotesClick}
           startIcon={<Box component="img" src={notesSvg} alt="notes" sx={{ width: 16, height: 16 }} />} 
           sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b' }}
         >
