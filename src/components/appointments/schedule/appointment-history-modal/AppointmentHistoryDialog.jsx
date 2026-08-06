@@ -24,6 +24,9 @@ import AppointmentHistoryFilters from './AppointmentHistoryFilters';
 import AppointmentHistoryTable, { getAppointmentRowKey } from './AppointmentHistoryTable';
 import medflowLogo from '../../../../assets/medflow-logo.png';
 
+import AuditScheduleHistoryDialog from './AuditScheduleHistoryDialog';
+import ReminderScheduleHistoryDialog from './ReminderScheduleHistoryDialog';
+
 const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
   const appointments = useSelector(selectPatientHistoryList);
@@ -42,6 +45,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const [sortBy, setSortBy] = useState("date"); // date, lastStatusChange
 
   const [selected, setSelected] = useState([]);
+  const [selectedAuditAppt, setSelectedAuditAppt] = useState(null);
+  const [selectedReminderAppt, setSelectedReminderAppt] = useState(null);
 
   const fetchHistoryData = useCallback(() => {
     if (!patient) return;
@@ -231,6 +236,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
             selected={selected}
             handleSelectAll={handleSelectAll}
             handleSelectOne={handleSelectOne}
+            onShowAudit={(appt) => setSelectedAuditAppt(appt)}
+            onShowReminders={(appt) => setSelectedReminderAppt(appt)}
           />
           
         </Box>
@@ -274,8 +281,18 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
           Print
         </Button>
       </DialogActions>
+
+      <AuditScheduleHistoryDialog
+        open={!!selectedAuditAppt}
+        onClose={() => setSelectedAuditAppt(null)}
+        appointment={selectedAuditAppt}
+      />
+      <ReminderScheduleHistoryDialog
+        open={!!selectedReminderAppt}
+        onClose={() => setSelectedReminderAppt(null)}
+        appointment={selectedReminderAppt}
+      />
     </Dialog>
   );
 };
-
 export default AppointmentHistoryDialog;

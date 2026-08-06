@@ -179,7 +179,9 @@ const AppointmentHistoryTable = ({
   procedureMap = {},
   selected,
   handleSelectAll,
-  handleSelectOne
+  handleSelectOne,
+  onShowAudit,
+  onShowReminders,
 }) => {
   const { providers = [] } = useDropdownData({ providers: true });
 
@@ -268,10 +270,10 @@ const AppointmentHistoryTable = ({
                         {capitalizeFirst(appt.status || "Unconfirmed")}
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
+                        <Typography onClick={() => onShowAudit?.(appt)} sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
+                        <Typography onClick={() => onShowReminders?.(appt)} sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
                       </TableCell>
                     </TableRow>
                   );

@@ -195,7 +195,7 @@ const LedgerSubRow = ({
           </Box>
           <Box sx={{ width: 60, display: 'flex', alignItems: 'center' }}>
             <Typography variant="caption" sx={{ color: '#1A1A1A', fontSize: '11px', fontWeight: 600 }}>
-              {proc.code}
+              {proc.cptCode || proc.code || '-'}
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ flexGrow: 1, color: '#444', fontSize: '11px' }}>

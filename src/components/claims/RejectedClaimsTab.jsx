@@ -84,6 +84,18 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     applyFilters(claims, newFilters, showHidden);
   };
 
+  const handleClearAll = () => {
+    const defaultFilters = {
+      carrier: 'all',
+      claimType: 'all',
+      attachment: 'all',
+      status: 'all',
+      search: '',
+    };
+    setFilters(defaultFilters);
+    applyFilters(claims, defaultFilters, showHidden);
+  };
+
   const handleToggleHidden = (val) => {
     setShowHidden(val);
     applyFilters(claims, filters, val);
@@ -115,7 +127,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'sort',
       label: 'Sort Report By:',
-      width: '243px',
+      width: '140px',
       value: filters.sort || 'none',
       options: [
         { value: 'none', label: 'None' },
@@ -127,7 +139,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'attachment',
       label: 'Claim Attachment:',
-      width: '260px',
+      width: '140px',
       value: filters.attachment,
       options: [
         { value: 'all', label: 'All' },
@@ -139,7 +151,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'status',
       label: 'Claim Status:',
-      width: '260px',
+      width: '140px',
       value: filters.status,
       options: [
         { value: 'all', label: 'All' },
@@ -152,7 +164,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'claimType',
       label: 'Filter by Claim Type:',
-      width: '220px',
+      width: '140px',
       value: filters.claimType,
       options: CLAIM_TYPES,
       onChange: (val) => handleFilterChange('claimType', val),
@@ -160,7 +172,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     {
       key: 'carrier',
       label: 'Filter by Carrier:',
-      width: '260px',
+      width: '140px',
       value: filters.carrier,
       options: CARRIERS,
       onChange: (val) => handleFilterChange('carrier', val),
@@ -177,6 +189,7 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           { label: 'Show Hidden Claims', checked: showHidden, onChange: handleToggleHidden }
         ]}
         onRefresh={loadData}
+        onClearAll={handleClearAll}
       />
 
       <ClaimAlertBar
@@ -195,17 +208,18 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             onClick: () => voidAndRecreate(selectedIds),
           },
           {
-            label: 'Print Page',
+            label: 'Export CSV',
+            variant: 'export',
+            icon: 'export',
+            onClick: () => exportCSV(filteredClaims),
+            disabled: false,
+          },
+          {
+            label: 'Print',
             variant: 'print',
             icon: 'print',
             onClick: () => printPage(),
             disabled: false, // Print doesn't require selection
-          },
-          {
-            label: 'Export CSV',
-            variant: 'outlined',
-            onClick: () => exportCSV(filteredClaims),
-            disabled: false,
           },
         ]}
       />

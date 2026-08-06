@@ -9,21 +9,22 @@ const BatchTabs = ({ activeTab, setActiveTab }) => {
       value={activeTab}
       onChange={(e, v) => setActiveTab(v)}
       sx={{
-        borderBottom: `1px solid ${COLORS.BORDER}`,
-        mb: 2,
         '& .MuiTab-root': {
+          fontWeight: 600,
           textTransform: 'none',
+          fontSize: '0.875rem',
           minWidth: 120,
-          fontWeight: fontWeight.semibold,
-          fontSize: fontSize.sm,
-          color: COLORS.TEXT_MUTED,
-        },
-        '& .Mui-selected': { 
-          color: `${COLORS.ACCENT} !important` 
+          color: '#64748b',
+          borderBottom: '3px solid transparent',
+          px: 2,
+          '&.Mui-selected': {
+            color: '#3b82f6',
+          },
         },
         '& .MuiTabs-indicator': {
-          backgroundColor: COLORS.ACCENT
-        }
+          height: 3,
+          backgroundColor: '#3b82f6',
+        },
       }}
     >
       <Tab label="Insurance Batch Payment" value="INSURANCE BATCH PAYMENT" />

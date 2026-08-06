@@ -41,19 +41,23 @@ const DenticalReportsTab = () => {
   return (
     <Box>
       <Paper
+        elevation={0}
         sx={{
-          p: 2,
-          mb: 2,
+          p: 1.5,
+          mb: 1.5,
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 1.5,
           backgroundColor: '#ffffff',
           borderRadius: '8px',
           boxShadow: 'none',
-          border: '1px solid #e0e6ed',
+          border: '1px solid #e2e8f0',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          minWidth: 0,
         }}
       >
-        <Box sx={{ flex: 1, maxWidth: 400 }}>
+        <Box sx={{ flex: 1, maxWidth: 300 }}>
           <TextField
             fullWidth
             size="small"
@@ -67,20 +71,31 @@ const DenticalReportsTab = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ '& .MuiOutlinedInput-root': { backgroundColor: '#ffffff', fontSize: '0.85rem' } }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                '& fieldset': { borderColor: '#e2e8f0' },
+                '&:hover fieldset': { borderColor: '#cbd5e1' },
+                '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+              },
+            }}
           />
         </Box>
         <Button
           onClick={loadData}
           sx={{
             textTransform: 'none',
-            fontSize: '0.8rem',
+            fontSize: '0.85rem',
             fontWeight: 600,
-            color: '#1a3a6b',
-            padding: '4px 8px',
-            minWidth: 'auto',
-            gap: 0.5,
-            '&:hover': { background: 'none', textDecoration: 'underline' },
+            color: '#64748b',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            gap: 1,
+            '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
           }}
         >
           <Box component="img" src={refreshIcon} alt="refresh" sx={{ width: 14, height: 14 }} />

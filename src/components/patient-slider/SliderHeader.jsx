@@ -4,6 +4,7 @@ import {
   Close,
   Refresh,
 } from "@mui/icons-material";
+import { Close, Refresh } from "@mui/icons-material";
 import InitialsAvatar from "../shared/InitialsAvatar";
 import { ActionBtn, VDiv } from "./helpers";
 import ToothSvg from "../../assets/patientslidericons/tabler_dental.svg";
@@ -28,35 +29,11 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => {
       backgroundColor: "#f3f8fd",
     }}
   >
-    <InitialsAvatar name={pt.name} size={42} fontSize={13} />
-
     <Box sx={{ mr: "4px" }}>
-      <Box sx={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-        <Typography
-          sx={{
-            fontFamily: "Inter",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: "#09121f",
-          }}
-        >
-          {pt.name}
-        </Typography>
-        <Typography
-          sx={{
-            fontFamily: "Inter",
-            fontSize: "11px",
-            color: "#2262ef",
-            fontWeight: 600,
-          }}
-        >
-          pt #{pt.id}
-        </Typography>
-      </Box>
       <Typography
         sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280" }}
       >
-        Selected family member
+        Selected family member: {pt.name} [pt#{pt.id}]
       </Typography>
     </Box>
 
@@ -137,14 +114,16 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => {
         py: "5px",
         cursor: isRefreshing ? "default" : "pointer",
         opacity: isRefreshing ? 0.7 : 1,
-        "&:hover": { backgroundColor: isRefreshing ? "transparent" : "rgba(0,0,0,0.05)" },
+        "&:hover": {
+          backgroundColor: isRefreshing ? "transparent" : "rgba(0,0,0,0.05)",
+        },
       }}
     >
-      <Refresh 
-        sx={{ 
-          fontSize: "14px", 
+      <Refresh
+        sx={{
+          fontSize: "14px",
           color: "#6b7280",
-        }} 
+        }}
       />
       <Typography
         sx={{
