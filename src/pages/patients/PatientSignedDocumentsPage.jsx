@@ -266,7 +266,9 @@ const PatientSignedDocumentsPage = () => {
           <CircularProgress />
         </Box>
       ) : !hasAnySignedDocs ? (
-        <Alert severity="info">No signed documents for this patient.</Alert>
+        <Alert severity="info" sx={{ backgroundColor: "rgba(35, 98, 239, 0.08)", color: "#2362EF", "& .MuiAlert-icon": { color: "#2362EF" }, borderRadius: "8px", fontWeight: 500 }}>
+          No signed documents for this patient.
+        </Alert>
       ) : (
         <>
           {/* HIPAA section always visible, even if empty */}

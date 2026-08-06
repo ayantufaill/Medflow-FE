@@ -358,18 +358,18 @@ const EmptySlotsSearch = () => {
           Time:
         </Typography>
         <FormControlLabel
-          control={<Checkbox checked={amSelected} onChange={(e) => setAmSelected(e.target.checked)} size="small" sx={{ p: '4px' }} />}
+          control={<Checkbox checked={amSelected} onChange={(e) => setAmSelected(e.target.checked)} size="small" sx={{ p: '4px', color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
           label={<Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>AM</Typography>}
         />
         <FormControlLabel
-          control={<Checkbox checked={pmSelected} onChange={(e) => setPmSelected(e.target.checked)} size="small" sx={{ p: '4px' }} />}
+          control={<Checkbox checked={pmSelected} onChange={(e) => setPmSelected(e.target.checked)} size="small" sx={{ p: '4px', color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
           label={<Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>PM</Typography>}
         />
       </Box>
 
       <Box sx={{ mb: '20px' }}>
         <FormControlLabel
-          control={<Checkbox size="small" sx={{ p: '4px' }} />}
+          control={<Checkbox size="small" sx={{ p: '4px', color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
           label={<Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Allow Double Booking</Typography>}
         />
       </Box>

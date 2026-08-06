@@ -1,4 +1,9 @@
 import { Box, Chip, IconButton, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import {
+  Close,
+  Refresh,
+} from "@mui/icons-material";
 import { Close, Refresh } from "@mui/icons-material";
 import InitialsAvatar from "../shared/InitialsAvatar";
 import { ActionBtn, VDiv } from "./helpers";
@@ -9,7 +14,10 @@ import LinkIcon from "../../assets/patientslidericons/link.svg";
 import FamilyIcon from "../../assets/patientslidericons/family-icon.svg";
 
 // 1. Add onRefresh to the component props
-const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
+const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => {
+  const navigate = useNavigate();
+
+  return (
   <Box
     sx={{
       display: "flex",
@@ -51,6 +59,10 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
           />
         }
         title="Billing"
+        onClick={() => {
+          onClose();
+          navigate(`/finance`);
+        }}
       />
       <ActionBtn
         icon={
@@ -81,6 +93,10 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
           />
         }
         title="Clinical"
+        onClick={() => {
+          onClose();
+          navigate(`/clinical/treatment-plan`);
+        }}
       />
     </Box>
 
@@ -149,5 +165,6 @@ const SliderHeader = ({ pt, onClose, onRefresh, isRefreshing }) => (
     </IconButton>
   </Box>
 );
+};
 
 export default SliderHeader;

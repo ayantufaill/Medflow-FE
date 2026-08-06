@@ -8,6 +8,7 @@ import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
 import AppointmentFooter      from "./new-appointment/AppointmentFooter";
 import AppointmentLeftPanel   from "./new-appointment/AppointmentLeftPanel";
 import AppointmentRightPanel  from "./new-appointment/AppointmentRightPanel";
+import LabOrderModal          from "./new-appointment/LabOrderModal";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -84,6 +85,7 @@ const AddNewPatientAppointmentForm = ({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
 
   const occupiedRoomIds = useMemo(() => {
     const h = parseInt(timeHours) % 12;
@@ -232,6 +234,8 @@ const AddNewPatientAppointmentForm = ({
                 code: p.procedureCode || p.code || p.ProcCode || "TBD", 
                 treatment: p.description || p.treatment || p.name || p.title || p.Descript || "Unknown", 
                 charge: p.fee || p.charge || p.amount || "$0.00", 
+                provider: p.providerId || p.provider || p.ProvNum || "",
+                site: p.tooth || p.site || p.ToothNum || "",
                 checked: true, 
                 completed: p.completed || false,
                 id: p._id || p.id || (Date.now() + i) 
@@ -541,7 +545,7 @@ const AddNewPatientAppointmentForm = ({
         const newId = nextId.current++;
         setProcedures((prev) => [...prev, {
           id: newId, code: template.code, treatment: template.treatment,
-          site: "", provider: "", charge: template.charge, checked: true,
+          site: "", provider: providerRows[0]?.providerId || "", charge: template.charge, checked: true,
           tag: { label: tagInfo.label, color: tagInfo.color, font: tagInfo.font },
           treatArea: template.treatArea,
         }]);
@@ -561,7 +565,7 @@ const AddNewPatientAppointmentForm = ({
     }
     setProcedures((prev) => [...prev, {
       id: nextId.current++, code: option.code, treatment: option.treatment,
-      site: "", provider: "", charge: option.charge, checked: true, tag: option.tag,
+      site: "", provider: providerRows[0]?.providerId || "", charge: option.charge, checked: true, tag: option.tag,
       treatArea: option.treatArea,
     }]);
     setProcedureInput(""); setAddingProcedure(false);
@@ -820,6 +824,9 @@ const AddNewPatientAppointmentForm = ({
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling}
             setIsRescheduling={setIsRescheduling}
+            appointmentId={initialAppointment?.id || initialAppointment?._id || initialAppointment?.AptNum}
+            status={status}
+            onStatusChange={setStatus}
           />
 
           <AppointmentRightPanel
@@ -865,8 +872,18 @@ const AddNewPatientAppointmentForm = ({
           showExtendedOptions={showExtendedOptions}
           isEditMode={isEditMode}
           readOnly={isEditMode && !isRescheduling}
+          onLabOrderClick={() => setIsLabOrderOpen(true)}
         />
       </Box>
+
+      {isLabOrderOpen && (
+        <LabOrderModal 
+          open={isLabOrderOpen} 
+          onClose={() => setIsLabOrderOpen(false)} 
+          procedures={procedures} 
+        />
+      )}
+
       <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert onClose={() => setToastMessage("")} severity="info" sx={{ width: '100%' }}>
           {toastMessage}

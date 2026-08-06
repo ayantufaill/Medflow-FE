@@ -44,7 +44,7 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, active
           y1={DOT_Y} 
           x2={(visitDates.length - 1) * ITEM_WIDTH + (ITEM_WIDTH / 2)} 
           y2={DOT_Y} 
-          stroke="#a2b9d6" 
+          stroke="#2362EF" 
           strokeWidth="2" 
         />
 
@@ -70,7 +70,7 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, active
                 cx={xPos} 
                 cy={DOT_Y} 
                 r={isActive ? LARGE_R : SMALL_R} 
-                fill={isActive ? "#5b6d96" : "#a2b9d6"} 
+                fill={isActive ? "#2362EF" : "rgba(35, 98, 239, 0.35)"} 
                 onClick={handleDateClick}
                 style={{ cursor: 'pointer' }}
               />

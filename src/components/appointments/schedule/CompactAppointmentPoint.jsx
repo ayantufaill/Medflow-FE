@@ -12,7 +12,7 @@ const STATUS_COLORS = {
   checked_out_complete: "#2e7d32",
   no_show: "#616161",
   left_message: "#8d6e63",
-  scheduled: "#0284c7"
+  scheduled: "#2362EF"
 };
 
 const CompactAppointmentPoint = ({ appointment, onSlotClick }) => {

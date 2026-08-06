@@ -205,6 +205,9 @@ const FamilyAppointmentsDialog = () => {
             height: 30,
             fontSize: "12px",
             fontWeight: 600,
+            borderColor: "#2362EF",
+            color: "#2362EF",
+            "&:hover": { borderColor: "#1a50cc", backgroundColor: "rgba(35, 98, 239, 0.04)" }
           }}
         >
           Print

@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { Box, Typography, Collapse, Menu, MenuItem, IconButton } from '@mui/material';
 import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
 import dayjs from 'dayjs';
+import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
+
+const getProviderInitials = (name) => {
+  if (!name) return null;
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 const PROCEDURE_OPTIONS = [
   'Enter Manually',
@@ -30,6 +40,32 @@ const PROCEDURE_OPTIONS = [
 const ProcedureBlocks = ({ appointment }) => {
   const [open, setOpen] = useState(true);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const providers = useSelector(selectProviderDropdownList);
+
+  // Build a lookup map: provider ID -> provider object
+  const providerMap = useMemo(() => {
+    const map = {};
+    (providers || []).forEach((p) => {
+      const id = String(p._id || p.id || p.ProvNum || '');
+      if (id) map[id] = p;
+    });
+    return map;
+  }, [providers]);
+
+  // Safely extract a plain string ID from a value that could be a string, number, or nested object
+  const extractId = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') return String(val._id || val.id || val.ProvNum || '');
+    return String(val);
+  };
+
+  const getProviderName = (p) => {
+    if (!p) return null;
+    if (p.userId?.firstName || p.userId?.lastName) {
+      return `${p.userId.firstName || ''} ${p.userId.lastName || ''}`.trim();
+    }
+    return `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.name || null;
+  };
 
   if (!appointment) return null;
 
@@ -138,15 +174,53 @@ const ProcedureBlocks = ({ appointment }) => {
         <Box sx={{ p: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {proceduresList.map((proc, idx) => {
             const desc = proc.description || proc.name || proc.code || 'Procedure';
-            const providerText = proc.providerId ? 'PRV' : 'SAB'; // Fallback mock badge
-            const badgeColor = '#6ee7b7'; // Mint green from screenshot
+
+            // Helper: extract name from any provider-shaped object
+            const nameFromObj = (obj) => {
+              if (!obj || typeof obj !== 'object') return null;
+              // Nested userId
+              const fName = obj.userId?.firstName || obj.firstName || obj.FName || '';
+              const lName = obj.userId?.lastName  || obj.lastName  || obj.LName  || '';
+              return (fName + ' ' + lName).trim() || obj.name || obj.Abbr || null;
+            };
+
+            // 1. Try procedure-level provider object embedded in the procedure itself
+            let resolvedName = proc.providerName || nameFromObj(proc.providerObj) || null;
+
+            // 2. Try map lookup using numeric ID on the procedure
+            if (!resolvedName) {
+              const procProviderId = extractId(proc.providerId || proc.provider || proc.ProvNum);
+              const procProviderObj = procProviderId ? providerMap[procProviderId] : null;
+              resolvedName = nameFromObj(procProviderObj);
+            }
+
+            // 3. Fall back to the appointment's main provider — read name directly first
+            if (!resolvedName) {
+              const apptProvider = appointment.provider;
+              if (typeof apptProvider === 'string') {
+                resolvedName = apptProvider || null;
+              } else {
+                resolvedName = nameFromObj(apptProvider) || null;
+              }
+              resolvedName = resolvedName || appointment.providerName || null;
+            }
+
+            // 4. Final fallback: map lookup using appointment providerId
+            if (!resolvedName) {
+              const apptProviderId = extractId(appointment.providerId);
+              const apptProviderObj = apptProviderId ? providerMap[apptProviderId] : null;
+              resolvedName = nameFromObj(apptProviderObj);
+            }
+
+            const initials = getProviderInitials(resolvedName) || '—';
+            const badgeColor = '#6ee7b7';
 
             return (
-              <Box 
-                key={idx} 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <Box
+                key={idx}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'space-between',
                   pl: '24px' // Indent relative to header
                 }}
@@ -156,7 +230,7 @@ const ProcedureBlocks = ({ appointment }) => {
                 </Typography>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Provider/Status Badge */}
+                  {/* Provider badge — always shown, falls back to appointment provider */}
                   <Box
                     sx={{
                       backgroundColor: badgeColor,
@@ -169,7 +243,7 @@ const ProcedureBlocks = ({ appointment }) => {
                       lineHeight: 1.2
                     }}
                   >
-                    {providerText}
+                    {initials}
                   </Box>
 
                   {/* Optional Date (only show if it has a created date) */}

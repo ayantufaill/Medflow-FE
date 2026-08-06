@@ -1351,15 +1351,6 @@ const OperatorySchedulePage = () => {
         >
           <MenuItem
             onClick={() => {
-              setViewMyColumn(prev => !prev);
-              setMoreMenuAnchorEl(null);
-            }}
-            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
-          >
-            {viewMyColumn ? "Show all columns" : "View my column"}
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
               setIsCloseOpenDayMode(prev => !prev);
               setMoreMenuAnchorEl(null);
             }}

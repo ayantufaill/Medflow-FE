@@ -60,7 +60,7 @@ const PatientFiltersBar = ({
     </Select>
 
     <FormControlLabel
-      control={<Checkbox checked={sortByName} onChange={(e) => onSortByNameChange(e.target.checked)} size="small" />}
+      control={<Checkbox checked={sortByName} onChange={(e) => onSortByNameChange(e.target.checked)} size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
       label="Sort By Name"
       sx={{ '& .MuiFormControlLabel-label': { fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_BODY } }}
     />

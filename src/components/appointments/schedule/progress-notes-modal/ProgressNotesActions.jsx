@@ -11,7 +11,7 @@ const ProgressNotesActions = ({ onRefresh, onExport, onPrint }) => {
         <IconButton 
           size="small" 
           onClick={onRefresh}
-          sx={{ color: '#0ea5e9', '&:hover': { backgroundColor: 'rgba(14, 165, 233, 0.08)' } }}
+          sx={{ color: '#2362EF', '&:hover': { backgroundColor: 'rgba(35, 98, 239, 0.08)' } }}
         >
           <RefreshIcon />
         </IconButton>
@@ -20,7 +20,7 @@ const ProgressNotesActions = ({ onRefresh, onExport, onPrint }) => {
           size="small" 
           startIcon={<FileDownloadIcon />} 
           onClick={onExport}
-          sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}
+          sx={{ textTransform: 'none', bgcolor: '#2362EF', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#1a50cc', boxShadow: 'none' } }}
         >
           Export as CSV
         </Button>
@@ -29,7 +29,7 @@ const ProgressNotesActions = ({ onRefresh, onExport, onPrint }) => {
           size="small" 
           startIcon={<PrintIcon />} 
           onClick={onPrint}
-          sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600 }}
+          sx={{ textTransform: 'none', borderColor: '#2362EF', color: '#2362EF', borderRadius: '8px', px: 2, fontWeight: 600, '&:hover': { borderColor: '#1a50cc', backgroundColor: 'rgba(35, 98, 239, 0.04)' } }}
         >
           Print
         </Button>
