@@ -184,7 +184,33 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
-  const providerOptions = useMemo(() => providers.map((p) => ({ value: p._id || p.id, label: providerLabel(p) })), [providers]);
+  const getProviderTypeString = (provider) => {
+    const raw = provider.providerType || provider.specialty || provider.specialtyId?.name || (provider.isSecondary ? "hygien" : "") || "";
+    if (typeof raw === "string") return raw.toLowerCase();
+    if (Array.isArray(raw)) return raw.join(" ").toLowerCase();
+    if (typeof raw === "object" && raw !== null) return JSON.stringify(raw).toLowerCase();
+    return String(raw).toLowerCase();
+  };
+
+  const dentistOptions = useMemo(() => {
+    const dentists = providers.filter((p) => {
+      if (p.isSecondary === false || p.isSecondary === 0) return true;
+      const type = getProviderTypeString(p);
+      return type.includes("dentist") || type.includes("dds") || type.includes("dmd") || type.includes("doctor");
+    });
+    const opts = dentists.length > 0 ? dentists : providers;
+    return opts.map((p) => ({ value: p._id || p.id || p.ProvNum, label: providerLabel(p) }));
+  }, [providers]);
+
+  const hygienistOptions = useMemo(() => {
+    const hygienists = providers.filter((p) => {
+      if (p.isSecondary === true || p.isSecondary === 1) return true;
+      const type = getProviderTypeString(p);
+      return type.includes("hygien");
+    });
+    const opts = hygienists.length > 0 ? hygienists : providers;
+    return opts.map((p) => ({ value: p._id || p.id || p.ProvNum, label: providerLabel(p) }));
+  }, [providers]);
 
   const handleFormSubmit = (values) => {
     const customFields = removeEmptyCustomFields({
@@ -254,13 +280,13 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             <Controller name="preferredDentistId" control={control} render={({ field }) => (
               <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
                 <MenuItem value="">Preferred Dentist</MenuItem>
-                {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
+                {dentistOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
             <Controller name="preferredHygienistId" control={control} render={({ field }) => (
               <OutlinedSelect {...field} SelectProps={{ displayEmpty: true }} sx={{ width: 200, "& .MuiOutlinedInput-root": { height: "36px", backgroundColor: COLORS.SURFACE_CARD, borderColor: COLORS.BORDER } }}>
                 <MenuItem value="">Preferred Hygienist</MenuItem>
-                {providerOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
+                {hygienistOptions.map((p) => <MenuItem key={p.value} value={p.value}>{p.label}</MenuItem>)}
               </OutlinedSelect>
             )} />
           </Box>

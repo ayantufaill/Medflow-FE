@@ -31,6 +31,13 @@ export const SocketProvider = ({ children }) => {
     const socket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnection: false,   // don't retry — backend has no socket.io server
+      timeout: 5000,
+    });
+
+    socket.on('connect_error', () => {
+      // Backend does not expose a socket.io server — suppress the error silently.
+      socket.disconnect();
     });
 
     socket.on('notification:new', (notification) => {

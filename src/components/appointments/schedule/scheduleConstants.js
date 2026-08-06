@@ -22,8 +22,8 @@ export const OPERATORY_COLORS = [
 export const STATUS_COLORS = {
   unconfirmed:           '#9e9e9e',
   preconfirmed:          '#5c6bc0',
-  confirmed:             '#1976d2',
-  scheduled:             '#1976d2',
+  confirmed:             '#2362EF',
+  scheduled:             '#2362EF',
   seated:                '#00796b',
   'checkout incomplete': '#f9a825',
   'checkout complete':   '#2e7d32',
