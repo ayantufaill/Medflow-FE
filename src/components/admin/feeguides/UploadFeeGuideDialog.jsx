@@ -24,24 +24,27 @@ const UploadFeeGuideDialog = ({ open, onClose, onUpload }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2 } }}>
-      <DialogTitle sx={{ bgcolor: '#4b71a1', color: 'white', py: 1.5, fontSize: '1rem', textAlign: 'center' }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ zIndex: 1400, '& .MuiDialog-paper': { borderRadius: '12px', overflow: 'hidden' } }}>
+      <DialogTitle sx={{ backgroundColor: '#F1F5FD', color: '#111', py: 2, px: 3, fontSize: '1.25rem', fontWeight: 600, borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         Upload Fee Guide
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748b' }}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <DialogContent sx={{ mt: 3 }}>
         <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
           Select a CSV or Excel file to upload the new fees. Ensure the column headers match the required format.
         </Typography>
-        
-        <Box 
-          sx={{ 
-            border: '2px dashed #e0e0e0', 
-            borderRadius: 2, 
-            p: 4, 
+
+        <Box
+          sx={{
+            border: '2px dashed #cbd5e1',
+            borderRadius: 2,
+            p: 4,
             textAlign: 'center',
-            bgcolor: '#fcfcfc',
+            bgcolor: '#f8fafc',
             cursor: 'pointer',
-            '&:hover': { bgcolor: '#f5f5f5', borderColor: '#4b71a1' }
+            '&:hover': { bgcolor: '#f1f5f9', borderColor: '#2262ef' }
           }}
           onClick={() => fileInputRef.current.click()}
         >
@@ -52,7 +55,7 @@ const UploadFeeGuideDialog = ({ open, onClose, onUpload }) => {
             onChange={handleFileChange}
             accept=".csv, .xlsx, .xls"
           />
-          <CloudUploadIcon sx={{ fontSize: 40, color: '#4b71a1', mb: 1 }} />
+          <CloudUploadIcon sx={{ fontSize: 40, color: '#2262ef', mb: 1 }} />
           <Typography variant="body1" sx={{ color: '#333', fontWeight: 500 }}>
             {fileName || 'Click to select or drag and drop file'}
           </Typography>
@@ -63,27 +66,27 @@ const UploadFeeGuideDialog = ({ open, onClose, onUpload }) => {
 
         {fileName && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" sx={{ color: '#4b71a1', fontWeight: 600 }}>
+            <Typography variant="caption" sx={{ color: '#2262ef', fontWeight: 600 }}>
               Selected File: {fileName}
             </Typography>
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'flex-end', gap: 2 }}>
-        <Button 
-          variant="contained" 
-          disabled={!fileName}
-          onClick={() => onUpload(fileName)}
-          sx={{ bgcolor: '#4b71a1', '&:hover': { bgcolor: '#3d5c85' }, textTransform: 'none', px: 4 }}
-        >
-          Upload
-        </Button>
-        <Button 
-          variant="contained" 
+      <DialogActions sx={{ px: 3, py: 2, backgroundColor: '#F9FAFB', borderTop: '1px solid #E5E7EB', justifyContent: 'flex-end', gap: 1 }}>
+        <Button
+          variant="outlined"
           onClick={onClose}
-          sx={{ bgcolor: '#9e9e9e', '&:hover': { bgcolor: '#8e8e8e' }, textTransform: 'none', px: 4 }}
+          sx={{ color: '#64748b', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' }, textTransform: 'none', px: 3, fontWeight: 600 }}
         >
           Cancel
+        </Button>
+        <Button
+          variant="contained"
+          disabled={!fileName}
+          onClick={() => onUpload(fileName)}
+          sx={{ bgcolor: '#2262ef', color: '#fff', '&:hover': { bgcolor: '#1d4ed8' }, textTransform: 'none', px: 3, fontWeight: 600, boxShadow: 'none' }}
+        >
+          Upload
         </Button>
       </DialogActions>
     </Dialog>

@@ -90,8 +90,32 @@ const getAppointmentProvider = (appointment, providers = []) => {
   if (typeof provider === "object" && provider !== null && provider.name) return provider.name;
   if (appointment.providerName) return appointment.providerName;
   if (typeof provider === "string" && /[a-z]/i.test(provider)) return provider;
-
   return "---";
+};
+
+const getProviderInitials = (name) => {
+  if (!name || name === "---") return "---";
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "---";
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getCalculatedDuration = (appt) => {
+  const explicitDuration = appt.durationMinutes || appt.DurationMins || appt.duration;
+  if (explicitDuration) return explicitDuration;
+
+  if (appt.startTime && appt.endTime) {
+    // If times are full date strings or HH:mm strings
+    const start = dayjs(appt.startTime.includes('T') ? appt.startTime : `2000-01-01 ${appt.startTime}`);
+    const end = dayjs(appt.endTime.includes('T') ? appt.endTime : `2000-01-01 ${appt.endTime}`);
+    if (start.isValid() && end.isValid()) {
+      const diff = end.diff(start, 'minute');
+      if (diff > 0) return diff;
+    }
+  }
+
+  return 60; // Absolute fallback
 };
 
 const getVisitType = (appointment) =>
@@ -155,7 +179,9 @@ const AppointmentHistoryTable = ({
   procedureMap = {},
   selected,
   handleSelectAll,
-  handleSelectOne
+  handleSelectOne,
+  onShowAudit,
+  onShowReminders,
 }) => {
   const { providers = [] } = useDropdownData({ providers: true });
 
@@ -183,7 +209,7 @@ const AppointmentHistoryTable = ({
                 <TableCell>Type</TableCell>
                 <TableCell>Procedures</TableCell>
                 <TableCell>Duration</TableCell>
-                <TableCell>Provider</TableCell>
+                <TableCell sx={{ minWidth: 110 }}>Provider</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Audit</TableCell>
                 <TableCell>Reminders</TableCell>
@@ -220,7 +246,7 @@ const AppointmentHistoryTable = ({
                       <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {capitalizeFirst(proceduresText)}
                       </TableCell>
-                      <TableCell>{appt.duration || 60} mins</TableCell>
+                      <TableCell>{getCalculatedDuration(appt)} mins</TableCell>
                       <TableCell>
                         <Box 
                           sx={{ 
@@ -231,20 +257,23 @@ const AppointmentHistoryTable = ({
                             color: "#166534", 
                             borderRadius: "4px", 
                             fontSize: "0.7rem", 
-                            fontWeight: 700 
+                            fontWeight: 700,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                            maxWidth: "100%",
                           }}
                         >
-                          {providerName}
+                          {getProviderInitials(providerName)}
                         </Box>
                       </TableCell>
                       <TableCell sx={{ fontWeight: 500, color: appt.status?.toLowerCase() === 'cancelled' ? '#ef4444' : '#475569' }}>
                         {capitalizeFirst(appt.status || "Unconfirmed")}
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
+                        <Typography onClick={() => onShowAudit?.(appt)} sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
+                        <Typography onClick={() => onShowReminders?.(appt)} sx={{ fontSize: "0.75rem", color: "#3b82f6", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>show</Typography>
                       </TableCell>
                     </TableRow>
                   );

@@ -4,10 +4,11 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Typography,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-
-const BRAND_COLOR = '#7788bb';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 /**
  * Shell for all brand-styled dialogs.
@@ -24,35 +25,46 @@ const BaseDialog = ({
   fullWidth = true,
   loading = false,
   showCloseButton = false,
-  titleColor = BRAND_COLOR,
   contentSx,
   paperSx,
+  icon: Icon
 }) => (
   <Dialog
     open={open}
     onClose={loading ? undefined : onClose}
     maxWidth={maxWidth}
     fullWidth={fullWidth}
+    sx={{ zIndex: 130000 }}
     PaperProps={{
       sx: {
-        borderRadius: '4px',
+        borderRadius: radius.md,
         overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         ...paperSx,
       },
     }}
   >
     <DialogTitle
       sx={{
-        bgcolor: titleColor,
-        color: '#fff',
-        fontSize: '14px',
-        fontWeight: 'bold',
+        bgcolor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        color: COLORS.TEXT_PRIMARY,
+        fontSize: '15px',
+        fontWeight: fontWeight.semiBold,
         textAlign: 'center',
-        py: 0.75,
+        py: 1.5,
+        px: 3,
         position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 1
       }}
     >
-      {title}
+      {Icon && <Icon sx={{ fontSize: '18px', color: COLORS.ACCENT }} />}
+      <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, flex: 1, textAlign: 'center' }}>
+        {title}
+      </Typography>
       {showCloseButton && (
         <IconButton
           onClick={onClose}
@@ -60,11 +72,11 @@ const BaseDialog = ({
           size="small"
           sx={{
             position: 'absolute',
-            right: 8,
+            right: 16,
             top: '50%',
             transform: 'translateY(-50%)',
-            color: '#fff',
-            p: 0.25,
+            color: COLORS.TEXT_SECONDARY,
+            p: 0.5,
           }}
         >
           <CloseIcon fontSize="small" />
@@ -72,12 +84,12 @@ const BaseDialog = ({
       )}
     </DialogTitle>
 
-    <DialogContent sx={{ pt: '8px !important', ...contentSx }}>
+    <DialogContent sx={{ pt: '24px !important', px: 3, pb: 3, ...contentSx }}>
       {children}
     </DialogContent>
 
     {actions && (
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}` }}>
         {actions}
       </DialogActions>
     )}

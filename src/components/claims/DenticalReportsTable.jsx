@@ -20,13 +20,13 @@ import {
 export const DenticalReportsTable = ({ filteredDenticalReports }) => {
   return (
             // DENTICAL REPORTS Table Layout
-        <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid #e0e6ed', borderRadius: '6px', overflow: 'auto' }}>
-          <Table>
-            <TableHead sx={{ backgroundColor: '#fafbfe' }}>
+        <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", overflowX: "auto" }}>
+          <Table size="small" sx={{ minWidth: 1200 }}>
+            <TableHead sx={{ backgroundColor: "#f8f9fa", "& .MuiTableCell-root": { py: 1, px: 1, fontSize: "0.7rem", fontWeight: 700, borderBottom: "1px solid #e2e8f0", color: "inherit", whiteSpace: "nowrap" } }}>
               <TableRow>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>File Name</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Report Date</TableCell>
-                <TableCell sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>
+                <TableCell >File Name</TableCell>
+                <TableCell >Report Date</TableCell>
+                <TableCell >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     Date Created
                     <Tooltip title="Date the Dentical report was received and imported into Medflow.">
@@ -34,10 +34,10 @@ export const DenticalReportsTable = ({ filteredDenticalReports }) => {
                     </Tooltip>
                   </Box>
                 </TableCell>
-                <TableCell align="right" sx={{ color: '#1a3a6b', fontWeight: 700, fontSize: '0.8rem', py: 1.5 }}>Actions</TableCell>
+                <TableCell align="right" >Actions</TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ "& .MuiTableCell-root": { py: 1.5, px: 1, fontSize: "0.75rem", verticalAlign: "middle", borderBottom: "1px solid #e2e8f0", color: "#1e293b", whiteSpace: "nowrap" } }}>
               {filteredDenticalReports.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
@@ -50,17 +50,13 @@ export const DenticalReportsTable = ({ filteredDenticalReports }) => {
                 filteredDenticalReports.map((report) => (
                   <TableRow
                     key={report.id}
-                    hover
-                    sx={{
-                      '&:hover': { backgroundColor: 'rgba(26, 58, 107, 0.03) !important' },
-                      transition: 'background-color 0.2s',
-                    }}
+                    hover={false}
                   >
                     {/* File Name with PDF Icon */}
                     <TableCell sx={{ py: 1.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <PdfIcon sx={{ color: '#e53e3e', fontSize: 20 }} />
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1a3a6b', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => alert(`Opening PDF file: ${report.fileName}`)}>
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#3b82f6', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => alert(`Opening PDF file: ${report.fileName}`)}>
                           {report.fileName}
                         </Typography>
                       </Box>
@@ -68,14 +64,14 @@ export const DenticalReportsTable = ({ filteredDenticalReports }) => {
 
                     {/* Report Date */}
                     <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                      <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>
                         {report.reportDate}
                       </Typography>
                     </TableCell>
 
                     {/* Date Created */}
                     <TableCell sx={{ py: 1.5 }}>
-                      <Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>
+                      <Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>
                         {report.dateCreated}
                       </Typography>
                     </TableCell>

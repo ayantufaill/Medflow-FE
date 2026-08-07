@@ -50,11 +50,10 @@ export const HistoryRow = ({ item, sectionKey, onUpdateItem, readOnly = false })
 
   return (
     <Box sx={{ borderBottom: "1px solid #e0e0e0", py: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 3, alignItems: 'start', width: '100%' }}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>
-            <Box component="span" sx={{ mr: 2 }}>{item.number}.</Box>
-            {text}
+            {item.number}. {text}
           </Typography>
           {item.id === 'fearful-treatment' && !isEditing && (
             <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, ml: 4, mt: 0.5 }}>
@@ -63,7 +62,7 @@ export const HistoryRow = ({ item, sectionKey, onUpdateItem, readOnly = false })
           )}
           
           {!isEditing && options && (
-            <Box sx={{ ml: 4, mt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ ml: 4, mt: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 2 }}>
               {options.map(opt => (
                 <Typography key={opt} sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: selectedOptions.includes(opt) ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}>
                   {opt}
@@ -89,7 +88,7 @@ export const HistoryRow = ({ item, sectionKey, onUpdateItem, readOnly = false })
                 </Box>
               )}
               {options ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 2 }}>
                   {options.map(opt => (
                     <FormControlLabel
                       key={opt}
@@ -119,10 +118,10 @@ export const HistoryRow = ({ item, sectionKey, onUpdateItem, readOnly = false })
           </Collapse>
         </Box>
         
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 120 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 100 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
              <InfoIcon sx={{ fontSize: 16, color: COLORS.TEXT_MUTED }} />
-             <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>
+             <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap' }}>
                {answer}
              </Typography>
           </Box>

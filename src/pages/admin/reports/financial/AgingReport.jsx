@@ -67,76 +67,7 @@ const AgingReport = () => {
     setAppliedFilters(newFilters);
   };
   
-  const [batches, setBatches] = useState([
-    {
-      id: 1,
-      date: '07/15/2022',
-      totalCreated: 1,
-      sentViaMyChart: 1,
-      manualCreated: 0,
-      details: {
-        withoutEmails: 0,
-        withMcAccounts: 0,
-        withEmails: 0,
-      },
-      myChartSent: {
-        count: 1,
-        successMessage: '1 e-statements successfully sent!',
-      },
-      manualPdfs: null,
-    },
-    {
-      id: 2,
-      date: '07/15/2022',
-      totalCreated: 3,
-      sentViaMyChart: 0,
-      manualCreated: 3,
-      details: {
-        withoutEmails: 0,
-        withMcAccounts: 3,
-        withEmails: 0,
-      },
-      myChartSent: null,
-      manualPdfs: [
-        {
-          id: 'm1',
-          label: '3 manual statements for pts with My Chart accounts',
-          hasMyChart: true,
-        }
-      ],
-    },
-    {
-      id: 3,
-      date: '07/14/2022',
-      totalCreated: 4,
-      sentViaMyChart: 0,
-      manualCreated: 4,
-      details: {
-        withoutEmails: 1,
-        withMcAccounts: 2,
-        withEmails: 1,
-      },
-      myChartSent: null,
-      manualPdfs: [
-        {
-          id: 'm2',
-          label: '1 manual statements for pts without emails',
-          hasMyChart: false,
-        },
-        {
-          id: 'm3',
-          label: '2 manual statements for pts with My Chart accounts',
-          hasMyChart: true,
-        },
-        {
-          id: 'm4',
-          label: '1 manual statements for pts with emails!',
-          hasMyChart: false,
-          showCreateSend: true,
-        }
-      ],
-    }
-  ]);
+  const [batches, setBatches] = useState([]);
 
   const handleGenerateBatch = (config) => {
     setShowGenerateStatements(false);
@@ -521,52 +452,68 @@ const AgingReport = () => {
 
           <Box id="aging-report-all-tables">
             {appliedFilters.arRange === 'any' ? (
-            agingBuckets.map((bucket, index) => {
-              const bucketData = filteredReportData.filter((r) => {
-                let oldest = null;
-                for (let i = agingBuckets.length - 1; i >= 0; i--) {
-                  if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
-                    oldest = agingBuckets[i];
-                    break;
-                  }
-                }
-                if (!oldest) oldest = agingBuckets[0];
-                return oldest === bucket;
-              });
+              filteredReportData.length === 0 ? (
+                <AgingReportTable 
+                  tableId="aging-report-table-empty"
+                  loading={loading}
+                  reportData={[]}
+                  hidePatientNames={hidePatientNames}
+                  agingBuckets={agingBuckets}
+                  totals={null}
+                  showFlags={appliedFilters.showFlags}
+                  showPaymentPlan={appliedFilters.paymentPlanOwing}
+                  setSelectedPatientForNotes={setSelectedPatientForNotes}
+                  selectedNames={selectedNames}
+                  setSelectedNames={setSelectedNames}
+                />
+              ) : (
+                agingBuckets.map((bucket, index) => {
+                  const bucketData = filteredReportData.filter((r) => {
+                    let oldest = null;
+                    for (let i = agingBuckets.length - 1; i >= 0; i--) {
+                      if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
+                        oldest = agingBuckets[i];
+                        break;
+                      }
+                    }
+                    if (!oldest) oldest = agingBuckets[0];
+                    return oldest === bucket;
+                  });
 
-              if (bucketData.length === 0) return null;
-              const tableId = `aging-report-table-${index}`;
+                  if (bucketData.length === 0) return null;
+                  const tableId = `aging-report-table-${index}`;
 
-              return (
-                <Box key={bucket} sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
-                    {bucket} Group
-                  </Typography>
-                  <Box className="hide-on-print">
-                    <AgingReportActions 
-                      hidePatientNames={hidePatientNames} 
-                      setHidePatientNames={setHidePatientNames} 
-                      onExportCsv={() => handleExportCSV(bucket, bucketData)}
-                      onPrint={() => handlePrint(tableId, bucket)}
-                      isSubTable={true}
-                    />
-                  </Box>
-                  <AgingReportTable 
-                    tableId={tableId}
-                    loading={loading}
-                    reportData={bucketData}
-                    hidePatientNames={hidePatientNames}
-                    agingBuckets={agingBuckets}
-                    totals={totals}
-                    showFlags={appliedFilters.showFlags}
-                    showPaymentPlan={appliedFilters.paymentPlanOwing}
-                    setSelectedPatientForNotes={setSelectedPatientForNotes}
-                    selectedNames={selectedNames}
-                    setSelectedNames={setSelectedNames}
-                  />
-                </Box>
-              );
-            })
+                  return (
+                    <Box key={bucket} sx={{ mb: 4 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
+                        {bucket} Group
+                      </Typography>
+                      <Box className="hide-on-print">
+                        <AgingReportActions 
+                          hidePatientNames={hidePatientNames} 
+                          setHidePatientNames={setHidePatientNames} 
+                          onExportCsv={() => handleExportCSV(bucket, bucketData)}
+                          onPrint={() => handlePrint(tableId, bucket)}
+                          isSubTable={true}
+                        />
+                      </Box>
+                      <AgingReportTable 
+                        tableId={tableId}
+                        loading={loading}
+                        reportData={bucketData}
+                        hidePatientNames={hidePatientNames}
+                        agingBuckets={agingBuckets}
+                        totals={totals}
+                        showFlags={appliedFilters.showFlags}
+                        showPaymentPlan={appliedFilters.paymentPlanOwing}
+                        setSelectedPatientForNotes={setSelectedPatientForNotes}
+                        selectedNames={selectedNames}
+                        setSelectedNames={setSelectedNames}
+                      />
+                    </Box>
+                  );
+                })
+              )
           ) : (
               <AgingReportTable 
                 tableId="aging-report-table"

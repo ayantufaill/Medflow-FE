@@ -87,6 +87,16 @@ export const clinicalManagementService = {
     return response.data.data;
   },
 
+  async removeChoiceFromChecklistItem(itemId, choiceIndex) {
+    const response = await apiClient.delete(`/clinical-management/checklists/items/${itemId}/choice/${choiceIndex}`);
+    return response.data.data;
+  },
+
+  async removeProductFromChecklistItem(itemId, productIndex) {
+    const response = await apiClient.delete(`/clinical-management/checklists/items/${itemId}/product/${productIndex}`);
+    return response.data.data;
+  },
+
   // --- PRESCRIPTION TEMPLATES ---
   async getPrescriptionTemplates() {
     const response = await apiClient.get('/clinical-management/prescription-templates');

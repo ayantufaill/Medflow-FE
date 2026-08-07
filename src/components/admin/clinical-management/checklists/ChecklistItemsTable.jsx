@@ -11,10 +11,12 @@ const ChecklistItemsTable = ({
   setActiveInput,
   handleInputSubmit,
   handleDeleteItem,
-  handleCopyItemToClipboard
+  handleCopyItemToClipboard,
+  handleRemoveChoice,
+  handleRemoveProduct
 }) => {
   return (
-    <Box sx={{ ml: 8, mr: 2, mb: 2, border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+    <Box sx={{ ml: 8, mr: 4, mt: 2, mb: 3, border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
       <Box sx={{ display: 'flex', backgroundColor: '#f8fafc', py: 1.5, px: 3, borderBottom: '1px solid #e2e8f0' }}>
         <Typography sx={{ width: 40, fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>#</Typography>
         <Typography sx={{ flex: 2, fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>Item</Typography>
@@ -24,13 +26,19 @@ const ChecklistItemsTable = ({
       </Box>
       {items.map((item, idx) => (
         <Box key={idx} sx={{ display: 'flex', py: 2, px: 3, borderBottom: idx === items.length - 1 ? 'none' : '1px solid #e2e8f0', '&:hover': { backgroundColor: '#f8fafc' } }}>
-          <Typography sx={{ width: 40, fontSize: '0.85rem', color: '#64748b' }}>{item.id}-</Typography>
+          <Typography sx={{ width: 40, fontSize: '0.85rem', color: '#64748b' }}>{idx + 1}-</Typography>
           <Typography sx={{ flex: 2, fontSize: '0.85rem', color: '#1e293b', pr: 2, fontWeight: 500 }}>{item.text}</Typography>
           <Box sx={{ flex: 1.5 }}>
             {item.choices.map((choice, cIdx) => (
-              <Box key={cIdx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                <ChoiceIcon />
-                <Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>{choice}</Typography>
+              <Box key={cIdx} sx={{ display: 'flex', alignItems: 'flex-start', mb: 1, '&:hover .delete-btn': { opacity: 1 } }}>
+                <Box 
+                  onClick={() => handleRemoveChoice(category, checklistIdx, idx, cIdx)}
+                  sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                  title="Remove choice"
+                >
+                  <ChoiceIcon />
+                </Box>
+                <Typography sx={{ fontSize: '0.85rem', color: '#334155', flex: 1 }}>{choice}</Typography>
               </Box>
             ))}
             {activeInput?.type === 'choice' && activeInput.itemIdx === idx && activeInput.checklistIdx === checklistIdx && activeInput.category === category ? (
@@ -68,7 +76,15 @@ const ChecklistItemsTable = ({
           </Box>
           <Box sx={{ flex: 1 }}>
             {item.products && item.products.map((product, pIdx) => (
-               <Typography key={pIdx} sx={{ fontSize: '0.85rem', color: '#334155', mb: 1 }}>• {product}</Typography>
+               <Box key={pIdx} sx={{ display: 'flex', alignItems: 'center', mb: 1, '&:hover .delete-btn': { opacity: 1 } }}>
+                 <Typography sx={{ fontSize: '0.85rem', color: '#334155', flex: 1 }}>• {product}</Typography>
+                 <DeleteIcon 
+                   className="delete-btn"
+                   onClick={() => handleRemoveProduct(category, checklistIdx, idx, pIdx)}
+                   sx={{ color: '#ef4444', fontSize: '1rem', cursor: 'pointer', opacity: 0, '&:hover': { opacity: 1, transform: 'scale(1.1)' }, transition: 'all 0.2s', ml: 1 }} 
+                   titleAccess="Remove product"
+                 />
+               </Box>
             ))}
             {activeInput?.type === 'product' && activeInput.itemIdx === idx && activeInput.checklistIdx === checklistIdx && activeInput.category === category ? (
               <Box sx={{ mt: 1 }}>

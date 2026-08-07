@@ -20,7 +20,7 @@ const DialogWrapper = ({ children, onClose, maxWidth = '100%', extraSx = {} }) =
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      zIndex: 1300
+      zIndex: 130000
     }}
     onClick={onClose}
   >
@@ -63,7 +63,7 @@ const FinancePageDialogs = ({
       )}
 
       {showCourtesyRefund && (
-        <DialogWrapper onClose={() => setShowCourtesyRefund(false)} maxWidth="900px" extraSx={{ width: '90%' }}>
+        <DialogWrapper onClose={() => setShowCourtesyRefund(false)} maxWidth="1000px" extraSx={{ width: '90%' }}>
           <CourtesyRefundDialog 
             patient={patient}
             onClose={() => setShowCourtesyRefund(false)} 

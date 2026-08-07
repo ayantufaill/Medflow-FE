@@ -1,6 +1,9 @@
 import React from 'react';
 import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 
+import { radius, fontSize, fontWeight } from '../../../../constants/styles';
+import { COLORS } from '../../../../constants/colors';
+
 const TreatmentPlanSyncDialog = ({ isOpen, onClose }) => {
   return (
     <Dialog
@@ -56,15 +59,17 @@ const TreatmentPlanSyncDialog = ({ isOpen, onClose }) => {
       <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1.5, backgroundColor: '#fff' }}>
         <Button
           onClick={onClose}
+          variant="outlined"
           sx={{
             textTransform: 'none',
-            backgroundColor: '#f1f5f9',
-            color: '#334155',
-            fontSize: '0.85rem',
-            fontWeight: 600,
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            color: COLORS.TEXT_MUTED,
+            borderColor: COLORS.BORDER,
             px: 3,
-            borderRadius: 1.5,
-            '&:hover': { backgroundColor: '#e2e8f0' }
+            '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.TEXT_MUTED }
           }}
         >
           Cancel
@@ -72,16 +77,17 @@ const TreatmentPlanSyncDialog = ({ isOpen, onClose }) => {
         <Button
           onClick={onClose}
           variant="contained"
+          disableElevation
           sx={{
             textTransform: 'none',
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            fontSize: '0.85rem',
-            fontWeight: 600,
+            borderRadius: radius.md,
+            fontFamily: 'Inter',
+            fontSize: fontSize.base,
+            fontWeight: fontWeight.semibold,
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
             px: 4,
-            borderRadius: 1.5,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
           }}
         >
           Sync

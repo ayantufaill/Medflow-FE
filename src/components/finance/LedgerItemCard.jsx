@@ -22,6 +22,7 @@ const LedgerItemCard = ({
   handleEditClick,
   handleRefreshClick,
   setMagicStickAnchorEl,
+  setTransferTarget,
   setEditInvoiceTarget,
   setShowEditInvoice,
   setAdjAnchorEl,
@@ -81,7 +82,7 @@ const LedgerItemCard = ({
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptBal || '$0.00'}</Typography>
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptPaid || '$0.00'}</Typography>
           </Box>
 
           {/* Column 3 */}
@@ -90,7 +91,7 @@ const LedgerItemCard = ({
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insBal || '$0.00'}</Typography>
 
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>$0.00</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insPaid || '$0.00'}</Typography>
           </Box>
 
           {/* Column 4: Invoice Balance & Claim */}
@@ -155,8 +156,11 @@ const LedgerItemCard = ({
                 editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 isAdjustment={displayItem.isAdjustment}
-                onMagicStickClick={(e) => setMagicStickAnchorEl(e.currentTarget)}
-                onSettingsClick={(data) => { setEditInvoiceTarget(data); setShowEditInvoice(true); }}
+                onMagicStickClick={(e) => {
+                  setMagicStickAnchorEl(e.currentTarget);
+                  setTransferTarget({ ...detail, invoiceId: displayItem.id });
+                }}
+                onSettingsClick={(data) => { setEditInvoiceTarget({ ...data, id: displayItem.id, invoiceId: displayItem.id }); setShowEditInvoice(true); }}
                 onAdjustmentSelect={(e) => { setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }}
                 onPrintClick={(e) => { setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }}
                 onAttachClick={handleAttachClick}

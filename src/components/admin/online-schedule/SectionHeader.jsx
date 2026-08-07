@@ -14,23 +14,7 @@ const SectionHeader = ({ number, icon: Icon, title, subtitle }) => (
       borderTopRightRadius: 8,
     }}
   >
-    <Box
-      sx={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        backgroundColor: '#2563eb',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '0.8rem',
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {number}
-    </Box>
+
     {Icon && <Icon sx={{ color: '#1d4ed8', fontSize: '1.25rem' }} />}
     <Box>
       <Typography fontWeight={700} fontSize="0.85rem" sx={{ textTransform: 'uppercase', letterSpacing: '0.03em' }}>

@@ -14,6 +14,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Flashed on an appointment card when the user arrives via a notification, so the
+   relevant appointment is easy to spot on the calendar without a page-level modal. */
+@keyframes notification-highlight-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.55); }
+  50% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+}
+
+.notification-highlight {
+  animation: notification-highlight-pulse 0.7s ease-in-out 3;
+  border-radius: 6px;
+}
+
 /* Print Styles - Hide navigation and show only content */
 @media print {
   /* Hide ALL navigation elements aggressively */
@@ -48,7 +60,6 @@ body {
   /* Ensure main content area expands */
   body,
   html,
-  .MuiBox-root,
   .main-content,
   .page-content,
   .print-content {

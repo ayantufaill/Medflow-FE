@@ -19,7 +19,9 @@ const ChecklistCategoryList = ({
   setActiveInput,
   handleInputSubmit,
   handleDeleteItem,
-  handleCopyItemToClipboard
+  handleCopyItemToClipboard,
+  handleRemoveChoice,
+  handleRemoveProduct
 }) => {
   return (
     <Box sx={{ mt: 3 }}>
@@ -104,6 +106,8 @@ const ChecklistCategoryList = ({
                   handleInputSubmit={handleInputSubmit}
                   handleDeleteItem={handleDeleteItem}
                   handleCopyItemToClipboard={handleCopyItemToClipboard}
+                  handleRemoveChoice={handleRemoveChoice}
+                  handleRemoveProduct={handleRemoveProduct}
                 />
               ))}
               <Box sx={{ pl: 6, py: 3, backgroundColor: checklists[category].length > 0 ? '#f8fafc' : '#fff' }}>

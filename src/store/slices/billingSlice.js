@@ -144,8 +144,11 @@ export const fetchLedgerItems = createAsyncThunk(
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
-          // The inner invoice row should only show procedures where dbi is true
-          const invoiceProcedures = invoice.lineItems.filter(l => l.dbi === true);
+          // The inner invoice row should show procedures where dbi is true
+          // AND procedures where dbi is false BUT no claims exist yet.
+          const invoiceProcedures = invoice.lineItems.filter(l => 
+            l.dbi === true || invoiceClaims.length === 0
+          );
           
           const combinedTitle = invoiceProcedures
             .map((l) => l.description || 'Procedure')
@@ -229,7 +232,43 @@ export const fetchLedgerItems = createAsyncThunk(
         };
       });
 
-      const combined = [...mappedInvoices, ...mappedAdjustments];
+      const mappedPayments = payments
+        .filter((pay) => !pay.invoiceId)
+        .map((pay) => {
+          const amt = Number(pay.amount || 0);
+          return {
+            id: pay._id || pay.id,
+            invoiceNumber: `Pay #${pay.receiptNumber || pay.id}`,
+            date: pay.paidAt ? dayjs(pay.paidAt).format('MM/DD/YYYY') : 'N/A',
+            rawDate: pay.paidAt || '',
+            method: 'Payment',
+            amount: `$${amt.toFixed(2)}`,
+            color: '#4caf50',
+            isAdjustment: false,
+            isTopLevelPayment: true,
+            useCheckmark: true,
+            initials: 'STAFF',
+            success: true,
+            summary: {
+              insWo:     '$0.00',
+              ptBal:     '$0.00',
+              insBal:    '$0.00',
+              invBal:    '$0.00',
+              appliedWo: '$0.00',
+              ptPaid:    `$${amt.toFixed(2)}`,
+              insPaid:   '$0.00',
+            },
+            details: [
+              {
+                id: pay._id || pay.id,
+                title: pay.notes || `Patient Payment via ${pay.paymentMethod || 'Card'}`,
+                amount: `$${amt.toFixed(2)}`,
+              },
+            ],
+          };
+        });
+
+      const combined = [...mappedInvoices, ...mappedAdjustments, ...mappedPayments];
       combined.sort((a, b) => {
         const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
         const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;
@@ -395,6 +434,21 @@ export const voidTransaction = createAsyncThunk(
       await dispatch(fetchLedgerItems(patientId));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to void transaction');
+    }
+  }
+);
+/**
+ * Transfer outstanding insurance balance to the patient.
+ */
+export const transferOutstandingToPatient = createAsyncThunk(
+  'billing/transferOutstandingToPatient',
+  async ({ invoiceId, procedureId, patientId }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post(`/invoices/${invoiceId}/items/${procedureId}/transfer-outstanding`);
+      await dispatch(fetchLedgerItems(patientId));
+      return { procedureId, invoiceId };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to transfer outstanding balance to patient');
     }
   }
 );

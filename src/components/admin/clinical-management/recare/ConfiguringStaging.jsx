@@ -50,15 +50,13 @@ const ConfiguringStaging = ({
           size="small" 
           onClick={handleAddStage}
           sx={{ 
-            backgroundColor: '#3b82f6', 
-            color: '#fff', 
-            textTransform: 'none', 
-            fontSize: '0.8rem', 
-            fontWeight: 600,
-            py: 0.8,
-            px: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#2563eb', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           + Add Stage

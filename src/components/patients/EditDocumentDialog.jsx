@@ -211,7 +211,7 @@ export const EditDocumentDialog = ({
           flexDirection: "column",
         },
       }}
-      sx={{ alignItems: "flex-start" }}
+      sx={{ zIndex: 1305, alignItems: "flex-start" }}
     >
       {/* ── Header ── */}
       <DialogTitle

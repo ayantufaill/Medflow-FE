@@ -55,15 +55,21 @@ const FrequencyPill = ({ active, label, onClick }) => (
   <Box
     onClick={onClick}
     sx={{
-      px: 2,
-      py: 0.75,
-      borderRadius: 999,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      paddingLeft: '24px',
+      paddingRight: '24px',
+      paddingTop: '8px',
+      paddingBottom: '8px',
+      borderRadius: '999px',
       border: `1px solid ${active ? COLORS.ACCENT : COLORS.BORDER}`,
       backgroundColor: active ? COLORS.ACCENT_BG : COLORS.SURFACE_CARD,
       cursor: "pointer",
+      width: 'fit-content'
     }}
   >
-    <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: active ? COLORS.ACCENT : COLORS.TEXT_BODY }}>
+    <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: active ? COLORS.ACCENT : COLORS.TEXT_BODY, textAlign: 'left' }}>
       {label}
     </Typography>
   </Box>
@@ -107,7 +113,7 @@ const DentalGeneralInfo = ({ info, onChange }) => {
         />
       </Box>
 
-      <Box sx={{ mb: 2 }}>
+      <div style={{ marginBottom: '32px' }}>
         <Typography sx={{ ...fieldLabelSx, mb: 1 }}>I routinely see my dentist every</Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
           {FREQUENCY_OPTIONS.map((option) => (
@@ -119,7 +125,7 @@ const DentalGeneralInfo = ({ info, onChange }) => {
             />
           ))}
         </Box>
-      </Box>
+      </div>
 
       <Box sx={{ border: "1px solid rgba(234, 88, 12, 0.25)", backgroundColor: "rgba(234, 88, 12, 0.06)", borderRadius: 2, px: 2, py: 1.5 }}>
         <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: COLORS.STATUS_WARNING, textTransform: "uppercase", letterSpacing: "0.3px", mb: 0.5 }}>

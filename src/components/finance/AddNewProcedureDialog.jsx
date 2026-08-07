@@ -4,6 +4,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ProcedureCategorySelectDialog from './ProcedureCategorySelectDialog';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../store/slices/feeGuideSlice';
+import { COLORS } from '../../constants/colors';
+import { NoteAdd as NoteAddIcon } from '@mui/icons-material';
 
 const AddNewProcedureDialog = ({ onClose, onSave }) => {
   const maxillaryUR = [1, 2, 3, 4, 5];
@@ -171,8 +173,9 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
       sx={{
         width: '100%',
         backgroundColor: 'white',
-        borderRadius: '4px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        borderRadius: '14px',
+        border: `1px solid ${COLORS.BORDER}`,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
         overflow: 'hidden',
         position: 'relative'
       }}
@@ -180,21 +183,27 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
       {/* Header */}
       <Box
         sx={{
-          backgroundColor: '#5c7bb5',
-          color: 'white',
-          padding: '12px',
-          textAlign: 'center',
+          boxSizing: "border-box",
+          px: "24px",
+          py: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 'normal', fontSize: '16px' }}>
+        <NoteAddIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Add new procedure
         </Typography>
         <IconButton
           onClick={onClose}
           size="small"
-          sx={{ position: 'absolute', right: 8, top: 8, color: 'rgba(255,255,255,0.7)', '&:hover': { color: 'white' } }}
+          sx={{ color: COLORS.TEXT_SECONDARY }}
         >
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </Box>
 
@@ -373,53 +382,62 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
           Enter Code
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <Box sx={{ 
-            width: '250px', 
-            borderBottom: '1px solid rgba(0, 0, 0, 0.42)', 
-            '&:focus-within': { borderBottom: '2px solid #5c7bb5' } 
-          }}>
-            <Autocomplete
-              multiple
-              freeSolo
-              options={searchOptions}
-              getOptionLabel={(option) => typeof option === 'string' ? option : `${option.ProcCode} - ${option.Descript}`}
-              loading={searchLoading}
-              inputValue={inputValue}
-              onInputChange={(e, newInputValue) => setInputValue(newInputValue)}
-              value={selectedProcedures}
-              onChange={(e, newValue) => {
-                setSelectedProcedures(newValue);
-              }}
-              componentsProps={{ popper: { sx: { zIndex: 1500 } } }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Enter code or procedure"
-                  variant="standard"
-                  InputProps={{
-                    ...params.InputProps,
-                    disableUnderline: true,
-                    endAdornment: (
-                      <React.Fragment>
-                        {searchLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                        {params.InputProps.endAdornment}
-                      </React.Fragment>
-                    ),
-                  }}
-                />
-              )}
-              sx={{ 
-                width: '100%', 
-                '& .MuiInputBase-root': { 
-                  fontSize: '14px',
-                  maxHeight: '90px',
-                  overflowY: 'auto',
-                  alignItems: 'flex-start',
-                  pb: 0.5
-                } 
-              }}
-            />
-          </Box>
+          <Autocomplete
+            multiple
+            freeSolo
+            options={searchOptions}
+            getOptionLabel={(option) => typeof option === 'string' ? option : `${option.ProcCode} - ${option.Descript}`}
+            loading={searchLoading}
+            inputValue={inputValue}
+            onInputChange={(e, newInputValue) => setInputValue(newInputValue)}
+            value={selectedProcedures}
+            onChange={(e, newValue) => {
+              setSelectedProcedures(newValue);
+            }}
+            componentsProps={{ 
+              popper: { 
+                sx: { zIndex: 150000 }, 
+                modifiers: [
+                  { name: 'flip', enabled: false },
+                  { name: 'preventOverflow', enabled: false }
+                ]
+              } 
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Enter code or procedure"
+                variant="outlined"
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <React.Fragment>
+                      {searchLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                      {params.InputProps.endAdornment}
+                    </React.Fragment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: COLORS.BORDER },
+                    '&:hover fieldset': { borderColor: '#9ca3af' },
+                    '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT },
+                  },
+                }}
+              />
+            )}
+            sx={{ 
+              width: '250px', 
+              '& .MuiInputBase-root': { 
+                fontSize: '14px',
+                maxHeight: '90px',
+                overflowY: 'auto',
+                alignItems: 'flex-start',
+                pb: 0.5
+              } 
+            }}
+          />
           <Typography 
             onClick={() => setIsSelectDialogOpen(true)}
             sx={{ color: '#5c7bb5', fontSize: '14px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
@@ -451,39 +469,41 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                 
                 selectedProcedures.forEach((proc, index) => {
                   const isLast = index === selectedProcedures.length - 1;
-                  const code = typeof proc === 'string' ? proc : proc.ProcCode;
-                  const desc = typeof proc === 'string' ? '' : (proc.Descript || '');
+                  const code = typeof proc === 'string' ? proc : proc.ProcCode || proc.code;
+                  const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
+                  const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
 
                   onSave({
                     selectedTeeth,
                     selectedSurfaces,
                     procedureCode: code,
                     procedureDescription: desc,
+                    fee: feeAmount,
                     dontChangeCode
                   }, !isLast);
                 });
               }}
               sx={{
-                bgcolor: '#d2b48c',
+                bgcolor: COLORS.ACCENT,
                 color: 'white',
                 textTransform: 'none',
                 boxShadow: 'none',
                 px: 4,
-                '&:hover': { bgcolor: '#c1a37b', boxShadow: 'none' }
+                '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' }
               }}
             >
               Save
             </Button>
             <Button
-              variant="contained"
+              variant="outlined"
               onClick={onClose}
               sx={{
-                bgcolor: '#9ca3af',
-                color: 'white',
+                color: COLORS.TEXT_SECONDARY,
+                borderColor: COLORS.BORDER,
                 textTransform: 'none',
-                boxShadow: 'none',
                 px: 4,
-                '&:hover': { bgcolor: '#8b949e', boxShadow: 'none' }
+                bgcolor: 'white',
+                '&:hover': { bgcolor: '#f5f5f5' }
               }}
             >
               Cancel

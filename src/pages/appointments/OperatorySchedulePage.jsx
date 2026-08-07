@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars, no-empty */
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Box, Popover, List, ListItem, ListItemText, Typography, Select, MenuItem, Link, Menu, IconButton, Backdrop, CircularProgress } from '@mui/material';
 import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import dayjs from 'dayjs';
@@ -145,8 +146,32 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
+
+  // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
+  // to jump the calendar to a specific date and flash the relevant appointment card.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightAppointmentId, setHighlightAppointmentId] = useState(null);
+
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    const highlightParam = searchParams.get('highlightAppointmentId');
+
+    if (dateParam && dayjs(dateParam).isValid()) {
+      setSelectedDate(dayjs(dateParam).toISOString());
+    }
+    if (highlightParam) {
+      setHighlightAppointmentId(highlightParam);
+    }
+    if (dateParam || highlightParam) {
+      // Clear the params from the URL so a refresh doesn't re-trigger the jump/highlight.
+      setSearchParams({}, { replace: true });
+    }
+    // Depends on searchParams (not just mount) because clicking a notification while already
+    // on this route updates the query string in place without remounting the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
 
 
@@ -763,6 +788,35 @@ const OperatorySchedulePage = () => {
     return mapped;
   }, [reduxAppointments, frontendFilters]);
 
+  // Once the target appointment has rendered on the grid, scroll to it and flash a highlight
+  // ring around its card so the user can spot it immediately after landing from a notification.
+  useEffect(() => {
+    if (!highlightAppointmentId) return undefined;
+
+    let attempts = 0;
+    const maxAttempts = 20; // ~4s at 200ms intervals, covers async render + fetch delays
+
+    const tryHighlight = () => {
+      const node = document.getElementById(`appointment-card-${highlightAppointmentId}`);
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        node.classList.add('notification-highlight');
+        setTimeout(() => node.classList.remove('notification-highlight'), 2600);
+        setHighlightAppointmentId(null);
+        return;
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        setTimeout(tryHighlight, 200);
+      } else {
+        setHighlightAppointmentId(null);
+      }
+    };
+
+    const timer = setTimeout(tryHighlight, 200);
+    return () => clearTimeout(timer);
+  }, [highlightAppointmentId, mappedAppointments]);
+
   const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
@@ -844,7 +898,8 @@ const OperatorySchedulePage = () => {
 
     try {
       setFormSaving(true);
-      await createAppointment({
+      
+      const appointmentData = {
         patientId: formData.patientId,
         providerId: formData.providerId,
         appointmentDate: start.format("YYYY-MM-DD"),
@@ -858,15 +913,26 @@ const OperatorySchedulePage = () => {
         ...(formData.roomId && { roomId: formData.roomId }),
         ...(formData.customFields && { customFields: formData.customFields }),
         patientName: formData.patientName,
-      });
-      showSnackbar('Appointment created successfully', 'success');
+      };
+
+      if (editingAppointment) {
+        let apptId = editingAppointment._id || editingAppointment.id;
+        if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
+          apptId = apptId.replace('appt-', '');
+        }
+        await updateAppointment(apptId, appointmentData);
+        showSnackbar('Appointment updated successfully', 'success');
+      } else {
+        await createAppointment(appointmentData);
+        showSnackbar('Appointment created successfully', 'success');
+      }
       setFormOpen(false);
     } catch (err) {
       if (err.status === 409 || err.response?.status === 409) {
         const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
         showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
       } else {
-        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create appointment.';
+        const msg = err.message || err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save appointment.';
         showSnackbar(msg, 'error');
       }
     } finally {
@@ -1236,33 +1302,35 @@ const OperatorySchedulePage = () => {
                 primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
               />
             </ListItem>
-            <ListItem
-              button
-              onClick={() => {
-                setSlotPopoverAnchorEl(null);
-                if (selectedSlotInfo) {
-                  const start = selectedDate
-                    .clone()
-                    .startOf("day")
-                    .add(selectedSlotInfo.minutesFromStart, "minute");
-                  const end = start.clone().add(30, "minute"); // default 30 min block
+            {calendarView === 'day' && (
+              <ListItem
+                button
+                onClick={() => {
+                  setSlotPopoverAnchorEl(null);
+                  if (selectedSlotInfo) {
+                    const start = selectedDate
+                      .clone()
+                      .startOf("day")
+                      .add(selectedSlotInfo.minutesFromStart, "minute");
+                    const end = start.clone().add(30, "minute"); // default 30 min block
 
-                  setBlockSlotDialogData({
-                    roomId: selectedSlotInfo.columnId.replace("op", ""),
-                    date: selectedDate.format("YYYY-MM-DD"),
-                    startTime: start.format("HH:mm"),
-                    endTime: end.format("HH:mm")
-                  });
-                  setBlockSlotDialogOpen(true);
-                }
-              }}
-              sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
-            >
-              <ListItemText
-                primary="Block Slot"
-                primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
-              />
-            </ListItem>
+                    setBlockSlotDialogData({
+                      roomId: selectedSlotInfo.columnId.replace("op", ""),
+                      date: selectedDate.format("YYYY-MM-DD"),
+                      startTime: start.format("HH:mm"),
+                      endTime: end.format("HH:mm")
+                    });
+                    setBlockSlotDialogOpen(true);
+                  }
+                }}
+                sx={{ px: 2, py: 1, cursor: "pointer", "&:hover": { bgcolor: "#f1f5f9" } }}
+              >
+                <ListItemText
+                  primary="Block Slot"
+                  primaryTypographyProps={{ sx: { fontSize: "13px", fontWeight: 600, color: "#334155" } }}
+                />
+              </ListItem>
+            )}
           </List>
         </Popover>
 
@@ -1281,15 +1349,6 @@ const OperatorySchedulePage = () => {
             }
           }}
         >
-          <MenuItem
-            onClick={() => {
-              setViewMyColumn(prev => !prev);
-              setMoreMenuAnchorEl(null);
-            }}
-            sx={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}
-          >
-            {viewMyColumn ? "Show all columns" : "View my column"}
-          </MenuItem>
           <MenuItem
             onClick={() => {
               setIsCloseOpenDayMode(prev => !prev);

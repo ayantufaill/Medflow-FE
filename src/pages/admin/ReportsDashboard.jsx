@@ -53,7 +53,6 @@ import PaymentRequest from './reports/financial/PaymentRequest';
 import OpenEdgeTransactions from './reports/financial/OpenEdgeTransactions';
 import ProceduresInsurance from './reports/financial/ProceduresInsurance';
 import FamilyMigratedBalances from './reports/financial/FamilyMigratedBalances';
-import DashboardTab from './reports/DashboardTab';
 import KpiDashboard from './reports/KpiDashboard';
 import { TABS, FINANCIAL_REPORT_SUB_TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
@@ -91,58 +90,59 @@ const ReportsDashboard = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
-      {/* Main Reports Area */}
+    <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box', '@media print': { height: 'auto', overflow: 'visible', display: 'block' } }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ position: 'relative', border: location.pathname.toLowerCase().includes('/kpi') ? 'none' : '1px solid #e2e8f0', borderRadius: location.pathname.toLowerCase().includes('/kpi') ? 0 : 2, backgroundColor: location.pathname.toLowerCase().includes('/kpi') ? 'transparent' : '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', '@media print': { height: 'auto', overflow: 'visible', border: 'none', display: 'block', backgroundColor: '#fff' } }}>
           
-          <Box onMouseLeave={() => setHoveredTab(null)} sx={{ flexShrink: 0, zIndex: 10 }}>
-            <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 2, pt: 1, mb: hoveredTab !== null ? 0 : 2 }}>
-              <Tabs
-                value={activeTab === -1 ? false : activeTab}
-              variant="scrollable"
-              scrollButtons="auto"
-              sx={{
-                '& .MuiTab-root': {
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  minWidth: 140,
-                  color: '#64748b',
-                  borderBottom: '3px solid transparent',
-                  '&.Mui-selected': {
-                    color: '#3b82f6',
+          {!location.pathname.toLowerCase().includes('/kpi') && (
+            <Box onMouseLeave={() => setHoveredTab(null)} sx={{ flexShrink: 0, zIndex: 10 }}>
+              <Box sx={{ borderBottom: hoveredTab !== null ? 0 : 1, borderColor: 'divider', px: 2, pt: 1, mb: hoveredTab !== null ? 0 : 2 }}>
+                <Tabs
+                  value={activeTab === -1 ? false : activeTab}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  '& .MuiTab-root': {
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.875rem',
+                    minWidth: 140,
+                    color: '#64748b',
+                    borderBottom: '3px solid transparent',
+                    '&.Mui-selected': {
+                      color: '#3b82f6',
+                    },
                   },
-                },
-                '& .MuiTabs-indicator': {
-                  height: 3,
-                  backgroundColor: '#3b82f6',
-                },
-              }}
-            >
-              {TABS.map((tab, index) => (
-                <Tab
-                  key={tab.label}
-                  label={tab.label}
-                  component={Link}
-                  to={tab.path}
-                  disableRipple
-                  onMouseEnter={() => setHoveredTab(index)}
-                />
-              ))}
-            </Tabs>
-          </Box>
+                  '& .MuiTabs-indicator': {
+                    height: 3,
+                    backgroundColor: '#3b82f6',
+                  },
+                }}
+              >
+                {TABS.map((tab, index) => (
+                  <Tab
+                    key={tab.label}
+                    label={tab.label}
+                    component={Link}
+                    to={tab.path}
+                    disableRipple
+                    onMouseEnter={() => setHoveredTab(index)}
+                  />
+                ))}
+              </Tabs>
+            </Box>
 
-          {/* Sub-nav — visible on hover */}
-          {hoveredTab === 0 && <FinancialReportsSubNav left={16} />}
-          {hoveredTab === 1 && <ClinicalReportsSubNav left={156} />}
-          {hoveredTab === 2 && <PatientReportsSubNav left={296} />}
-          {hoveredTab === 3 && <OthersReportsSubNav left={436} />}
-          {hoveredTab === 4 && <SavingReportsSubNav left={576} />}
-          </Box>
+            {/* Sub-nav — visible on hover */}
+            {hoveredTab === 0 && <FinancialReportsSubNav left={16} />}
+            {hoveredTab === 1 && <ClinicalReportsSubNav left={156} />}
+            {hoveredTab === 2 && <PatientReportsSubNav left={296} />}
+            {hoveredTab === 3 && <OthersReportsSubNav left={436} />}
+            {hoveredTab === 4 && <SavingReportsSubNav left={576} />}
+            </Box>
+          )}
 
           {/* Page content */}
-          <Box sx={{ flex: 1, p: 3, backgroundColor: '#fff', overflowY: 'auto', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+          <Box sx={{ flex: 1, p: location.pathname.toLowerCase().includes('/kpi') ? 0 : 3, backgroundColor: location.pathname.toLowerCase().includes('/kpi') ? 'transparent' : '#fff', overflowY: 'auto', overflowX: 'hidden', width: '100%', boxSizing: 'border-box', '@media print': { overflow: 'visible', height: 'auto', display: 'block', backgroundColor: '#fff' } }}>
             {(location.pathname === '/admin/reports' || location.pathname === '/admin/reports/dashboard') ? (
               <Navigate to="/admin/reports/financial/aging" replace />
             ) : location.pathname.toLowerCase().includes('/kpi') ? (
@@ -259,7 +259,7 @@ const ReportsDashboard = () => {
       
       {/* Right Panel */}
       {rightPanelOpen ? (
-        <Box sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', '@media print': { display: 'none' } }}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
             <IconButton onClick={() => setRightPanelOpen(false)} sx={{ color: 'text.secondary', p: 0, '&:hover': { color: 'primary.main' } }}>
               <KeyboardDoubleArrowRightIcon fontSize="small" />
@@ -268,7 +268,7 @@ const ReportsDashboard = () => {
           <RightPanel hideAppointmentShortlist={true} />
         </Box>
       ) : (
-        <Box sx={{ height: '100%', flexShrink: 0 }}>
+        <Box sx={{ height: '100%', flexShrink: 0, '@media print': { display: 'none' } }}>
           <RightPanelCollapsed onExpand={() => setRightPanelOpen(true)} hideAppointmentShortlist={true} />
         </Box>
       )}

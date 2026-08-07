@@ -81,7 +81,7 @@ const PatientRow = memo(function PatientRow({
       }}
     >
       <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-        <Checkbox size="small" checked={isSelected} onChange={() => onSelectOne(patientId)} />
+        <Checkbox size="small" checked={isSelected} onChange={() => onSelectOne(patientId)} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />
       </TableCell>
 
       <TableCell>{patient.patientCode || '-'}</TableCell>

@@ -21,6 +21,7 @@ import InformedConsent from '../pages/admin/InformedConsent';
 import PrePostOps from '../pages/admin/PrePostOps';
 import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
+import ClinicAnalyticsPage from '../pages/admin/ClinicAnalyticsPage';
 
 const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin']}>
@@ -85,9 +86,10 @@ const adminRoutes = [
   <Route key="/admin/clinical-management/TreatmentPlan-Presentation" path="/admin/clinical-management/TreatmentPlan-Presentation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/informed-consent" path="/admin/clinical-management/informed-consent" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<AdminPage />)} />,
-  <Route key="/admin/reports/kpi" path="/admin/reports/kpi" element={adminOnly(<ReportsDashboard />, true)} />,
+  <Route key="/kpi" path="/kpi" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
+  <Route key="/admin/analytics" path="/admin/analytics" element={adminOnly(<ClinicAnalyticsPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 

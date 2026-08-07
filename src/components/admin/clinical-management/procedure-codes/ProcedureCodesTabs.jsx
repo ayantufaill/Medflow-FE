@@ -37,16 +37,12 @@ const ProcedureCodesTabs = ({ activeTab, handleTabChange, handleOpenSyncDialog }
         startIcon={<SyncIcon />}
         sx={{
           mb: 1.5,
-          bgcolor: '#3B82F6',
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.85rem',
-          borderRadius: 1.5,
-          px: 3,
-          py: 1,
-          boxShadow: 'none',
+          fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+          textTransform: "none", borderRadius: "8px",
+          backgroundColor: "#2262ef", color: "#fff",
+          px: "16px", py: "7px",
           transition: 'all 0.15s',
-          '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' }
+          '&:hover': { backgroundColor: '#1a50cc' }
         }}
       >
         Sync

@@ -22,15 +22,20 @@ import {
 import {
   CheckCircle,
   NavigateNext,
+  DescriptionOutlined as DescriptionOutlinedIcon,
+  PaymentOutlined as PaymentOutlinedIcon,
 } from '@mui/icons-material';
 
 import PaymentDetailsForm from './PaymentDetailsForm';
 import { invoiceService } from '../../services/invoice.service';
+import SectionCard from '../shared/SectionCard';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight, radius } from '../../constants/styles';
 
 const SummaryItem = ({ label, value }) => (
   <Box sx={{ minWidth: '140px' }}>
-    <Typography variant="caption" sx={{ color: '#555', display: 'block', fontSize: '11px' }}>
-      {label}: <Box component="span" sx={{ fontWeight: 'bold' }}>{value || '$0.00'}</Box>
+    <Typography variant="caption" sx={{ color: COLORS.TEXT_SECONDARY, display: 'block', fontSize: '11px' }}>
+      {label}: <Box component="span" sx={{ fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>{value || '$0.00'}</Box>
     </Typography>
   </Box>
 );
@@ -39,7 +44,7 @@ const PaymentPlanRow = ({ id, date, amount, initials, checked, onToggle, summary
   <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
     <Checkbox 
       size="small" 
-      sx={{ p: 0 }} 
+      sx={{ p: 0, color: COLORS.BORDER, '&.Mui-checked': { color: COLORS.ACCENT } }} 
       checked={checked}
       onChange={onToggle}
     />
@@ -48,16 +53,16 @@ const PaymentPlanRow = ({ id, date, amount, initials, checked, onToggle, summary
       sx={{
         flexGrow: 1,
         p: '8px 16px',
-        border: '1px solid #a5b4fc',
-        borderRadius: '4px',
-        bgcolor: '#fff',
+        border: `1px solid ${COLORS.BORDER}`,
+        borderRadius: radius.md,
+        bgcolor: COLORS.SURFACE,
       }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1 }}>
-          <CheckCircle sx={{ color: '#8bc34a', fontSize: 22 }} />
+          <CheckCircle sx={{ color: COLORS.STATUS_SUCCESS, fontSize: 22 }} />
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '12px', color: '#333' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
               INVOICE #{id} ({date}) {amount}
             </Typography>
             
@@ -80,7 +85,7 @@ const PaymentPlanRow = ({ id, date, amount, initials, checked, onToggle, summary
             </Box>
           </Box>
         </Stack>
-        <Typography variant="caption" sx={{ color: '#cfd8dc', fontWeight: 'bold', fontSize: '11px', alignSelf: 'flex-end', mb: 0.5 }}>
+        <Typography variant="caption" sx={{ color: COLORS.TEXT_MUTED, fontWeight: fontWeight.semibold, fontSize: '11px', alignSelf: 'flex-end', mb: 0.5 }}>
           {initials}
         </Typography>
       </Box>
@@ -110,7 +115,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
         const data = await invoiceService.getInvoicesByPatient(patientId);
         const list = data.invoices || [];
         setInvoices(list);
-        setSelectedInvoiceIds(list.map(inv => inv.id));
+        setSelectedInvoiceIds(list.map(inv => inv.id || inv._id));
       } catch (err) {
         console.error('Error fetching invoices for payment plan:', err);
       } finally {
@@ -120,17 +125,12 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
     fetchInvoices();
   }, [patient]);
 
-  React.useEffect(() => {
-    if (invoices.length === 0) {
-      setSelectedInvoiceIds(['24636', '24635', '24634', '24633']);
-    }
-  }, [invoices]);
 
   const mapInvoiceToPlanRow = (inv) => {
-    const ptBalance = inv.patientPortion !== undefined ? inv.patientPortion - (inv.ptPaid || 0) : inv.balanceDue;
-    const ptPaid = inv.ptPaid || 0;
-    const insBalance = inv.insurancePortion !== undefined ? inv.insurancePortion - (inv.insPaid || 0) : 0;
+    const ptPaid = inv.paidAmount || inv.ptPaid || 0;
+    const ptBalance = inv.patientPortion !== undefined ? inv.patientPortion - ptPaid : inv.balanceDue;
     const insPaid = inv.insPaid || 0;
+    const insBalance = inv.insurancePortion !== undefined ? inv.insurancePortion - insPaid : 0;
     const insWo = inv.insWriteOff || 0;
     
     return {
@@ -157,14 +157,9 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
     );
   };
 
-  const planItems = invoices.length > 0 ? invoices : [
-    { id: '24636', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24635', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24634', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-    { id: '24633', date: '04/15/2026', amount: '$100.00', initials: 'MAG', balanceDue: 100, summary: { insWo: '$0.00', appliedWo: '$0.00', ptBalance: '$100.00', ptPaid: '$0.00', insBalance: '$0.00', insPaid: '$0.00', invoiceBalance: '$100.00' } },
-  ];
+  const planItems = invoices;
   return (
-    <Box sx={{ p: 2, bgcolor: '#fff', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: COLORS.BACKGROUND, minHeight: '100vh' }}>
       <Dialog 
         open={showAddCard} 
         onClose={() => setShowAddCard(false)}
@@ -195,60 +190,66 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
 
       {/* Breadcrumbs */}
       <Breadcrumbs 
-        separator={<NavigateNext fontSize="small" sx={{ color: '#0288d1' }} />} 
+        separator={<NavigateNext fontSize="small" sx={{ color: COLORS.ACCENT }} />} 
         sx={{ mb: 2 }}
       >
         <Link 
           underline="hover" 
-          color="#0288d1" 
+          color={COLORS.ACCENT}
           href="#" 
           onClick={onBack}
-          sx={{ fontSize: '14px' }}
+          sx={{ fontSize: fontSize.sm }}
         >
           Finance
         </Link>
-        <Typography color="#333" sx={{ fontSize: '14px' }}>
+        <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.sm }}>
           New Payment Plan
         </Typography>
       </Breadcrumbs>
 
-      <Typography variant="subtitle2" sx={{ mb: 3, fontWeight: 'bold', color: '#333' }}>
+      <Typography variant="subtitle2" sx={{ mb: 3, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, fontSize: fontSize.lg }}>
         Patient: {patient ? `${patient.firstName} ${patient.lastName}` : 'test test'}
       </Typography>
 
       {/* Invoice List */}
-      <Box sx={{ maxWidth: '100%', mb: 4 }}>
-        {planItems.map((item) => {
-          const rowData = invoices.length > 0 ? mapInvoiceToPlanRow(item) : item;
-          const itemId = rowData.id;
-          return (
-            <PaymentPlanRow 
-              key={itemId}
-              id={itemId}
-              date={rowData.date}
-              amount={rowData.amount}
-              initials={rowData.initials}
-              summary={rowData.summary}
-              checked={selectedInvoiceIds.includes(itemId)}
-              onToggle={() => handleToggleInvoice(itemId)}
-            />
-          );
-        })}
-      </Box>
+      <SectionCard 
+        icon={DescriptionOutlinedIcon} 
+        title="Select Invoices" 
+        subtitle="Choose which invoices to include in this payment plan"
+      >
+        <Box sx={{ maxWidth: '100%', pt: 2, pb: 1, px: 2 }}>
+          {planItems.map((item) => {
+            const rowData = invoices.length > 0 ? mapInvoiceToPlanRow(item) : item;
+            const itemId = rowData.id;
+            return (
+              <PaymentPlanRow 
+                key={itemId}
+                id={itemId}
+                date={rowData.date}
+                amount={rowData.amount}
+                initials={rowData.initials}
+                summary={rowData.summary}
+                checked={selectedInvoiceIds.includes(itemId)}
+                onToggle={() => handleToggleInvoice(itemId)}
+              />
+            );
+          })}
+        </Box>
+      </SectionCard>
 
       {/* Terms Section */}
-      {/* Terms Section */}
-      <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #eee' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 4, color: '#333', fontSize: '18px' }}>
-          Terms
-        </Typography>
-
-        <Grid container spacing={4}>
-          {/* Down Payment Field */}
-          <Grid item xs={12} sm={3}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, fontSize: '13px' }}>
-              Down Payment
-            </Typography>
+      <SectionCard 
+        icon={PaymentOutlinedIcon} 
+        title="Terms" 
+        subtitle="Set up the payment schedule and amounts"
+      >
+        <Box sx={{ pt: 3, pb: 2, px: 3 }}>
+          <Grid container spacing={4}>
+            {/* Down Payment Field */}
+            <Grid item xs={12} sm={3}>
+              <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, mb: 1, fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
+                Down Payment
+              </Typography>
             <TextField
               fullWidth
               placeholder="0.00"
@@ -256,15 +257,15 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
               value={downPayment}
               onChange={(e) => setDownPayment(e.target.value)}
               InputProps={{
-                startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { fontSize: '13px' } }}>$</InputAdornment>,
-                sx: { fontSize: '13px' }
+                startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { fontSize: fontSize.sm } }}>$</InputAdornment>,
+                sx: { fontSize: fontSize.sm, bgcolor: COLORS.SURFACE_INPUT, '& fieldset': { borderColor: COLORS.BORDER } }
               }}
             />
           </Grid>
 
           {/* Exclude Amount Field */}
           <Grid item xs={12} sm={3}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, fontSize: '13px' }}>
+            <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, mb: 1, fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
               Exclude Amount
             </Typography>
             <TextField
@@ -274,8 +275,8 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
               value={excludeAmount}
               onChange={(e) => setExcludeAmount(e.target.value)}
               InputProps={{
-                startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { fontSize: '13px' } }}>$</InputAdornment>,
-                sx: { fontSize: '13px' }
+                startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { fontSize: fontSize.sm } }}>$</InputAdornment>,
+                sx: { fontSize: fontSize.sm, bgcolor: COLORS.SURFACE_INPUT, '& fieldset': { borderColor: COLORS.BORDER } }
               }}
             />
           </Grid>
@@ -283,44 +284,44 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
 
         {/* Payment Schedule Section */}
         <Box sx={{ mt: 5 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 2, fontSize: '13px' }}>
+          <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, mb: 2, fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>
             Payment Schedule*
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ fontSize: '13px' }}>Every</Typography>
+            <Typography variant="body2" sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>Every</Typography>
             <TextField
               value={scheduleEvery}
               onChange={(e) => setScheduleEvery(e.target.value)}
               size="small"
-              sx={{ width: 80, '& .MuiInputBase-input': { fontSize: '13px' } }}
+              sx={{ width: 80, bgcolor: COLORS.SURFACE_INPUT, '& fieldset': { borderColor: COLORS.BORDER }, '& .MuiInputBase-input': { fontSize: fontSize.sm } }}
             />
             
             <Select
               value={scheduleType}
               onChange={(e) => setScheduleType(e.target.value)}
               size="small"
-              sx={{ width: 120, bgcolor: '#f5f5f5', fontSize: '13px' }}
+              sx={{ width: 120, bgcolor: COLORS.SURFACE_INPUT, fontSize: fontSize.sm, '& fieldset': { borderColor: COLORS.BORDER } }}
             >
-              <MenuItem value="Month" sx={{ fontSize: '13px' }}>Month</MenuItem>
-              <MenuItem value="Week" sx={{ fontSize: '13px' }}>Week</MenuItem>
+              <MenuItem value="Month" sx={{ fontSize: fontSize.sm }}>Month</MenuItem>
+              <MenuItem value="Week" sx={{ fontSize: fontSize.sm }}>Week</MenuItem>
             </Select>
 
-            <Typography variant="body2" sx={{ fontSize: '13px' }}>For</Typography>
+            <Typography variant="body2" sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>For</Typography>
             <TextField
               value={numberOfPayments}
               onChange={(e) => setNumberOfPayments(e.target.value)}
               size="small"
-              sx={{ width: 80, '& .MuiInputBase-input': { fontSize: '13px' } }}
+              sx={{ width: 80, bgcolor: COLORS.SURFACE_INPUT, '& fieldset': { borderColor: COLORS.BORDER }, '& .MuiInputBase-input': { fontSize: fontSize.sm } }}
             />
-            <Typography variant="body2" sx={{ fontSize: '13px' }}>{scheduleType}/s</Typography>
+            <Typography variant="body2" sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_PRIMARY }}>{scheduleType}/s</Typography>
           </Box>
         </Box>
 
         {/* Calculation summary */}
         {(() => {
           const totalSelectedBalance = planItems
-            .filter(item => selectedInvoiceIds.includes(item.id))
+            .filter(item => selectedInvoiceIds.includes(item.id || item._id))
             .reduce((sum, item) => sum + (item.balanceDue || 0), 0);
           const numDownPayment = parseFloat(downPayment) || 0;
           const numExcludeAmount = parseFloat(excludeAmount) || 0;
@@ -329,40 +330,40 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
           const calculatedPayment = numPayments > 0 ? (planTotalAmount / numPayments).toFixed(2) : '0.00';
 
           return (
-            <Box sx={{ mt: 5, p: 2, bgcolor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0', maxWidth: '400px' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: '#333', fontSize: '13px' }}>Plan Summary</Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '13px', color: '#666' }}>Selected Balance:</Typography>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold' }}>${totalSelectedBalance.toFixed(2)}</Typography>
+            <Box sx={{ mt: 5, p: 3, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, maxWidth: '400px' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.bold, mb: 1.5, color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base }}>Plan Summary</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>Selected Balance:</Typography>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>${totalSelectedBalance.toFixed(2)}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '13px', color: '#666' }}>Down Payment:</Typography>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold', color: '#b64c4c' }}>-${numDownPayment.toFixed(2)}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>Down Payment:</Typography>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.STATUS_ERROR }}>-${numDownPayment.toFixed(2)}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '13px', color: '#666' }}>Excluded:</Typography>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold', color: '#b64c4c' }}>-${numExcludeAmount.toFixed(2)}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>Excluded:</Typography>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.STATUS_ERROR }}>-${numExcludeAmount.toFixed(2)}</Typography>
               </Box>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Total Plan Amount:</Typography>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af' }}>${planTotalAmount.toFixed(2)}</Typography>
+              <Divider sx={{ my: 1.5, borderColor: COLORS.BORDER }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>Total Plan Amount:</Typography>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: COLORS.ACCENT }}>${planTotalAmount.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>{scheduleType}ly Payment:</Typography>
-                <Typography sx={{ fontSize: '14px', fontWeight: 'bold', color: '#16a34a' }}>${calculatedPayment} / {scheduleType.toLowerCase()}</Typography>
+                <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>{scheduleType}ly Payment:</Typography>
+                <Typography sx={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: COLORS.STATUS_SUCCESS }}>${calculatedPayment} / {scheduleType.toLowerCase()}</Typography>
               </Box>
             </Box>
           );
         })()}
 
         {/* Create Plan Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 8 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
           <Button
             variant="contained"
             onClick={() => {
               const totalSelectedBalance = planItems
-                .filter(item => selectedInvoiceIds.includes(item.id))
+                .filter(item => selectedInvoiceIds.includes(item.id || item._id))
                 .reduce((sum, item) => sum + (item.balanceDue || 0), 0);
               const numDownPayment = parseFloat(downPayment) || 0;
               const numExcludeAmount = parseFloat(excludeAmount) || 0;
@@ -372,6 +373,7 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
 
               if (onCreatePlan) {
                 onCreatePlan({
+                  invoiceIds: selectedInvoiceIds,
                   totalAmount: planTotalAmount,
                   downPayment: numDownPayment,
                   monthlyPayment: parseFloat(calculatedPayment),
@@ -381,15 +383,17 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
               }
             }}
             sx={{
-              bgcolor: '#94a3b8',
+              bgcolor: COLORS.ACCENT,
               textTransform: 'none',
-              borderRadius: '20px',
+              borderRadius: radius.md,
               px: 6,
               py: 1,
-              fontSize: '14px',
-              fontWeight: 'bold',
+              fontSize: fontSize.sm,
+              fontWeight: fontWeight.semibold,
+              boxShadow: 'none',
               '&:hover': {
-                bgcolor: '#64748b',
+                bgcolor: COLORS.ACCENT_HOVER,
+                boxShadow: 'none',
               },
             }}
           >
@@ -397,23 +401,8 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
           </Button>
         </Box>
       </Box>
-
-      {/* Side Tab Placeholder */}
-      <Box 
-        sx={{ 
-          position: 'fixed', 
-          right: 0, 
-          top: '50%', 
-          bgcolor: '#0d47a1', 
-          color: '#fff', 
-          p: 1, 
-          borderRadius: '4px 0 0 4px',
-          cursor: 'pointer'
-        }}
-      >
-        <Box sx={{ width: 12, height: 24 }} />
-      </Box>
-    </Box>
+    </SectionCard>
+  </Box>
   );
 };
 

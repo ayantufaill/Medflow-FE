@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Box,
   Typography,
@@ -13,115 +12,526 @@ import {
   TableCell,
   TableBody,
   Button,
-} from '@mui/material';
+  IconButton,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+import {
+  Close as CloseIcon,
+  DescriptionOutlined as DescriptionIcon,
+} from "@mui/icons-material";
+import apiClient from "../../../config/api";
 
-const AuditHistoryDialog = ({ open, onClose }) => {
+const normalizeHistoryRows = (payload) => {
+  const list = Array.isArray(payload)
+    ? payload
+    : payload?.auditEvents ||
+      payload?.history ||
+      payload?.data?.auditEvents ||
+      payload?.data?.history ||
+      payload?.items ||
+      payload?.data?.items ||
+      [];
+
+  return list.map((item, index) => {
+    const diffs = Array.isArray(item?.differences)
+      ? item.differences
+      : Array.isArray(item?.diff)
+        ? item.diff
+        : Array.isArray(item?.changes)
+          ? item.changes
+          : item?.oldValue !== undefined || item?.newValue !== undefined
+            ? [
+                {
+                  key: item?.section || "value",
+                  old: item?.oldValue ?? "",
+                  new: item?.newValue ?? "",
+                },
+              ]
+            : [];
+
+    return {
+      id:
+        item?._id ||
+        item?.id ||
+        item?.eventId ||
+        item?.auditId ||
+        `row-${index}`,
+      date:
+        item?.changedAt ||
+        item?.createdAt ||
+        item?.timestamp ||
+        item?.date ||
+        "",
+      user:
+        item?.actor?.name ||
+        item?.actorName ||
+        item?.user?.name ||
+        item?.userName ||
+        item?.user ||
+        "System",
+      name:
+        item?.name ||
+        item?.feeGuideName ||
+        item?.resourceName ||
+        item?.targetName ||
+        "Fee Guide",
+      action: item?.action || item?.type || item?.event || "Update",
+      diff: diffs.map((diff) => ({
+        key: diff?.key || diff?.field || diff?.path || "value",
+        old: diff?.old ?? diff?.previous ?? "",
+        new: diff?.new ?? diff?.current ?? "",
+      })),
+    };
+  });
+};
+
+const AuditHistoryDialog = ({
+  open,
+  onClose,
+  historyEndpoint = "/admin/finance-management/fee-guides/audit-history",
+  historyItems = null,
+}) => {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) {
+      setRows([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (Array.isArray(historyItems)) {
+      setRows(normalizeHistoryRows(historyItems));
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadHistory = async () => {
+      setLoading(true);
+      setError(null);
+      setRows([]);
+
+      try {
+        const response = await apiClient.get(historyEndpoint, {
+          signal: controller.signal,
+        });
+        const payload = response?.data?.data || response?.data || {};
+        setRows(normalizeHistoryRows(payload));
+      } catch (err) {
+        if (err?.name === "CanceledError") return;
+
+        if (err?.response?.status === 404) {
+          setError(
+            "No backend fee-guide audit-history endpoint is available yet.",
+          );
+        } else {
+          setError(
+            err?.response?.data?.message || "Failed to load fee guide history.",
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHistory();
+
+    return () => controller.abort();
+  }, [open, historyEndpoint, historyItems]);
+
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      sx={{ zIndex: 1600 }}
+      PaperProps={{
+        sx: {
+          borderRadius: "12px",
+          overflow: "hidden",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+        },
+      }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        lineHeight: 1.3,
-        borderBottom: '1px solid #f1f5f9'
-      }}>
-        Audit Fee Guides History
-      </DialogTitle>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          px: "20px",
+          py: "16px",
+          borderBottom: "1px solid #e0e5eb",
+          backgroundColor: "#f3f8fd",
+        }}
+      >
+        <Box
+          sx={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "8px",
+            backgroundColor: "#eff6ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            flex: 1,
+          }}
+        >
+          <Typography
+            sx={{
+              fontFamily: "Inter",
+              fontSize: "15px",
+              fontWeight: 700,
+              color: "#09121f",
+            }}
+          >
+            Audit Fee Guides History
+          </Typography>
+          <Typography
+            sx={{
+              fontWeight: 400,
+              color: "#5c646f",
+              fontFamily: "Inter",
+              fontSize: "11px",
+            }}
+          >
+            View history of actions taken on fee guides.
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            color: "#6b7280",
+            "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </Box>
+
       <DialogContent sx={{ p: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>Filter list by:</Typography>
-          <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600, ml: 3 }}>Action:</Typography>
-          <TextField 
-            select 
-            size="small" 
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+          <Typography
+            sx={{
+              fontFamily: "Inter",
+              fontSize: "13px",
+              color: "#475569",
+              fontWeight: 500,
+            }}
+          >
+            Filter list by:
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: "Inter",
+              fontSize: "13px",
+              color: "#475569",
+              fontWeight: 500,
+              ml: 3,
+            }}
+          >
+            Action:
+          </Typography>
+          <TextField
+            select
+            size="small"
             defaultValue="All"
             SelectProps={{ native: true }}
-            sx={{ 
-              '& .MuiInputBase-root': { backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+            sx={{
+              "& .MuiInputBase-root": {
+                fontFamily: "Inter",
+                fontSize: "13px",
+                backgroundColor: "#fff",
+                borderRadius: "8px",
+                color: "#374151",
+              },
+              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" },
             }}
           >
             <option value="All">All</option>
           </TextField>
         </Box>
-        <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2, maxHeight: 500 }}>
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
-                <TableCell>Date</TableCell>
-                <TableCell>User</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Action</TableCell>
-                <TableCell sx={{ textAlign: 'center' }} colSpan={3}>Difference</TableCell>
-              </TableRow>
-              <TableRow sx={{ '& .MuiTableCell-root': { backgroundColor: '#F8FAFC', color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', py: 1, borderBottom: '2px solid #e2e8f0' } }}>
-                <TableCell colSpan={4} />
-                <TableCell sx={{ textAlign: 'center', width: '20%' }}>Key</TableCell>
-                <TableCell sx={{ textAlign: 'center', width: '20%' }}>Old</TableCell>
-                <TableCell sx={{ textAlign: 'center', width: '20%' }}>New</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[
-                { date: '09/21/2021 12:40:52 PM', user: 'Admin User', name: 'FeeGuide', action: 'Add', diff: [] },
-                { date: '09/21/2021 12:41:28 PM', user: 'Admin User', name: 'FeeGuide', action: 'Update', diff: [{ key: '/name', old: 'Careington PPO', new: 'Careington PPO (directly in network)' }] },
-                { date: '09/21/2021 12:41:43 PM', user: 'Admin User', name: 'D2390', action: 'Update', diff: [{ key: '/price', old: '', new: '226' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 12:41 PM' }] },
-                { date: '09/21/2021 12:41:44 PM', user: 'Admin User', name: 'D2391', action: 'Update', diff: [{ key: '/price', old: '', new: '98' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 12:41 PM' }] },
-                { date: '09/21/2021 12:41:44 PM', user: 'Admin User', name: 'D2392', action: 'Update', diff: [{ key: '/price', old: '', new: '134' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 12:41 PM' }] },
-                { date: '09/21/2021 12:41:44 PM', user: 'Admin User', name: 'D2393', action: 'Update', diff: [{ key: '/price', old: '', new: '167' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 12:41 PM' }] },
-                { date: '09/21/2021 12:41:44 PM', user: 'Admin User', name: 'D2394', action: 'Update', diff: [{ key: '/price', old: '', new: '175' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 12:41 PM' }] },
-                { date: '09/21/2021 01:15:22 PM', user: 'Sarah Miller', name: 'D0120', action: 'Update', diff: [{ key: '/price', old: '45', new: '52' }] },
-                { date: '09/21/2021 01:16:05 PM', user: 'Sarah Miller', name: 'D0150', action: 'Update', diff: [{ key: '/price', old: '85', new: '95' }, { key: '/modified', old: '09/21/2021 12:40 PM', new: '09/21/2021 01:16 PM' }] },
-                { date: '09/22/2021 09:10:12 AM', user: 'John Davis', name: 'FeeGuide', action: 'Update', diff: [{ key: '/default', old: 'No', new: 'Yes' }] },
-              ].map((row, i) => (
-                <React.Fragment key={i}>
-                  <TableRow sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', color: '#1e293b', verticalAlign: 'top', borderBottom: row.diff.length > 0 ? 'none' : '1px solid #f1f5f9' } }}>
-                    <TableCell rowSpan={row.diff.length || 1}>{row.date}</TableCell>
-                    <TableCell rowSpan={row.diff.length || 1}>{row.user}</TableCell>
-                    <TableCell rowSpan={row.diff.length || 1}>{row.name}</TableCell>
-                    <TableCell rowSpan={row.diff.length || 1}>{row.action}</TableCell>
-                    {row.diff.length === 0 && <TableCell colSpan={3} />}
-                    {row.diff.length > 0 && (
-                      <>
-                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{row.diff[0].key}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{row.diff[0].old}</TableCell>
-                        <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{row.diff[0].new}</TableCell>
-                      </>
-                    )}
-                  </TableRow>
-                  {row.diff.slice(1).map((d, j) => (
-                    <TableRow key={j} sx={{ '& .MuiTableCell-root': { py: 1.5, fontSize: '0.85rem', borderBottom: j === row.diff.length - 2 ? '1px solid #f1f5f9' : 'none' } }}>
-                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center' }}>{d.key}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#dc2626' }}>{d.old}</TableCell>
-                      <TableCell sx={{ borderLeft: '1px solid #f1f5f9', textAlign: 'center', color: '#16a34a' }}>{d.new}</TableCell>
+
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : error ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Alert severity="info">{error}</Alert>
+            <Box
+              sx={{
+                p: 2,
+                border: "1px solid #e2e8f0",
+                borderRadius: 2,
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  color: "#0f172a",
+                  mb: 1,
+                }}
+              >
+                Backend implementation plan
+              </Typography>
+              <Typography
+                component="ul"
+                sx={{
+                  pl: 2.5,
+                  m: 0,
+                  color: "#475569",
+                  fontSize: "13px",
+                  lineHeight: 1.7,
+                }}
+              >
+                <li>
+                  Add a backend endpoint such as GET
+                  /admin/finance-management/fee-guides/audit-history.
+                </li>
+                <li>
+                  Persist each create/update/delete action for fee guides in an
+                  audit table or change-log collection.
+                </li>
+                <li>
+                  Return rows with date, actor, fee-guide name, action, and
+                  change diffs in a consistent shape.
+                </li>
+                <li>
+                  Wire the frontend to consume that endpoint through the same
+                  dialog component.
+                </li>
+              </Typography>
+            </Box>
+          </Box>
+        ) : rows.length === 0 ? (
+          <Box
+            sx={{
+              p: 3,
+              border: "1px solid #e2e8f0",
+              borderRadius: 2,
+              backgroundColor: "#f8fafc",
+              textAlign: "center",
+            }}
+          >
+            <Typography sx={{ color: "#475569", fontSize: "14px" }}>
+              No fee guide history is available yet.
+            </Typography>
+          </Box>
+        ) : (
+          <TableContainer
+            sx={{
+              border: "1px solid #e2e8f0",
+              borderRadius: 2,
+              maxHeight: 500,
+            }}
+          >
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow
+                  sx={{
+                    "& .MuiTableCell-root": {
+                      backgroundColor: "#F8FAFC",
+                      color: "#475569",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      py: 1.5,
+                      borderBottom: "1px solid #e2e8f0",
+                    },
+                  }}
+                >
+                  <TableCell>Date</TableCell>
+                  <TableCell>User</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Action</TableCell>
+                  <TableCell sx={{ textAlign: "center" }} colSpan={3}>
+                    Difference
+                  </TableCell>
+                </TableRow>
+                <TableRow
+                  sx={{
+                    "& .MuiTableCell-root": {
+                      backgroundColor: "#F8FAFC",
+                      color: "#475569",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      py: 1,
+                      borderBottom: "2px solid #e2e8f0",
+                    },
+                  }}
+                >
+                  <TableCell colSpan={4} />
+                  <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                    Key
+                  </TableCell>
+                  <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                    Old
+                  </TableCell>
+                  <TableCell sx={{ textAlign: "center", width: "20%" }}>
+                    New
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <React.Fragment key={row.id}>
+                    <TableRow
+                      sx={{
+                        "& .MuiTableCell-root": {
+                          py: 1.5,
+                          fontSize: "0.85rem",
+                          color: "#1e293b",
+                          verticalAlign: "top",
+                          borderBottom:
+                            row.diff.length > 0 ? "none" : "1px solid #f1f5f9",
+                        },
+                      }}
+                    >
+                      <TableCell rowSpan={row.diff.length || 1}>
+                        {row.date}
+                      </TableCell>
+                      <TableCell rowSpan={row.diff.length || 1}>
+                        {row.user}
+                      </TableCell>
+                      <TableCell rowSpan={row.diff.length || 1}>
+                        {row.name}
+                      </TableCell>
+                      <TableCell rowSpan={row.diff.length || 1}>
+                        {row.action}
+                      </TableCell>
+                      {row.diff.length === 0 && <TableCell colSpan={3} />}
+                      {row.diff.length > 0 && (
+                        <>
+                          <TableCell
+                            sx={{
+                              borderLeft: "1px solid #f1f5f9",
+                              textAlign: "center",
+                            }}
+                          >
+                            {row.diff[0].key}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderLeft: "1px solid #f1f5f9",
+                              textAlign: "center",
+                              color: "#dc2626",
+                            }}
+                          >
+                            {row.diff[0].old}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderLeft: "1px solid #f1f5f9",
+                              textAlign: "center",
+                              color: "#16a34a",
+                            }}
+                          >
+                            {row.diff[0].new}
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
-                  ))}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-          <Button 
-            variant="contained" 
-            sx={{ 
-              textTransform: 'none', 
-              backgroundColor: '#2563eb', 
-              fontWeight: 600, 
-              borderRadius: 2, 
-              px: 4, 
-              boxShadow: 'none', 
-              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' } 
+                    {row.diff.slice(1).map((diff, index) => (
+                      <TableRow
+                        key={`${row.id}-${index}`}
+                        sx={{
+                          "& .MuiTableCell-root": {
+                            py: 1.5,
+                            fontSize: "0.85rem",
+                            borderBottom:
+                              index === row.diff.length - 2
+                                ? "1px solid #f1f5f9"
+                                : "none",
+                          },
+                        }}
+                      >
+                        <TableCell
+                          sx={{
+                            borderLeft: "1px solid #f1f5f9",
+                            textAlign: "center",
+                          }}
+                        >
+                          {diff.key}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderLeft: "1px solid #f1f5f9",
+                            textAlign: "center",
+                            color: "#dc2626",
+                          }}
+                        >
+                          {diff.old}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderLeft: "1px solid #f1f5f9",
+                            textAlign: "center",
+                            color: "#16a34a",
+                          }}
+                        >
+                          {diff.new}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 1.5,
+            px: 4,
+            py: 3,
+            borderTop: "1px solid #f1f5f9",
+            mx: -4,
+            mb: -4,
+            mt: 3,
+          }}
+        >
+          <Button
+            variant="contained"
+            sx={{
+              fontFamily: "Inter",
+              fontSize: "13px",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: "8px",
+              backgroundColor: "#2262ef",
+              color: "#fff",
+              px: "20px",
+              py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+              "&.Mui-disabled": {
+                backgroundColor: "#e0e5eb",
+                color: "#9aa3ae",
+              },
             }}
             onClick={onClose}
           >

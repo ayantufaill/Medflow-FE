@@ -5,7 +5,7 @@ import { fontSize, fontWeight } from '../../constants/styles';
 
 export const PATIENT_SECTION_TABS = [
   { id: 'details', label: 'Patient Details' },
-  { id: 'vitals', label: 'Vitals' },
+  // { id: 'vitals', label: 'Vitals' },
   { id: 'medical', label: 'Medical History' },
   { id: 'dental', label: 'Dental History' },
   { id: 'insurance', label: 'Insurance' },

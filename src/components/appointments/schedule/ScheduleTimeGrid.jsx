@@ -235,35 +235,55 @@ const getGridPosition = (gridItem, colIndex) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode }) => {
-  const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
-  
-  // Create two droppable zones for the hour: top half (0 mins) and bottom half (30 mins)
-  const { setNodeRef: setNodeRefTop, isOver: isOverTop } = useDroppable({
-    id: `slot-${roomId}-${hour}-0`,
-  });
-  
-  const { setNodeRef: setNodeRefBottom, isOver: isOverBottom } = useDroppable({
-    id: `slot-${roomId}-${hour}-30`,
+// ─── 10-Minute Portion Sub-Component ──────────────────────────────────────────
+
+const PORTION_MINUTES = [0, 10, 20, 30, 40, 50];
+
+const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, isWeek, isClosed, isCloseOpenDayMode }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot-${roomId}-${hour}-${mins}`,
   });
 
   return (
     <Box
+      ref={setNodeRef}
       onClick={(e) => {
-        if (isCloseOpenDayMode || isClosed) return; // Disallow booking interactions while in toggle mode or if column is closed
+        if (isCloseOpenDayMode || isClosed) return;
         e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        const isBottomHalf = y > HOUR_HEIGHT / 2;
-        const mins = isBottomHalf ? 30 : 0;
-        setActiveCell({
-          hour,
-          mins,
-          roomId
-        });
+        if (isWeek) {
+          if (onSlotClick) onSlotClick(hour, mins, roomId);
+        } else {
+          setActiveCell({ hour, mins, roomId });
+        }
       }}
       sx={{
+        flex: 1,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        boxSizing: 'border-box',
+        backgroundColor: isOver ? 'rgba(34, 98, 239, 0.15)' : 'transparent',
+        borderBottom: mins !== 50 ? '1px dashed transparent' : 'none',
+        '.droppable-cell-container:hover &': {
+          borderBottom: mins !== 50 ? '1px dashed rgba(203, 213, 225, 0.8)' : 'none',
+        },
+        '&:hover': {
+          backgroundColor: isCloseOpenDayMode || isClosed ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
+        },
+      }}
+    />
+  );
+};
+
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek }) => {
+  const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
+
+  return (
+    <Box
+      className="droppable-cell-container"
+      sx={{
         width: COLUMN_MIN_WIDTH,
+        height: HOUR_HEIGHT,
         flexShrink: 0,
         borderLeft: `1px solid ${COLORS.BORDER}`,
         position: "relative",
@@ -277,38 +297,45 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
         "&:hover": {
           backgroundColor: isCloseOpenDayMode 
             ? (isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent') 
-            : "rgba(34, 98, 239, 0.04)",
-        },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          top: "50%",
-          left: 0,
-          right: 0,
-          borderTop: "1px dashed #e8ecf0",
-          pointerEvents: "none",
+            : "rgba(34, 98, 239, 0.02)",
         },
       }}
     >
-      <Box ref={setNodeRefTop} sx={{ flex: 1, backgroundColor: isOverTop ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
-      <Box ref={setNodeRefBottom} sx={{ flex: 1, backgroundColor: isOverBottom ? "rgba(34, 98, 239, 0.1)" : "transparent" }} />
+      {PORTION_MINUTES.map((mins) => (
+        <PortionDroppableZone
+          key={mins}
+          hour={hour}
+          mins={mins}
+          roomId={roomId}
+          onSlotClick={onSlotClick}
+          setActiveCell={setActiveCell}
+          isWeek={isWeek}
+          isClosed={isClosed}
+          isCloseOpenDayMode={isCloseOpenDayMode}
+        />
+      ))}
+
       {/* Active cell options popup */}
       {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && (
         <Box
           sx={{
             position: 'absolute',
-            top: activeCell.mins === 30 ? '50%' : 0,
-            height: '50%',
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            backgroundColor: 'rgba(255,255,255,0.95)',
+            top: `${(activeCell.mins / 60) * 100}%`,
+            left: '4px',
+            right: '4px',
+            zIndex: 20,
+            backgroundColor: 'rgba(255,255,255,0.98)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             gap: '4px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            py: '8px',
+            px: '8px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+            border: `1px solid ${COLORS.ACCENT}`,
+            transform: activeCell.mins >= 40 ? 'translateY(-75%)' : 'none',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -325,7 +352,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
               fontWeight: fontWeight.semibold, 
               textTransform: 'none', 
               py: 0.5, 
-              minWidth: '80%', 
+              width: '100%', 
               backgroundColor: COLORS.ACCENT, 
               borderRadius: '6px',
               '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
@@ -345,7 +372,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
               fontWeight: fontWeight.semibold, 
               textTransform: 'none', 
               py: 0.5, 
-              minWidth: '80%', 
+              width: '100%', 
               color: COLORS.TEXT_PRIMARY, 
               borderColor: COLORS.BORDER,
               borderRadius: '6px',
@@ -569,6 +596,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 onBlockClick={onBlockClick}
                 isClosed={isClosed}
                 isCloseOpenDayMode={isCloseOpenDayMode}
+                isWeek={isWeek}
               />
             );
           })}

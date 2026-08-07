@@ -47,8 +47,12 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   DescriptionOutlined as DescriptionIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { feeService } from '../../services/fee.service';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 
 import ProcedureCodesTabs from '../../components/admin/clinical-management/procedure-codes/ProcedureCodesTabs';
 import NoChargePowerCodesTab from '../../components/admin/clinical-management/procedure-codes/NoChargePowerCodesTab';
@@ -1490,16 +1494,20 @@ const ProcedureCodesManagement = () => {
         <DialogActions sx={{ px: 4, pb: 4, pt: 1, gap: 1.5 }}>
           <Button
             onClick={handleCloseSyncDialog}
+            variant="outlined"
             sx={{
               textTransform: 'none',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              borderRadius: 2,
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              color: COLORS.TEXT_MUTED,
+              borderColor: COLORS.BORDER,
+              '&:hover': {
+                borderColor: COLORS.TEXT_MUTED,
+                backgroundColor: COLORS.BACKGROUND,
+              },
               px: 3,
-              py: 0.8,
-              '&:hover': { backgroundColor: '#e2e8f0' }
             }}
           >
             Cancel
@@ -1507,17 +1515,17 @@ const ProcedureCodesManagement = () => {
           <Button
             onClick={handleCloseSyncDialog}
             variant="contained"
+            disableElevation
             sx={{
               textTransform: 'none',
-              backgroundColor: '#2563eb',
-              color: '#fff',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              borderRadius: 2,
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
               px: 4,
-              py: 0.8,
-              boxShadow: 'none',
-              '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
             }}
           >
             Sync Offices
@@ -1529,30 +1537,43 @@ const ProcedureCodesManagement = () => {
       <Dialog
         open={isAddCustomCodeOpen}
         onClose={handleCloseAddCustomCode}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
+        sx={{ zIndex: 9999 }}
         PaperProps={{
-          sx: { borderRadius: '4px', overflow: 'hidden' }
+          sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: "0px 8px 24px rgba(0,0,0,0.12)" }
         }}
       >
-        <DialogTitle
-          sx={{
-            backgroundColor: '#4b71a1',
-            color: '#fff',
-            fontSize: '1.05rem',
-            fontWeight: 600,
-            py: 1.5,
-            px: 3,
-            textAlign: 'center',
-          }}
-        >
-          Add Custom Code
-        </DialogTitle>
+        <Box sx={{
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "20px", py: "16px",
+          borderBottom: "1px solid #e0e5eb",
+          backgroundColor: "#f3f8fd",
+        }}>
+          <Box sx={{
+            width: "36px", height: "36px", borderRadius: "8px",
+            backgroundColor: "#eff6ff",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+              Add Custom Code
+            </Typography>
+            <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+              Create a new procedure code.
+            </Typography>
+          </Box>
+          <IconButton onClick={handleCloseAddCustomCode} size="small" sx={{ color: "#6b7280" }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
+          </IconButton>
+        </Box>
         <form onSubmit={handleSaveCustomCode}>
-          <DialogContent sx={{ py: 3, px: 3 }}>
-            <Grid container spacing={2}>
+          <DialogContent sx={{ py: 3, px: 3, backgroundColor: "#fff" }}>
+            <Grid container spacing={2.5}>
               <Grid item xs={6}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Code *
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1565,12 +1586,16 @@ const ProcedureCodesManagement = () => {
                     required
                     value={customCodeForm.code}
                     onChange={(e) => setCustomCodeForm(prev => ({ ...prev, code: e.target.value }))}
-                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                    sx={{
+                      "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                      "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                    }}
                   />
                 </Box>
               </Grid>
               <Grid item xs={6}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Category *
                 </Typography>
                 <TextField
@@ -1579,11 +1604,15 @@ const ProcedureCodesManagement = () => {
                   required
                   value={customCodeForm.category}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, category: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  sx={{
+                    "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                    "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Procedure Type *
                 </Typography>
                 <TextField
@@ -1592,11 +1621,15 @@ const ProcedureCodesManagement = () => {
                   required
                   value={customCodeForm.procedureType}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, procedureType: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  sx={{
+                    "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                    "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 />
               </Grid>
               <Grid item xs={6}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Procedure *
                 </Typography>
                 <TextField
@@ -1605,11 +1638,15 @@ const ProcedureCodesManagement = () => {
                   required
                   value={customCodeForm.procedure}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, procedure: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  sx={{
+                    "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                    "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+              <Grid item xs={6}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Code Name:
                 </Typography>
                 <TextField
@@ -1617,11 +1654,15 @@ const ProcedureCodesManagement = () => {
                   size="small"
                   value={customCodeForm.codeName}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, codeName: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem', py: 1 } }}
+                  sx={{
+                    "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                    "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+              <Grid item xs={2.5}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Site
                 </Typography>
                 <Select
@@ -1629,7 +1670,12 @@ const ProcedureCodesManagement = () => {
                   size="small"
                   value={customCodeForm.site}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, site: e.target.value }))}
-                  sx={{ height: 38, fontSize: '0.85rem' }}
+                  MenuProps={{ sx: { zIndex: 10000 } }}
+                  sx={{
+                    fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff",
+                    color: "#374151", height: "38px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 >
                   <MenuItem value="None">None</MenuItem>
                   <MenuItem value="Upper Right">Upper Right</MenuItem>
@@ -1640,8 +1686,8 @@ const ProcedureCodesManagement = () => {
                   <MenuItem value="Lower Arch">Lower Arch</MenuItem>
                 </Select>
               </Grid>
-              <Grid item xs={12}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', mb: 0.5 }}>
+              <Grid item xs={3.5}>
+                <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
                   Description *
                 </Typography>
                 <TextField
@@ -1652,47 +1698,46 @@ const ProcedureCodesManagement = () => {
                   required
                   value={customCodeForm.description}
                   onChange={(e) => setCustomCodeForm(prev => ({ ...prev, description: e.target.value }))}
-                  sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                  sx={{
+                    "& .MuiInputBase-root": { fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", backgroundColor: "#fff" },
+                    "& .MuiInputBase-input": { color: "#374151", py: "8.5px" },
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" }
+                  }}
                 />
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center', gap: 2 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              sx={{
-                textTransform: 'none',
-                backgroundColor: '#c5a059',
-                color: '#fff',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                px: 3,
-                py: 0.75,
-                borderRadius: '4px',
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#b08c48', boxShadow: 'none' }
-              }}
-            >
-              Save
-            </Button>
+          <DialogActions sx={{
+            display: "flex", alignItems: "center", justifyContent: "flex-end",
+            px: "20px", py: "12px", gap: "8px",
+            borderTop: '1px solid #e0e5eb', m: 0
+          }}>
             <Button
               onClick={handleCloseAddCustomCode}
-              variant="contained"
+              variant="outlined"
               sx={{
-                textTransform: 'none',
-                backgroundColor: '#a0aec0',
-                color: '#fff',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                px: 3,
-                py: 0.75,
-                borderRadius: '4px',
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: '#8a9ab0', boxShadow: 'none' }
+                fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+                textTransform: "none", borderRadius: "8px",
+                border: "1px solid #d0d5dd", color: "#374151",
+                px: "16px", py: "7px",
+                "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
               }}
             >
               Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disableElevation
+              sx={{
+                fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+                textTransform: "none", borderRadius: "8px",
+                backgroundColor: "#2262ef", color: "#fff",
+                px: "20px", py: "7px",
+                "&:hover": { backgroundColor: "#1a50cc" },
+              }}
+            >
+              Save
             </Button>
           </DialogActions>
         </form>

@@ -21,8 +21,10 @@ const AppointmentRightPanel = ({
   noReminders, onNoRemindersChange,
   tags, onTagsChange,
   showExtendedOptions,
+  readOnly,
 }) => (
-  <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "18px" }}>
+  <Box sx={{ width: "30%", minWidth: "300px", flexShrink: 0, p: "20px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "18px", pointerEvents: readOnly ? 'none' : 'auto', opacity: readOnly ? 0.85 : 1 }}>
 
     <FieldBox label="Appointment status">
       <Select MenuProps={{ sx: { zIndex: 1400 } }}
@@ -74,9 +76,14 @@ const AppointmentRightPanel = ({
         sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredDentist ? "#09121f" : "#9aa3ae" }}
       >
         <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select dentist</MenuItem>
-        {providers.map((p) => (
-          <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
-        ))}
+        {providers.map((p) => {
+          const providerId = String(p.ProvNum || p.providerId || p._id || p.id);
+          return (
+            <MenuItem key={providerId} value={providerId} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
+              {providerLabel(p)}
+            </MenuItem>
+          );
+        })}
       </Select>
     </FieldBox>
 
@@ -88,9 +95,14 @@ const AppointmentRightPanel = ({
         sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: preferredHygienist ? "#09121f" : "#9aa3ae" }}
       >
         <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Select hygienist</MenuItem>
-        {providers.map((p) => (
-          <MenuItem key={p._id || p.id} value={String(p._id || p.id)} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{providerLabel(p)}</MenuItem>
-        ))}
+        {providers.map((p) => {
+          const providerId = String(p.ProvNum || p.providerId || p._id || p.id);
+          return (
+            <MenuItem key={providerId} value={providerId} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
+              {providerLabel(p)}
+            </MenuItem>
+          );
+        })}
       </Select>
     </FieldBox>
 
@@ -146,6 +158,7 @@ const AppointmentRightPanel = ({
     )}
 
     <ColorTagPicker selected={selectedColorTags} onChange={onColorTagsChange} />
+    </Box>
   </Box>
 );
 

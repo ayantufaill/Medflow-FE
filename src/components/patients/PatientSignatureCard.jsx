@@ -9,7 +9,7 @@ import { fontSize, fontWeight } from '../../constants/styles';
 // as Task List / Messages so the medical history sidebar reads as one
 // consistent column instead of mixing card styles.
 const PatientSignatureCard = ({ value, onChange, reviewedWithPatient }) => (
-  <RightPanelCard icon={<SignatureIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Signature">
+  <RightPanelCard icon={<SignatureIcon className="section-card-icon" sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Signature">
     <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mb: 1 }}>
       Patient / Guardian Signature
     </Typography>

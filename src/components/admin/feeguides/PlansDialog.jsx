@@ -12,8 +12,9 @@ import {
   TableHead,
   TableRow,
   Checkbox,
+  Box,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const mockPlans = [
   { id: '1', groupNumber: '00652756', groupName: 'PLAN 1 GROUP', employerName: 'EMPLOYER 1', payerName: 'MetLife', payerId: '65978' },
@@ -54,28 +55,35 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
       maxWidth="lg"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        lineHeight: 1.3,
-        borderBottom: '1px solid #f1f5f9',
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        {selectedFeeGuide}'S PLANS
-        <IconButton onClick={onClose} size="small" sx={{ color: '#64748b' }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f", textTransform: 'uppercase' }}>
+            {selectedFeeGuide}'S PLANS
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            View and manage plans associated with this fee guide.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
+      </Box>
       <DialogContent sx={{ p: 4, mt: 1 }}>
-        <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: '#334155' }}>
+        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
           Insurance Plans:
         </Typography>
         <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: 2 }}>

@@ -1,5 +1,7 @@
 import { Button, Typography } from '@mui/material';
 import BaseDialog from '../shared/BaseDialog';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
   <BaseDialog
@@ -11,7 +13,17 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
         <Button
           onClick={onClose}
           variant="outlined"
-          sx={{ textTransform: 'none', color: '#666', borderColor: '#ccc' }}
+          sx={{ 
+            textTransform: 'none', 
+            borderColor: COLORS.BORDER, 
+            color: COLORS.TEXT_PRIMARY,
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            px: 3,
+            '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
+          }}
         >
           Cancel
         </Button>
@@ -20,9 +32,15 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
           variant="contained"
           sx={{
             textTransform: 'none',
-            bgcolor: '#7788bb',
-            color: '#fff',
-            '&:hover': { bgcolor: '#6577aa' },
+            bgcolor: '#ef4444', // Danger Red
+            color: COLORS.WHITE,
+            fontSize: '13px',
+            fontWeight: fontWeight.medium,
+            borderRadius: radius.sm,
+            height: '36px',
+            px: 3,
+            boxShadow: 'none',
+            '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }, // Darker Danger Red
           }}
         >
           Void
@@ -30,8 +48,8 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
       </>
     }
   >
-    <Typography variant="body2" sx={{ color: '#555', fontSize: '14px' }}>
-      Are you sure you want to void this adjustment?
+    <Typography variant="body2" sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '14px', textAlign: 'center', py: 2 }}>
+      Are you sure you want to void this adjustment? This action cannot be undone.
     </Typography>
   </BaseDialog>
 );

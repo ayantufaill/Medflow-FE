@@ -23,6 +23,7 @@ import {
   selectLedgerLoading,
   selectAdjustmentTypeMap,
   setAdjustmentTypeForItem,
+  transferOutstandingToPatient,
 } from '../../store/slices/billingSlice';
 
 import LedgerItemCard from './LedgerItemCard';
@@ -62,6 +63,7 @@ const LedgerList = ({ patient, expanded }) => {
   const [showEditDeposit,        setShowEditDeposit]        = useState(false);
   const [editDepositTarget,      setEditDepositTarget]      = useState(null);
   const [showTransferConfirmation, setShowTransferConfirmation] = useState(false);
+  const [transferTarget,           setTransferTarget]           = useState(null);
   const [showEditInvoice,        setShowEditInvoice]        = useState(false);
   const [editInvoiceTarget,      setEditInvoiceTarget]      = useState(null);
   const [showInvoiceModal,       setShowInvoiceModal]       = useState(false);
@@ -205,12 +207,28 @@ const LedgerList = ({ patient, expanded }) => {
 
   const handleRefreshClick = (data) => { setUndoTarget(data); setShowUndoDialog(true); };
   const handleUndoCancel   = () => { setShowUndoDialog(false); setUndoTarget(null); };
-  const handleUndoConfirm  = async () => {
+  const handleUndoConfirm = async () => {
     if (undoTarget) {
-      dispatch(undoCourtesyCredit({ patientId, procedureId: undoTarget.id, invoiceId: undoTarget.invoiceId }));
+      await dispatch(undoCourtesyCredit({
+        patientId,
+        procedureId: undoTarget.id,
+        invoiceId:   undoTarget.invoiceId,
+      }));
     }
     setShowUndoDialog(false);
     setUndoTarget(null);
+  };
+
+  const handleTransferConfirm = async () => {
+    if (transferTarget) {
+      await dispatch(transferOutstandingToPatient({
+        patientId,
+        invoiceId: transferTarget.invoiceId,
+        procedureId: transferTarget.id,
+      }));
+    }
+    setShowTransferConfirmation(false);
+    setTransferTarget(null);
   };
 
   const handleCollapsedEditClick = (item) => { setEditDepositTarget(item); setShowEditDeposit(true); };
@@ -320,6 +338,7 @@ const LedgerList = ({ patient, expanded }) => {
             handleEditClick={handleEditClick}
             handleRefreshClick={handleRefreshClick}
             setMagicStickAnchorEl={setMagicStickAnchorEl}
+            setTransferTarget={setTransferTarget}
             setEditInvoiceTarget={setEditInvoiceTarget}
             setShowEditInvoice={setShowEditInvoice}
             setAdjAnchorEl={setAdjAnchorEl}
@@ -348,7 +367,7 @@ const LedgerList = ({ patient, expanded }) => {
         showEditDeposit={showEditDeposit} handleEditDepositCancel={handleEditDepositCancel} handleEditDepositSave={handleEditDepositSave} editDepositTarget={editDepositTarget}
         showInvoiceModal={showInvoiceModal} handleInvoiceModalCancel={handleInvoiceModalCancel} handleInvoiceModalSave={handleInvoiceModalSave} invoiceModalData={invoiceModalData}
         magicStickAnchorEl={magicStickAnchorEl} setMagicStickAnchorEl={setMagicStickAnchorEl}
-        showTransferConfirmation={showTransferConfirmation} setShowTransferConfirmation={setShowTransferConfirmation}
+        showTransferConfirmation={showTransferConfirmation} setShowTransferConfirmation={setShowTransferConfirmation} handleTransferConfirm={handleTransferConfirm}
         showEditInvoice={showEditInvoice} setShowEditInvoice={setShowEditInvoice} editInvoiceTarget={editInvoiceTarget}
         showAttachDialog={showAttachDialog} setShowAttachDialog={setShowAttachDialog} attachTarget={attachTarget}
       />

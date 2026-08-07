@@ -32,6 +32,7 @@ import { usePatient, useScheduleState } from "../../../../hooks/redux";
 
 import FamilyAppointmentsScheduledTab from './FamilyAppointmentsScheduledTab';
 import FamilyAppointmentsDueTab from './FamilyAppointmentsDueTab';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const FamilyAppointmentsDialog = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -204,6 +205,9 @@ const FamilyAppointmentsDialog = () => {
             height: 30,
             fontSize: "12px",
             fontWeight: 600,
+            borderColor: "#2362EF",
+            color: "#2362EF",
+            "&:hover": { borderColor: "#1a50cc", backgroundColor: "rgba(35, 98, 239, 0.04)" }
           }}
         >
           Print
@@ -218,9 +222,26 @@ const FamilyAppointmentsDialog = () => {
           display: "flex",
           overflow: "hidden",
           backgroundColor: "#f8fafc",
+          "@media print": { p: 0, '& .no-print': { display: 'none !important' } },
         }}
       >
-        {tabValue === 0 ? (
+        <style>
+          {`
+            @media print {
+              body * { visibility: hidden; }
+              .printable-family-content, .printable-family-content * { visibility: visible; }
+              .printable-family-content { position: absolute; left: 0; top: 0; width: 100%; overflow: visible !important; }
+              .MuiDialog-root, .MuiDialog-container, .MuiDialog-paper,
+              .MuiDialogContent-root { overflow: visible !important; position: static !important; height: auto !important; max-height: none !important; }
+            }
+          `}
+        </style>
+        <Box className="printable-family-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Print-only Medflow Logo at Top Center */}
+          <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3, pt: 2 } }}>
+            <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
+          </Box>
+          {tabValue === 0 ? (
           <FamilyAppointmentsScheduledTab 
             allAppointments={allAppointments}
             groupedAppointments={groupedAppointments}
@@ -232,6 +253,7 @@ const FamilyAppointmentsDialog = () => {
             getPatientName={getPatientName}
           />
         )}
+        </Box>
       </DialogContent>
 
       {/* ── FOOTER ─────────────────────────────────────────────────────────── */}

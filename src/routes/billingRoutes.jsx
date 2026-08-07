@@ -58,7 +58,7 @@ const adminBillingFrontDesk = (children) => (
 );
 
 const billingRoutes = [
-  <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />)} />,
+  <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />, true)} />,
   <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />, true)} />,
   <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />, true)} />,
 
@@ -82,7 +82,7 @@ const billingRoutes = [
   <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingDoctor(<ViewEstimatePage />)} />,
 
   <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />, true)} />,
-  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />)} />,
+  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />, true)} />,
   <Route key="/claims/denied" path="/claims/denied" element={adminBilling(<DeniedClaimsPage />)} />,
   <Route key="/claims/secondary" path="/claims/secondary" element={adminBilling(<SecondaryClaimsPage />)} />,
   <Route key="/claims/:claimId" path="/claims/:claimId" element={adminBilling(<ViewClaimPage />)} />,

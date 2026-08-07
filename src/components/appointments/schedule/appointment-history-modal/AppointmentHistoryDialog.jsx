@@ -22,6 +22,10 @@ import { COLORS } from "../../../../constants/colors";
 
 import AppointmentHistoryFilters from './AppointmentHistoryFilters';
 import AppointmentHistoryTable, { getAppointmentRowKey } from './AppointmentHistoryTable';
+import medflowLogo from '../../../../assets/medflow-logo.png';
+
+import AuditScheduleHistoryDialog from './AuditScheduleHistoryDialog';
+import ReminderScheduleHistoryDialog from './ReminderScheduleHistoryDialog';
 
 const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
@@ -41,6 +45,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const [sortBy, setSortBy] = useState("date"); // date, lastStatusChange
 
   const [selected, setSelected] = useState([]);
+  const [selectedAuditAppt, setSelectedAuditAppt] = useState(null);
+  const [selectedReminderAppt, setSelectedReminderAppt] = useState(null);
 
   const fetchHistoryData = useCallback(() => {
     if (!patient) return;
@@ -87,8 +93,44 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
       if (sortBy === "date") {
         return dayjs(b.appointmentDate || b.date).diff(dayjs(a.appointmentDate || a.date));
       } else {
-        const timeA = a.updatedAt || a.createdAt || a.date;
-        const timeB = b.updatedAt || b.createdAt || b.date;
+        // Last Status Change sort
+        const getStatusChangeTime = (apt) => {
+          if (apt.systemEvents && apt.systemEvents.length > 0) {
+            const statusEvents = apt.systemEvents.filter(e => 
+              (e.type === 'status_changed' || 
+              e.action === 'status_changed' || 
+              (e.message && e.message.toLowerCase().includes('status'))) && 
+              e.action !== 'created' && e.type !== 'created'
+            );
+            if (statusEvents.length > 0) {
+              const latestEvent = statusEvents.reduce((latest, current) => {
+                const tCurrent = current.timestamp || current.createdAt || current.date;
+                const tLatest = latest.timestamp || latest.createdAt || latest.date;
+                return dayjs(tCurrent).isAfter(dayjs(tLatest)) ? current : latest;
+              });
+              return latestEvent.timestamp || latestEvent.createdAt || latestEvent.date;
+            }
+          }
+          // Fallback: If no explicit status change events are found, 
+          // we use updatedAt as a proxy for "last status change".
+          // However, if updatedAt is virtually identical to createdAt (or missing), it means the appointment 
+          // was never updated since creation. In that case, we fall back to the actual appointment date.
+          // This prevents newly created appointments from artificially bubbling to the top of the status change sort.
+          const created = dayjs(apt.createdAt || apt.date || dayjs().toISOString());
+          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || dayjs().toISOString());
+          
+          if (apt.updatedAt && updated.diff(created, 'second') > 60) {
+            // It has been updated at least 1 minute after creation! Use the updatedAt time.
+            return updated.toISOString();
+          }
+
+          // No real status updates since creation. Sink it to the bottom by using a very old date, 
+          // but preserve relative ordering using the appointment date, not the creation date.
+          return dayjs(apt.appointmentDate || apt.date).subtract(10, 'year').toISOString();
+        };
+
+        const timeA = getStatusChangeTime(a);
+        const timeB = getStatusChangeTime(b);
         return dayjs(timeB).diff(dayjs(timeA));
       }
     });
@@ -161,21 +203,32 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
               body * { visibility: hidden; }
               .printable-content, .printable-content * { visibility: visible; }
               .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+              @page { size: landscape; margin: 10mm; }
+              .printable-content .MuiTableCell-paddingCheckbox { display: none !important; }
+              .printable-content .MuiTableHead-root th:nth-of-type(9),
+              .printable-content .MuiTableHead-root th:nth-of-type(10),
+              .printable-content .MuiTableBody-root td:nth-of-type(9),
+              .printable-content .MuiTableBody-root td:nth-of-type(10) { display: none !important; }
+              .printable-content .MuiTable-root { font-size: 0.75rem; table-layout: auto; width: 100%; }
             }
           `}
         </style>
         <Box className="printable-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          
-          <AppointmentHistoryFilters 
-            filterType={filterType}
-            setFilterType={setFilterType}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            uniqueStatuses={uniqueStatuses}
-            filteredCount={filteredAndSortedAppointments.length}
-          />
+          <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', mb: 3, pt: 2 } }}>
+            <img src={medflowLogo} alt="Medflow" style={{ height: 40 }} />
+          </Box>
+          <Box className="no-print">
+            <AppointmentHistoryFilters 
+              filterType={filterType}
+              setFilterType={setFilterType}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              uniqueStatuses={uniqueStatuses}
+              filteredCount={filteredAndSortedAppointments.length}
+            />
+          </Box>
 
           <AppointmentHistoryTable 
             loading={loading}
@@ -183,6 +236,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
             selected={selected}
             handleSelectAll={handleSelectAll}
             handleSelectOne={handleSelectOne}
+            onShowAudit={(appt) => setSelectedAuditAppt(appt)}
+            onShowReminders={(appt) => setSelectedReminderAppt(appt)}
           />
           
         </Box>
@@ -217,14 +272,27 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
             fontSize: "12px",
             borderRadius: "8px",
             fontWeight: 600,
+            borderColor: "#2362EF",
+            color: "#2362EF",
+            "&:hover": { borderColor: "#1a50cc", backgroundColor: "rgba(35, 98, 239, 0.04)" }
           }}
           onClick={() => window.print()}
         >
           Print
         </Button>
       </DialogActions>
+
+      <AuditScheduleHistoryDialog
+        open={!!selectedAuditAppt}
+        onClose={() => setSelectedAuditAppt(null)}
+        appointment={selectedAuditAppt}
+      />
+      <ReminderScheduleHistoryDialog
+        open={!!selectedReminderAppt}
+        onClose={() => setSelectedReminderAppt(null)}
+        appointment={selectedReminderAppt}
+      />
     </Dialog>
   );
 };
-
 export default AppointmentHistoryDialog;

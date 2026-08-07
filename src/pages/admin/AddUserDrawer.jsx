@@ -233,7 +233,7 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
 
   const toggleRole = (roleId) =>
     setSelectedRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
+      prev.includes(roleId) ? [] : [roleId]
     );
 
   const onSubmit = async (data) => {

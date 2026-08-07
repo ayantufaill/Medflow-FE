@@ -22,6 +22,10 @@ import {
   ThumbUp as ThumbUpIcon,
   NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
+
+import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
+
 import { useNavigate } from 'react-router-dom';
 import { communicationService } from '../../services/communication.service';
 
@@ -166,17 +170,26 @@ const ReviewSettings = () => {
         </Box>
         <Box>
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={handleSave} 
             disabled={saving || !isDirty}
-            sx={{ 
-              bgcolor: '#3B82F6', 
-              textTransform: 'none', 
-              borderRadius: '8px', 
-              px: 3, 
-              fontWeight: 600,
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } 
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 3,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+              '&.Mui-disabled': {
+                backgroundColor: COLORS.BORDER,
+                color: COLORS.TEXT_MUTED,
+              }
             }}
           >
             {saving ? 'Saving...' : 'Save Settings'}
@@ -185,7 +198,7 @@ const ReviewSettings = () => {
       </Box>
 
       {/* Main Content Container */}
-      <Box sx={{ maxWidth: 1000, mx: 'auto', px: 4, pb: 10 }}>
+      <Box sx={{ px: 4, pb: 10 }}>
 
       {/* Office Review */}
       <Box sx={{ bgcolor: '#ffffff', borderRadius: 3, p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #E5E7EB' }}>
@@ -204,9 +217,23 @@ const ReviewSettings = () => {
             <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Setup how often would you like your patient to receive a review request after their completed appointment.</Typography>
           </Box>
           <Button 
-            variant="contained" 
+            variant="contained"
+            disableElevation
             onClick={handleAddNotification}
-            sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, px: 2.5, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
+            sx={{
+              textTransform: 'none',
+              borderRadius: radius.md,
+              fontFamily: 'Inter',
+              fontSize: fontSize.base,
+              fontWeight: fontWeight.semibold,
+              px: 2.5,
+              py: 1,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
+              '&:hover': {
+                backgroundColor: COLORS.ACCENT_HOVER,
+              },
+            }}
           >
             + Add Notification
           </Button>
@@ -280,7 +307,19 @@ const ReviewSettings = () => {
                         <MenuItem value="Hours" sx={{ fontSize: '0.85rem' }}>Hours</MenuItem>
                         <MenuItem value="Days" sx={{ fontSize: '0.85rem' }}>Days</MenuItem>
                       </Select>
-                      <Button variant="contained" onClick={() => toggleEditNotification(notif.id)} sx={{ bgcolor: '#3B82F6', minWidth: 'auto', px: 2, height: 32, fontSize: '0.8rem', borderRadius: '6px', boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}>
+                      <Button variant="contained" disableElevation onClick={() => toggleEditNotification(notif.id)} sx={{ 
+                        textTransform: 'none',
+                        borderRadius: radius.md,
+                        fontFamily: 'Inter',
+                        fontSize: fontSize.sm,
+                        fontWeight: fontWeight.semibold,
+                        backgroundColor: COLORS.ACCENT,
+                        color: COLORS.WHITE,
+                        minWidth: 'auto', 
+                        px: 2, 
+                        height: 32,
+                        '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+                      }}>
                         Save
                       </Button>
                     </>

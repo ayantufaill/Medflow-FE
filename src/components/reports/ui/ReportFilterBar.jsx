@@ -14,6 +14,7 @@ export const ReportFilterBar = ({
   onCreateTemplate,
   onPrint,
   onExportCsv,
+  wrapFilters = false,
 }) => {
   const hasTopRow = topRowFilters || topRowActions;
   const hasMiddleRow = !!middleRowFilters;
@@ -26,16 +27,16 @@ export const ReportFilterBar = ({
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          flexWrap: 'nowrap', 
+          flexWrap: wrapFilters ? 'wrap' : 'nowrap', 
           gap: 1.5, 
           p: 2, 
           pb: (hasMiddleRow || hasBottomRow) ? 1.5 : 2, 
           backgroundColor: '#fff',
-          overflowX: 'auto',
-          '&::-webkit-scrollbar': { height: 0, display: 'none' } 
+          overflowX: wrapFilters ? 'visible' : 'auto',
+          '&::-webkit-scrollbar': wrapFilters ? {} : { height: 0, display: 'none' } 
         }}>
           {topRowFilters && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: 'nowrap' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: wrapFilters ? 'wrap' : 'nowrap' }}>
               {topRowFilters}
             </Box>
           )}
@@ -55,14 +56,14 @@ export const ReportFilterBar = ({
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'flex-end', 
-          flexWrap: 'nowrap', 
+          flexWrap: wrapFilters ? 'wrap' : 'nowrap', 
           gap: 1.5, 
           px: 2, 
           pb: hasBottomRow ? 1.5 : 2,
           backgroundColor: '#fff',
           borderTop: hasTopRow ? '1px solid #e2e8f0' : 'none',
-          overflowX: 'auto',
-          '&::-webkit-scrollbar': { height: 0, display: 'none' } 
+          overflowX: wrapFilters ? 'visible' : 'auto',
+          '&::-webkit-scrollbar': wrapFilters ? {} : { height: 0, display: 'none' } 
         }}>
           {middleRowFilters}
         </Box>
@@ -73,17 +74,17 @@ export const ReportFilterBar = ({
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'flex-end', 
-          flexWrap: 'nowrap', 
+          flexWrap: wrapFilters ? 'wrap' : 'nowrap', 
           gap: 1.5, 
           p: 2, 
           pt: hasTopRow || hasMiddleRow ? 1.5 : 2, 
           backgroundColor: '#f8fafc', 
           borderTop: hasTopRow || hasMiddleRow ? '1px solid #e2e8f0' : 'none',
-          overflowX: 'auto',
-          '&::-webkit-scrollbar': { height: 0, display: 'none' } 
+          overflowX: wrapFilters ? 'visible' : 'auto',
+          '&::-webkit-scrollbar': wrapFilters ? {} : { height: 0, display: 'none' } 
         }}>
           {bottomRowFilters && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: 'nowrap' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', flexWrap: wrapFilters ? 'wrap' : 'nowrap' }}>
               {bottomRowFilters}
             </Box>
           )}

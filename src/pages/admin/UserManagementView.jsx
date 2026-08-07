@@ -30,6 +30,9 @@ import {
 import { userService } from '../../services/user.service';
 import { useRoles } from '../../hooks/queries/useRoles';
 import AddUserDrawer from './AddUserDrawer';
+import ViewUserModal from './ViewUserModal';
+import EditUserModal from './EditUserModal';
+import AssignRolesModal from './AssignRolesModal';
 import adduserIcon from '../../assets/usermanagement icons/adduser.svg';
 import viewIcon from '../../assets/usermanagement icons/view.svg';
 import editIcon from '../../assets/usermanagement icons/edit.svg';
@@ -37,8 +40,8 @@ import rolesIcon from '../../assets/usermanagement icons/roles.svg';
 
 // ─── UserRow ─────────────────────────────────────────────────────────────────
 
-const UserRow = ({ user }) => {
-  const theme    = useTheme();
+const UserRow = ({ user, onViewUser, onEditUser, onAssignRolesUser }) => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
@@ -66,49 +69,223 @@ const UserRow = ({ user }) => {
 
       <Collapse in={expanded}>
         <Box sx={{
-          px: 4.5, pb: 1.5, pt: 1,
-          backgroundColor: '#fff',
+          px: '22px', py: '18px',
+          backgroundColor: '#F8FAFC',
+          borderTop: `1px solid ${theme.palette.divider}`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}>
-          <Grid container spacing={1} sx={{ mb: 1 }}>
+          {/* User Contact Info Cards */}
+          <Grid container spacing={2} sx={{ mb: '16px' }}>
             {user.email && (
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <EmailIcon fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.9rem' }} />
-                  <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                <Box sx={{
+                  p: '12px 14px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { borderColor: '#CBD5E1', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' },
+                }}>
+                  <Box sx={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    backgroundColor: '#EFF6FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <EmailIcon sx={{ color: '#2262EF', fontSize: '18px' }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#64748B',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.4px',
+                      lineHeight: 1.2,
+                    }}>
+                      Email Address
+                    </Typography>
+                    <Typography sx={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#0F172A',
+                      mt: '2px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {user.email}
+                    </Typography>
+                  </Box>
                 </Box>
               </Grid>
             )}
+
             {user.phone && (
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <PhoneIcon fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.9rem' }} />
-                  <Typography variant="body2" color="text.secondary">{user.phone}</Typography>
+                <Box sx={{
+                  p: '12px 14px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { borderColor: '#CBD5E1', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' },
+                }}>
+                  <Box sx={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    backgroundColor: '#EFF6FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <PhoneIcon sx={{ color: '#2262EF', fontSize: '18px' }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#64748B',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.4px',
+                      lineHeight: 1.2,
+                    }}>
+                      Phone Number
+                    </Typography>
+                    <Typography sx={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#0F172A',
+                      mt: '2px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {user.phone}
+                    </Typography>
+                  </Box>
                 </Box>
               </Grid>
             )}
           </Grid>
 
-          <Divider sx={{ mb: 1 }} />
+          {/* Action Bar Footer */}
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pt: '14px',
+            borderTop: '1px solid #E2E8F0',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}>
+            <Typography sx={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#64748B',
+            }}>
+              Manage account permissions and details
+            </Typography>
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button size="small" variant="outlined"
-              startIcon={<img src={viewIcon} alt="view" style={{ width: 14, height: 14 }} />}
-              onClick={(e) => { e.stopPropagation(); navigate(`/users/${user._id || user.id}`); }}
-              sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.25, borderColor: '#e0e0e0', color: '#2262EF' }}>
-              View
-            </Button>
-            <Button size="small" variant="outlined"
-              startIcon={<img src={editIcon} alt="edit" style={{ width: 14, height: 14 }} />}
-              onClick={(e) => { e.stopPropagation(); navigate(`/users/${user._id || user.id}/edit`); }}
-              sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.25, borderColor: '#e0e0e0', color: '#2262EF' }}>
-              Edit
-            </Button>
-            <Button size="small" variant="outlined"
-              startIcon={<img src={rolesIcon} alt="roles" style={{ width: 14, height: 14 }} />}
-              onClick={(e) => { e.stopPropagation(); navigate(`/users/${user._id || user.id}/roles`); }}
-              sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.25, borderColor: '#e0e0e0', color: '#2262EF' }}>
-              Roles
-            </Button>
+            <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Button
+                startIcon={<img src={viewIcon} alt="view" style={{ width: 15, height: 15 }} />}
+                onClick={(e) => { e.stopPropagation(); onViewUser ? onViewUser(user) : navigate(`/users/${user._id || user.id}`); }}
+                sx={{
+                  textTransform: 'none',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  px: '14px',
+                  bgcolor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  color: '#1E293B',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: '#F8FAFC',
+                    borderColor: '#94A3B8',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+                  },
+                }}
+              >
+                View
+              </Button>
+              <Button
+                startIcon={<img src={editIcon} alt="edit" style={{ width: 15, height: 15 }} />}
+                onClick={(e) => { e.stopPropagation(); onEditUser ? onEditUser(user) : navigate(`/users/${user._id || user.id}/edit`); }}
+                sx={{
+                  textTransform: 'none',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  px: '14px',
+                  bgcolor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  color: '#1E293B',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: '#F8FAFC',
+                    borderColor: '#94A3B8',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+                  },
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                startIcon={<img src={rolesIcon} alt="roles" style={{ width: 15, height: 15 }} />}
+                onClick={(e) => { e.stopPropagation(); onAssignRolesUser ? onAssignRolesUser(user) : navigate(`/users/${user._id || user.id}/roles`); }}
+                sx={{
+                  textTransform: 'none',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  px: '16px',
+                  bgcolor: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  color: '#1D4ED8',
+                  boxShadow: '0 1px 2px rgba(34, 98, 239, 0.08)',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: '#DBEAFE',
+                    borderColor: '#93C5FD',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 5px rgba(34, 98, 239, 0.15)',
+                  },
+                }}
+              >
+                Roles
+              </Button>
+            </Box>
           </Box>
         </Box>
       </Collapse>
@@ -118,13 +295,13 @@ const UserRow = ({ user }) => {
 
 // ─── RoleBlock ────────────────────────────────────────────────────────────────
 
-const RoleBlock = ({ roleName, users }) => {
+const RoleBlock = ({ roleName, users, onViewUser, onEditUser, onAssignRolesUser }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(true);
   if (users.length === 0) return null;
 
   return (
-    <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, overflow: 'hidden' }}>
+    <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '6px', overflow: 'hidden' }}>
       <Box
         onClick={() => setExpanded((p) => !p)}
         sx={{
@@ -140,7 +317,7 @@ const RoleBlock = ({ roleName, users }) => {
         </IconButton>
       </Box>
       <Collapse in={expanded}>
-        {users.map((user) => <UserRow key={user._id || user.id} user={user} />)}
+        {users.map((user) => <UserRow key={user._id || user.id} user={user} onViewUser={onViewUser} onEditUser={onEditUser} onAssignRolesUser={onAssignRolesUser} />)}
       </Collapse>
     </Paper>
   );
@@ -150,12 +327,15 @@ const RoleBlock = ({ roleName, users }) => {
 
 const UserManagementView = () => {
   const { data: roles = [] } = useRoles();
-  const [users,        setUsers]        = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showInactive, setShowInactive] = useState(false);
-  const [drawerOpen,   setDrawerOpen]   = useState(false);
-  
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedUserForView, setSelectedUserForView] = useState(null);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [selectedUserForRoles, setSelectedUserForRoles] = useState(null);
+
   const fetchingRef = useRef(false);
 
   const fetchAllUsers = useCallback(async () => {
@@ -164,22 +344,22 @@ const UserManagementView = () => {
     try {
       setLoading(true);
       setError('');
-      const PAGE_LIMIT    = 100;
-      let page            = 1;
-      let allUsers        = [];
-      const statusFilter  = showInactive ? 'inactive' : '';
+      const PAGE_LIMIT = 100;
+      let page = 1;
+      let allUsers = [];
+      const statusFilter = showInactive ? 'inactive' : '';
 
       while (true) {
         const result = await userService.getAllUsers(page, PAGE_LIMIT, '', '', statusFilter);
-        const batch  = result.users || [];
-        allUsers     = allUsers.concat(batch);
-        const total  = result.pagination?.total || 0;
+        const batch = result.users || [];
+        allUsers = allUsers.concat(batch);
+        const total = result.pagination?.total || 0;
         if (allUsers.length >= total || batch.length < PAGE_LIMIT) break;
         page++;
       }
       setUsers(allUsers);
     } catch (err) {
-      const errorMsg = typeof err === 'string' ? err : 
+      const errorMsg = typeof err === 'string' ? err :
         (err.response?.data?.error?.message || err.response?.data?.message || err?.message || 'Failed to fetch users.');
       setError(errorMsg);
     } finally {
@@ -198,7 +378,7 @@ const UserManagementView = () => {
   }, {});
 
   const allRoleNames = roles.map((r) => r.name);
-  const ungrouped    = users.filter(
+  const ungrouped = users.filter(
     (u) => !u.roles || u.roles.length === 0 ||
       !(u.roles || []).some((r) => allRoleNames.includes(typeof r === 'string' ? r : r?.name))
   );
@@ -209,7 +389,7 @@ const UserManagementView = () => {
     <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 'none' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" fontWeight={700}>Users</Typography>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <FormControlLabel
             control={
@@ -255,13 +435,25 @@ const UserManagementView = () => {
           {Object.entries(usersByRole).map(([roleName, roleUsers]) =>
             roleUsers.length > 0 ? (
               <Grid size={{ xs: 12, sm: 6 }} key={roleName}>
-                <RoleBlock roleName={roleName} users={roleUsers} />
+                <RoleBlock
+                  roleName={roleName}
+                  users={roleUsers}
+                  onViewUser={setSelectedUserForView}
+                  onEditUser={setSelectedUserForEdit}
+                  onAssignRolesUser={setSelectedUserForRoles}
+                />
               </Grid>
             ) : null
           )}
           {ungrouped.length > 0 && (
             <Grid size={{ xs: 12, sm: 6 }}>
-              <RoleBlock roleName="Other" users={ungrouped} />
+              <RoleBlock
+                roleName="Other"
+                users={ungrouped}
+                onViewUser={setSelectedUserForView}
+                onEditUser={setSelectedUserForEdit}
+                onAssignRolesUser={setSelectedUserForRoles}
+              />
             </Grid>
           )}
         </Grid>
@@ -272,6 +464,28 @@ const UserManagementView = () => {
         onClose={() => setDrawerOpen(false)}
         roles={roles}
         onCreated={fetchAllUsers}
+      />
+
+      <ViewUserModal
+        open={Boolean(selectedUserForView)}
+        onClose={() => setSelectedUserForView(null)}
+        user={selectedUserForView}
+        onEditUser={(user) => setSelectedUserForEdit(user)}
+        onAssignRolesUser={(user) => setSelectedUserForRoles(user)}
+      />
+
+      <EditUserModal
+        open={Boolean(selectedUserForEdit)}
+        onClose={() => setSelectedUserForEdit(null)}
+        user={selectedUserForEdit}
+        onSuccess={fetchAllUsers}
+      />
+
+      <AssignRolesModal
+        open={Boolean(selectedUserForRoles)}
+        onClose={() => setSelectedUserForRoles(null)}
+        user={selectedUserForRoles}
+        onSuccess={fetchAllUsers}
       />
     </Paper>
   );

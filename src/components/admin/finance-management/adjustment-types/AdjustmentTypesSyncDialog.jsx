@@ -1,4 +1,5 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, TextField, Button } from '@mui/material';
+import { Dialog, DialogContent, DialogActions, Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Sync as SyncIcon, Close as CloseIcon } from '@mui/icons-material';
 
 const AdjustmentTypesSyncDialog = ({ open, onClose }) => {
   return (
@@ -9,29 +10,37 @@ const AdjustmentTypesSyncDialog = ({ open, onClose }) => {
       fullWidth
       sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
+        sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
       }}
     >
-      <DialogTitle
-        sx={{
-          backgroundColor: '#fff',
-          color: '#0f172a',
-          fontSize: '1.1rem',
-          fontWeight: 700,
-          py: 3,
-          px: 4,
-          lineHeight: 1.3,
-          borderBottom: '1px solid #f1f5f9'
-        }}
-      >
-        Sync Offices
-        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5, fontWeight: 400 }}>
-          Select the offices you would like to sync with the source office
-        </Typography>
-      </DialogTitle>
-      <DialogContent sx={{ mt: 3, px: 4 }}>
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
+      }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <SyncIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            Sync Offices
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Select the offices you would like to sync with the source office
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ mt: 1, px: 4, py: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#334155' }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Source Office:
           </Typography>
           <TextField
@@ -40,48 +49,47 @@ const AdjustmentTypesSyncDialog = ({ open, onClose }) => {
             value="thedentalstudio"
             disabled
             sx={{
-              '& .MuiInputBase-root': { backgroundColor: '#f8fafc', borderRadius: 2 },
-              '& .MuiInputBase-input': { fontSize: '0.85rem', color: '#64748b' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' }
+              '& .MuiInputBase-root': { backgroundColor: '#f9fafb', borderRadius: '8px' },
+              '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: '13px', color: '#6b7280' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
             }}
           />
         </Box>
         <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: '#334155' }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
             Target Offices:
           </Typography>
-          <Box sx={{ p: 2, border: '1px solid #e2e8f0', borderRadius: 2, backgroundColor: '#f8fafc', textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748b' }}>
+          <Box sx={{ p: 2, border: '1px solid #d0d5dd', borderRadius: '8px', backgroundColor: '#f9fafb', textAlign: 'center' }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "13px", color: '#6b7280' }}>
               Select target offices from the list below...
             </Typography>
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 4, pb: 4, pt: 2, gap: 1.5 }}>
+      <DialogActions sx={{ px: 4, py: 3, borderTop: '1px solid #f1f5f9', gap: 1.5 }}>
         <Button
           onClick={onClose}
-          sx={{
-            textTransform: 'none',
-            color: '#475569',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 3,
-            '&:hover': { backgroundColor: '#f1f5f9' }
+          variant="outlined"
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
-          variant="text"
         >
           Cancel
         </Button>
         <Button
           variant="contained"
-          sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 3,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            "&.Mui-disabled": { backgroundColor: "#e0e5eb", color: "#9aa3ae" }
           }}
         >
           Sync Now

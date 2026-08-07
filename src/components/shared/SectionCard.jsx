@@ -23,6 +23,7 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
 
   return (
     <Box
+      className="section-card"
       sx={{
         backgroundColor: COLORS.SURFACE_CARD,
         borderRadius: radius.xl,
@@ -52,21 +53,20 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           {Icon && (
             <Box
+              className="section-card-icon"
+              style={{ width: '40px', height: '40px', minWidth: '40px', maxWidth: '40px', flexBasis: '40px', flexShrink: 0, flexGrow: 0 }}
               sx={{
-                width: 40,
-                height: 40,
                 borderRadius: "50%",
                 backgroundColor: COLORS.ACCENT_BG,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                flexShrink: 0,
               }}
             >
               <Icon sx={{ fontSize: 20, color: COLORS.ACCENT }} />
             </Box>
           )}
-          <Box>
+          <Box className="section-card-text" sx={{ flex: 1, minWidth: 0 }}>
             {typeof title === 'string' ? (
               <Typography
                 sx={{
@@ -117,7 +117,7 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
       </Box>
 
       {/* Body */}
-      <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+      <Box className="section-card-body" sx={{ p: { xs: 2, sm: 2.5 } }}>
         {children}
       </Box>
     </Box>

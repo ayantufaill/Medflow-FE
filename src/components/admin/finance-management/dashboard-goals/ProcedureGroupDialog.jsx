@@ -6,8 +6,11 @@ import {
   DialogActions,
   Box,
   TextField,
-  Button
+  Button,
+  Typography,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
 
 const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, onSave }) => {
   return (
@@ -18,21 +21,35 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
       fullWidth
       sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: { borderRadius: 3, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
+        sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
       }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#fff',
-        color: '#0f172a',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        py: 3,
-        px: 4,
-        borderBottom: '1px solid #f1f5f9'
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "20px", py: "16px",
+        borderBottom: "1px solid #e0e5eb",
+        backgroundColor: "#f3f8fd",
       }}>
-        {isEdit ? 'Edit Procedure Group' : 'Add Procedure Group'}
-      </DialogTitle>
-      <DialogContent sx={{ p: 4 }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+            {isEdit ? 'Edit Procedure Group' : 'Add Procedure Group'}
+          </Typography>
+          <Typography sx={{ fontWeight: 400, color: "#5c646f", fontFamily: "Inter", fontSize: "11px" }}>
+            Configure dashboard goals procedure group.
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <DialogContent sx={{ py: 3, px: 4 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
           <TextField
             label="Group Name"
@@ -41,7 +58,12 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
             fullWidth
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            InputLabelProps={{ sx: { fontFamily: "Inter", fontSize: "13px" } }}
+            sx={{ 
+              '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+              '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
+            }}
           />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
@@ -49,7 +71,13 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
               variant="outlined"
               size="small"
               type="number"
-              sx={{ width: '50%', '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              sx={{ 
+                width: '50%',
+                '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+                '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
+              }}
+              InputLabelProps={{ sx: { fontFamily: "Inter", fontSize: "13px" } }}
               value={formData.percentage}
               onChange={(e) => setFormData(prev => ({ ...prev, percentage: e.target.value }))}
             />
@@ -58,7 +86,13 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
               variant="outlined"
               size="small"
               type="color"
-              sx={{ width: '50%', '& .MuiOutlinedInput-root': { borderRadius: 2, height: '40px' } }}
+              sx={{ 
+                width: '50%',
+                '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+                '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff', height: '40px' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
+              }}
+              InputLabelProps={{ sx: { fontFamily: "Inter", fontSize: "13px" } }}
               value={formData.color}
               onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
             />
@@ -73,21 +107,25 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
             value={formData.codes}
             onChange={(e) => setFormData(prev => ({ ...prev, codes: e.target.value }))}
             placeholder="e.g. D1110, D1120"
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            InputLabelProps={{ sx: { fontFamily: "Inter", fontSize: "13px" } }}
+            sx={{ 
+              '& .MuiInputBase-input': { fontFamily: "Inter", fontSize: "13px" },
+              '& .MuiOutlinedInput-root': { borderRadius: "8px", backgroundColor: '#fff' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d0d5dd' }
+            }}
           />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 4, pb: 4, pt: 2, gap: 1.5 }}>
+      <DialogActions sx={{ px: 4, py: 3, borderTop: '1px solid #f1f5f9', gap: 1.5 }}>
         <Button 
           onClick={onClose}
-          variant="text"
+          variant="outlined"
           sx={{
-            textTransform: 'none',
-            color: '#475569',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 3,
-            '&:hover': { backgroundColor: '#f1f5f9' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Cancel
@@ -96,13 +134,12 @@ const ProcedureGroupDialog = ({ open, onClose, isEdit, formData, setFormData, on
           onClick={onSave}
           variant="contained" 
           sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 3,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            px: "20px", py: "7px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
           }}
         >
           Save Group

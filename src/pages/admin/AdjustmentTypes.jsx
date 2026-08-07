@@ -133,20 +133,18 @@ const AdjustmentTypes = () => {
           </Typography>
         </Box>
         <Button
-          startIcon={<SyncIcon />}
-          size="small"
-          onClick={() => setIsSyncDialogOpen(true)}
-          sx={{
-            textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            fontWeight: 600,
-            borderRadius: 2,
-            px: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
-          }}
           variant="contained"
+          onClick={() => setIsSyncDialogOpen(true)}
+          startIcon={<SyncIcon sx={{ fontSize: '18px' }} />}
+          sx={{ 
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+            textTransform: "none", borderRadius: "8px",
+            backgroundColor: "#2262ef", color: "#fff",
+            height: 38, 
+            px: "20px",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+          }}
         >
           Sync
         </Button>

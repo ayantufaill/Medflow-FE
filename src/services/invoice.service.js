@@ -150,7 +150,7 @@ export const invoiceService = {
    * Recalculate invoice totals
    */
   async recalculateInvoice(invoiceId) {
-    const response = await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+    const response = await apiClient.post(`/invoices/${invoiceId}/recalculate`, {});
     return response.data.data;
   },
 
@@ -221,5 +221,14 @@ export const invoiceService = {
       claims: claimsResult.data?.data?.claims || [],
     };
   },
+
+  /**
+   * Estimate insurance and patient portions for invoice items
+   */
+  async estimateInvoiceItems(patientId, items) {
+    const response = await apiClient.post('/invoices/estimate', { patientId, items });
+    return response.data.data;
+  },
 };
+
 

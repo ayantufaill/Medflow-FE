@@ -19,10 +19,17 @@ import {
   Select,
   MenuItem,
   TextField,
+  IconButton,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
+import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
+import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
+import { COLORS } from "../../constants/colors";
 
-const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
+const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
@@ -37,129 +44,59 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
 
-  const containerStyle = {
-    fontFamily: '"Segoe UI", Tahoma, sans-serif',
-    width: "100%",
-    backgroundColor: "white",
-    borderRadius: "2px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-    overflow: "hidden",
-  };
-
-  const headerStyle = {
-    backgroundColor: "#ff6347",
-    color: "white",
-    padding: "12px",
-    textAlign: "center",
-    fontSize: "16px",
-    margin: 0,
-    fontWeight: "normal",
-  };
-
-  const bodyStyle = {
-    padding: procedures.length > 0 ? "0" : "10px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    position: "relative",
-    minHeight: "80px",
-    maxHeight: "calc(90vh - 100px)",
-    overflowY: "auto",
-  };
-
-  const emptyMessageStyle = {
-    color: "#333",
-    fontSize: "14px",
-    marginBottom: "15px",
-    marginTop: "15px",
-  };
-
-  const controlsRowStyle = {
-    display: "flex",
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "8px 10px",
-    borderTop: procedures.length > 0 ? "1px solid #eee" : "none",
-  };
-
-  const leftControls = {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  };
-
-  const rightControls = {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-  };
-
-  const addButtonStyle = {
-    backgroundColor: "#d6b37a",
-    color: "white",
-    border: "none",
-    padding: "6px 12px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "13px",
-  };
-
-  const linkButtonStyle = {
-    color: "#5b7bb1",
-    textDecoration: "none",
-    fontSize: "14px",
-    cursor: "pointer",
-    background: "none",
-    border: "none",
-    padding: 0,
-  };
-
-  const saveButtonStyle = {
-    backgroundColor: "#ff9c8c",
-    color: "white",
-    border: "none",
-    padding: "6px 20px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "14px",
-  };
-
-  const cancelButtonStyle = {
-    backgroundColor: "#a9a9a9",
-    color: "white",
-    border: "none",
-    padding: "6px 20px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "14px",
-  };
-
-  const handleSaveProcedure = (savedData, keepOpen = false) => {
+  const handleSaveProcedure = async (savedData, keepOpen = false) => {
     if (!keepOpen) {
       setShowAddProcedure(false);
     }
     if (!savedData) return;
 
+    const fee = parseFloat(savedData.fee || 0);
+    const code = savedData.procedureCode || "";
+
+    const portions = calculatePortionsForCategory({
+      charge: fee,
+      writeoff: 0,
+      code,
+      dbi: false,
+      coverageTable: patient?.coverageTable || null,
+    });
+
     const newProcedure = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       date: new Date().toISOString().split("T")[0],
-      code: savedData.procedureCode || "",
+      code,
       site:
         savedData.selectedTeeth.join(",") +
         (savedData.selectedSurfaces.length > 0
           ? ` (${savedData.selectedSurfaces.join("")})`
           : ""),
       treatment: savedData.procedureDescription || "Custom Procedure",
-      provider: "", // default to empty instead of 'SMI'
+      provider: "",
       writeoff: "$0.00",
-      ptPortion: "$0.00",
-      insPortion: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
-      charge: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
-      balance: `$${parseFloat(savedData.fee || 0).toFixed(2)}`,
+      coveragePct: portions.coveragePct,
+      ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+      insPortion: `$${portions.insPortion.toFixed(2)}`,
+      charge: `$${fee.toFixed(2)}`,
+      balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
     };
+
+    if (patient && patient._id) {
+      try {
+        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+          { code: newProcedure.code, charge: fee }
+        ]);
+        if (estimates && estimates.length > 0) {
+          const est = estimates[0];
+          newProcedure.insPortion = `$${Number(est.insPortion || 0).toFixed(2)}`;
+          newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
+          newProcedure.balance = `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch estimate for procedure:", err);
+      }
+    }
 
     setProcedures((prev) => [...prev, newProcedure]);
   };
@@ -176,12 +113,15 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
     setProcedures((prev) => prev.filter((p) => p.id !== procedureId));
   };
 
-  const handleAmountChange = (procedureId, field, value) => {
-    setProcedures((prev) =>
-      prev.map((p) => {
+  const handleAmountChange = async (procedureId, field, value) => {
+    let updatedProcedure = null;
+    
+    setProcedures((prev) => {
+      return prev.map((p) => {
         if (p.id !== procedureId) return p;
 
         const updated = { ...p, [field]: value };
+        updatedProcedure = updated;
 
         const numCharge =
           parseFloat(
@@ -194,23 +134,74 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
         const dbiState = updated.dbi;
 
         if (["charge", "writeoff", "dbi"].includes(field)) {
-          const owed = Math.max(0, numCharge - numWriteoff);
-
-          if (dbiState) {
-            updated.ptPortion = `$${owed.toFixed(2)}`;
-            updated.insPortion = `$0.00`;
-          } else {
-            updated.insPortion = `$${owed.toFixed(2)}`;
-            updated.ptPortion = `$0.00`;
-          }
-
-          updated.balance = `$${owed.toFixed(2)}`;
+          const portions = calculatePortionsForCategory({
+            charge: numCharge,
+            writeoff: numWriteoff,
+            code: updated.code,
+            dbi: dbiState,
+            coverageTable: patient?.coverageTable || null,
+            explicitPct: updated.coveragePct,
+          });
+          updated.insPortion = `$${portions.insPortion.toFixed(2)}`;
+          updated.ptPortion = `$${portions.ptPortion.toFixed(2)}`;
+          updated.balance = `$${portions.balance.toFixed(2)}`;
+          updated.coveragePct = portions.coveragePct;
         } else if (["ptPortion", "insPortion"].includes(field)) {
           updated.balance = `$${Math.max(0, numCharge - numWriteoff).toFixed(2)}`;
+        } else if (field === "charge") {
+          updated.balance = `$${numCharge.toFixed(2)}`;
         }
 
         return updated;
-      }),
+      });
+    });
+
+    if (field === "charge" && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+      try {
+        const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+          { code: updatedProcedure.code, charge: numCharge }
+        ]);
+        if (estimates && estimates.length > 0) {
+          const est = estimates[0];
+          setProcedures((prev) => prev.map((p) => {
+            if (p.id !== procedureId) return p;
+            return {
+              ...p,
+              insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
+              ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+              balance: `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`
+            };
+          }));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch estimate after charge change:", err);
+      }
+    }
+  };
+
+  const handleReestimate = () => {
+    setProcedures((prev) =>
+      prev.map((p) => {
+        const numCharge =
+          parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const numWriteoff =
+          parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const portions = calculatePortionsForCategory({
+          charge: numCharge,
+          writeoff: numWriteoff,
+          code: p.code,
+          dbi: p.dbi,
+          coverageTable: patient?.coverageTable || null,
+        });
+        return {
+          ...p,
+          insPortion: `$${portions.insPortion.toFixed(2)}`,
+          ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+          balance: `$${portions.balance.toFixed(2)}`,
+          coveragePct: portions.coveragePct,
+        };
+      })
     );
   };
 
@@ -220,17 +211,24 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         displayEmpty
-        variant="standard"
-        MenuProps={{ style: { zIndex: 9999 }, sx: { zIndex: 9999 } }}
+        variant="outlined"
+        size="small"
+        MenuProps={{ 
+          style: { zIndex: 150000 }, 
+          sx: { zIndex: 150000 },
+          anchorOrigin: { vertical: "bottom", horizontal: "left" },
+          transformOrigin: { vertical: "top", horizontal: "left" }
+        }}
         renderValue={(selected) => {
           if (!selected) return "Sel";
           return selected.substring(0, 2).toUpperCase();
         }}
         sx={{
-          bgcolor: value ? "#7ba0b5" : "#a9a9a9",
-          color: "white",
+          bgcolor: "white",
+          color: COLORS.TEXT_PRIMARY,
           borderRadius: "4px",
           fontSize: "12px",
+          width: "70px",
           "& .MuiSelect-select": {
             py: 0.5,
             px: 1,
@@ -238,9 +236,18 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
             alignItems: "center",
           },
           "& .MuiSvgIcon-root": {
-            color: "white",
+            color: COLORS.TEXT_SECONDARY,
             fontSize: "16px",
           },
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.BORDER,
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: '#9ca3af',
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: COLORS.ACCENT,
+          }
         }}
       >
         <MenuItem value="" disabled sx={{ fontSize: "12px" }}>
@@ -268,19 +275,40 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
   };
 
   return (
-    <div style={containerStyle}>
-      <h2 style={headerStyle}>Invoice #{invoiceData?.invoiceId || "3125"}</h2>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden' }}>
+      <DialogTitle
+        sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "8px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <ReceiptIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Invoice #{invoiceData?.invoiceId || "3125"}
+        </Typography>
+        <IconButton onClick={onClose || onCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
+      </DialogTitle>
 
-      <div style={bodyStyle}>
+      <DialogContent sx={{ p: procedures.length > 0 ? 0 : 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {procedures.length === 0 ? (
-          <div style={emptyMessageStyle}>
-            there are no completed procedures ready to be billed
-          </div>
+          <Typography sx={{ color: "#666", fontSize: "14px", my: 2 }}>
+            There are no completed procedures ready to be billed
+          </Typography>
         ) : (
           <Box sx={{ width: "100%", px: 3, pt: 2 }}>
             <Box
               sx={{
-                borderBottom: "1px solid #ff6347",
+                borderBottom: `1px solid ${COLORS.BORDER}`,
                 pb: 1,
                 mb: 1,
                 textAlign: "left",
@@ -289,189 +317,91 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
               <Typography
                 variant="subtitle1"
                 sx={{
-                  color: "#ff6347",
+                  color: COLORS.ACCENT,
                   display: "inline-block",
                   mr: 2,
                   fontSize: "13px",
+                  fontWeight: 600,
                 }}
               >
-                07/15/2022
+                {new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })}
               </Typography>
               <Typography
                 variant="subtitle1"
-                sx={{
-                  color: "#ff6347",
-                  display: "inline-block",
-                  fontSize: "13px",
-                }}
+                sx={{ display: "inline-block", color: COLORS.TEXT_SECONDARY, fontSize: "13px" }}
               >
-                Invoice #{invoiceData?.invoiceId || "3125"}
+                No descriptions
               </Typography>
             </Box>
-            <TableContainer component={Box} sx={{ width: "100%" }}>
-              <Table size="small" sx={{ width: "100%" }}>
+            <TableContainer sx={{ boxShadow: "none" }}>
+              <Table size="small">
                 <TableHead>
-                  <TableRow
-                    sx={{
-                      "& th": {
-                        px: 0.5,
-                        py: 0.5,
-                        color: "#666",
-                        fontWeight: 600,
-                        fontSize: "12px",
-                        borderBottom: "1px solid #e0e0e0",
-                      },
-                    }}
-                  >
-                    <TableCell
-                      padding="none"
-                      sx={{ width: "20px" }}
-                    ></TableCell>
-                    <TableCell>Date of Service</TableCell>
-                    <TableCell>Code</TableCell>
-                    <TableCell>Site</TableCell>
-                    <TableCell>Treatment</TableCell>
-                    <TableCell>Provider</TableCell>
-                    <TableCell>Insurance Write-off</TableCell>
-                    <TableCell>Patient Portion</TableCell>
-                    <TableCell>Insurance Portion</TableCell>
-                    <TableCell>Total Charge</TableCell>
-                    <TableCell>Total Balance</TableCell>
-                    <TableCell></TableCell>
+                  <TableRow>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>DATE</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>CODE</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>SITE</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>TREATMENT</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>PROVIDER</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>WRITEOFF</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>PT PORTION</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>INS PORTION</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>CHARGE</TableCell>
+                    <TableCell sx={{ fontSize: "11px", color: COLORS.ACCENT, fontWeight: 600, py: 1 }}>BALANCE</TableCell>
+                    <TableCell sx={{ py: 1 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {procedures.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      sx={{
-                        "& td": {
-                          px: 0.5,
-                          py: 0.5,
-                          borderBottom: "1px solid #f0f0f0",
-                          fontSize: "12px",
-                          color: "#333",
-                        },
-                      }}
-                    >
-                      <TableCell padding="none" align="center">
-                        <span
-                          onClick={() => handleDeleteProcedure(row.id)}
-                          style={{
-                            color: "#ff6347",
-                            cursor: "pointer",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          x
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          type="date"
-                          value={row.date}
-                          onChange={(e) =>
-                            handleAmountChange(row.id, "date", e.target.value)
-                          }
-                          style={{
-                            border: "1px solid #ccc",
-                            borderRadius: "4px",
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            width: "105px",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>{row.code}</TableCell>
-                      <TableCell>{row.site}</TableCell>
-                      <TableCell sx={{ color: "#555" }}>
-                        {row.treatment}
-                      </TableCell>
-                      <TableCell>
+                    <TableRow key={row.id}>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.date}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.code}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.site || "-"}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.treatment}</TableCell>
+                      <TableCell sx={{ py: 1 }}>
                         <ProviderDropdown
                           value={row.provider}
-                          onChange={(newVal) =>
-                            handleProviderChange(row.id, newVal)
-                          }
+                          onChange={(val) => handleProviderChange(row.id, val)}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: "#666" }}>
-                        {row.writeoff}
-                      </TableCell>
-                      <TableCell sx={{ color: "#666" }}>
-                        {row.ptPortion}
-                      </TableCell>
-                      <TableCell sx={{ color: "#666" }}>
-                        {row.insPortion}
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          type="text"
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.writeoff}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.ptPortion}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.insPortion}</TableCell>
+                      <TableCell sx={{ py: 1 }}>
+                        <TextField
+                          size="small"
                           value={row.charge}
-                          onChange={(e) =>
-                            handleAmountChange(row.id, "charge", e.target.value)
-                          }
-                          style={{
-                            width: "60px",
-                            border: "1px solid #ccc",
-                            borderRadius: "4px",
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                          }}
+                          onChange={(e) => handleAmountChange(row.id, "charge", e.target.value)}
+                          sx={{ width: "80px", "& .MuiInputBase-input": { py: 0.5, px: 1, fontSize: "12px" } }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: "#ff6347", fontWeight: 600 }}>
-                        {row.balance}
-                      </TableCell>
-                      <TableCell>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-                        >
+                      <TableCell sx={{ color: COLORS.ACCENT, fontWeight: 600, py: 1 }}>{row.balance}</TableCell>
+                      <TableCell sx={{ py: 1 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <FormControlLabel
                             control={
                               <Checkbox
                                 size="small"
                                 checked={row.dbi || false}
-                                onChange={(e) =>
-                                  handleAmountChange(
-                                    row.id,
-                                    "dbi",
-                                    e.target.checked,
-                                  )
-                                }
-                                sx={{ p: 0.5 }}
+                                onChange={(e) => handleAmountChange(row.id, "dbi", e.target.checked)}
+                                sx={{ p: 0.5, color: COLORS.TEXT_SECONDARY }}
                               />
                             }
-                            label={
-                              <Typography
-                                sx={{ fontSize: "11px", color: "#555" }}
-                              >
-                                DBI
-                              </Typography>
-                            }
+                            label={<Typography sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY }}>DBI</Typography>}
                             sx={{ m: 0 }}
                           />
                           <Box
-                            onClick={() =>
-                              handleAmountChange(
-                                row.id,
-                                "completed",
-                                row.completed === undefined
-                                  ? false
-                                  : !row.completed,
-                              )
-                            }
+                            onClick={() => handleAmountChange(row.id, "completed", row.completed === undefined ? false : !row.completed)}
                             sx={{
-                              bgcolor:
-                                row.completed === false ? "#d32f2f" : "#8bc34a",
+                              bgcolor: row.completed === false ? "#d32f2f" : "#8bc34a",
                               color: "white",
                               borderRadius: "4px",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              width: "24px",
-                              height: "24px",
+                              width: "20px",
+                              height: "20px",
                               cursor: "pointer",
+                              fontSize: "12px"
                             }}
                           >
                             {row.completed === false ? "✗" : "✓"}
@@ -485,52 +415,71 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
             </TableContainer>
           </Box>
         )}
+      </DialogContent>
 
-        <div style={controlsRowStyle}>
-          <div style={leftControls}>
-            <button
-              style={addButtonStyle}
-              onClick={() => setShowAddProcedure(true)}
-            >
-              +Add Procedure
-            </button>
-            <button style={addButtonStyle}>Re-estimate</button>
-            <button style={linkButtonStyle}>+ Add description</button>
-          </div>
+      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: COLORS.SURFACE_TINT }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Button
+            variant="contained"
+            size="small"
+            sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0", boxShadow: 'none' } }}
+            onClick={() => setShowAddProcedure(true)}
+          >
+            +Add Procedure
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #f97316", color: "#f97316",
+              px: "16px", py: "4px", bgcolor: 'white',
+              "&:hover": { borderColor: "#ea6c00", backgroundColor: "#fff7ed" }
+            }}
+          >
+            Re-estimate
+          </Button>
+          <Button
+            variant="text"
+            size="small"
+            sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
+          >
+            + Add description
+          </Button>
+        </Box>
 
-          <div style={rightControls}>
-            <label
-              style={{
-                ...linkButtonStyle,
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <input
-                type="checkbox"
-                style={{ margin: 0 }}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
                 checked={addClaim}
                 onChange={(e) => setAddClaim(e.target.checked)}
-              />{" "}
-              Add Claim
-            </label>
+                size="small"
+              />
+            }
+            label={<Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Add Claim</Typography>}
+            sx={{ m: 0 }}
+          />
 
-            <button
-              type="button"
-              style={saveButtonStyle}
-              onClick={() => {
-                if (onSave) onSave({ procedures, addClaim, claimProcedures });
-              }}
-            >
-              Add New Invoice
-            </button>
-            <button type="button" style={cancelButtonStyle} onClick={onCancel || onClose}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures }); }}
+            sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0" } }}
+          >
+            Add New Invoice
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onCancel || onClose}
+            sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, textTransform: "none", bgcolor: "white", "&:hover": { bgcolor: "#f5f5f5" } }}
+          >
+            Cancel
+          </Button>
+        </Box>
+      </DialogActions>
 
       {showAddProcedure && (
         <Box
@@ -565,7 +514,7 @@ const InvoiceModal = ({ invoiceData, onSave, onCancel, onClose }) => {
           </Box>
         </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

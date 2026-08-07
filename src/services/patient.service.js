@@ -187,6 +187,11 @@ export const patientService = {
     return response.data.data;
   },
 
+  async purchaseProducts(patientId, products) {
+    const response = await apiClient.post(`/patients/${patientId}/purchase-products`, { products });
+    return response.data.data;
+  },
+
   // ---------------- Patient Insurance ----------------
 
   /**
@@ -203,6 +208,22 @@ export const patientService = {
       
     const response = await apiClient.get(url);
     console.log('📨 RAW GET COVERAGES RESPONSE:', response.data);
+    const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
+    return Array.isArray(result) ? result : [];
+  },
+
+  /**
+   * Get all insurances across all patients globally
+   * @param {boolean} isActive - Optional active filter
+   * @returns {Promise<Array>} Array of all patient insurances
+   */
+  async getAllPatientInsurances(isActive) {
+    const query = isActive !== undefined ? `isActive=${isActive}` : '';
+    const url = query
+      ? `/patients/all/coverages?${query}`
+      : `/patients/all/coverages`;
+      
+    const response = await apiClient.get(url);
     const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
     return Array.isArray(result) ? result : [];
   },
