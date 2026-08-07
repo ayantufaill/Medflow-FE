@@ -280,27 +280,21 @@ export default function PatientDetailsSection({
             >
               <FormControlLabel
                 value="male"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Male"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="female"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Female"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="intersex"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Intersex"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
             </RadioGroup>
           </FormControl>
@@ -336,35 +330,27 @@ export default function PatientDetailsSection({
             >
               <FormControlLabel
                 value="male"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Male/Man"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="female"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Female/Woman"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="non_binary"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Non-binary"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="prefer_not_to_say"
-                disabled={!isEditMode}
-                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Prefer not to say"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
             </RadioGroup>
           </FormControl>
