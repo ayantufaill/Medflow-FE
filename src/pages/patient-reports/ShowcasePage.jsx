@@ -28,29 +28,29 @@ const ShowcasePage = () => {
 
   // Mock data - replace with actual API calls
   const mockTreatments = [
-    { 
-      id: 1, 
-      title: 'Teeth Whitening', 
-      date: '2024-01-15', 
+    {
+      id: 1,
+      title: 'Teeth Whitening',
+      date: '2024-01-15',
       beforeImage: '/Damaged_teeth.png',
       afterImage: '/white_teeth.png',
-      description: 'Professional whitening treatment - 3 shades lighter' 
+      description: 'Professional whitening treatment - 3 shades lighter'
     },
-    { 
-      id: 2, 
-      title: 'Composite Filling', 
-      date: '2024-01-10', 
+    {
+      id: 2,
+      title: 'Composite Filling',
+      date: '2024-01-10',
       beforeImage: '/cavity_teeth.png',
       afterImage: '/repaired_teeth.png',
-      description: 'Tooth-colored restoration on molar' 
+      description: 'Tooth-colored restoration on molar'
     },
-    { 
-      id: 3, 
-      title: 'Dental Crown', 
-      date: '2023-12-20', 
+    {
+      id: 3,
+      title: 'Dental Crown',
+      date: '2023-12-20',
       beforeImage: '/before_treatment.png',
       afterImage: '/repaired_teeth.png',
-      description: 'Porcelain crown on premolar' 
+      description: 'Porcelain crown on premolar'
     },
   ];
 
@@ -70,7 +70,7 @@ const ShowcasePage = () => {
         gap: 2,
       }}>
         {patient ? <PatientSummaryCard patient={patient} /> : <Box />}
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
           {reportSections.map((section) => (
             <Button
@@ -103,16 +103,16 @@ const ShowcasePage = () => {
       {/* Main Content Area */}
       <Box sx={{ pb: 4 }}>
         {/* Unified Card Layout */}
-        <Box sx={{ 
-          backgroundColor: COLORS.SURFACE_CARD, 
-          borderRadius: radius.xl, 
-          border: `1px solid ${COLORS.BORDER}`, 
-          p: 3 
+        <Box sx={{
+          backgroundColor: COLORS.SURFACE_CARD,
+          borderRadius: radius.xl,
+          border: `1px solid ${COLORS.BORDER}`,
+          p: 3
         }}>
           <Box sx={{ mb: 3, textAlign: 'center' }}>
-            <Typography 
-              sx={{ 
-                fontWeight: 600, 
+            <Typography
+              sx={{
+                fontWeight: 600,
                 fontSize: '0.90rem',
                 color: COLORS.PRIMARY
               }}
@@ -122,77 +122,79 @@ const ShowcasePage = () => {
           </Box>
 
           <Box sx={{ display: 'flex', gap: 3 }}>
-          {/* Left Side - Visual */}
-          <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
-            <img 
-              src="/report_visual.png" 
-              alt="Treatment Showcase Visualization"
-              style={{ width: '100%', height: 'auto', display: 'block' }}
-            />
-          </Box>
+            {/* Left Side - Visual */}
+            <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
+              <img
+                src="/report_visual.png"
+                alt="Treatment Showcase Visualization"
+                style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto', objectFit: 'contain' }}
+              />
+            </Box>
 
-          {/* Vertical Divider */}
-          <Box sx={{ 
-            width: '1px', 
-            bgcolor: '#bdbdbd',
-            minHeight: '400px',
-            flexShrink: 0
-          }} />
+            {/* Vertical Divider */}
+            <Box sx={{
+              width: '1px',
+              bgcolor: '#bdbdbd',
+              minHeight: '400px',
+              flexShrink: 0
+            }} />
 
-          {/* Right Side - Content */}
-          <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 0 }}>
-            <Box>
-              {mockTreatments.map((treatment) => (
-              <SectionCard 
-                key={treatment.id} 
-                title={treatment.title}
-                subtitle={`Completed: ${treatment.date}`}
-                icon={ShowcaseIcon}
-              >
-                <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, mb: 2 }}>
-                  {treatment.description}
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 6 }}>
-                    <Typography sx={{ ...captionSx, fontWeight: 600, color: COLORS.TEXT_PRIMARY, mb: 1, textAlign: 'center', textTransform: 'uppercase' }}>
-                      Before
+            {/* Right Side - Content */}
+            <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 0 }}>
+              <Box>
+                {mockTreatments.map((treatment) => (
+                  <SectionCard
+                    key={treatment.id}
+                    title={treatment.title}
+                    subtitle={`Completed: ${treatment.date}`}
+                    icon={ShowcaseIcon}
+                    collapsible
+                    defaultExpanded={false}
+                  >
+                    <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, mb: 2 }}>
+                      {treatment.description}
                     </Typography>
-                    <Box 
-                      component="img"
-                      src={treatment.beforeImage}
-                      alt={`Before ${treatment.title}`}
-                      sx={{ 
-                        width: '100%',
-                        height: 200,
-                        objectFit: 'cover',
-                        borderRadius: radius.md,
-                        border: `1px solid ${COLORS.BORDER}`
-                      }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 6 }}>
-                    <Typography sx={{ ...captionSx, fontWeight: 600, color: COLORS.TEXT_PRIMARY, mb: 1, textAlign: 'center', textTransform: 'uppercase' }}>
-                      After
-                    </Typography>
-                    <Box 
-                      component="img"
-                      src={treatment.afterImage}
-                      alt={`After ${treatment.title}`}
-                      sx={{ 
-                        width: '100%',
-                        height: 200,
-                        objectFit: 'cover',
-                        borderRadius: radius.md,
-                        border: `1px solid ${COLORS.BORDER}`
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              </SectionCard>
-            ))}
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 6 }}>
+                        <Typography sx={{ ...captionSx, fontWeight: 600, color: COLORS.TEXT_PRIMARY, mb: 1, textAlign: 'center', textTransform: 'uppercase' }}>
+                          Before
+                        </Typography>
+                        <Box
+                          component="img"
+                          src={treatment.beforeImage}
+                          alt={`Before ${treatment.title}`}
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            objectFit: 'cover',
+                            borderRadius: radius.md,
+                            border: `1px solid ${COLORS.BORDER}`
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 6 }}>
+                        <Typography sx={{ ...captionSx, fontWeight: 600, color: COLORS.TEXT_PRIMARY, mb: 1, textAlign: 'center', textTransform: 'uppercase' }}>
+                          After
+                        </Typography>
+                        <Box
+                          component="img"
+                          src={treatment.afterImage}
+                          alt={`After ${treatment.title}`}
+                          sx={{
+                            width: '100%',
+                            height: 200,
+                            objectFit: 'cover',
+                            borderRadius: radius.md,
+                            border: `1px solid ${COLORS.BORDER}`
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </SectionCard>
+                ))}
+              </Box>
             </Box>
           </Box>
-        </Box>
         </Box>
       </Box>
     </Box>
