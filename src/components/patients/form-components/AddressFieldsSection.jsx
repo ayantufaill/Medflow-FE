@@ -41,11 +41,19 @@ const AddressFieldsSection = ({
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 3 }}>
             <FormField label="Country">
-              <Controller name={`${prefix}Country`} control={control} render={({ field }) => (
-                <OutlinedSelect {...field} disabled={disabled}>
-                  {COUNTRY_OPTIONS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                </OutlinedSelect>
-              )} />
+              <Controller
+                name={`${prefix}Country`}
+                control={control}
+                defaultValue="United States"
+                render={({ field }) => (
+                  <OutlinedInput
+                    {...field}
+                    value="United States"
+                    disabled
+                    readOnly
+                  />
+                )}
+              />
             </FormField>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
