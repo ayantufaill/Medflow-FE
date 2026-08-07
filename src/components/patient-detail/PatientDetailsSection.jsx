@@ -265,7 +265,7 @@ export default function PatientDetailsSection({
               </Box>
             )}
           </Typography>
-          <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+          <FormControl component="fieldset" sx={{ minWidth: 0, pointerEvents: !isEditMode ? 'none' : 'auto' }}>
             <RadioGroup
               row
               value={
@@ -273,29 +273,34 @@ export default function PatientDetailsSection({
                   ? sexAtBirth
                   : ""
               }
-              onChange={(e) => handleFieldChange("sexAtBirth", e.target.value)}
-              disabled={!isEditMode}
+              onChange={(e) => {
+                if (!isEditMode) return;
+                handleFieldChange("sexAtBirth", e.target.value);
+              }}
             >
               <FormControlLabel
                 value="male"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Male"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="female"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Female"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="intersex"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Intersex"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
             </RadioGroup>
           </FormControl>
@@ -314,7 +319,7 @@ export default function PatientDetailsSection({
           <Typography sx={{ ...labelSx, fontFamily: "Inter", pt: 0.5 }}>
             Gender Identity:
           </Typography>
-          <FormControl component="fieldset" sx={{ minWidth: 0 }}>
+          <FormControl component="fieldset" sx={{ minWidth: 0, pointerEvents: !isEditMode ? 'none' : 'auto' }}>
             <RadioGroup
               row
               value={
@@ -324,38 +329,42 @@ export default function PatientDetailsSection({
                   ? genderIdentity
                   : ""
               }
-              onChange={(e) =>
-                handleFieldChange("genderIdentity", e.target.value)
-              }
-              disabled={!isEditMode}
+              onChange={(e) => {
+                if (!isEditMode) return;
+                handleFieldChange("genderIdentity", e.target.value);
+              }}
             >
               <FormControlLabel
                 value="male"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Male/Man"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="female"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Female/Woman"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="non_binary"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Non-binary"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
               <FormControlLabel
                 value="prefer_not_to_say"
-                control={<Radio size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
+                disabled={!isEditMode}
+                control={<Radio size="small" disabled={!isEditMode} sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
                 label="Prefer not to say"
                 slotProps={{ typography: radioLabelTypographySx }}
-                sx={{ opacity: !isEditMode ? 0.6 : 1 }}
+                sx={{ opacity: !isEditMode ? 0.6 : 1, cursor: !isEditMode ? 'default' : 'pointer' }}
               />
             </RadioGroup>
           </FormControl>

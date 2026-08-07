@@ -28,6 +28,7 @@ import SectionCard from "../../components/shared/SectionCard";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
+import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -184,23 +185,7 @@ const PatientAdditionalDocumentsPage = () => {
   };
 
   const handleDownloadDocument = (row) => {
-    if (row.id.startsWith("demo-")) {
-      showSnackbar(`Downloading ${row.name}...`, "info");
-      return;
-    }
-    const url = row.fileUrl || row.documentUrl;
-    if (!url) {
-      showSnackbar("Error: File URL is missing", "error");
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = row.name || "document";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showSnackbar("Document downloaded", "success");
+    downloadDocumentFile(row, showSnackbar);
   };
 
   const handleShareWithPatient = (row) => {

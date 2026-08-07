@@ -44,6 +44,8 @@ import {
 } from '../../validations/documentValidations';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
+import { downloadDocumentFile } from '../../utils/downloadUtils';
+
 const DocumentsListPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -127,16 +129,8 @@ const DocumentsListPage = () => {
     debouncedSearch(event.target.value);
   };
 
-  const handleDownload = async (document) => {
-    try {
-      if (document.storagePath) {
-        window.open(document.storagePath, '_blank');
-      } else {
-        showSnackbar('Document download link not available', 'error');
-      }
-    } catch (err) {
-      showSnackbar('Failed to download document', 'error');
-    }
+  const handleDownload = (doc) => {
+    downloadDocumentFile(doc, showSnackbar);
   };
 
   const handleDelete = async () => {
