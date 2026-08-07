@@ -1,4 +1,6 @@
-import { Box, Chip, Typography } from "@mui/material";
+import { Box, Chip, Typography, Collapse, IconButton } from "@mui/material";
+import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon } from "@mui/icons-material";
+import { useState } from "react";
 import { COLORS } from "../../constants/colors";
 import { radius, fontSize, fontWeight } from "../../constants/styles";
 
@@ -18,8 +20,15 @@ const BADGE_PRESETS = {
 // convention, see RightPanelCard.jsx/AppointmentModalHeader.jsx), optional
 // tone badge or a custom header action (e.g. an "Add" button), and a padded
 // body for the section's own content.
-const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx = {}, allowOverflow = false }) => {
+const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx = {}, allowOverflow = false, collapsible = false, defaultExpanded = true }) => {
   const badgeStyle = typeof badge === "string" ? BADGE_PRESETS[badge] : badge;
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const handleToggle = () => {
+    if (collapsible) {
+      setExpanded(!expanded);
+    }
+  };
 
   return (
     <Box
@@ -39,15 +48,17 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
     >
       {/* Header */}
       <Box
+        onClick={collapsible ? handleToggle : undefined}
         sx={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           backgroundColor: COLORS.SURFACE_TINT,
-          borderBottom: `1px solid ${COLORS.BORDER}`,
+          borderBottom: (expanded || !collapsible) ? `1px solid ${COLORS.BORDER}` : 'none',
           ...(allowOverflow && { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }),
           px: { xs: 2, sm: 2.5 },
           py: 0.9,
+          cursor: collapsible ? 'pointer' : 'default',
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -114,12 +125,26 @@ const SectionCard = ({ icon: Icon, title, subtitle, badge, action, children, sx 
             }}
           />
         )}
+        {collapsible && !action && (
+          <IconButton 
+            size="small" 
+            sx={{ ml: 1, color: COLORS.TEXT_MUTED }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle();
+            }}
+          >
+            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        )}
       </Box>
 
       {/* Body */}
-      <Box className="section-card-body" sx={{ p: { xs: 2, sm: 2.5 } }}>
-        {children}
-      </Box>
+      <Collapse in={!collapsible || expanded} unmountOnExit>
+        <Box className="section-card-body" sx={{ p: { xs: 2, sm: 2.5 } }}>
+          {children}
+        </Box>
+      </Collapse>
     </Box>
   );
 };
