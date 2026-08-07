@@ -226,162 +226,6 @@ const AdvancedReporting = () => {
     }
   };
 
-  if (view === 'detail') {
-    return (
-      <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ p: 3, flex: 1, overflowY: 'auto' }}>
-        {/* Breadcrumbs */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography
-            onClick={() => setView('list')}
-            sx={{ color: '#2362EF', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-          >
-            {tabValue === 0 ? 'Reports' : 'Audience'}
-          </Typography>
-          <Typography sx={{ color: '#94a3b8', fontSize: '0.85rem' }}>{'>'}</Typography>
-          <Typography sx={{ color: '#64748b', fontSize: '0.85rem' }}>Details</Typography>
-        </Box>
-
-        {/* Header */}
-        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e293b', fontFamily: 'Inter' }}>
-            {selectedItem?.name}
-          </Typography>
-          <Typography sx={{ color: '#2362EF', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, ml: 1 }}>
-            (edit)
-          </Typography>
-        </Box>
-        <Typography sx={{ fontSize: '0.9rem', color: '#64748b', mb: 3 }}>
-          Report kind <Typography component="span" sx={{ color: '#2362EF', fontWeight: 600 }}>{selectedItem?.kind}</Typography>
-        </Typography>
-
-        <Divider sx={{ mb: 3, borderColor: '#e2e8f0' }} />
-
-        {/* Table Columns */}
-        <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', mb: 1.5 }}>
-            Table columns:
-          </Typography>
-          <Box sx={{ border: '1px solid #e2e8f0', p: 2, borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {COLUMNS.map(col => {
-              const isSelected = selectedColumns.includes(col);
-              return (
-                <Chip
-                  key={col}
-                  label={col}
-                  onClick={() => toggleColumn(col)}
-                  sx={{
-                    height: 28,
-                    fontSize: '0.75rem',
-                    backgroundColor: isSelected ? '#2362EF' : '#f1f5f9',
-                    color: isSelected ? '#fff' : '#475569',
-                    borderRadius: '14px',
-                    fontWeight: isSelected ? 600 : 400,
-                    '&:hover': { backgroundColor: isSelected ? '#1D53CC' : '#e2e8f0' }
-                  }}
-                />
-              );
-            })}
-          </Box>
-        </Box>
-
-        {/* Filters */}
-        <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', mb: 1.5 }}>
-            Filter Report by:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select defaultValue="Metadata" variant="standard" sx={{ fontSize: '0.85rem', '&:before': { borderColor: '#e2e8f0' } }}>
-                {METADATA_FIELDS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <Select defaultValue="Operations" variant="standard" sx={{ fontSize: '0.85rem', '&:before': { borderColor: '#e2e8f0' } }}>
-                <MenuItem value="Operations">Operations</MenuItem>
-                <MenuItem value="Equal">Equal</MenuItem>
-                <MenuItem value="Not Equal">Not Equal</MenuItem>
-              </Select>
-            </FormControl>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon sx={{ fontSize: 16 }}/>}
-              sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#64748b', px: 2, fontSize: '0.8rem', height: 32, borderRadius: '6px', fontWeight: 600, '&:hover': { borderColor: '#cbd5e1', bgcolor: '#f8fafc' } }}
-            >
-              Add
-            </Button>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>inactive</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
-            </Box>
-            <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>isSubscriber</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
-              <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-          <Button
-            onClick={handleRunReport}
-            disabled={loading}
-            variant="contained"
-            sx={{ textTransform: 'none', bgcolor: '#2362EF', borderRadius: '8px', px: 3, boxShadow: 'none', fontWeight: 600, fontSize: '0.85rem', '&:hover': { bgcolor: '#1D53CC', boxShadow: 'none' } }}
-          >
-            {loading ? <CircularProgress size={20} color="inherit" /> : 'Run Report'}
-          </Button>
-          <Button
-            variant="outlined"
-            sx={{ textTransform: 'none', borderColor: '#2362EF', color: '#2362EF', borderRadius: '8px', px: 3, fontWeight: 600, fontSize: '0.85rem', '&:hover': { bgcolor: '#eff6ff', borderColor: '#1D53CC' } }}
-          >
-            Export As CSV
-          </Button>
-        </Box>
-
-        <Typography sx={{ fontSize: '0.75rem', color: '#dcb265', mb: 2 }}>
-          Filtered Items: {totalResults}
-        </Typography>
-
-        {/* Results Table */}
-        {showResults && (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  {selectedColumns.slice(0, 6).map(col => (
-                    <TableCell key={col} sx={{ fontWeight: 600, fontSize: '0.8rem', borderBottom: '2px solid #e0e0e0' }}>{col}</TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {resultsData.map((row, i) => (
-                  <TableRow key={i}>
-                    {selectedColumns.slice(0, 6).map(col => (
-                      <TableCell key={col} sx={{ fontSize: '0.8rem', py: 1.5 }}>
-                        {row[col] !== undefined ? String(row[col]) : '-'}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ display: 'flex', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box' }}>
@@ -643,6 +487,156 @@ const AdvancedReporting = () => {
             {tabValue === 0 ? 'Add report' : 'Add audience'}
           </Button>
         </DialogActions>
+      </Dialog>
+      {/* Detail Modal */}
+      <Dialog
+        open={view === 'detail'}
+        onClose={() => { setView('list'); setShowResults(false); }}
+        maxWidth="lg"
+        fullWidth
+        sx={{ '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.4)' }, zIndex: 99999 }}
+        PaperProps={{ sx: { borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontFamily: 'Inter, sans-serif' } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: '10px 16px', bgcolor: '#F3F8FD', borderBottom: '1px solid #e2e8f0' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#0B132B', fontFamily: 'Inter, sans-serif' }}>
+              {selectedItem?.name}
+            </Typography>
+            <Typography sx={{ color: '#2362EF', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, ml: 1 }}>
+              (edit)
+            </Typography>
+          </Box>
+          <IconButton onClick={() => { setView('list'); setShowResults(false); }} sx={{ color: '#94a3b8', '&:hover': { color: '#0B132B', bgcolor: '#e2e8f0' }, p: 1, alignSelf: 'flex-start' }}>
+            <CloseIcon sx={{ fontSize: '1.25rem' }} />
+          </IconButton>
+        </DialogTitle>
+        <Divider sx={{ borderColor: '#f1f5f9' }} />
+        <DialogContent sx={{ p: 3, pt: 3, display: 'flex', flexDirection: 'column', bgcolor: '#ffffff' }}>
+          <Typography sx={{ fontSize: '0.9rem', color: '#64748b', mb: 3 }}>
+            Report kind <Typography component="span" sx={{ color: '#2362EF', fontWeight: 600 }}>{selectedItem?.kind}</Typography>
+          </Typography>
+
+          <Divider sx={{ mb: 3, borderColor: '#e2e8f0' }} />
+
+          {/* Table Columns */}
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', mb: 1.5 }}>
+              Table columns:
+            </Typography>
+            <Box sx={{ border: '1px solid #e2e8f0', p: 2, borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {COLUMNS.map(col => {
+                const isSelected = selectedColumns.includes(col);
+                return (
+                  <Chip
+                    key={col}
+                    label={col}
+                    onClick={() => toggleColumn(col)}
+                    sx={{
+                      height: 28,
+                      fontSize: '0.75rem',
+                      backgroundColor: isSelected ? '#2362EF' : '#f1f5f9',
+                      color: isSelected ? '#fff' : '#475569',
+                      borderRadius: '14px',
+                      fontWeight: isSelected ? 600 : 400,
+                      '&:hover': { backgroundColor: isSelected ? '#1D53CC' : '#e2e8f0' }
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          </Box>
+
+          {/* Filters */}
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', mb: 1.5 }}>
+              Filter Report by:
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select MenuProps={{ sx: { zIndex: 100000 } }} defaultValue="Metadata" variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '6px', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
+                  {METADATA_FIELDS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select MenuProps={{ sx: { zIndex: 100000 } }} defaultValue="Operations" variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '6px', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
+                  <MenuItem value="Operations">Operations</MenuItem>
+                  <MenuItem value="Equal">Equal</MenuItem>
+                  <MenuItem value="Not Equal">Not Equal</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon sx={{ fontSize: 16 }}/>}
+                sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#64748b', px: 2, fontSize: '0.8rem', height: 32, borderRadius: '6px', fontWeight: 600, '&:hover': { borderColor: '#cbd5e1', bgcolor: '#f8fafc' } }}
+              >
+                Add
+              </Button>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>inactive</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
+              </Box>
+              <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>isSubscriber</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Actions & Count */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: '#dcb265' }}>
+              Filtered Items: {totalResults}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={handleRunReport}
+                disabled={loading}
+                variant="contained"
+                sx={{ textTransform: 'none', bgcolor: '#2362EF', borderRadius: '8px', px: 3, boxShadow: 'none', fontWeight: 600, fontSize: '0.85rem', '&:hover': { bgcolor: '#1D53CC', boxShadow: 'none' } }}
+              >
+                {loading ? <CircularProgress size={20} color="inherit" /> : 'Run Report'}
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{ textTransform: 'none', borderColor: '#2362EF', color: '#2362EF', borderRadius: '8px', px: 3, fontWeight: 600, fontSize: '0.85rem', '&:hover': { bgcolor: '#eff6ff', borderColor: '#1D53CC' } }}
+              >
+                Export As CSV
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Results Table */}
+          {showResults && (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    {selectedColumns.slice(0, 6).map(col => (
+                      <TableCell key={col} sx={{ fontWeight: 600, fontSize: '0.8rem', borderBottom: '2px solid #e0e0e0' }}>{col}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {resultsData.map((row, i) => (
+                    <TableRow key={i}>
+                      {selectedColumns.slice(0, 6).map(col => (
+                        <TableCell key={col} sx={{ fontSize: '0.8rem', py: 1.5 }}>
+                          {row[col] !== undefined ? String(row[col]) : '-'}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
       </Dialog>
           </Box>
         </Box>
