@@ -85,6 +85,18 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       const res = await invoiceService.getAllInvoices({ patientId, status: 'draft', limit: 1000, includeItems: true });
       const fetchedInvoices = res.invoices || [];
 
+      // Fetch all claims for the patient to know which items are already claimed
+      const claimsRes = await claimService.getAllClaims({ patientId });
+      const claims = claimsRes.claims || [];
+      const claimedItemIds = new Set();
+      claims.forEach((c) => {
+        const procs = (c.procedures?.length > 0 ? c.procedures : c.selectedItems) || [];
+        procs.forEach((p) => {
+          if (p.itemId) claimedItemIds.add(String(p.itemId));
+          if (p.ProcNum) claimedItemIds.add(String(p.ProcNum));
+        });
+      });
+
       // If backend returned items inline, skip individual detail requests entirely
       const needsDetailFetch = fetchedInvoices.some((inv) => !inv.lineItems);
 
@@ -100,7 +112,9 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
         (lineItems || [])
           .filter((item) => {
             if (item.dbi === true) return false;
-            if (item.dbi === false) return true;
+            // Hide procedures that are already part of a claim
+            if (claimedItemIds.has(String(item.id || item.itemId || item._id))) return false;
+            
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
             const pt = Number(item.ptPortion || 0);
@@ -128,7 +142,8 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
 
       return fullInvoices
         .filter(Boolean)
-        .map((inv) => ({ ...inv, checked: false, lineItems: enrichLineItems(inv.lineItems) }));
+        .map((inv) => ({ ...inv, checked: false, lineItems: enrichLineItems(inv.lineItems) }))
+        .filter((inv) => inv.lineItems.length > 0);
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch draft invoices');
     }

@@ -52,8 +52,8 @@ const LedgerDialogManager = ({
       { open: showMembershipDialog, onClose: () => setShowMembershipDialog(false), Component: MembershipAdjustmentDialog },
       { open: showWriteOffDialog,   onClose: () => setShowWriteOffDialog(false),   Component: InsuranceWriteOffDialog },
     ].map(({ open, onClose, Component }, i) => (
-      <Dialog key={i} open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 130000 }} PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}>
-        <DialogContent sx={{ p: 0 }}><Component onClose={onClose} /></DialogContent>
+      <Dialog key={i} open={open} onClose={onClose} maxWidth="lg" fullWidth sx={{ zIndex: 130000 }} PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}>
+        <DialogContent sx={{ p: 0 }}><Component onClose={onClose} editTarget={editTarget} /></DialogContent>
       </Dialog>
     ))}
 
@@ -89,7 +89,7 @@ const LedgerDialogManager = ({
 
     <Dialog open={showInvoiceModal} onClose={handleInvoiceModalCancel} maxWidth={false} fullWidth
       sx={{ zIndex: 130000 }}
-      PaperProps={{ sx: { borderRadius: '2px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', border: '1px solid #ccc' } }}>
+      PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', border: '1px solid #ccc' } }}>
       <DialogContent sx={{ p: 0 }}>
         <InvoiceModal invoiceData={invoiceModalData} onSave={handleInvoiceModalSave} onCancel={handleInvoiceModalCancel} />
       </DialogContent>

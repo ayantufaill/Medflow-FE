@@ -29,6 +29,7 @@ const LedgerItemCard = ({
   setAdjItem,
   setPrintAnchorEl,
   setPrintItem,
+  onEOBClick,
   handleAddProcedureClick,
   handleAttachClick
 }) => {
@@ -58,7 +59,11 @@ const LedgerItemCard = ({
       >
         {/* Left: Icon & Title */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 320 }}>
-          <CheckCircle sx={{ color: '#42C070', fontSize: '20px' }} />
+          {(parseFloat((displayItem.summary?.invBal || '0').toString().replace(/[^0-9.-]+/g, "")) || 0) === 0 ? (
+            <CheckCircle sx={{ color: '#42C070', fontSize: '20px' }} />
+          ) : (
+            <Box sx={{ width: '20px', height: '20px', borderRadius: '50%', bgcolor: '#ef4444' }} />
+          )}
           {isExpanded ? <KeyboardArrowDown sx={{ color: '#6B778C' }} /> : <KeyboardArrowRight sx={{ color: '#6B778C' }} />}
           <Typography sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '14px', textTransform: 'uppercase' }}>
             {displayItem.method === 'Invoice' ? 'INVOICE' : displayItem.method === 'Adjustment' ? 'ADJUSTMENT' : 'PATIENT DEPOSIT'} #{displayItem.invoiceNumber || displayItem.id} ({displayItem.date}) {displayItem.amount}
@@ -98,7 +103,7 @@ const LedgerItemCard = ({
           <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
             <Typography variant="caption" sx={{ color: '#6B778C', textAlign: 'right', fontSize: '11px' }}>Invoice Balance:</Typography>
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#1A1A1A', fontSize: '11px', whiteSpace: 'nowrap' }}>
-              {displayItem.amount || '$0.00'}
+              {displayItem.summary?.invBal || '$0.00'}
             </Typography>
 
             {displayItem.details?.some(d => d.isClaim) && (
@@ -152,9 +157,11 @@ const LedgerItemCard = ({
                 onVoidClick={handleVoidClick}
                 onEditClick={handleEditClick}
                 onRefreshClick={handleRefreshClick}
+                onEOBClick={onEOBClick}
                 voidData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment, isGrouped: detail.isGrouped }}
                 editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
+                eobData={detail}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);

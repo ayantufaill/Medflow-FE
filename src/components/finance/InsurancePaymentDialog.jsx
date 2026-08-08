@@ -30,14 +30,38 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
   const [paymentMethod, setPaymentMethod] = useState('EFT');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
-  const [procedures, setProcedures] = useState([
-    { code: 'D0120 - periodic ex', submitted: '$42.00', bal: '$42.00', ded: '0.00', allowed: '42.00', wo: '0.00', pay: '42.00' },
-    { code: 'D1110 - hygiene', submitted: '$100.00', bal: '$100.00', ded: '0.00', allowed: '100.00', wo: '0.00', pay: '100.00' }
-  ]);
+  const [procedures, setProcedures] = useState([]);
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
-    newProcedures[index][field] = value;
+    const proc = { ...newProcedures[index] };
+    
+    if (['ded', 'allowed', 'wo', 'pay'].includes(field)) {
+      if (!/^\d*\.?\d*$/.test(value) && value !== '') return;
+    }
+    
+    proc[field] = value;
+
+    const submittedNum = Number((proc.submitted || '').toString().replace(/[^0-9.-]+/g, "")) || 0;
+    
+    if (field === 'allowed') {
+      const allowedNum = Number(value || 0);
+      proc.wo = (submittedNum - allowedNum).toFixed(2);
+      const dedNum = Number(proc.ded || 0);
+      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+    } else if (field === 'wo') {
+      const woNum = Number(value || 0);
+      const allowedNum = submittedNum - woNum;
+      proc.allowed = allowedNum.toFixed(2);
+      const dedNum = Number(proc.ded || 0);
+      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+    } else if (field === 'ded') {
+      const dedNum = Number(value || 0);
+      const allowedNum = Number(proc.allowed || 0);
+      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+    }
+    
+    newProcedures[index] = proc;
     setProcedures(newProcedures);
   };
   const [showSimpleBillingAlert, setShowSimpleBillingAlert] = useState(false);
@@ -67,6 +91,52 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     };
     fetchClaims();
   }, [patient]);
+
+  useEffect(() => {
+    if (selectedClaim === 'select a claim' || !selectedClaim) {
+      setProcedures([]);
+      return;
+    }
+    const claim = claims.find(c => c.id === selectedClaim);
+    if (!claim) {
+      setProcedures([]);
+      return;
+    }
+    
+    let claimProcs = [];
+    if (claim.procedures && claim.procedures.length > 0) {
+      claimProcs = claim.procedures.filter(p => !p.dbi).map(p => ({
+        code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || ''}`,
+        submitted: `$${Number(p.ProcFee || p.charge || 0).toFixed(2)}`,
+        bal: `$${Number(p.ProcFee || p.balance || p.charge || 0).toFixed(2)}`,
+        ded: '0.00',
+        allowed: Number(p.ProcFee || p.charge || 0).toFixed(2),
+        wo: '0.00',
+        pay: Number(p.ProcFee || p.charge || 0).toFixed(2)
+      }));
+    } else if (claim.selectedItems && claim.selectedItems.length > 0) {
+      claimProcs = claim.selectedItems.filter(item => !item.dbi).map(item => ({
+        code: `Item ID: ${item.itemId}`,
+        submitted: `$${Number(item.amount || 0).toFixed(2)}`,
+        bal: `$${Number(item.amount || 0).toFixed(2)}`,
+        ded: '0.00',
+        allowed: Number(item.amount || 0).toFixed(2),
+        wo: '0.00',
+        pay: Number(item.amount || 0).toFixed(2)
+      }));
+    } else if (claim.invoice && claim.invoice.lineItems) {
+      claimProcs = claim.invoice.lineItems.filter(l => !l.dbi).map(l => ({
+        code: `${l.code || ''} - ${l.description || l.name || ''}`,
+        submitted: `$${Number(l.charge || l.totalPrice || 0).toFixed(2)}`,
+        bal: `$${Number(l.balance || l.charge || 0).toFixed(2)}`,
+        ded: '0.00',
+        allowed: Number(l.charge || l.totalPrice || 0).toFixed(2),
+        wo: '0.00',
+        pay: Number(l.charge || l.totalPrice || 0).toFixed(2)
+      }));
+    }
+    setProcedures(claimProcs);
+  }, [selectedClaim, claims]);
   
   const headerBackground = '#7788bb';
   const greenHeader = '#8fb884';
@@ -109,11 +179,29 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     }
 
     try {
+      let finalInvoiceId = selectedClaimObj.invoiceId;
+      if (typeof finalInvoiceId === 'object' && finalInvoiceId !== null) {
+        finalInvoiceId = finalInvoiceId.id || finalInvoiceId._id;
+      }
+      if (!finalInvoiceId) {
+        finalInvoiceId = selectedClaimObj.invoice?.id || selectedClaimObj.invoice?._id || selectedClaimObj.id || selectedClaimObj.ClaimNum;
+      }                
+
+      const totalPay = procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
+      
+      let backendMethod = 'ach';
+      const pLower = (paymentMethod || '').toLowerCase();
+      if (pLower.includes('cash')) backendMethod = 'cash';
+      else if (pLower.includes('check')) backendMethod = 'check';
+      else if (pLower.includes('card') || pLower.includes('amex')) backendMethod = 'card';
+      else if (pLower.includes('eft') || pLower.includes('ach')) backendMethod = 'ach';
+      else if (pLower.includes('insurance')) backendMethod = 'insurance';
+
       const paymentData = {
         patientId: patientId.toString(),
-        invoiceId: selectedClaimObj.invoiceId?.toString() || selectedClaimObj.invoice?.id?.toString() || selectedClaimObj.invoice?._id?.toString(),
-        amount: parseFloat(paymentAmount) || 0,
-        paymentMethod: paymentMethod,
+        invoiceId: finalInvoiceId?.toString(),
+        amount: totalPay,
+        paymentMethod: backendMethod,
         paymentSource: 'insurance_company',
         paymentDate: new Date().toISOString(),
         insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
@@ -182,6 +270,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         <InsurancePaymentTable 
           procedures={procedures}
           handleProcedureChange={handleProcedureChange}
+          selectedClaimObj={claims.find(c => c.id === selectedClaim)}
+          patientName={patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : ''}
         />
       </DialogContent>
 
@@ -189,6 +279,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         handleSwitchToSimpleBilling={handleSwitchToSimpleBilling}
         handleApplyAndPay={handleApplyAndPay}
         onClose={onClose}
+        totalWo={procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0)}
+        totalPay={procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0)}
       />
 
       {/* Simple Billing Alert Dialog */}
@@ -197,7 +289,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onClose={handleCancelSimpleBilling}
         maxWidth="sm"
         fullWidth
-        sx={{ zIndex: 1600, '& .MuiDialog-paper': { maxWidth: '650px' } }}
+        sx={{ zIndex: 140000, '& .MuiDialog-paper': { maxWidth: '650px', borderRadius: '14px' } }}
       >
         <DialogTitle sx={{
           boxSizing: "border-box",
@@ -218,7 +310,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             <CloseIcon sx={{ fontSize: "18px" }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3, pb: 2 }}>
+        <DialogContent sx={{ pt: '32px !important', px: '25px', pb: 2 }}>
           <Typography sx={{ fontSize: '0.85rem', lineHeight: 1.6 }}>
             In simple mode, the system will automatically assign a payment amount per procedure. By switching to simple mode, you will have no control over the way the software will split the total payment.
           </Typography>
@@ -247,7 +339,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onClose={handleCancelPayment}
         maxWidth="sm"
         fullWidth
-        sx={{ zIndex: 1600, '& .MuiDialog-paper': { maxWidth: '500px' } }}
+        sx={{ zIndex: 140000, '& .MuiDialog-paper': { maxWidth: '500px', borderRadius: '14px', overflow: 'hidden' } }}
       >
         <DialogTitle sx={{
           boxSizing: "border-box",
@@ -324,14 +416,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             <Button 
               onClick={handleProceedPayment}
               variant="contained"
-              sx={{ bgcolor: '#7788bb', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem', '&:hover': { bgcolor: '#1565c0' } }}
             >
               Proceed
             </Button>
             <Button 
               onClick={handleCancelPayment}
-              variant="contained"
-              sx={{ bgcolor: '#a9a9a9', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 3 }}
+              variant="outlined"
+              sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, bgcolor: 'white', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem', '&:hover': { bgcolor: '#f5f5f5' } }}
             >
               Cancel
             </Button>

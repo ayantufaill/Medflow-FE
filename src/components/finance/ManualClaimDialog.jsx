@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Checkbox, Select,
-  MenuItem, TextField, Autocomplete,
+  MenuItem, TextField, Autocomplete, DialogTitle, IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
+import { COLORS } from '../../constants/colors';
 
 // Redux — providers & patients
 import {
@@ -73,8 +75,23 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   const patientId = selectedPatientId || patient?._id || patient?.id;
 
   // Memoised selector for the current patient's draft invoices
-  const invoices = useSelector(selectDraftInvoicesForPatient(patientId));
-
+  const rawInvoices = useSelector(selectDraftInvoicesForPatient(patientId));
+  const invoices = React.useMemo(() => {
+    return (rawInvoices || [])
+      .map(inv => ({
+        ...inv,
+        lineItems: (inv.lineItems || []).filter(item => {
+          if (item.dbi) return false;
+          const writeoff = Number(item.writeoff || 0);
+          const ins = Number(item.insPortion || item.insurance || 0);
+          const pt = Number(item.ptPortion || 0);
+          const total = Number(item.total || item.totalPrice || 0);
+          const patientBal = pt > 0 ? pt : ins > 0 ? 0 : Math.max(0, total - writeoff - ins);
+          return !(patientBal > 0 && ins === 0);
+        })
+      }))
+      .filter(inv => inv.lineItems.length > 0);
+  }, [rawInvoices]);
   const activeInsurances = patientId && insurancesCache?.[patientId]
     ? (insurancesCache[patientId].data || []).filter((ins) => ins.isActive !== false)
     : [];
@@ -189,25 +206,36 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
       : '';
 
-  const headerBackground = '#7788bb';
-  const textGrey         = '#555';
-  const linkBlue         = '#5b7bb1';
+  const linkBlue         = COLORS.ACCENT;
   const errorRed         = '#d32f2f';
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ width: '100%', minWidth: '1000px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff', pb: 2 }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: headerBackground, py: 1.5, textAlign: 'center' }}>
-        <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 600 }}>
+    <Box sx={{ width: '100%', minWidth: '1000px', borderRadius: '14px', border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', bgcolor: '#fff', display: 'flex', flexDirection: 'column' }}>
+      <DialogTitle sx={{
+        boxSizing: "border-box",
+        px: "25px",
+        py: "16px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        backgroundColor: COLORS.SURFACE_TINT,
+        m: 0,
+        flexShrink: 0,
+      }}>
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Manual Claim
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
+      </DialogTitle>
 
-      <Box sx={{ p: 2, maxHeight: '80vh', overflowY: 'auto' }}>
+      <Box sx={{ p: 3, maxHeight: '80vh', overflowY: 'auto' }}>
         {/* ── Top Info Row ── */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2, borderBottom: '1px solid #eee', pb: 1.5, flexWrap: 'wrap' }}>
-          <Typography sx={{ color: headerBackground, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2, borderBottom: `1px solid ${COLORS.BORDER}`, pb: 1.5, flexWrap: 'wrap' }}>
+          <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '0.8125rem', fontWeight: 500, whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif' }}>
             {dayjs().format('MM/DD/YYYY')}
           </Typography>
 
@@ -373,24 +401,24 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                       checked={proc.checked}
                       onChange={() => handleProcedureToggle(inv.id, proc.id)}
                     />
-                    <Typography sx={{ fontSize: '0.75rem', width: '60px', color: textGrey, ml: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '60px', color: COLORS.TEXT_SECONDARY, ml: 1 }}>
                       {proc.cptCode || proc.code}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '200px', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '200px', color: COLORS.TEXT_SECONDARY }}>
                       {proc.description || proc.name || proc.notes}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_SECONDARY }}>
                       {inv.provider?.userId?.firstName || inv.provider?.firstName || ''} {inv.provider?.userId?.lastName || inv.provider?.lastName || ''}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, pr: 6 }}>
-                    <Typography sx={{ fontSize: '0.75rem', width: '100px', textAlign: 'right', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '100px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
                       {proc.ptAmount}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '130px', textAlign: 'right', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '130px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
                       {proc.insAmount}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '260px', textAlign: 'right', color: textGrey, whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '260px', textAlign: 'right', color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap' }}>
                       {proc.prevAmount}
                     </Typography>
                   </Box>
@@ -426,7 +454,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             {!showNote ? (
               <Typography
                 onClick={() => setShowNote(true)}
-                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer' }}
+                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
               >
                 + Add note/narrative
               </Typography>
@@ -437,33 +465,27 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                 onChange={(e) => setNote(e.target.value)}
                 variant="standard"
                 autoFocus
-                sx={{ width: 200, input: { fontSize: '0.8125rem' } }}
+                sx={{ width: 200, input: { fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif' } }}
               />
             )}
+
+            <Button
+              variant="outlined"
+              onClick={onClose}
+              sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
+            >
+              Cancel
+            </Button>
 
             <Button
               variant="contained"
               onClick={handleSendToBatch}
               disabled={isSubmitting}
               sx={{
-                bgcolor: headerBackground,
-                color: '#fff',
-                textTransform: 'none',
-                boxShadow: 'none',
-                px: 2,
-                fontSize: '0.8125rem',
-                '&:hover': { bgcolor: '#6677aa' },
+                textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif'
               }}
             >
               {isSubmitting ? 'Sending...' : 'Send to Batch'}
-            </Button>
-
-            <Button
-              variant="contained"
-              onClick={onClose}
-              sx={{ bgcolor: '#a9a9a9', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem' }}
-            >
-              Cancel
             </Button>
           </Box>
         </Box>

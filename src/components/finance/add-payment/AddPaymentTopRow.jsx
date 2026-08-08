@@ -10,6 +10,7 @@ const AddPaymentTopRow = ({
   setSelectedPatient,
   paymentMethod,
   setPaymentMethod,
+  MENU_PROPS,
 }) => {
   const greenText = COLORS.TEXT_PRIMARY;
 
@@ -25,10 +26,11 @@ const AddPaymentTopRow = ({
         value={selectedPatient} 
         onChange={(e) => setSelectedPatient(e.target.value)}
         sx={{
-          minWidth: 100,
+          width: 150,
           '& .MuiOutlinedInput-root': { height: '32px' },
           '& .MuiSelect-select': { py: 0, fontSize: '0.8125rem' }
         }}
+        SelectProps={{ MenuProps: MENU_PROPS }}
       >
         <MenuItem value={selectedPatient}>{selectedPatient}</MenuItem>
       </OutlinedSelect>
@@ -39,10 +41,11 @@ const AddPaymentTopRow = ({
         value={paymentMethod} 
         onChange={(e) => setPaymentMethod(e.target.value)}
         sx={{
-          minWidth: 120,
+          width: 120,
           '& .MuiOutlinedInput-root': { height: '32px' },
           '& .MuiSelect-select': { py: 0, fontSize: '0.8125rem' }
         }}
+        SelectProps={{ MenuProps: MENU_PROPS }}
       >
         {PAYMENT_METHODS.map((m) => (
           <MenuItem key={m} value={m}>{m}</MenuItem>

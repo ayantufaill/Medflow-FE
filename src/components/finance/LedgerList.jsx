@@ -27,8 +27,10 @@ import {
 } from '../../store/slices/billingSlice';
 
 import LedgerItemCard from './LedgerItemCard';
+import { invoiceService } from '../../services/invoice.service';
 import LedgerDialogManager from './LedgerDialogManager';
 import { claimService } from '../../services/claim.service';
+import ManageEOBModal from '../claims/batch-actions/modals/ManageEOBModal';
 
 const LedgerList = ({ patient, expanded }) => {
   const dispatch = useDispatch();
@@ -71,6 +73,13 @@ const LedgerList = ({ patient, expanded }) => {
   const [magicStickAnchorEl,     setMagicStickAnchorEl]     = useState(null);
   const [showAttachDialog,       setShowAttachDialog]       = useState(false);
   const [attachTarget,           setAttachTarget]           = useState(null);
+  const [showEOBModal,           setShowEOBModal]           = useState(false);
+  const [eobTarget,              setEOBTarget]              = useState(null);
+
+  const handleEOBClick = (data) => {
+    setEOBTarget(data);
+    setShowEOBModal(true);
+  };
   
   // Local deposit edits (not server-persisted in the original code either)
   const [depositOverrides,       setDepositOverrides]       = useState({});
@@ -221,11 +230,37 @@ const LedgerList = ({ patient, expanded }) => {
 
   const handleTransferConfirm = async () => {
     if (transferTarget) {
-      await dispatch(transferOutstandingToPatient({
-        patientId,
-        invoiceId: transferTarget.invoiceId,
-        procedureId: transferTarget.id,
-      }));
+      if (transferTarget.isGrouped && transferTarget.procedures) {
+        let successCount = 0;
+        for (let i = 0; i < transferTarget.procedures.length; i++) {
+          const proc = transferTarget.procedures[i];
+          const procId = proc.ProcNum || proc._id || proc.id;
+          if (procId) {
+            const isLast = i === transferTarget.procedures.length - 1;
+            try {
+              await dispatch(transferOutstandingToPatient({
+                patientId,
+                invoiceId: transferTarget.invoiceId,
+                procedureId: procId,
+                skipFetch: !isLast
+              })).unwrap();
+              successCount++;
+            } catch (err) {
+              console.error('Failed to transfer for procedure:', procId, err);
+            }
+          }
+        }
+        if (successCount === 0 && transferTarget.procedures.length > 0) {
+          // If all failed, they might not have any outstanding balance
+          console.warn('No procedures had outstanding insurance to transfer');
+        }
+      } else {
+        await dispatch(transferOutstandingToPatient({
+          patientId,
+          invoiceId: transferTarget.invoiceId,
+          procedureId: transferTarget.id,
+        }));
+      }
     }
     setShowTransferConfirmation(false);
     setTransferTarget(null);
@@ -286,13 +321,36 @@ const LedgerList = ({ patient, expanded }) => {
     };
     if (payload.items.length === 0) { alert('Please add at least one procedure before saving.'); return; }
     try {
-      const result = await dispatch(createInvoice(payload)).unwrap();
+      let createdInvoiceId;
+
+      if (invoiceModalData?.invoiceId) {
+        const targetInvoiceId = invoiceModalData.invoiceId;
+        await Promise.all(
+          payload.items.map(item => invoiceService.addInvoiceItem(targetInvoiceId, {
+            serviceId: item.code,
+            unitPrice: item.charge,
+            description: item.description,
+            cptCode: item.code,
+            quantity: 1,
+            // passing additional fields in case the backend uses them
+            date: item.date,
+            provider: item.provider,
+            site: item.site,
+            dbi: item.dbi,
+            completed: item.completed
+          }))
+        );
+        createdInvoiceId = targetInvoiceId;
+      } else {
+        const result = await dispatch(createInvoice(payload)).unwrap();
+        createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
+      }
+
       setShowInvoiceModal(false);
       setInvoiceModalData(null);
 
       // If "Add Claim" was checked, create a claim for all dbi=false procedures
       if (shouldAddClaim && claimRows.length > 0) {
-        const createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
         if (createdInvoiceId) {
           try {
             await claimService.createClaimFromInvoice(createdInvoiceId, {
@@ -345,6 +403,7 @@ const LedgerList = ({ patient, expanded }) => {
             setAdjItem={setAdjItem}
             setPrintAnchorEl={setPrintAnchorEl}
             setPrintItem={setPrintItem}
+            onEOBClick={handleEOBClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />
@@ -371,6 +430,13 @@ const LedgerList = ({ patient, expanded }) => {
         showEditInvoice={showEditInvoice} setShowEditInvoice={setShowEditInvoice} editInvoiceTarget={editInvoiceTarget}
         showAttachDialog={showAttachDialog} setShowAttachDialog={setShowAttachDialog} attachTarget={attachTarget}
       />
+      {showEOBModal && (
+        <ManageEOBModal
+          open={showEOBModal}
+          onClose={() => { setShowEOBModal(false); setEOBTarget(null); }}
+          selectedBatchPayment={eobTarget}
+        />
+      )}
     </Box>
   );
 };
