@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { ReportLayout, ReportFilterBar } from '../../../../components/reports/ui';
 import {
   Box,
   Typography,
@@ -220,6 +221,8 @@ const ReferralByPatientReport = () => {
 
   const handleExport = () => alert('Exporting report as CSV...');
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
+
+  const topFilters = null;
 
   return (
     <React.Fragment>

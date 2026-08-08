@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { ReportLayout, ReportFilterBar, ReportCheckbox } from '../../../../components/reports/ui';
 import {
   Box,
   Typography,
@@ -391,7 +392,10 @@ const PatientInsuranceCoverage = () => {
     printWindow.focus();
     printWindow.print();
     printWindow.close();
+    printWindow.close();
   };
+
+  const topFilters = null;
 
   const bottomFilters = (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -698,7 +702,7 @@ const PatientInsuranceCoverage = () => {
           variant="contained" 
           size="small" 
           disabled
-          onClick={handleCreateTemplate}
+          onClick={() => setTemplateDialogOpen(true)}
           sx={{ 
             textTransform: 'none', 
             backgroundColor: '#d9a366', 

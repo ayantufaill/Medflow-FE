@@ -214,6 +214,9 @@ const PatientMembershipPlan = () => {
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
   const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
+  const topFilters = null;
+  const bottomFilters = null;
+
   const renderTable = (tableData, tableId) => (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
       <Table id={tableId} size="small" stickyHeader>
