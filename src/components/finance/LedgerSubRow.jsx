@@ -17,7 +17,7 @@ import ButtonSettingsIcon from '../../assets/finance icons/Button - Settings →
 import ButtonMagicIcon from '../../assets/finance icons/Button - Magic actions → SVG.svg';
 
 const LedgerSubRow = ({
-  id, date, title, amount, initials, isAdjustment, isPayment, isClaim,
+  id, date, title, amount, initials, isAdjustment, isPayment, isClaim, isVoided,
   showExtendedTools, onVoidClick, voidData, onEditClick, editData,
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
@@ -31,9 +31,9 @@ const LedgerSubRow = ({
   const insTotal = hasProcedures ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0) : 0;
   
   const isPaidClaim = isClaim && (claimStatus?.toLowerCase() === 'paid');
-  const rowBgColor = isPaidClaim ? '#619c38' : '#FFFFFF';
-  const textPrimaryColor = isPaidClaim ? '#FFFFFF' : '#1A1A1A';
-  const textSecondaryColor = isPaidClaim ? '#E0E0E0' : '#6B778C';
+  const rowBgColor = isVoided ? '#ef4444' : isPaidClaim ? '#619c38' : '#FFFFFF';
+  const textPrimaryColor = (isVoided || isPaidClaim) ? '#FFFFFF' : '#1A1A1A';
+  const textSecondaryColor = (isVoided || isPaidClaim) ? '#E0E0E0' : '#6B778C';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -42,7 +42,7 @@ const LedgerSubRow = ({
         sx={{ 
           display: 'flex', alignItems: 'center', p: '12px 24px', borderTop: '1px solid #DFE5EC', 
           bgcolor: rowBgColor, cursor: hasProcedures ? 'pointer' : 'default', 
-          '&:hover': { bgcolor: isPaidClaim ? '#568b31' : '#f8f9fa' } 
+          '&:hover': { bgcolor: isVoided ? '#ef4444' : isPaidClaim ? '#568b31' : '#f8f9fa' } 
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', width: 220 }}>
@@ -118,8 +118,8 @@ const LedgerSubRow = ({
       {initials || 'MAG'}
     </Typography>
     
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ justifyContent: 'flex-end', minWidth: 120 }}>
-      {isPayment ? (
+    <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', opacity: isPaidClaim ? 0.7 : 1 }}>
+      {isVoided ? null : isPayment ? (
         <>
           <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
           <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />

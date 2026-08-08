@@ -37,7 +37,8 @@ const LedgerDialogManager = ({
   magicStickAnchorEl, setMagicStickAnchorEl,
   showTransferConfirmation, setShowTransferConfirmation, handleTransferConfirm,
   showEditInvoice, setShowEditInvoice, editInvoiceTarget,
-  showAttachDialog, setShowAttachDialog, attachTarget
+  showAttachDialog, setShowAttachDialog, attachTarget,
+  printItem
 }) => (
   <>
     {/* ── Popovers / Dropdowns ── */}
@@ -76,7 +77,7 @@ const LedgerDialogManager = ({
       <Dialog key={i} open={open} onClose={onClose} maxWidth={false} fullWidth
         PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden', maxHeight: '90vh', margin: 0, bgcolor: '#f5f5f5', width: '880px', maxWidth: '90vw' } }}
         sx={{ zIndex: 130000, '& .MuiDialog-paper': { margin: 0, maxWidth: '100%' } }}>
-        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}><Component onClose={onClose} /></DialogContent>
+        <DialogContent sx={{ p: 0, m: 0, bgcolor: '#f5f5f5' }}><Component onClose={onClose} printItem={printItem} /></DialogContent>
       </Dialog>
     ))}
 

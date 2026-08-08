@@ -95,7 +95,9 @@ export const fetchLedgerItems = createAsyncThunk(
           : rawPt + rawIns;           // last resort: sum of portions
 
         // Map payments and claims associated with this invoice
-        const invoicePms = payments.filter((p) => String(p.invoiceId) === String(invoice._id || invoice.id));
+        const invoicePms = payments.filter((p) => 
+          String(p.invoiceId) === String(invoice._id || invoice.id)
+        );
         const invoiceClaims = claims.filter((c) => 
           String(c.invoiceRefId) === String(invoice._id || invoice.id) || 
           String(c.invoice?._id || c.invoice?.id || '') === String(invoice._id || invoice.id) ||
@@ -106,7 +108,9 @@ export const fetchLedgerItems = createAsyncThunk(
         let totalInsPaidAmt = 0;
         let runningBalance = originalTotal;
         const paymentsMapped = invoicePms.map((payment) => {
-          const paymentAmt = Number(payment.amount || 0);
+          const isVoided = String(payment.status || '').toLowerCase() === 'void' || String(payment.status || '').toLowerCase() === 'voided';
+          const paymentAmt = isVoided ? 0 : Number(payment.amount || 0);
+          const originalAmt = Number(payment.amount || 0);
           const isIns = payment.paymentSource === 'insurance_company' || payment.method === 'insurance';
           if (isIns) {
             totalInsPaidAmt += paymentAmt;
@@ -118,10 +122,11 @@ export const fetchLedgerItems = createAsyncThunk(
           return {
             id: payment._id || payment.id,
             title: isIns
-              ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'EFT'} : $${paymentAmt.toFixed(2)} / $${paymentAmt.toFixed(2)}`
-              : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'Patient Check'} : $${paymentAmt.toFixed(2)} / $${paymentAmt.toFixed(2)}`,
-            amount: `$${Math.max(0, runningBalance).toFixed(2)}`,
+              ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'EFT'} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? ' (VOIDED)' : ''}`
+              : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || 'Patient Check'} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? ' (VOIDED)' : ''}`,
+            amount: isVoided ? '(Voided)' : `$${Math.max(0, runningBalance).toFixed(2)}`,
             isPayment: true,
+            isVoided
           };
         });
 
@@ -180,7 +185,7 @@ export const fetchLedgerItems = createAsyncThunk(
         const adjustedPtBal = Math.max(0, rawPt - totalPtPaidAmt);
         const adjustedInsBal = Math.max(0, rawIns - totalInsPaidAmt);
         const adjustedInvBal = Math.max(0, originalTotal - totalPtPaidAmt - totalInsPaidAmt);
-        const ptPaidDisplay = totalPtPaidAmt > 0 ? totalPtPaidAmt : (totalInsPaidAmt === 0 && rawPaid > 0 ? rawPaid : 0);
+        const ptPaidDisplay = totalPtPaidAmt;
 
         return {
           id: invoice._id || invoice.id,
@@ -247,33 +252,35 @@ export const fetchLedgerItems = createAsyncThunk(
         .filter((pay) => !pay.invoiceId)
         .map((pay) => {
           const amt = Number(pay.amount || 0);
+          const isVoided = String(pay.status || '').toLowerCase() === 'void' || String(pay.status || '').toLowerCase() === 'voided';
           return {
             id: pay._id || pay.id,
-            invoiceNumber: `Pay #${pay.receiptNumber || pay.id}`,
+            invoiceNumber: `Pay #${pay.receiptNumber || pay.id}${isVoided ? ' (VOIDED)' : ''}`,
             date: pay.paidAt ? dayjs(pay.paidAt).format('MM/DD/YYYY') : 'N/A',
             rawDate: pay.paidAt || '',
             method: 'Payment',
-            amount: `$${amt.toFixed(2)}`,
-            color: '#4caf50',
+            amount: isVoided ? '(Voided)' : `$${amt.toFixed(2)}`,
+            color: isVoided ? '#9e9e9e' : '#4caf50',
             isAdjustment: false,
             isTopLevelPayment: true,
             useCheckmark: true,
             initials: 'STAFF',
-            success: true,
+            success: !isVoided,
             summary: {
-              insWo:     '$0.00',
-              ptBal:     '$0.00',
-              insBal:    '$0.00',
-              invBal:    '$0.00',
-              appliedWo: '$0.00',
-              ptPaid:    `$${amt.toFixed(2)}`,
-              insPaid:   '$0.00',
+              insWo:    '$0.00',
+              ptBal:    isVoided ? '$0.00' : `-$${amt.toFixed(2)}`,
+              insBal:   '$0.00',
+              invBal:   '$0.00',
+              appliedWo:'$0.00',
+              ptPaid:   isVoided ? '$0.00' : `$${amt.toFixed(2)}`,
+              insPaid:  '$0.00',
             },
             details: [
               {
                 id: pay._id || pay.id,
                 title: pay.notes || `Patient Payment via ${pay.paymentMethod || 'Card'}`,
-                amount: `$${amt.toFixed(2)}`,
+                amount: isVoided ? '(Voided)' : `$${amt.toFixed(2)}`,
+                isVoided
               },
             ],
           };
@@ -433,15 +440,23 @@ export const backdateTransaction = createAsyncThunk(
  */
 export const voidTransaction = createAsyncThunk(
   'billing/voidTransaction',
-  async ({ patientId, invoiceId, itemId, isAdjustment, isGrouped }, { dispatch, rejectWithValue }) => {
+  async ({ patientId, invoiceId, itemId, isAdjustment, isGrouped, isPayment }, { dispatch, rejectWithValue }) => {
     try {
       if (isAdjustment) {
-        await apiClient.delete(`/adjustments/${invoiceId}`);
+        await apiClient.delete(`/adjustments/${itemId || invoiceId}`);
+      } else if (isPayment) {
+        await paymentService.voidPayment(itemId, 'Voided from Ledger');
       } else if (isGrouped) {
         await apiClient.delete(`/admin-finance/invoices/${invoiceId}`);
       } else {
         await invoiceService.deleteInvoiceItem(invoiceId, itemId);
       }
+      
+      // Recalculate invoice balances if we didn't just delete the whole invoice
+      if (invoiceId && !isGrouped) {
+        await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+      }
+      
       await dispatch(fetchLedgerItems(patientId));
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to void transaction');

@@ -184,13 +184,20 @@ const LedgerList = ({ patient, expanded }) => {
   const handleVoidCancel = () => { setShowVoidDialog(false); setVoidTarget(null); };
   const handleVoidConfirm = async () => {
     if (voidTarget) {
-      dispatch(voidTransaction({
-        patientId,
-        invoiceId: voidTarget.invoiceId,
-        itemId:    voidTarget.id,
-        isAdjustment: voidTarget.isAdjustment,
-        isGrouped:    voidTarget.isGrouped,
-      }));
+      try {
+        console.log('Dispatching voidTransaction with:', voidTarget);
+        await dispatch(voidTransaction({
+          patientId,
+          invoiceId: voidTarget.invoiceId, // might be undefined for adjustments
+          itemId:    voidTarget.id,
+          isAdjustment: voidTarget.isAdjustment,
+          isGrouped:    voidTarget.isGrouped,
+          isPayment:    voidTarget.isPayment,
+        })).unwrap();
+        console.log('voidTransaction succeeded');
+      } catch (err) {
+        console.error('voidTransaction failed:', err);
+      }
     }
     setShowVoidDialog(false);
     setVoidTarget(null);
@@ -218,11 +225,17 @@ const LedgerList = ({ patient, expanded }) => {
   const handleUndoCancel   = () => { setShowUndoDialog(false); setUndoTarget(null); };
   const handleUndoConfirm = async () => {
     if (undoTarget) {
-      await dispatch(undoCourtesyCredit({
-        patientId,
-        procedureId: undoTarget.id,
-        invoiceId:   undoTarget.invoiceId,
-      }));
+      try {
+        console.log('Dispatching undoCourtesyCredit with:', undoTarget);
+        await dispatch(undoCourtesyCredit({
+          patientId,
+          procedureId: undoTarget.id,
+          invoiceId:   undoTarget.invoiceId,
+        })).unwrap();
+        console.log('undoCourtesyCredit succeeded');
+      } catch (err) {
+        console.error('undoCourtesyCredit failed:', err);
+      }
     }
     setShowUndoDialog(false);
     setUndoTarget(null);
@@ -412,7 +425,7 @@ const LedgerList = ({ patient, expanded }) => {
 
       <LedgerDialogManager
         anchorEl={anchorEl} setAnchorEl={setAnchorEl} handleBackdateDone={handleBackdateDone}
-        printAnchorEl={printAnchorEl} setPrintAnchorEl={setPrintAnchorEl} handlePrintSelect={handlePrintSelect}
+        printAnchorEl={printAnchorEl} setPrintAnchorEl={setPrintAnchorEl} handlePrintSelect={handlePrintSelect} printItem={printItem}
         adjAnchorEl={adjAnchorEl} setAdjAnchorEl={setAdjAnchorEl} handleAdjustmentSelect={handleAdjustmentSelect}
         showAdjustDialog={showAdjustDialog} setShowAdjustDialog={setShowAdjustDialog}
         showDebitDialog={showDebitDialog} setShowDebitDialog={setShowDebitDialog}
