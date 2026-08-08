@@ -40,12 +40,19 @@ const OnlineSchedulingReferral = () => {
   ];
 
   const renderRow = (row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.referral}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmSource}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmMedium}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.utmCampaign}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.clicks}</TableCell>
+    <TableRow 
+      key={index} 
+      hover
+      sx={{ 
+        '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+        '&:hover': { backgroundColor: '#f1f5f9' }
+      }}
+    >
+      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{row.referral}</TableCell>
+      <TableCell>{row.utmSource}</TableCell>
+      <TableCell>{row.utmMedium}</TableCell>
+      <TableCell>{row.utmCampaign}</TableCell>
+      <TableCell>{row.clicks}</TableCell>
     </TableRow>
   );
 
@@ -54,6 +61,7 @@ const OnlineSchedulingReferral = () => {
       <ReportLayout title="Online Scheduling Referral">
         <ReportFilterBar 
           onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={() => alert('Exporting CSV...')}
           onPrint={() => window.print()}
         />
 

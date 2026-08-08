@@ -29,7 +29,7 @@ const RecareReport = () => {
     <Box sx={{ p: 0, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       {/* Report Title */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontWeight: 600, borderBottom: '2px solid #1976d2', display: 'inline-block', pb: 0.5, color: '#1e293b' }}>
+        <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
           Recare Report
         </Typography>
         {subtitle && (

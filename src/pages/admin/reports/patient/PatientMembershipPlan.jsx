@@ -23,7 +23,11 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
-import { ReportLayout, ReportFilterBar, ReportSearchInput, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import { ReportLayout, ReportFilterBar, ReportSearchInput, ReportSelect, ReportCheckbox, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 const INITIAL_DATA = [
   { number: '1249', patient: 'John Doe', email: 'john.doe@example.com', planName: 'Foundations (Perio) Program - New Patient', lastAppointment: '', renewalMonth: 'April' },
@@ -214,76 +218,114 @@ const PatientMembershipPlan = () => {
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
   const handleCreateTemplate = () => setTemplateDialogOpen(true);
 
-  const topFilters = null;
-  const bottomFilters = null;
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setGrouping('no');
+    setRenewalMonth('');
+    setApptFilterType('no');
+    setApptStartDate('');
+    setApptEndDate('');
+    setApptSingleDate('');
+    setShowNoPlan(false);
+  };
 
-  const renderTable = (tableData, tableId) => (
-    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
-      <Table id={tableId} size="small" stickyHeader>
-        <TableHead>
-          <TableRow>
-            {[
-              'Patient Number', 
-              'Patient', 
-              'Email', 
-              'Plan name', 
-              'Last Appointment', 
-              'Plan Renewal Month'
-            ].map((header) => (
-              <TableCell 
-                key={header} 
-                sx={{ 
-                  fontWeight: 600, 
-                  fontSize: '0.72rem', 
-                  py: 1,
-                  px: 1,
-                  borderBottom: '1px solid #ddd',
-                  backgroundColor: '#fff'
-                }}
-              >
-                {header}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {tableData.map((row, index) => (
-            <TableRow 
-              key={index} 
-              sx={{ 
-                backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc', 
-                '& td': { borderBottom: '1px solid #eee' } 
+  const topFilters = (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
+          <FormControlLabel value="no" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>No Appt Filter</Typography>} />
+          <FormControlLabel value="range" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Range</Typography>} />
+          <FormControlLabel value="before" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Before</Typography>} />
+          <FormControlLabel value="after" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>After</Typography>} />
+        </RadioGroup>
+      </Box>
+
+      {apptFilterType === 'range' && (
+        <>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>from date</Typography>
+            <DatePicker
+              value={apptStartDate ? dayjs(apptStartDate) : null}
+              onChange={(newValue) => setApptStartDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              format="MM/DD/YYYY"
+              slotProps={{ 
+                popper: { sx: { zIndex: 1400 } },
+                textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
               }}
-            >
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.number}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.email}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planName}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.lastAppointment || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.renewalMonth || 'N/A'}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+            />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>to date</Typography>
+            <DatePicker
+              value={apptEndDate ? dayjs(apptEndDate) : null}
+              onChange={(newValue) => setApptEndDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              format="MM/DD/YYYY"
+              slotProps={{ 
+                popper: { sx: { zIndex: 1400 } },
+                textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
+              }}
+            />
+          </Box>
+        </>
+      )}
+
+      {(apptFilterType === 'before' || apptFilterType === 'after') && (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>date</Typography>
+          <DatePicker
+            value={apptSingleDate ? dayjs(apptSingleDate) : null}
+            onChange={(newValue) => setApptSingleDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+            format="MM/DD/YYYY"
+            slotProps={{ 
+              popper: { sx: { zIndex: 1400 } },
+              textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
+            }}
+          />
+        </Box>
+      )}
+
+      <ReportDivider />
+
+      <ReportSelect 
+        label="RENEWAL MONTH" 
+        options={[
+          { value: '', label: 'Select month' },
+          ...['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => ({ value: m, label: m }))
+        ]} 
+        value={renewalMonth} 
+        onChange={(e) => setRenewalMonth(e.target.value)} 
+        width="160px" 
+      />
+    </LocalizationProvider>
   );
 
-  return (
-    <React.Fragment>
-      <ReportLayout title="Patient by Membership Plan:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          bottomRowFilters={bottomFilters}
-          onApplyFilters={handleApplyFilters}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting...')}
-          onPrint={() => window.print()}
-        />
+  const bottomFilters = (
+    <>
+      <ReportSelect 
+        label="GROUPING" 
+        options={[
+          { value: 'no', label: 'No Grouping' },
+          { value: 'plan', label: 'Group By Plan' },
+          { value: 'renewalMonth', label: 'Group By Renewal Month' }
+        ]} 
+        value={grouping} 
+        onChange={(e) => setGrouping(e.target.value)} 
+        width="180px" 
+      />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
-        {/* Search */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Search by plan name:</Typography>
+      <ReportDivider />
+
+      <ReportCheckbox 
+        label="Show patients with no membership plan" 
+        checked={showNoPlan} 
+        onChange={(e) => setShowNoPlan(e.target.checked)} 
+      />
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>SEARCH BY PLAN NAME:</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Box sx={{ position: 'relative', width: 300 }}>
             <TextField 
               fullWidth
@@ -300,9 +342,11 @@ const PatientMembershipPlan = () => {
                   </InputAdornment>
                 ),
                 sx: { 
-                  fontSize: '0.8rem',
-                  backgroundColor: '#f9f9f9',
-                  '& fieldset': { borderColor: '#ccc' }
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc',
+                  height: 36,
+                  fontSize: '0.75rem',
+                  '& fieldset': { borderColor: '#e2e8f0' },
                 }
               }}
             />
@@ -347,158 +391,62 @@ const PatientMembershipPlan = () => {
             )}
           </Box>
         </Box>
-
-        {/* Grouping */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Grouping:</Typography>
-          <RadioGroup 
-            row 
-            value={grouping} 
-            onChange={(e) => setGrouping(e.target.value)}
-          >
-            <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No Grouping</Typography>} />
-            <FormControlLabel value="plan" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Group By Plan</Typography>} />
-            <FormControlLabel value="renewalMonth" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Group By Renewal Month</Typography>} />
-          </RadioGroup>
-        </Box>
-
-        {/* Filter by past appointment date */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by past appointment date:</Typography>
-            <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
-              <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
-              <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Range</Typography>} />
-              <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Before specific date</Typography>} />
-              <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">After specific date</Typography>} />
-            </RadioGroup>
-          </Box>
-          {apptFilterType === 'range' && (
-            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Start Date:
-                <input 
-                  type="date" 
-                  value={apptStartDate} 
-                  onChange={(e) => setApptStartDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                End Date:
-                <input 
-                  type="date" 
-                  value={apptEndDate} 
-                  onChange={(e) => setApptEndDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-            </Box>
-          )}
-          {(apptFilterType === 'before' || apptFilterType === 'after') && (
-            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Date:
-                <input 
-                  type="date" 
-                  value={apptSingleDate} 
-                  onChange={(e) => setApptSingleDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
-        {/* Filter by Renewal Month */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by plan renewal month:</Typography>
-          <Select
-            size="small"
-            value={renewalMonth}
-            onChange={(e) => setRenewalMonth(e.target.value)}
-            displayEmpty
-            sx={{ height: 25, fontSize: '0.75rem', width: 150 }}
-          >
-            <MenuItem value=""><Typography variant="caption">Select month</Typography></MenuItem>
-            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
-              <MenuItem key={m} value={m}><Typography variant="caption">{m}</Typography></MenuItem>
-            ))}
-          </Select>
-        </Box>
-
-        {/* Checkbox */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-          <Checkbox 
-            size="small" 
-            sx={{ p: 0.5 }} 
-            checked={showNoPlan}
-            onChange={(e) => setShowNoPlan(e.target.checked)}
-          />
-          <Typography variant="caption">Show patients with no membership plan</Typography>
-        </Box>
       </Box>
+    </>
+  );
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1.5 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handleApplyFilters}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#4a89dc', 
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Apply Filters
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          disabled
-          onClick={handleCreateTemplate}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#d9a366', 
-            color: '#fff',
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Create Template
-        </Button>
-        {grouping === 'no' && (
-          <>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={handleExportCSV}
-              sx={{ 
-                textTransform: 'none', 
-                backgroundColor: '#4a89dc', 
-                fontSize: '0.75rem',
-                padding: '4px 12px'
-              }}
-            >
-              Export as CSV
-            </Button>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={handlePrint}
-              sx={{ 
-                textTransform: 'none', 
-                backgroundColor: '#da4453', 
-                fontSize: '0.75rem',
-                padding: '4px 12px'
-              }}
-            >
-              Print
-            </Button>
-          </>
-        )}
+  const columns = [
+    { label: 'Patient Number' },
+    { label: 'Patient' },
+    { label: 'Email' },
+    { label: 'Plan name' },
+    { label: 'Last Appointment' },
+    { label: 'Plan Renewal Month' }
+  ];
+
+  const renderRow = (row, index) => (
+    <TableRow 
+      key={index} 
+      hover
+      sx={{ 
+        '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+        '&:hover': { backgroundColor: '#f1f5f9' }
+      }}
+    >
+      <TableCell>{row.number}</TableCell>
+      <TableCell sx={{ color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}>{row.patient}</TableCell>
+      <TableCell>{row.email}</TableCell>
+      <TableCell>{row.planName}</TableCell>
+      <TableCell>{row.lastAppointment || 'N/A'}</TableCell>
+      <TableCell>{row.renewalMonth || 'N/A'}</TableCell>
+    </TableRow>
+  );
+
+  const renderTable = (tableData, tableId) => (
+    <div id={tableId}>
+      <ReportDataTable 
+        columns={columns} 
+        data={tableData} 
+        renderRow={renderRow} 
+        loading={false}
+        emptyMessage="No patient membership records found"
+      />
+    </div>
+  );
+
+  return (
+    <React.Fragment>
+      <ReportLayout title="Patient by Membership Plan:">
+      <Box className="hide-on-print" sx={{ mb: 2 }}>
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          bottomRowFilters={bottomFilters}
+          onApplyFilters={handleApplyFilters}
+          onClearAll={handleClearFilters}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={grouping === 'no' ? handleExportCSV : null}
+          onPrint={grouping === 'no' ? handlePrint : null}
+        />
       </Box>
 
       {/* Summary Text */}

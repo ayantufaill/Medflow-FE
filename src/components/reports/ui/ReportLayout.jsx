@@ -3,9 +3,9 @@ import { Box, Typography } from '@mui/material';
 
 const ReportLayout = ({ title, subtitle, children, summaryFooter }) => {
   return (
-    <Box sx={{ p: 0 }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
+    <Box sx={{ p: 0, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
           {title}
         </Typography>
         {subtitle && (

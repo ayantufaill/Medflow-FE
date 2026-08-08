@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { ReportLayout, ReportFilterBar, ReportCheckbox } from '../../../../components/reports/ui';
+import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportSelect, ReportDivider, ReportSearchInput } from '../../../../components/reports/ui';
 import {
   Box,
   Typography,
@@ -21,7 +21,13 @@ import {
   CircularProgress,
   Autocomplete,
   Chip,
+  Tabs,
+  Tab,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 import { Search as SearchIcon } from '@mui/icons-material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
@@ -395,111 +401,102 @@ const PatientInsuranceCoverage = () => {
     printWindow.close();
   };
 
-  const topFilters = null;
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedSearchItems([]);
+    setAssignmentFilter('no');
+    setApptFilterType('no');
+    setApptStartDate('');
+    setApptEndDate('');
+    setApptSingleDate('');
+    setShowNoCoverage(false);
+  };
+
+  const topFilters = (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
+          <FormControlLabel value="no" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>No Appt Filter</Typography>} />
+          <FormControlLabel value="range" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Range</Typography>} />
+          <FormControlLabel value="before" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>Before</Typography>} />
+          <FormControlLabel value="after" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>After</Typography>} />
+        </RadioGroup>
+      </Box>
+
+      {apptFilterType === 'range' && (
+        <>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>from date</Typography>
+            <DatePicker
+              value={apptStartDate ? dayjs(apptStartDate) : null}
+              onChange={(newValue) => setApptStartDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              format="MM/DD/YYYY"
+              slotProps={{ 
+                popper: { sx: { zIndex: 1400 } },
+                textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
+              }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>to date</Typography>
+            <DatePicker
+              value={apptEndDate ? dayjs(apptEndDate) : null}
+              onChange={(newValue) => setApptEndDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+              format="MM/DD/YYYY"
+              slotProps={{ 
+                popper: { sx: { zIndex: 1400 } },
+                textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
+              }}
+            />
+          </Box>
+        </>
+      )}
+
+      {(apptFilterType === 'before' || apptFilterType === 'after') && (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>date</Typography>
+          <DatePicker
+            value={apptSingleDate ? dayjs(apptSingleDate) : null}
+            onChange={(newValue) => setApptSingleDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+            format="MM/DD/YYYY"
+            slotProps={{ 
+              popper: { sx: { zIndex: 1400 } },
+              textField: { size: 'small', sx: { width: '135px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '36px', backgroundColor: '#fafbfe', color: '#09121f' }, '& fieldset': { borderColor: '#e2e8f0' } } }
+            }}
+          />
+        </Box>
+      )}
+
+      <ReportDivider />
+
+      <ReportSelect 
+        label="ASSIGNMENT" 
+        options={[
+          { value: 'no', label: 'No filter' },
+          { value: 'assignment', label: 'Assignment' },
+          { value: 'non-assignment', label: 'Non-Assignment' }
+        ]} 
+        value={assignmentFilter} 
+        onChange={(e) => setAssignmentFilter(e.target.value)} 
+        width="160px" 
+      />
+    </LocalizationProvider>
+  );
 
   const bottomFilters = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600, color: '#1e293b' }}>Filter by past appointment date:</Typography>
-        <RadioGroup row defaultValue="no">
-          <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>No filter</Typography>} />
-          <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Range</Typography>} />
-          <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Before specific date</Typography>} />
-          <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>After specific date</Typography>} />
-        </RadioGroup>
-      </Box>
+    <>
+      <ReportCheckbox 
+        label="Show patients with no coverage" 
+        checked={showNoCoverage} 
+        onChange={(e) => setShowNoCoverage(e.target.checked)} 
+      />
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600, color: '#1e293b' }}>Filter by Assignment:</Typography>
-        <RadioGroup row value={assignmentFilter} onChange={(e) => setAssignmentFilter(e.target.value)}>
-          <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>No filter</Typography>} />
-          <FormControlLabel value="assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Assignment</Typography>} />
-          <FormControlLabel value="non-assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption" sx={{ color: '#1e293b' }}>Non-Assignment</Typography>} />
-        </RadioGroup>
-      </Box>
+      <ReportDivider />
 
-      <Box sx={{ mt: 0.5 }}>
-        <ReportCheckbox label="Show patients with no coverage" />
-      </Box>
-    </Box>
-  );
-
-  const renderTable = (tableData, tableId) => (
-    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
-      <Table id={tableId} size="small" stickyHeader>
-        <TableHead>
-          <TableRow>
-            {[
-              'Patient Number', 
-              'Patient', 
-              'Email', 
-              'Plan name(plan num)', 
-              'Payer', 
-              'Last Appointment', 
-              'Fee Schedule', 
-              'Plan Renewal Date', 
-              'Assignment Status'
-            ].map((header) => (
-              <TableCell 
-                key={header} 
-                sx={{ 
-                  fontWeight: 600, 
-                  fontSize: '0.72rem', 
-                  py: 1,
-                  px: 1,
-                  borderBottom: '1px solid #ddd',
-                  backgroundColor: '#fff'
-                }}
-              >
-                {header}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {tableData.map((row, index) => (
-            <TableRow 
-              key={index} 
-              sx={{ 
-                backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc',
-                '& td': { borderBottom: '1px solid #eee' }
-              }}
-            >
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.number}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.email}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planName || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.payer || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.lastAppointment || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.feeSchedule || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.planRenewalDate || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.72rem', py: 1, px: 1 }}>{row.assignmentStatus || 'N/A'}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-
-  return (
-    <React.Fragment>
-      <ReportLayout title="Patient by Insurance Coverage:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          bottomRowFilters={bottomFilters}
-          onApplyFilters={handleApplyFilters}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting...')}
-          onPrint={() => window.print()}
-        />
-
-      {/* Filters Section */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
-        {/* Search */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>SEARCH BY PAYER OR PLAN:</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Search by payer or plan:</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Box sx={{ position: 'relative', width: 300 }}>
+          <Box sx={{ position: 'relative', width: 300 }}>
             <TextField 
               fullWidth
               size="small" 
@@ -515,9 +512,11 @@ const PatientInsuranceCoverage = () => {
                   </InputAdornment>
                 ),
                 sx: { 
-                  fontSize: '0.8rem',
-                  backgroundColor: '#f9f9f9',
-                  '& fieldset': { borderColor: '#ccc' }
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc',
+                  height: 36,
+                  fontSize: '0.75rem',
+                  '& fieldset': { borderColor: '#e2e8f0' },
                 }
               }}
             />
@@ -572,177 +571,108 @@ const PatientInsuranceCoverage = () => {
                 </Table>
               </Paper>
             )}
-            </Box>
-            
-            {/* Display Selected Tags next to search dropdown */}
-            {selectedSearchItems.map((item, idx) => (
-              <Chip
-                key={idx}
-                label={item}
-                onDelete={() => setSelectedSearchItems(selectedSearchItems.filter(i => i !== item))}
-                variant="outlined"
-                size="small"
-                sx={{ 
-                  borderRadius: '4px', 
-                  color: '#444', 
-                  borderColor: '#ddd', 
-                  bgcolor: '#fff',
-                  '& .MuiChip-deleteIcon': { color: '#e53935', fontSize: '16px' }
-                }}
-              />
-            ))}
           </Box>
-        </Box>
-
-        {/* Grouping */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Grouping:</Typography>
-          <RadioGroup 
-            row 
-            value={grouping} 
-            onChange={(e) => setGrouping(e.target.value)}
-          >
-            <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No Grouping</Typography>} />
-            <FormControlLabel value="payer" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Group By Payer</Typography>} />
-            <FormControlLabel value="plan" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Group By Plan</Typography>} />
-            <FormControlLabel value="fee" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Group By Fee Schedule</Typography>} />
-          </RadioGroup>
-        </Box>
-
-        {/* Filter by past appointment date */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by past appointment date:</Typography>
-            <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
-              <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
-              <FormControlLabel value="range" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Range</Typography>} />
-              <FormControlLabel value="before" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Before specific date</Typography>} />
-              <FormControlLabel value="after" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">After specific date</Typography>} />
-            </RadioGroup>
-          </Box>
-          {apptFilterType === 'range' && (
-            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Start Date:
-                <input 
-                  type="date" 
-                  value={apptStartDate} 
-                  onChange={(e) => setApptStartDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                End Date:
-                <input 
-                  type="date" 
-                  value={apptEndDate} 
-                  onChange={(e) => setApptEndDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-            </Box>
-          )}
-          {(apptFilterType === 'before' || apptFilterType === 'after') && (
-            <Box sx={{ display: 'flex', gap: 2, pl: 21 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Date:
-                <input 
-                  type="date" 
-                  value={apptSingleDate} 
-                  onChange={(e) => setApptSingleDate(e.target.value)}
-                  style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-                />
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
-        {/* Filter by Assignment */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="caption" sx={{ minWidth: 160, fontWeight: 600 }}>Filter by Assignment:</Typography>
-          <RadioGroup 
-            row 
-            value={assignmentFilter}
-            onChange={(e) => setAssignmentFilter(e.target.value)}
-          >
-            <FormControlLabel value="no" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">No filter</Typography>} />
-            <FormControlLabel value="assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Assignment</Typography>} />
-            <FormControlLabel value="non-assignment" control={<Radio size="small" sx={{ p: 0.5 }} />} label={<Typography variant="caption">Non-Assignment</Typography>} />
-          </RadioGroup>
-        </Box>
-
-        {/* Checkbox */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-          <Checkbox 
-            size="small" 
-            sx={{ p: 0.5 }} 
-            checked={showNoCoverage}
-            onChange={(e) => setShowNoCoverage(e.target.checked)}
-          />
-          <Typography variant="caption">Show patients with no coverage</Typography>
+          
+          {selectedSearchItems.map((item, idx) => (
+            <Chip
+              key={idx}
+              label={item}
+              onDelete={() => setSelectedSearchItems(selectedSearchItems.filter(i => i !== item))}
+              variant="outlined"
+              size="small"
+              sx={{ 
+                borderRadius: '4px', 
+                color: '#444', 
+                borderColor: '#ddd', 
+                bgcolor: '#fff',
+                '& .MuiChip-deleteIcon': { color: '#e53935', fontSize: '16px' }
+              }}
+            />
+          ))}
         </Box>
       </Box>
+    </>
+  );
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1.5 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handleApplyFilters}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#4a89dc', 
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Apply Filters
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          disabled
-          onClick={() => setTemplateDialogOpen(true)}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#d9a366', 
-            color: '#fff',
-            fontSize: '0.75rem',
-            padding: '4px 12px'
-          }}
-        >
-          Create Template
-        </Button>
-        {grouping === 'no' && (
-          <>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={handleExportCSV}
+  const renderTable = (tableData, tableId) => (
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mt: 2, overflowX: 'auto', backgroundColor: '#fff' }}>
+      <Table id={tableId} size="small" stickyHeader>
+        <TableHead>
+          <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1.5, borderBottom: '1px solid #e2e8f0', color: '#334155' } }}>
+            {[
+              'Patient Number', 
+              'Patient', 
+              'Email', 
+              'Plan name(plan num)', 
+              'Payer', 
+              'Last Appointment', 
+              'Fee Schedule', 
+              'Plan Renewal Date', 
+              'Assignment Status'
+            ].map((header) => (
+              <TableCell key={header}>
+                {header}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tableData.map((row, index) => (
+            <TableRow 
+              key={index} 
+              hover
               sx={{ 
-                textTransform: 'none', 
-                backgroundColor: '#4a89dc', 
-                fontSize: '0.75rem',
-                padding: '4px 12px'
+                '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+                '&:hover': { backgroundColor: '#f1f5f9' }
               }}
             >
-              Export as CSV
-            </Button>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={handlePrint}
-              sx={{ 
-                textTransform: 'none', 
-                backgroundColor: '#da4453', 
-                fontSize: '0.75rem',
-                padding: '4px 12px'
-              }}
-            >
-              Print
-            </Button>
-          </>
-        )}
+              <TableCell>{row.number}</TableCell>
+              <TableCell sx={{ color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}>{row.patient}</TableCell>
+              <TableCell>{row.email}</TableCell>
+              <TableCell>{row.planName || 'N/A'}</TableCell>
+              <TableCell>{row.payer || 'N/A'}</TableCell>
+              <TableCell>{row.lastAppointment || 'N/A'}</TableCell>
+              <TableCell>{row.feeSchedule || 'N/A'}</TableCell>
+              <TableCell>{row.planRenewalDate || 'N/A'}</TableCell>
+              <TableCell>{row.assignmentStatus || 'N/A'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  return (
+    <Box sx={{ p: 0, '@media print': { '& .hide-on-print': { display: 'none !important' } } }}>
+      <Typography variant="h6" className="hide-on-print" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
+        Patient Insurance Coverage
+      </Typography>
+      
+      {/* View Toggle Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={grouping} 
+          onChange={(e, newVal) => setGrouping(newVal)} 
+          textColor="primary" 
+          indicatorColor="primary"
+        >
+          <Tab label="No Grouping" value="no" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
+          <Tab label="Group By Payer" value="payer" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
+          <Tab label="Group By Plan" value="plan" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
+          <Tab label="Group By Fee Schedule" value="fee" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
+        </Tabs>
+      </Box>
+
+      <Box className="hide-on-print" sx={{ mb: 2 }}>
+        <ReportFilterBar 
+          topRowFilters={topFilters}
+          bottomRowFilters={bottomFilters}
+          onApplyFilters={handleApplyFilters}
+          onClearAll={handleClearFilters}
+          onCreateTemplate={() => setTemplateDialogOpen(true)}
+          onExportCsv={grouping === 'no' ? handleExportCSV : null}
+          onPrint={grouping === 'no' ? handlePrint : null}
+        />
       </Box>
 
       {/* Summary Text */}
@@ -800,8 +730,7 @@ const PatientInsuranceCoverage = () => {
         onClose={() => setTemplateDialogOpen(false)} 
         onSave={(name) => alert(`Template "${name}" saved!`)} 
       />
-      </ReportLayout>
-    </React.Fragment>
+    </Box>
   );
 };
 export default PatientInsuranceCoverage;

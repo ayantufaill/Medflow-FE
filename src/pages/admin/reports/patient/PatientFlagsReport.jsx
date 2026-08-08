@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
 
 const DUMMY_DATA = [
   { number: '1249', patient: 'John Doe', flags: 'VIP, Pre-med', lastAppointment: '05/01/2026' },
@@ -38,11 +38,18 @@ const PatientFlagsReport = () => {
   ];
 
   const renderRow = (row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.number}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.flags}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.lastAppointment}</TableCell>
+    <TableRow 
+      key={index} 
+      hover
+      sx={{ 
+        '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+        '&:hover': { backgroundColor: '#f1f5f9' }
+      }}
+    >
+      <TableCell>{row.number}</TableCell>
+      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{row.patient}</TableCell>
+      <TableCell>{row.flags}</TableCell>
+      <TableCell>{row.lastAppointment}</TableCell>
     </TableRow>
   );
 
@@ -60,24 +67,30 @@ const PatientFlagsReport = () => {
         ]} 
         width="180px"
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Including Flags:</Typography>
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', textTransform: 'uppercase' }}>Including Flags:</Typography>
         <Button
           variant="contained"
           size="small"
           endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#2362EF', textTransform: 'none', fontSize: '0.75rem', height: 26, minWidth: 80, '&:hover': { bgcolor: '#1a4bbd' }, boxShadow: 'none' }}
+          sx={{ backgroundColor: '#3b82f6', textTransform: 'none', fontSize: '0.75rem', height: 28, borderRadius: '6px', minWidth: 80, '&:hover': { bgcolor: '#2563eb' }, boxShadow: 'none' }}
         >
           Flags
         </Button>
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Excluding Flags:</Typography>
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', textTransform: 'uppercase' }}>Excluding Flags:</Typography>
         <Button
           variant="contained"
           size="small"
           endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#2362EF', textTransform: 'none', fontSize: '0.75rem', height: 26, minWidth: 80, '&:hover': { bgcolor: '#1a4bbd' }, boxShadow: 'none' }}
+          sx={{ backgroundColor: '#3b82f6', textTransform: 'none', fontSize: '0.75rem', height: 28, borderRadius: '6px', minWidth: 80, '&:hover': { bgcolor: '#2563eb' }, boxShadow: 'none' }}
         >
           Flags
         </Button>
@@ -160,6 +173,7 @@ const PatientFlagsReport = () => {
           topRowFilters={topFilters}
           bottomRowLeftActions={bottomRowLeftActions}
           onApplyFilters={() => setShowData(true)}
+          onClearAll={() => { setFilterBy('active'); setShowData(false); }}
           onCreateTemplate={() => setTemplateDialogOpen(true)}
           onExportCsv={() => alert('Exporting CSV...')}
           onPrint={() => window.print()}
