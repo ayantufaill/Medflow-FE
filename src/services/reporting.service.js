@@ -131,5 +131,37 @@ export const reportingService = {
   async updateDashboardGoals(goals) {
     const response = await apiClient.put('/reports/dashboard/goals', goals);
     return response.data.data;
+  },
+
+  /**
+   * Get patient reviews report
+   */
+  async getPatientReviewsReport(params = {}) {
+    const response = await apiClient.get('/reports/patient/review', { params });
+    return response.data.data;
+  },
+
+  /**
+   * Get patient notifications report
+   */
+  async getPatientNotificationsReport(params = {}) {
+    const response = await apiClient.get('/reports/patient/notifications', { params });
+    return response.data.data;
+  },
+
+  /**
+   * Get patient procedures report
+   */
+  async getPatientProceduresReport(params = {}) {
+    const response = await apiClient.get('/reports/patient/procedures', { params });
+    return response.data.data;
+  },
+
+  /**
+   * Get patient trackers report
+   */
+  async getPatientTrackersReport(params = {}) {
+    const response = await apiClient.get('/reports/patient/trackers', { params });
+    return response.data.data;
   }
 };

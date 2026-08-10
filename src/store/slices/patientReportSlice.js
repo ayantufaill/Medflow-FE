@@ -193,6 +193,54 @@ export const fetchPatientDiscountEditedFeeReport = createAsyncThunk(
   }
 );
 
+export const fetchReviewsReport = createAsyncThunk(
+  'patientReport/fetchReviewsReport',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientReviewsReport(params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
+export const fetchNotificationsReport = createAsyncThunk(
+  'patientReport/fetchNotificationsReport',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientNotificationsReport(params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
+export const fetchProceduresReport = createAsyncThunk(
+  'patientReport/fetchProceduresReport',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientProceduresReport(params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
+export const fetchPatientTrackersReport = createAsyncThunk(
+  'patientReport/fetchPatientTrackersReport',
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await reportingService.getPatientTrackersReport(params);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
+    }
+  }
+);
+
 const initialState = {
   insuranceCoverage: [],
   insuranceCoverageLoading: false,
@@ -226,6 +274,14 @@ const initialState = {
   labCaseDataLoading: false,
   discountEditedFeeData: [],
   discountEditedFeeDataLoading: false,
+  reviewsData: [],
+  reviewsDataLoading: false,
+  notificationsData: [],
+  notificationsDataLoading: false,
+  proceduresData: [],
+  proceduresDataLoading: false,
+  patientTrackersData: [],
+  patientTrackersDataLoading: false,
   error: null,
 };
 
@@ -463,6 +519,54 @@ const patientReportSlice = createSlice({
         state.discountEditedFeeDataLoading = false;
         state.error = action.payload || 'Failed to load report';
       })
+      .addCase(fetchReviewsReport.pending, (state) => {
+        state.reviewsDataLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchReviewsReport.fulfilled, (state, action) => {
+        state.reviewsDataLoading = false;
+        state.reviewsData = action.payload || [];
+      })
+      .addCase(fetchReviewsReport.rejected, (state, action) => {
+        state.reviewsDataLoading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchNotificationsReport.pending, (state) => {
+        state.notificationsDataLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchNotificationsReport.fulfilled, (state, action) => {
+        state.notificationsDataLoading = false;
+        state.notificationsData = action.payload || [];
+      })
+      .addCase(fetchNotificationsReport.rejected, (state, action) => {
+        state.notificationsDataLoading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchProceduresReport.pending, (state) => {
+        state.proceduresDataLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchProceduresReport.fulfilled, (state, action) => {
+        state.proceduresDataLoading = false;
+        state.proceduresData = action.payload || [];
+      })
+      .addCase(fetchProceduresReport.rejected, (state, action) => {
+        state.proceduresDataLoading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
+      .addCase(fetchPatientTrackersReport.pending, (state) => {
+        state.patientTrackersDataLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchPatientTrackersReport.fulfilled, (state, action) => {
+        state.patientTrackersDataLoading = false;
+        state.patientTrackersData = action.payload || [];
+      })
+      .addCase(fetchPatientTrackersReport.rejected, (state, action) => {
+        state.patientTrackersDataLoading = false;
+        state.error = action.payload || 'Failed to load report';
+      })
   },
 });
 
@@ -500,6 +604,18 @@ export const selectLabCaseData = (state) => state.patientReport?.labCaseData;
 export const selectLabCaseDataLoading = (state) => state.patientReport?.labCaseDataLoading;
 export const selectDiscountEditedFeeData = (state) => state.patientReport?.discountEditedFeeData;
 export const selectDiscountEditedFeeDataLoading = (state) => state.patientReport?.discountEditedFeeDataLoading;
+
+export const selectReviewsData = (state) => state.patientReport?.reviewsData;
+export const selectReviewsDataLoading = (state) => state.patientReport?.reviewsDataLoading;
+
+export const selectNotificationsData = (state) => state.patientReport?.notificationsData;
+export const selectNotificationsDataLoading = (state) => state.patientReport?.notificationsDataLoading;
+
+export const selectProceduresData = (state) => state.patientReport?.proceduresData;
+export const selectProceduresDataLoading = (state) => state.patientReport?.proceduresDataLoading;
+
+export const selectPatientTrackersData = (state) => state.patientReport?.patientTrackersData;
+export const selectPatientTrackersDataLoading = (state) => state.patientReport?.patientTrackersDataLoading;
 
 export const selectPatientReportError = (state) => state.patientReport?.error;
 // Keeping these for backward compatibility

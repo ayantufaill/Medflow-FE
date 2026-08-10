@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Button, Radio, RadioGroup, FormControlLabel, TableCell, TableRow, Select, MenuItem, TextField
+  Box, Typography, Button, Radio, RadioGroup, FormControlLabel, TableCell, TableRow, Select, MenuItem, TextField, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchProceduresReport, selectProceduresData, selectProceduresDataLoading } from '../../../../store/slices/patientReportSlice';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -10,19 +12,42 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
-const DUMMY_DATA = [
-  { patient: 'Alice Smith', code: 'CD2999', description: 'DLVR', status: 'Completed', provider: 'Christina Sabour', created: 'Mar 04, 2026', scheduled: 'Apr 22, 2026' },
-  { patient: 'Bob Johnson', code: 'CD2999', description: 'DLVR', status: 'Completed', provider: 'Christina Sabour', created: 'Mar 04, 2026', scheduled: 'Apr 22, 2026' },
-  { patient: 'Charlie Brown', code: 'D9951', description: 'occlusal adjustment', status: 'Completed', provider: 'Christina Sabour', created: 'Apr 23, 2026', scheduled: 'Apr 24, 2026' },
-];
+
 
 const ProceduresReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectProceduresData) || [];
+  const loading = useSelector(selectProceduresDataLoading);
+
   const [dateType, setDateType] = useState('scheduled');
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [provider, setProvider] = useState('none');
   const [status, setStatus] = useState('none');
+  const [adaCode, setAdaCode] = useState('');
+
+  React.useEffect(() => {
+    dispatch(fetchProceduresReport({
+      dateType,
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      provider,
+      status,
+      adaCode
+    }));
+  }, [dispatch]);
+
+  const handleApplyFilters = () => {
+    dispatch(fetchProceduresReport({
+      dateType,
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      provider,
+      status,
+      adaCode
+    }));
+  };
 
   const columns = [
     { label: 'Patient' },
@@ -135,7 +160,7 @@ const ProceduresReport = () => {
       />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
         <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Ada Code:</Typography>
-        <ReportSearchInput placeholder="Enter code or procedure" width="200px" />
+        <ReportSearchInput placeholder="Enter code or procedure" width="200px" value={adaCode} onChange={(e) => setAdaCode(e.target.value)} />
       </Box>
     </>
   );
@@ -148,7 +173,7 @@ const ProceduresReport = () => {
             <ReportFilterBar 
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
-              onApplyFilters={() => console.log('Apply Filters')}
+              onApplyFilters={handleApplyFilters}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
           </Box>
@@ -156,22 +181,28 @@ const ProceduresReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of procedures = {DUMMY_DATA.length})
+              (number of procedures = {reportData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={() => alert('Exporting CSV...')}
                 onPrint={() => window.print()}
-                hasData={DUMMY_DATA.length > 0}
+                hasData={reportData.length > 0}
               />
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

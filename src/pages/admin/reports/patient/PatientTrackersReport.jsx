@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Button, Select, MenuItem, TextField, TableCell, TableRow
+  Box, Typography, Button, Select, MenuItem, TextField, TableCell, TableRow, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPatientTrackersReport, selectPatientTrackersData, selectPatientTrackersDataLoading } from '../../../../store/slices/patientReportSlice';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -10,27 +12,39 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
-const DUMMY_DATA = [
-  { 
-    patient: 'Alice Smith (59)', 
-    trackerName: 'UI with Dr. Miller', 
-    startDate: 'May 12, 2026', 
-    endDate: 'Jun 15, 2026', 
-    duration: '34 days', 
-    description: 'Having #12-15 + Impacted #11 EXT. Need full photo series, tx plan, wax up ready for her.', 
-    status: 'On Track', 
-    createdBy: 'C. Yasi Sabour on May 07, 2026', 
-    completedBy: '--', 
-    deletedBy: '--' 
-  },
-];
+
 
 const PatientTrackersReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectPatientTrackersData) || [];
+  const loading = useSelector(selectPatientTrackersDataLoading);
+
   const [startDate, setStartDate] = useState(dayjs('2026-01-01'));
   const [endDate, setEndDate] = useState(dayjs('2027-01-01'));
+  const [patientSearch, setPatientSearch] = useState('');
   const [createdBy, setCreatedBy] = useState('all');
   const [status, setStatus] = useState('all');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  React.useEffect(() => {
+    dispatch(fetchPatientTrackersReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      patientSearch,
+      createdBy,
+      status
+    }));
+  }, [dispatch]);
+
+  const handleApplyFilters = () => {
+    dispatch(fetchPatientTrackersReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      patientSearch,
+      createdBy,
+      status
+    }));
+  };
 
   const columns = [
     { label: 'Patient' },
@@ -64,7 +78,7 @@ const PatientTrackersReport = () => {
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter by Patient:</Typography>
-        <ReportSearchInput placeholder="Search patient" width="180px" />
+        <ReportSearchInput placeholder="Search patient" width="180px" value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
       </Box>
 
       <ReportSelect 
@@ -127,7 +141,7 @@ const PatientTrackersReport = () => {
             <ReportFilterBar 
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
-              onApplyFilters={() => console.log('Apply Filters')}
+              onApplyFilters={handleApplyFilters}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
           </Box>
@@ -135,22 +149,28 @@ const PatientTrackersReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of patient trackers = {DUMMY_DATA.length})
+              (number of patient trackers = {reportData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={() => alert('Exporting CSV...')}
                 onPrint={() => window.print()}
-                hasData={DUMMY_DATA.length > 0}
+                hasData={reportData.length > 0}
               />
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 
