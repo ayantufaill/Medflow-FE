@@ -78,7 +78,7 @@ const CoverageRow = ({
             {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
           <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <Box component="span" sx={{ color: COLORS.ACCENT }}>{(ins.insuranceType || 'Primary').charAt(0).toUpperCase() + (ins.insuranceType || 'primary').slice(1)}:</Box>{' '}
+            <Box component="span" sx={{ color: COLORS.ACCENT }}>{ins?.Ordinal ? `Coverage #${ins.Ordinal}` : 'Coverage'}:</Box>{' '}
             <Box component="span" sx={{ fontWeight: fontWeight.semibold, color: COLORS.TEXT_PRIMARY }}>{ins.employerName || ins.planName?.split(' by ')[0] || companyName}</Box>{' '}
             <Box component="span" sx={{ color: COLORS.TEXT_MUTED }}>by {companyName}</Box>
           </Typography>
@@ -333,7 +333,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
         subscriberName: planData.subscriberName || 'Subscriber',
         subscriberDateOfBirth: planData.subscriberDateOfBirth ? dayjs(planData.subscriberDateOfBirth).toISOString() : dayjs().subtract(25, 'year').toISOString(),
         relationshipToPatient: planData.relationshipToPatient || 'self',
-        insuranceType: planData.insuranceType || 'primary',
+
         effectiveDate: planData.effectiveDate ? dayjs(planData.effectiveDate).toISOString() : dayjs().toISOString(),
         expirationDate: planData.expirationDate ? dayjs(planData.expirationDate).toISOString() : undefined,
         copayAmount: 0,

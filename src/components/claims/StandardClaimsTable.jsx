@@ -866,6 +866,7 @@ export const StandardClaimsTable = ({
                                   color: "#475569",
                                   fontStyle: "italic",
                                   fontSize: "0.72rem",
+                                  fontFamily: "Inter, sans-serif",
                                 }}
                               >
                                 {shortDesc}
@@ -882,6 +883,7 @@ export const StandardClaimsTable = ({
                                     border: "1px solid #e2e8f0",
                                     borderRadius: "4px",
                                     fontSize: "0.72rem",
+                                    fontFamily: "Inter, sans-serif",
                                   }}
                                 >
                                   {longDesc}
@@ -902,6 +904,7 @@ export const StandardClaimsTable = ({
                               color: "#475569",
                               fontStyle: "italic",
                               cursor: "pointer",
+                              fontFamily: "Inter, sans-serif",
                             }}
                           >
                             {(() => {

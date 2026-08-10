@@ -302,6 +302,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
                 handleOpenAttach={onOpenAttach}
                 handleOpenPreview={onOpenPreview}
                 handleToggleHide={toggleHide}
+                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
               />
             );
           }
@@ -331,6 +332,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
                 handleOpenAttach={onOpenAttach}
                 handleOpenPreview={onOpenPreview}
                 handleToggleHide={toggleHide}
+                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
               />
             </Box>
           ));
@@ -356,6 +358,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           handleOpenAttach={onOpenAttach}
           handleOpenPreview={onOpenPreview}
           handleToggleHide={toggleHide}
+          handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
         />
       )}
     </Box>
