@@ -20,9 +20,8 @@ import {
   MenuItem
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { ReportLayout, ReportFilterBar, ReportSearchInput, ReportSelect, ReportCheckbox, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -444,15 +443,24 @@ const PatientMembershipPlan = () => {
           onApplyFilters={handleApplyFilters}
           onClearAll={handleClearFilters}
           onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={grouping === 'no' ? handleExportCSV : null}
-          onPrint={grouping === 'no' ? handlePrint : null}
         />
       </Box>
 
-      {/* Summary Text */}
-      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-        (number of patient policies = {data.length})
-      </Typography>
+      {/* Summary Text and Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+          (number of patient policies = {data.length})
+        </Typography>
+        {grouping === 'no' && (
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={handleExportCSV}
+              onPrint={handlePrint}
+              hasData={data.length > 0}
+            />
+          </Box>
+        )}
+      </Box>
 
       {/* Table Section */}
       {grouping === 'no' ? (
@@ -467,25 +475,12 @@ const PatientMembershipPlan = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {grouping === 'plan' ? 'Plan' : 'Renewal Month'}: {groupName} ({groupData.length} patients)
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<FileDownloadIcon />}
-                      onClick={() => handleExportGroupCSV(groupName, groupData)}
-                      sx={{ fontSize: '0.7rem', py: 0.2 }}
-                    >
-                      Export CSV
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<PrintIcon />}
-                      onClick={() => handlePrintGroup(tableId, groupName)}
-                      sx={{ fontSize: '0.7rem', py: 0.2 }}
-                    >
-                      Print
-                    </Button>
+                  <Box sx={{ transform: 'translateY(-4px)' }}>
+                    <ProductionReportActions
+                      onExportCsv={() => handleExportGroupCSV(groupName, groupData)}
+                      onPrint={() => handlePrintGroup(tableId, groupName)}
+                      hasData={groupData.length > 0}
+                    />
                   </Box>
                 </Box>
                 {renderTable(groupData, tableId)}

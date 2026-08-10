@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import {
   Box, Typography, Button, Select, MenuItem, TableCell, TableRow
 } from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { patient: 'Bonnie Fuller', date: '05/07/2026', code: 'D1110', description: 'Prophylaxis - Adult', fee: '$120.00', editedFee: '$100.00', discount: '$20.00', provider: 'Dr. Smith' },
@@ -13,12 +16,9 @@ const DUMMY_DATA = [
 ];
 
 const PatientDiscountEditedFeeReport = () => {
-  const [currentDate, setCurrentDate] = useState(dayjs('2026-05-08'));
-  const [dateRange, setDateRange] = useState('daily');
+  const [startDate, setStartDate] = useState(dayjs('2026-05-08'));
+  const [endDate, setEndDate] = useState(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const handlePrevDate = () => setCurrentDate(prev => prev.subtract(1, 'day'));
-  const handleNextDate = () => setCurrentDate(prev => prev.add(1, 'day'));
 
   const columns = [
     { label: 'Patient' },
@@ -46,63 +46,75 @@ const PatientDiscountEditedFeeReport = () => {
 
   const topFilters = (
     <>
-      <ReportSelect 
-        label={dateRange} 
-        prefix="Date Range:" 
-        value={dateRange} 
-        onChange={(e) => setDateRange(e.target.value)}
-        options={['daily', 'weekly', 'monthly']}
-      />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
-        <ChevronLeft 
-          onClick={handlePrevDate}
-          sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} 
-        />
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 600, minWidth: 80, textAlign: 'center', whiteSpace: 'nowrap' }}>
-          {currentDate.format('MMM DD, YYYY')}
-        </Typography>
-        <ChevronRight 
-          onClick={handleNextDate}
-          sx={{ fontSize: '1.1rem', color: '#337ab7', cursor: 'pointer', '&:hover': { opacity: 0.7 } }} 
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Start Date:</Typography>
+        <DatePicker
+          value={startDate}
+          onChange={(v) => setStartDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+          }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Date:</Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#337ab7', whiteSpace: 'nowrap' }}>
-          {currentDate.format('MM/DD/YYYY')}
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>End Date:</Typography>
+        <DatePicker
+          value={endDate}
+          onChange={(v) => setEndDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+          }}
+        />
       </Box>
     </>
   );
 
   return (
-    <React.Fragment>
-      <ReportLayout title="Patient By Discount Or Edited Fee:">
-        <Typography variant="caption" sx={{ display: 'block', mb: 2, color: '#999', fontStyle: 'italic', fontSize: '0.65rem' }}>
-          Please note that Adjustment dates do not exist before 01/24/2023, so any data before that will not be displayed.
-        </Typography>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <React.Fragment>
+        <ReportLayout title="Patient By Discount Or Edited Fee:">
+          <Typography variant="caption" sx={{ display: 'block', mb: 2, color: '#999', fontStyle: 'italic', fontSize: '0.65rem' }}>
+            Please note that Adjustment dates do not exist before 01/24/2023, so any data before that will not be displayed.
+          </Typography>
 
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          onApplyFilters={() => console.log('Apply Filters')}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              onApplyFilters={() => console.log('Apply Filters')}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
 
-        <ReportDataTable 
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of patients = {DUMMY_DATA.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={DUMMY_DATA.length > 0}
+              />
+            </Box>
+          </Box>
+
+          <ReportDataTable 
           columns={columns} 
           data={DUMMY_DATA} 
           renderRow={renderRow} 
         />
       </ReportLayout>
 
-      <CreateTemplateDialog 
-        open={templateDialogOpen} 
-        onClose={() => setTemplateDialogOpen(false)} 
-        onSave={(name) => alert(`Template "${name}" saved!`)} 
-      />
-    </React.Fragment>
+        <CreateTemplateDialog 
+          open={templateDialogOpen} 
+          onClose={() => setTemplateDialogOpen(false)} 
+          onSave={(name) => alert(`Template "${name}" saved!`)} 
+        />
+      </React.Fragment>
+    </LocalizationProvider>
   );
 };
 

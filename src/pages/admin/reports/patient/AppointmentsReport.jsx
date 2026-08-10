@@ -8,6 +8,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   {
@@ -161,14 +162,28 @@ const AppointmentsReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Appointments Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={() => console.log('Apply Filters')}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
+
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of appointments = {DUMMY_DATA.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={DUMMY_DATA.length > 0}
+              />
+            </Box>
+          </Box>
 
           <ReportDataTable 
             columns={columns} 

@@ -11,6 +11,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { patient: 'Alice Smith', type: 'Recare', providers: 'SAB', duration: '70 mins', prefDay: 'Thurs', prefTime: '09:30 AM', procedures: 'BW4, hygiene, fl, PA1, compex, PAadd...', aptDate: 'Apr 23, 2026', nextAptDate: '', reason: 'No show - please take deposit next time scheduling. KMH' },
@@ -102,13 +103,27 @@ const NoShowAppointmentsReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="NoShow Appointments Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            onApplyFilters={handleApply}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              onApplyFilters={handleApply}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
+
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of appointments = {data.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting...')}
+                onPrint={() => window.print()}
+                hasData={data.length > 0}
+              />
+            </Box>
+          </Box>
 
           <ReportDataTable 
             columns={columns} 

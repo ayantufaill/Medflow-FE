@@ -6,6 +6,7 @@ import {
 import { Edit as EditIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { number: '1249', patient: 'John Doe', flags: 'VIP, Pre-med', lastAppointment: '05/01/2026' },
@@ -98,12 +99,6 @@ const PatientFlagsReport = () => {
     </>
   );
 
-  const bottomRowLeftActions = (
-    <Typography variant="caption" sx={{ fontWeight: 700, textDecoration: 'underline', color: '#1e293b', mr: 2 }}>
-      Number of Patients: {showData ? DUMMY_DATA.length : 0}
-    </Typography>
-  );
-
   const handleSaveFlags = (flags) => {
     if (dialogMode === 'include') {
       setIncludeFlags(flags);
@@ -169,15 +164,28 @@ const PatientFlagsReport = () => {
   return (
     <React.Fragment>
       <ReportLayout title="Patient Flags Report:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          bottomRowLeftActions={bottomRowLeftActions}
-          onApplyFilters={() => setShowData(true)}
-          onClearAll={() => { setFilterBy('active'); setShowData(false); }}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
+        <Box className="hide-on-print" sx={{ mb: 2 }}>
+          <ReportFilterBar 
+            topRowFilters={topFilters}
+            onApplyFilters={() => setShowData(true)}
+            onClearAll={() => { setFilterBy('active'); setShowData(false); }}
+            onCreateTemplate={() => setTemplateDialogOpen(true)}
+          />
+        </Box>
+
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of patients = {showData ? DUMMY_DATA.length : 0})
+          </Typography>
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={() => alert('Exporting CSV...')}
+              onPrint={() => window.print()}
+              hasData={showData && DUMMY_DATA.length > 0}
+            />
+          </Box>
+        </Box>
 
         {!showData ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>

@@ -4,6 +4,7 @@ import {
 } from '@mui/material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { patient: 'Bonnie Fuller', provider: 'Dr. Smith', created: '05/07/2026', due: '', shared: '05/07/2026', status: 'Sent Out' },
@@ -69,13 +70,27 @@ const ReferralDocumentReport = () => {
   return (
     <React.Fragment>
       <ReportLayout title="Referral Document:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          onApplyFilters={() => console.log('Apply Filters')}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
+        <Box className="hide-on-print" sx={{ mb: 2 }}>
+          <ReportFilterBar 
+            topRowFilters={topFilters}
+            onApplyFilters={() => console.log('Apply Filters')}
+            onCreateTemplate={() => setTemplateDialogOpen(true)}
+          />
+        </Box>
+
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of documents = {DUMMY_DATA.length})
+          </Typography>
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={() => alert('Exporting CSV...')}
+              onPrint={() => window.print()}
+              hasData={DUMMY_DATA.length > 0}
+            />
+          </Box>
+        </Box>
 
         <ReportDataTable 
           columns={columns} 

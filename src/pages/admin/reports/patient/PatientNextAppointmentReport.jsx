@@ -8,6 +8,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { id: '192', patient: 'Alice Smith', status: 'Active', apptDate: 'Jul 21, 2026', type: 'Recare', apptStatus: 'Unconfirmed', newPatient: 'No', provider: 'Christina Sabour', email: 'alice@example.com', phone: '123-456-7890', text: 'Yes', emailPerm: 'Yes', review: 'No' },
@@ -98,23 +99,32 @@ const PatientNextAppointmentReport = () => {
     </>
   );
 
-  const bottomRowLeftActions = (
-    <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mr: 2, color: '#1e293b' }}>Patient Count: 251</Typography>
-  );
-
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Patient By Next Appointment Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            bottomRowLeftActions={bottomRowLeftActions}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={() => console.log('Apply Filters')}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
+
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of patients = {DUMMY_DATA.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={DUMMY_DATA.length > 0}
+              />
+            </Box>
+          </Box>
 
           <ReportDataTable 
             columns={columns} 

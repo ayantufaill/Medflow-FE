@@ -21,6 +21,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { patient: 'Alice Smith', type: 'Recare', providers: 'KAR', duration: '60 mins', prefDay: 'Thurs', prefTime: '11:30 AM', procedures: 'BW4, fl, hygiene', aptDate: 'Apr 09, 2026', nextAptDate: '', reason: 'She is out of the country.' },
@@ -118,13 +119,27 @@ const CancelledAppointmentsReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Cancelled Appointments Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            onApplyFilters={handleApply}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={handleExportCSV}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              onApplyFilters={handleApply}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
+
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of appointments = {data.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={handleExportCSV}
+                onPrint={() => window.print()}
+                hasData={data.length > 0}
+              />
+            </Box>
+          </Box>
 
           <ReportDataTable 
             columns={columns} 

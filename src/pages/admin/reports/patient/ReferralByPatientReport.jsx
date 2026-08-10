@@ -26,6 +26,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import {
   fetchReferralByPatientReport,
   selectReferralByPatientData,
@@ -280,9 +281,21 @@ const ReferralByPatientReport = () => {
             topRowFilters={topFilters}
             onClearAll={handleClearFilters}
             onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={handleExport}
-            onPrint={handlePrint}
           />
+        </Box>
+
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of patients = {data.length})
+          </Typography>
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={handleExport}
+              onPrint={handlePrint}
+              hasData={data.length > 0}
+            />
+          </Box>
         </Box>
 
       {/* Table Section */}

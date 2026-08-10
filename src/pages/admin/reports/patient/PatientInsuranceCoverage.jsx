@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportSelect, ReportDivider, ReportSearchInput } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import {
   Box,
   Typography,
@@ -21,16 +22,12 @@ import {
   CircularProgress,
   Autocomplete,
   Chip,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { Search as SearchIcon } from '@mui/icons-material';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import PrintIcon from '@mui/icons-material/Print';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { useInsuranceCatalog } from '../../../../hooks/redux/useInsuranceCatalog';
 import {
@@ -414,6 +411,19 @@ const PatientInsuranceCoverage = () => {
 
   const topFilters = (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <ReportSelect 
+        label="GROUP BY" 
+        options={[
+          { value: 'no', label: 'No Grouping' },
+          { value: 'payer', label: 'Payer' },
+          { value: 'plan', label: 'Plan' },
+          { value: 'fee', label: 'Fee Schedule' }
+        ]} 
+        value={grouping} 
+        onChange={(e) => setGrouping(e.target.value)} 
+        width="160px" 
+      />
+      <ReportDivider />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <RadioGroup row value={apptFilterType} onChange={(e) => setApptFilterType(e.target.value)}>
           <FormControlLabel value="no" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>No Appt Filter</Typography>} />
@@ -647,21 +657,6 @@ const PatientInsuranceCoverage = () => {
       <Typography variant="h6" className="hide-on-print" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
         Patient Insurance Coverage
       </Typography>
-      
-      {/* View Toggle Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs 
-          value={grouping} 
-          onChange={(e, newVal) => setGrouping(newVal)} 
-          textColor="primary" 
-          indicatorColor="primary"
-        >
-          <Tab label="No Grouping" value="no" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
-          <Tab label="Group By Payer" value="payer" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
-          <Tab label="Group By Plan" value="plan" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
-          <Tab label="Group By Fee Schedule" value="fee" sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.9rem' }} />
-        </Tabs>
-      </Box>
 
       <Box className="hide-on-print" sx={{ mb: 2 }}>
         <ReportFilterBar 
@@ -670,15 +665,24 @@ const PatientInsuranceCoverage = () => {
           onApplyFilters={handleApplyFilters}
           onClearAll={handleClearFilters}
           onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={grouping === 'no' ? handleExportCSV : null}
-          onPrint={grouping === 'no' ? handlePrint : null}
         />
       </Box>
 
-      {/* Summary Text */}
-      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-        (number of patient policies = {data.length})
-      </Typography>
+      {/* Summary Text and Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+          (number of patient policies = {data.length})
+        </Typography>
+        {grouping === 'no' && (
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={handleExportCSV}
+              onPrint={handlePrint}
+              hasData={data.length > 0}
+            />
+          </Box>
+        )}
+      </Box>
 
       {/* Table Section */}
       {loading ? (
@@ -697,25 +701,12 @@ const PatientInsuranceCoverage = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {grouping === 'payer' ? 'Payer' : grouping === 'plan' ? 'Plan' : 'Fee Schedule'}: {groupName} ({groupData.length} patients)
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<FileDownloadIcon />}
-                      onClick={() => handleExportGroupCSV(groupName, groupData)}
-                      sx={{ fontSize: '0.7rem', py: 0.2 }}
-                    >
-                      Export CSV
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<PrintIcon />}
-                      onClick={() => handlePrintGroup(tableId, groupName)}
-                      sx={{ fontSize: '0.7rem', py: 0.2 }}
-                    >
-                      Print
-                    </Button>
+                  <Box sx={{ transform: 'translateY(-4px)' }}>
+                    <ProductionReportActions
+                      onExportCsv={() => handleExportGroupCSV(groupName, groupData)}
+                      onPrint={() => handlePrintGroup(tableId, groupName)}
+                      hasData={groupData.length > 0}
+                    />
                   </Box>
                 </Box>
                 {renderTable(groupData, tableId)}

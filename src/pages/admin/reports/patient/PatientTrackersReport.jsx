@@ -8,6 +8,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
 const DUMMY_DATA = [
   { 
@@ -100,8 +101,7 @@ const PatientTrackersReport = () => {
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 120, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
           }}
         />
       </Box>
@@ -112,8 +112,7 @@ const PatientTrackersReport = () => {
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 120, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
           }}
         />
       </Box>
@@ -124,14 +123,28 @@ const PatientTrackersReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Patient Trackers Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={() => console.log('Apply Filters')}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
+
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of patient trackers = {DUMMY_DATA.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={DUMMY_DATA.length > 0}
+              />
+            </Box>
+          </Box>
 
           <ReportDataTable 
             columns={columns} 
