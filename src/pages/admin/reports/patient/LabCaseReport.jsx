@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Button, Checkbox, Select, MenuItem, Menu, IconButton, TableCell, TableRow
+  Box, Typography, Button, Checkbox, Select, MenuItem, Menu, IconButton, TableCell, TableRow, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   DeleteOutline, EditOutlined, VisibilityOutlined, CheckCircle
 } from '@mui/icons-material';
@@ -12,23 +13,37 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchLabCaseReport, selectLabCaseData, selectLabCaseDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { 
-    patient: 'Stephanie Peterson', 
-    provider: 'Evident', 
-    procedures: '- Cd8999.1 Retainer delivery', 
-    dueDate: '05/08/2026', 
-    apptDate: '', 
-    sharedDate: '', 
-    status: 'Quality Checked',
-  },
-];
+
 
 const LabCaseReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectLabCaseData) || [];
+  const loading = useSelector(selectLabCaseDataLoading);
+
   const [startDate, setStartDate] = useState(dayjs('2026-05-08'));
   const [endDate, setEndDate] = useState(null);
+  const [status, setStatus] = useState('all');
+  const [dateFilterType, setDateFilterType] = useState('Lab Due Date');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const fetchReport = () => {
+    dispatch(fetchLabCaseReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      status,
+      dateFilterType
+    }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
   const [dueDateAnchorEl, setDueDateAnchorEl] = useState(null);
@@ -103,9 +118,9 @@ const LabCaseReport = () => {
       <ReportSelect 
         label="Select Status" 
         prefix="Filter By:" 
-        defaultValue="Select Status" 
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
         options={[
-          { value: 'Select Status', label: 'Select Status' },
           { value: 'all', label: 'All Statuses' },
           { value: 'qc', label: 'Quality Checked' },
           { value: 'pending', label: 'Pending' },
@@ -120,7 +135,8 @@ const LabCaseReport = () => {
     <>
       <ReportSelect 
         label="Lab Due Date" 
-        defaultValue="Lab Due Date" 
+        value={dateFilterType}
+        onChange={(e) => setDateFilterType(e.target.value)}
         options={[
           { value: 'Lab Due Date', label: 'Lab Due Date' },
           { value: 'Appointment Date', label: 'Appointment Date' },
@@ -138,7 +154,7 @@ const LabCaseReport = () => {
             <ReportFilterBar 
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
-              onApplyFilters={() => console.log('Apply Filters')}
+              onApplyFilters={handleApply}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
           </Box>
@@ -146,7 +162,7 @@ const LabCaseReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of lab cases = {DUMMY_DATA.length})
+              (number of lab cases = {reportData.length})
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography variant="caption" sx={{ color: '#337ab7', cursor: 'pointer', fontSize: '0.7rem' }}>
@@ -156,17 +172,23 @@ const LabCaseReport = () => {
                 <ProductionReportActions
                   onExportCsv={() => alert('Exporting CSV...')}
                   onPrint={() => window.print()}
-                  hasData={DUMMY_DATA.length > 0}
+                  hasData={reportData.length > 0}
                 />
               </Box>
             </Box>
           </Box>
 
-          <ReportDataTable 
-          columns={columns} 
-          data={DUMMY_DATA} 
-          renderRow={renderRow} 
-        />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
       </ReportLayout>
 
         <CreateTemplateDialog 

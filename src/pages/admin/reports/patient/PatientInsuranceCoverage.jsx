@@ -36,118 +36,7 @@ import {
   selectInsuranceCoverageLoading,
 } from '../../../../store/slices/patientReportSlice';
 
-const INITIAL_DATA = [
-  {
-    number: '1262',
-    patient: 'John Doe',
-    email: 'john.doe@example.com',
-    planName: 'Standard Insurance (160-173134-1)',
-    payer: 'Standard Insurance',
-    lastAppointment: '',
-    feeSchedule: '',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1254',
-    patient: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    planName: 'Walmart (8000-00010000)',
-    payer: 'Delta Dental of Arkansas',
-    lastAppointment: '05/05/2026',
-    feeSchedule: '',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1247',
-    patient: 'Robert Brown',
-    email: 'robert.b@example.com',
-    planName: 'Blue Cross Blue Shield of Texas (387291)',
-    payer: 'Blue Cross Blue Shield of Texas',
-    lastAppointment: '',
-    feeSchedule: 'Careington PPO Platinum (directly in network)',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1247',
-    patient: 'Michael Johnson',
-    email: 'm.johnson@example.com',
-    planName: 'United Concordia (858527000)',
-    payer: 'United Concordia',
-    lastAppointment: '',
-    feeSchedule: '',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1246',
-    patient: 'William Davis',
-    email: 'w.davis@example.com',
-    planName: 'CIGNA (3345155)',
-    payer: 'CIGNA',
-    lastAppointment: '',
-    feeSchedule: 'Careington PPO Platinum (directly in network)',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1241',
-    patient: 'Elizabeth Garcia',
-    email: 'e.garcia@example.com',
-    planName: 'Delta Dental of Pennsylvania (20657-05048)',
-    payer: 'Delta Dental of Pennsylvania',
-    lastAppointment: '05/05/2026',
-    feeSchedule: '',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1239',
-    patient: 'David Martinez',
-    email: 'd.martinez@example.com',
-    planName: 'CIGNA (0653848)',
-    payer: 'CIGNA',
-    lastAppointment: '',
-    feeSchedule: 'Careington PPO Platinum (directly in network)',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1238',
-    patient: 'Susan Wilson',
-    email: 's.wilson@example.com',
-    planName: 'Aetna Dental Plans (014197501000001)',
-    payer: 'Aetna Dental Plans',
-    lastAppointment: '04/15/2026',
-    feeSchedule: 'Careington PPO Platinum (directly in network)',
-    planRenewalDate: 'June',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1236',
-    patient: 'Joseph Anderson',
-    email: 'j.anderson@example.com',
-    planName: 'ERICSSON INC. (069802102100001)',
-    payer: 'Aetna Dental Plans',
-    lastAppointment: '04/08/2026',
-    feeSchedule: 'Careington PPO Platinum (directly in network)',
-    planRenewalDate: 'January',
-    assignmentStatus: 'Assignment',
-  },
-  {
-    number: '1235',
-    patient: 'Charles Green',
-    email: 'c.green@example.com',
-    planName: '',
-    payer: '',
-    lastAppointment: '03/20/2026',
-    feeSchedule: '',
-    planRenewalDate: '',
-    assignmentStatus: '',
-  },
-];
+
 
 const PatientInsuranceCoverage = () => {
   const dispatch = useDispatch();
@@ -194,8 +83,8 @@ const PatientInsuranceCoverage = () => {
     setSearchResults(filtered);
     setShowDropdown(true);
   };
-  const [rawReportData, setRawReportData] = useState(INITIAL_DATA);
-  const [data, setData] = useState(INITIAL_DATA);
+  const [rawReportData, setRawReportData] = useState([]);
+  const [data, setData] = useState([]);
   const [grouping, setGrouping] = useState('no');
   const [assignmentFilter, setAssignmentFilter] = useState('no');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -216,12 +105,9 @@ const PatientInsuranceCoverage = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (reduxData && reduxData.length > 0) {
+    if (reduxData) {
       setRawReportData(reduxData);
       setData(reduxData);
-    } else {
-      setRawReportData(INITIAL_DATA);
-      setData(INITIAL_DATA);
     }
   }, [reduxData]);
 
@@ -407,6 +293,7 @@ const PatientInsuranceCoverage = () => {
     setApptEndDate('');
     setApptSingleDate('');
     setShowNoCoverage(false);
+    setGrouping('no');
   };
 
   const topFilters = (

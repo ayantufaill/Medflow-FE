@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow, Select, MenuItem, TableHead, Table, TableBody
+  Box, Typography, Checkbox, Button, TableCell, TableRow, Select, MenuItem, TableHead, Table, TableBody, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -9,16 +10,43 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchPatientNextAppointmentReport, selectNextAppointmentData, selectNextAppointmentDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { id: '192', patient: 'Alice Smith', status: 'Active', apptDate: 'Jul 21, 2026', type: 'Recare', apptStatus: 'Unconfirmed', newPatient: 'No', provider: 'Christina Sabour', email: 'alice@example.com', phone: '123-456-7890', text: 'Yes', emailPerm: 'Yes', review: 'No' },
-  { id: '610', patient: 'Bob Johnson', status: 'Active', apptDate: 'May 14, 2026', type: 'Recare', apptStatus: 'Unconfirmed', newPatient: 'No', provider: 'Christina Sabour', email: 'bob@example.com', phone: '123-456-7891', text: 'Yes', emailPerm: 'Yes', review: 'No' },
-];
+
 
 const PatientNextAppointmentReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectNextAppointmentData) || [];
+  const loading = useSelector(selectNextAppointmentDataLoading);
+
   const [startDate, setStartDate] = useState(dayjs('2026-05-08'));
   const [endDate, setEndDate] = useState(null);
+  
+  const [patientStatus, setPatientStatus] = useState('active');
+  const [provider, setProvider] = useState('all');
+  const [appointmentStatus, setAppointmentStatus] = useState('all');
+  const [flagsFilter, setFlagsFilter] = useState('all');
+
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const fetchReport = () => {
+    dispatch(fetchPatientNextAppointmentReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      patientStatus,
+      provider,
+      appointmentStatus,
+      flagsFilter
+    }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const columns = [
     { label: 'ID' },
@@ -83,11 +111,12 @@ const PatientNextAppointmentReport = () => {
       <ReportSelect 
         label="Active Patients Only" 
         prefix="Filter Report By:" 
-        defaultValue="active" 
-        options={[{ value: 'active', label: 'Active Patients Only' }]} 
+        value={patientStatus} 
+        onChange={(e) => setPatientStatus(e.target.value)}
+        options={[{ value: 'active', label: 'Active Patients Only' }, { value: 'all', label: 'All Patients' }]} 
       />
-      <ReportSelect label="All Providers" defaultValue="all" options={[{ value: 'all', label: 'All Providers' }]} />
-      <ReportSelect label="All Appointment Status" defaultValue="all" options={[{ value: 'all', label: 'All Appointment Status' }]} />
+      <ReportSelect label="All Providers" value={provider} onChange={(e) => setProvider(e.target.value)} options={[{ value: 'all', label: 'All Providers' }]} />
+      <ReportSelect label="All Appointment Status" value={appointmentStatus} onChange={(e) => setAppointmentStatus(e.target.value)} options={[{ value: 'all', label: 'All Appointment Status' }]} />
       <ReportSelect label="Default" prefix="Sort Report By:" defaultValue="default" options={[{ value: 'default', label: 'Default' }]} />
     </>
   );
@@ -95,7 +124,7 @@ const PatientNextAppointmentReport = () => {
   const bottomFilters = (
     <>
       <ReportCheckbox label="Show Flags in Report" />
-      <ReportSelect label="Pts With Or Without Flags" defaultValue="all" options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} />
+      <ReportSelect label="Pts With Or Without Flags" value={flagsFilter} onChange={(e) => setFlagsFilter(e.target.value)} options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} />
     </>
   );
 
@@ -107,7 +136,7 @@ const PatientNextAppointmentReport = () => {
             <ReportFilterBar 
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
-              onApplyFilters={() => console.log('Apply Filters')}
+              onApplyFilters={handleApply}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
           </Box>
@@ -115,22 +144,28 @@ const PatientNextAppointmentReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of patients = {DUMMY_DATA.length})
+              (number of patients = {reportData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={() => alert('Exporting CSV...')}
                 onPrint={() => window.print()}
-                hasData={DUMMY_DATA.length > 0}
+                hasData={reportData.length > 0}
               />
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

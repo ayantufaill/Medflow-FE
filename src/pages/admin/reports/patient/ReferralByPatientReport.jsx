@@ -29,15 +29,11 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import {
   fetchReferralByPatientReport,
-  selectReferralByPatientData,
+  selectReferralByPatient,
   selectPatientReportLoading,
 } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { patient: 'Melina Heck', referralSource: 'Melina Jackson', phone: '+13607368380', email: '' },
-  { patient: 'Brad Pitt', referralSource: 'john bosco', phone: '+14022107551', email: 'nicole@pannetondental.com' },
-  { patient: 'Travis Kendall', referralSource: 'Melina Sistoso', phone: '+19037462410', email: 'traviskendall1@gmail.com' },
-];
+
 
 const DATE_RANGES = [
   'Daily',
@@ -67,7 +63,7 @@ const ActionIcons = () => (
 
 const ReferralByPatientReport = () => {
   const dispatch = useDispatch();
-  const rawReportData = useSelector(selectReferralByPatientData);
+  const rawReportData = useSelector(selectReferralByPatient);
   const loading = useSelector(selectPatientReportLoading);
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -76,7 +72,7 @@ const ReferralByPatientReport = () => {
   const [endDate, setEndDate] = useState(getTodayString());
   const [dateRange, setDateRange] = useState('Daily');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [data, setData] = useState(DUMMY_DATA);
+  const [data, setData] = useState([]);
 
   const computeDates = (mode) => {
     const today = new Date();
@@ -178,20 +174,18 @@ const ReferralByPatientReport = () => {
     }));
   }, [dispatch, startDate, endDate, dateRange]);
 
-  // Sync redux state to local state (with fallback to dummy data)
+  // Sync redux state to local state
   useEffect(() => {
-    if (rawReportData && rawReportData.length > 0) {
+    if (rawReportData) {
       const mapped = rawReportData.map((item) => ({
-        patient: item.referred,
-        referralSource: item.referredBy,
-        phone: '',
-        email: '',
+        patient: item.referred || item.patient,
+        referralSource: item.referredBy || item.referralSource,
+        phone: item.phone || '',
+        email: item.email || '',
       }));
       setData(mapped);
-    } else if (!loading) {
-      setData(DUMMY_DATA);
     }
-  }, [rawReportData, loading]);
+  }, [rawReportData]);
 
   const groupedData = useMemo(() => {
     const groups = {};

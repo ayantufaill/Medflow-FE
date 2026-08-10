@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Button, Select, MenuItem, TableCell, TableRow
+  Box, Typography, Button, Select, MenuItem, TableCell, TableRow, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchReferralDocumentReport, selectReferralDocumentData, selectReferralDocumentDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { patient: 'Bonnie Fuller', provider: 'Dr. Smith', created: '05/07/2026', due: '', shared: '05/07/2026', status: 'Sent Out' },
-  { patient: 'Sarah Miller', provider: 'Dr. Johnson', created: '05/04/2026', due: '', shared: '05/04/2026', status: 'Sent Out' },
-  { patient: 'Charlie Wright', provider: 'Dr. Brown', created: '04/30/2026', due: '', shared: '05/01/2026', status: 'Sent Out' },
-  { patient: 'David Lee', provider: 'Dr. Davis', created: '04/29/2026', due: '', shared: '04/29/2026', status: 'Sent Out' },
-  { patient: 'Jane Smith', provider: 'Dr. White', created: '04/22/2026', due: '', shared: '04/22/2026', status: 'Sent Out' },
-  { patient: 'Sabrina Sosa', provider: 'Dr. Green', created: '03/19/2026', due: '', shared: '', status: 'New' },
-];
+
 
 const ReferralDocumentReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectReferralDocumentData) || [];
+  const loading = useSelector(selectReferralDocumentDataLoading);
+
   const [status, setStatus] = useState('none');
   const [provider, setProvider] = useState('all');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const fetchReport = () => {
+    dispatch(fetchReferralDocumentReport({ status, provider }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const columns = [
     { label: 'Referral Patient' },
@@ -73,7 +84,7 @@ const ReferralDocumentReport = () => {
         <Box className="hide-on-print" sx={{ mb: 2 }}>
           <ReportFilterBar 
             topRowFilters={topFilters}
-            onApplyFilters={() => console.log('Apply Filters')}
+            onApplyFilters={handleApply}
             onCreateTemplate={() => setTemplateDialogOpen(true)}
           />
         </Box>
@@ -81,22 +92,28 @@ const ReferralDocumentReport = () => {
         {/* Summary Text and Actions */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
           <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-            (number of documents = {DUMMY_DATA.length})
+            (number of documents = {reportData.length})
           </Typography>
           <Box sx={{ transform: 'translateY(-4px)' }}>
             <ProductionReportActions
               onExportCsv={() => alert('Exporting CSV...')}
               onPrint={() => window.print()}
-              hasData={DUMMY_DATA.length > 0}
+              hasData={reportData.length > 0}
             />
           </Box>
         </Box>
 
-        <ReportDataTable 
-          columns={columns} 
-          data={DUMMY_DATA} 
-          renderRow={renderRow} 
-        />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <ReportDataTable 
+            columns={columns} 
+            data={reportData} 
+            renderRow={renderRow} 
+          />
+        )}
       </ReportLayout>
 
       <CreateTemplateDialog 

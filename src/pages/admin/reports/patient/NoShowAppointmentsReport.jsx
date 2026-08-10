@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow
+  Box, Typography, Checkbox, Button, TableCell, TableRow, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -12,29 +13,32 @@ dayjs.extend(customParseFormat);
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchNoShowAppointmentsReport, selectNoShowAppointmentsData, selectNoShowAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { patient: 'Alice Smith', type: 'Recare', providers: 'SAB', duration: '70 mins', prefDay: 'Thurs', prefTime: '09:30 AM', procedures: 'BW4, hygiene, fl, PA1, compex, PAadd...', aptDate: 'Apr 23, 2026', nextAptDate: '', reason: 'No show - please take deposit next time scheduling. KMH' },
-  { patient: 'Bob Johnson', type: 'Recare', providers: 'SAB', duration: '85 mins', prefDay: 'Thurs', prefTime: '08:15 AM', procedures: 'FMX, compex, 3d scan', aptDate: 'Apr 23, 2026', nextAptDate: '', reason: 'no show please take deposit yf' },
-];
+
 
 const NoShowAppointmentsReport = () => {
+  const dispatch = useDispatch();
+  const data = useSelector(selectNoShowAppointmentsData) || [];
+  const loading = useSelector(selectNoShowAppointmentsDataLoading);
+
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
-  const [data, setData] = useState(DUMMY_DATA);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
+  const fetchReport = () => {
+    dispatch(fetchNoShowAppointmentsReport({
+      startDate: startDate.format('YYYY-MM-DD'),
+      endDate: endDate.format('YYYY-MM-DD')
+    }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
   const handleApply = () => {
-    if (!startDate || !endDate) return;
-    const filtered = DUMMY_DATA.filter((item) => {
-      const itemDate = dayjs(item.aptDate, 'MMM DD, YYYY');
-      if (!itemDate.isValid()) return false;
-      return (
-        (itemDate.isSame(startDate, 'day') || itemDate.isAfter(startDate, 'day')) &&
-        (itemDate.isSame(endDate, 'day') || itemDate.isBefore(endDate, 'day'))
-      );
-    });
-    setData(filtered);
+    fetchReport();
   };
 
   const columns = [
@@ -125,11 +129,17 @@ const NoShowAppointmentsReport = () => {
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={data} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={data} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

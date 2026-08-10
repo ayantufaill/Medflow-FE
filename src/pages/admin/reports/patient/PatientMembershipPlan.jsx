@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPatientMembershipPlanReport, selectMembershipPlanData, selectMembershipPlanDataLoading } from '../../../../store/slices/patientReportSlice';
 import {
   Box,
   Typography,
@@ -28,15 +30,19 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
-const INITIAL_DATA = [
-  { number: '1249', patient: 'John Doe', email: 'john.doe@example.com', planName: 'Foundations (Perio) Program - New Patient', lastAppointment: '', renewalMonth: 'April' },
-  { number: '1210', patient: 'Jane Smith', email: 'jane.smith@example.com', planName: 'Foundations (Perio) Program - New Patient', lastAppointment: '', renewalMonth: 'February' },
-  { number: '540', patient: 'Robert Brown', email: 'robert.b@example.com', planName: 'Clean + Confident - Existing Patient', lastAppointment: '', renewalMonth: 'March' },
-];
+
 
 const PatientMembershipPlan = () => {
+  const dispatch = useDispatch();
+  const reduxData = useSelector(selectMembershipPlanData) || [];
+  const loading = useSelector(selectMembershipPlanDataLoading);
+
+  useEffect(() => {
+    dispatch(fetchPatientMembershipPlanReport());
+  }, [dispatch]);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [data, setData] = useState(INITIAL_DATA);
+  const [data, setData] = useState([]);
   const [grouping, setGrouping] = useState('no');
   const [renewalMonth, setRenewalMonth] = useState('');
 
@@ -50,9 +56,9 @@ const PatientMembershipPlan = () => {
   const [searchResults, setSearchResults] = useState([]);
 
   const availablePlans = useMemo(() => {
-    const plans = INITIAL_DATA.map(item => item.planName).filter(Boolean);
+    const plans = reduxData.map(item => item.planName).filter(Boolean);
     return [...new Set(plans)].sort().map(plan => ({ planName: plan }));
-  }, []);
+  }, [reduxData]);
 
   const handleSearch = (val) => {
     setSearchQuery(val);
@@ -70,7 +76,7 @@ const PatientMembershipPlan = () => {
   };
 
   const handleApplyFilters = () => {
-    const filtered = INITIAL_DATA.filter((item) => {
+    const filtered = reduxData.filter((item) => {
       // 1. Search Query
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || (
@@ -123,7 +129,8 @@ const PatientMembershipPlan = () => {
     apptStartDate,
     apptEndDate,
     apptSingleDate,
-    showNoPlan
+    showNoPlan,
+    reduxData
   ]);
 
   const groupedData = useMemo(() => {
@@ -427,7 +434,7 @@ const PatientMembershipPlan = () => {
         columns={columns} 
         data={tableData} 
         renderRow={renderRow} 
-        loading={false}
+        loading={loading}
         emptyMessage="No patient membership records found"
       />
     </div>

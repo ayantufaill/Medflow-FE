@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, Select, MenuItem
+  Box, Typography, Checkbox, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, Select, MenuItem, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -9,20 +10,15 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchAppointmentsReport, selectAppointmentsData, selectAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  {
-    patient: 'John Doe', flags: '', type: 'Treatment', status: 'Checked out complete', providers: 'KAR', operatory: 'Consult', aptDate: 'Apr 20, 2026', time: 'Mon, 08:00 AM', duration: '60 mins', procedures: 'fl / Scal w inflam', nextAptDate: 'Oct 01, 2026',
-  },
-  {
-    patient: 'Jane Smith', flags: '', type: 'Recare', status: 'Checked out complete', providers: 'SAB', operatory: 'Operatory 2', aptDate: 'Apr 15, 2026', time: 'Wed, 10:30 AM', duration: '60 mins', procedures: 'fl / hygiene / URQ undefined / U...', nextAptDate: 'May 13, 2026',
-  },
-  {
-    patient: 'Robert Brown', flags: '', type: 'Treatment', status: 'Cancelled Short Notice', providers: 'SAB', operatory: 'Operatory 4', aptDate: 'May 06, 2026', time: 'Wed, 12:30 PM', duration: '60 mins', procedures: '#30 OB, comp / #31 OB, comp', nextAptDate: '',
-  },
-];
+
 
 const AppointmentsReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectAppointmentsData) || [];
+  const loading = useSelector(selectAppointmentsDataLoading);
+
   const [dateType, setDateType] = useState('aptDate');
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
@@ -30,6 +26,23 @@ const AppointmentsReport = () => {
   const [status, setStatus] = useState('all');
   const [locationType, setLocationType] = useState('office');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const fetchReport = () => {
+    dispatch(fetchAppointmentsReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      provider,
+      status
+    }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const columns = [
     { label: 'Patient' },
@@ -166,7 +179,7 @@ const AppointmentsReport = () => {
             <ReportFilterBar 
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
-              onApplyFilters={() => console.log('Apply Filters')}
+              onApplyFilters={handleApply}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
           </Box>
@@ -174,22 +187,28 @@ const AppointmentsReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of appointments = {DUMMY_DATA.length})
+              (number of appointments = {reportData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={() => alert('Exporting CSV...')}
                 onPrint={() => window.print()}
-                hasData={DUMMY_DATA.length > 0}
+                hasData={reportData.length > 0}
               />
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

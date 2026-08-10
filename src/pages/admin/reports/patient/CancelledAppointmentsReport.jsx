@@ -22,33 +22,33 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchCancelledAppointmentsReport, selectCancelledAppointmentsData, selectCancelledAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { patient: 'Alice Smith', type: 'Recare', providers: 'KAR', duration: '60 mins', prefDay: 'Thurs', prefTime: '11:30 AM', procedures: 'BW4, fl, hygiene', aptDate: 'Apr 09, 2026', nextAptDate: '', reason: 'She is out of the country.' },
-  { patient: 'Bob Johnson', type: 'Recare', providers: 'SAB', duration: '85 mins', prefDay: 'Thurs', prefTime: '12:35 PM', procedures: 'fl, Maintenance, BW4, periodic ex', aptDate: 'Apr 16, 2026', nextAptDate: '', reason: 'pt has a meeting and will call to resched' },
-];
+
 
 const CancelledAppointmentsReport = () => {
   const dispatch = useDispatch();
-  const { cancelledAppointmentsData, loading } = useSelector((state) => state.patientReport || { cancelledAppointmentsData: [], loading: false });
+  const reportData = useSelector(selectCancelledAppointmentsData) || [];
+  const loading = useSelector(selectCancelledAppointmentsDataLoading);
 
   const [startDate, setStartDate] = useState(dayjs());
   const [endDate, setEndDate] = useState(dayjs());
   
-  const [data, setData] = useState(DUMMY_DATA);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
+  const fetchReport = () => {
+    dispatch(fetchCancelledAppointmentsReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+    }));
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
   const handleApply = () => {
-    if (!startDate || !endDate) return;
-    const filtered = DUMMY_DATA.filter((item) => {
-      const itemDate = dayjs(item.aptDate, 'MMM DD, YYYY');
-      if (!itemDate.isValid()) return false;
-      return (
-        (itemDate.isSame(startDate, 'day') || itemDate.isAfter(startDate, 'day')) &&
-        (itemDate.isSame(endDate, 'day') || itemDate.isBefore(endDate, 'day'))
-      );
-    });
-    setData(filtered);
+    fetchReport();
   };
 
   const handleExportCSV = () => alert("Exporting...");
@@ -130,22 +130,28 @@ const CancelledAppointmentsReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of appointments = {data.length})
+              (number of appointments = {reportData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCSV}
                 onPrint={() => window.print()}
-                hasData={data.length > 0}
+                hasData={reportData.length > 0}
               />
             </Box>
           </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={data} 
-            renderRow={renderRow} 
-          />
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

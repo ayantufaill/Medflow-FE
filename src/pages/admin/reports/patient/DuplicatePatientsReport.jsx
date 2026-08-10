@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import { TableCell, TableRow, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { TableCell, TableRow, Button, CircularProgress, Box } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportDataTable } from '../../../../components/reports/ui';
+import { fetchDuplicatePatientsReport, selectDuplicatePatientsData, selectDuplicatePatientsDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { id: '1049', firstName: 'Sarah', lastName: 'Miller', dob: 'Feb 03, 1983', status: 'Inactive', subscriber: 'False' },
-  { id: '1071', firstName: 'Sarah', lastName: 'Miller', dob: 'Feb 03, 1983', status: 'Inactive', subscriber: 'False' },
-  { id: '997', firstName: 'James', lastName: 'Wilson', dob: 'Feb 23, 1984', status: 'Active', subscriber: 'False' },
-  { id: '998', firstName: 'James', lastName: 'Wilson', dob: 'Feb 23, 1984', status: 'Inactive', subscriber: 'True' },
-  { id: '252', firstName: 'Mary', lastName: 'Davis', dob: 'Sep 16, 1968', status: 'Inactive', subscriber: 'False' },
-  { id: '253', firstName: 'Mary', lastName: 'Davis', dob: 'Sep 16, 1968', status: 'Active', subscriber: 'False' },
-  { id: '1024', firstName: 'John', lastName: 'Doe', dob: 'Sep 07, 1994', status: 'Active', subscriber: 'False' },
-  { id: '1025', firstName: 'John', lastName: 'Doe', dob: 'Sep 07, 1994', status: 'Inactive', subscriber: 'False' },
-];
+
 
 const DuplicatePatientsReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectDuplicatePatientsData) || [];
+  const loading = useSelector(selectDuplicatePatientsDataLoading);
+
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  
+  useEffect(() => {
+    dispatch(fetchDuplicatePatientsReport());
+  }, [dispatch]);
+
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   const handlePrint = () => window.print();
@@ -25,7 +27,7 @@ const DuplicatePatientsReport = () => {
     const headers = ['ID', 'First Name', 'Last Name', 'Date of Birth', 'Status', 'Subscriber'];
     const csvRows = [
       headers.join(','),
-      ...DUMMY_DATA.map((row) =>
+      ...reportData.map((row) =>
         [row.id, row.firstName, row.lastName, row.dob, row.status, row.subscriber].join(',')
       ),
     ].join('\n');
@@ -65,11 +67,17 @@ const DuplicatePatientsReport = () => {
           onPrint={handlePrint}
         />
 
-        <ReportDataTable 
-          columns={columns} 
-          data={DUMMY_DATA} 
-          renderRow={renderRow} 
-        />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <ReportDataTable 
+            columns={columns} 
+            data={reportData} 
+            renderRow={renderRow} 
+          />
+        )}
       </ReportLayout>
 
       <CreateTemplateDialog 
