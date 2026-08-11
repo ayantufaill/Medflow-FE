@@ -208,7 +208,11 @@ export const ClaimsDialogs = ({
                       size="small"
                       sx={textFieldSx}
                       value={editingClaim.planName || ''}
-                      onChange={(e) => setEditingClaim({ ...editingClaim, planName: e.target.value })}
+                      onChange={(e) => setEditingClaim({ 
+                        ...editingClaim, 
+                        planName: e.target.value,
+                        policyNumber: e.target.value // Backup for API payload
+                      })}
                     />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
@@ -221,7 +225,14 @@ export const ClaimsDialogs = ({
                       sx={textFieldSx}
                       type="number"
                       value={editingClaim.submittedValue || 0}
-                      onChange={(e) => setEditingClaim({ ...editingClaim, submittedValue: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                        setEditingClaim({ 
+                          ...editingClaim, 
+                          submittedValue: val,
+                          submittedAmount: val || 0 // Backup for API payload
+                        });
+                      }}
                     />
                   </Grid>
                 </>
@@ -249,7 +260,11 @@ export const ClaimsDialogs = ({
                   size="small"
                   sx={textFieldSx}
                   value={editingClaim.clearingHouseMessage || ''}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, clearingHouseMessage: e.target.value })}
+                  onChange={(e) => setEditingClaim({ 
+                    ...editingClaim, 
+                    clearingHouseMessage: e.target.value,
+                    denialReason: e.target.value // Backup for API payload
+                  })}
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
@@ -261,7 +276,12 @@ export const ClaimsDialogs = ({
                   multiline
                   rows={2}
                   value={editingClaim.description}
-                  onChange={(e) => setEditingClaim({ ...editingClaim, description: e.target.value })}
+                  onChange={(e) => setEditingClaim({ 
+                    ...editingClaim, 
+                    description: e.target.value,
+                    notes: e.target.value // Backup for API payload
+                  })}
+                  sx={textFieldSx}
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
@@ -274,6 +294,7 @@ export const ClaimsDialogs = ({
                   rows={2}
                   value={editingClaim.notes}
                   onChange={(e) => setEditingClaim({ ...editingClaim, notes: e.target.value })}
+                  sx={textFieldSx}
                 />
               </Grid>
             </Grid>

@@ -62,6 +62,7 @@ export const StandardClaimsTable = ({
   handleOpenEdit = () => {},
   handleOpenAttach = () => {},
   handleOpenPreview = () => {},
+  handleOpenInvalidInfo = () => {},
   handleDeletePredetermination = () => {},
   handleToggleHide = () => {},
   dateRange = 'none',
@@ -110,7 +111,7 @@ export const StandardClaimsTable = ({
             "& .MuiTableCell-root": {
               py: 1,
               px: 1,
-              fontSize: "0.7rem",
+              fontSize: "0.75rem",
               fontWeight: 700,
               borderBottom: "1px solid #e2e8f0",
               color: 'inherit',
@@ -174,25 +175,25 @@ export const StandardClaimsTable = ({
               >
                 <MenuItem
                   onClick={() => handleSelectSubset("all")}
-                  sx={{ fontSize: "0.8rem", py: 0.8, px: 2 }}
+                  sx={{ fontSize: "0.75rem", py: 0.8, px: 2 }}
                 >
                   Select All
                 </MenuItem>
                 <MenuItem
                   onClick={() => handleSelectSubset("ready")}
-                  sx={{ fontSize: "0.8rem", py: 0.8, px: 2 }}
+                  sx={{ fontSize: "0.75rem", py: 0.8, px: 2 }}
                 >
                   Select All Ready
                 </MenuItem>
                 <MenuItem
                   onClick={() => handleSelectSubset("errored")}
-                  sx={{ fontSize: "0.8rem", py: 0.8, px: 2 }}
+                  sx={{ fontSize: "0.75rem", py: 0.8, px: 2 }}
                 >
                   Select All with Alerts/Errors
                 </MenuItem>
                 <MenuItem
                   onClick={() => handleSelectSubset("none")}
-                  sx={{ fontSize: "0.8rem", py: 0.8, px: 2 }}
+                  sx={{ fontSize: "0.75rem", py: 0.8, px: 2 }}
                 >
                   Clear Selection
                 </MenuItem>
@@ -318,7 +319,7 @@ export const StandardClaimsTable = ({
                 >
                   <Typography
                     variant="body2"
-                    sx={{ color: "#64748b", fontStyle: "italic" }}
+                    sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}
                   >
                     No claims found matching the selection criteria.
                   </Typography>
@@ -432,21 +433,21 @@ export const StandardClaimsTable = ({
                     {/* Patient Name (+ Code & DOB) */}
                     <TableCell>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif", 
                           fontWeight: 600,
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#3b82f6",
-                          fontSize: "0.8rem",
+                          fontSize: "0.75rem",
                           cursor: "pointer",
                         }}
                       >
                         {claim.patientName}
                       </Typography>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif", 
                           color: "#64748b",
                           fontWeight: 400,
-                          fontSize: "0.68rem",
+                          fontSize: "0.75rem",
                         }}
                       >
                         {claim.patientCode}
@@ -454,10 +455,10 @@ export const StandardClaimsTable = ({
                       {(activeTab === 4 || activeTab === 5) &&
                         claim.patientDob && (
                           <Typography
-                            sx={{
+                            sx={{ fontFamily: "Inter, sans-serif", 
                               color: "#64748b",
                               mt: 0.2,
-                              fontSize: "0.68rem",
+                              fontSize: "0.75rem",
                             }}
                           >
                             {claim.patientDob}
@@ -468,7 +469,7 @@ export const StandardClaimsTable = ({
                     {/* Claim # (+ Created Date) */}
                     <TableCell>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif", 
                           fontWeight: 600,
                           color: isError && activeTab === 0 ? "#e53e3e" : "#1e293b",
                           fontSize: "0.75rem",
@@ -481,10 +482,10 @@ export const StandardClaimsTable = ({
                       </Typography>
                       {activeTab === 4 && claim.createdDate && (
                         <Typography
-                          sx={{
+                          sx={{ fontFamily: "Inter, sans-serif", 
                             color: "#64748b",
                             fontStyle: "normal",
-                            fontSize: "0.68rem",
+                            fontSize: "0.75rem",
                           }}
                         >
                           ({claim.createdDate})
@@ -495,12 +496,12 @@ export const StandardClaimsTable = ({
                     {/* Claim Type */}
                     <TableCell>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif", 
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#64748b",
                           display: "flex",
                           flexDirection: "column",
-                          fontSize: "0.7rem",
+                          fontSize: "0.75rem",
                         }}
                       >
                         <span style={{ fontWeight: 600 }}>
@@ -515,7 +516,7 @@ export const StandardClaimsTable = ({
                     {/* Created Date / Sent Date */}
                     <TableCell>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#475569",
                         }}
@@ -529,7 +530,7 @@ export const StandardClaimsTable = ({
                       activeTab === 3 ||
                       activeTab === 4) && (
                       <TableCell>
-                        <Typography sx={{ color: "#475569" }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569" }}>
                           {claim.printedDate || "—"}
                         </Typography>
                       </TableCell>
@@ -538,7 +539,7 @@ export const StandardClaimsTable = ({
                     {/* Subscriber */}
                     {activeTab === 4 && (
                       <TableCell>
-                        <Typography sx={{ color: "#475569", fontWeight: 500 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
                           {claim.subscriber || "—"}
                         </Typography>
                       </TableCell>
@@ -547,11 +548,11 @@ export const StandardClaimsTable = ({
                     {/* Carrier */}
                     <TableCell>
                       <Typography
-                        sx={{
+                        sx={{ fontFamily: "Inter, sans-serif", 
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#475569",
                           fontWeight: 500,
-                          fontSize: "0.72rem",
+                          fontSize: "0.75rem",
                         }}
                       >
                         {claim.carrier}
@@ -562,10 +563,10 @@ export const StandardClaimsTable = ({
                     {activeTab === 4 && (
                       <TableCell>
                         <Typography
-                          sx={{
+                          sx={{ fontFamily: "Inter, sans-serif", 
                             color: "#475569",
                             fontStyle: "normal",
-                            fontSize: "0.7rem",
+                            fontSize: "0.75rem",
                           }}
                         >
                           {claim.planName || "—"}
@@ -587,7 +588,7 @@ export const StandardClaimsTable = ({
                         }
                         sx={{
                           textTransform: "none",
-                          fontSize: "0.7rem",
+                          fontSize: "0.75rem",
                           fontWeight: 600,
                           color: "#1a3a6b",
                           padding: "1px 6px",
@@ -608,7 +609,7 @@ export const StandardClaimsTable = ({
                     {/* Treating Provider */}
                     {activeTab === 5 && (
                       <TableCell>
-                        <Typography sx={{ color: "#475569", fontWeight: 500 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
                           {claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() || '—' : "—"}
                         </Typography>
                       </TableCell>
@@ -634,7 +635,7 @@ export const StandardClaimsTable = ({
                                 handleRowStatusChange(claim.id, e.target.value)
                               }
                               sx={{
-                                fontSize: "0.72rem",
+                                fontSize: "0.75rem",
                                 fontWeight: 500,
                                 color:
                                   claim.status === "denied" ||
@@ -644,51 +645,51 @@ export const StandardClaimsTable = ({
                                 "& .MuiSelect-select": { py: 0.5, pr: 2 },
                               }}
                             >
-                              <MenuItem value="draft" sx={{ fontSize: "0.7rem" }}>
+                              <MenuItem value="draft" sx={{ fontSize: "0.75rem" }}>
                                 Draft
                               </MenuItem>
                               <MenuItem
                                 value="submitted"
-                                sx={{ fontSize: "0.7rem" }}
+                                sx={{ fontSize: "0.75rem" }}
                               >
                                 Submitted
                               </MenuItem>
                               <MenuItem
                                 value="pending"
-                                sx={{ fontSize: "0.7rem" }}
+                                sx={{ fontSize: "0.75rem" }}
                               >
                                 Pending
                               </MenuItem>
                               <MenuItem
                                 value="accepted"
-                                sx={{ fontSize: "0.7rem" }}
+                                sx={{ fontSize: "0.75rem" }}
                               >
                                 Accepted
                               </MenuItem>
-                              <MenuItem value="paid" sx={{ fontSize: "0.7rem" }}>
+                              <MenuItem value="paid" sx={{ fontSize: "0.75rem" }}>
                                 Paid
                               </MenuItem>
                               <MenuItem
                                 value="partial"
-                                sx={{ fontSize: "0.7rem" }}
+                                sx={{ fontSize: "0.75rem" }}
                               >
                                 Partial
                               </MenuItem>
                               <MenuItem
                                 value="denied"
-                                sx={{ fontSize: "0.7rem", color: "#d93838" }}
+                                sx={{ fontSize: "0.75rem", color: "#d93838" }}
                               >
                                 Denied
                               </MenuItem>
                               <MenuItem
                                 value="rejected"
-                                sx={{ fontSize: "0.7rem", color: "#d93838" }}
+                                sx={{ fontSize: "0.75rem", color: "#d93838" }}
                               >
                                 Rejected
                               </MenuItem>
                               <MenuItem
                                 value="cancelled"
-                                sx={{ fontSize: "0.7rem" }}
+                                sx={{ fontSize: "0.75rem" }}
                               >
                                 Cancelled
                               </MenuItem>
@@ -696,10 +697,10 @@ export const StandardClaimsTable = ({
                           </FormControl>
                         ) : (
                           <Typography
-                            sx={{
+                            sx={{ fontFamily: "Inter, sans-serif", 
                               fontWeight: 500,
                               color: "#1e293b",
-                              fontSize: "0.72rem",
+                              fontSize: "0.75rem",
                             }}
                           >
                             {claim.status}
@@ -721,10 +722,11 @@ export const StandardClaimsTable = ({
                           >
                             <Button
                               size="small"
+                              onClick={() => handleOpenInvalidInfo && handleOpenInvalidInfo(claim)}
                               sx={{
                                 backgroundColor: "#e53e3e",
                                 color: "#ffffff",
-                                fontSize: "0.65rem",
+                                fontSize: "0.75rem",
                                 fontWeight: 600,
                                 textTransform: "none",
                                 minWidth: "auto",
@@ -742,7 +744,7 @@ export const StandardClaimsTable = ({
                               onClick={() => handleRevalidate(claim.id)}
                               sx={{
                                 color: "#3182ce",
-                                fontSize: "0.7rem",
+                                fontSize: "0.75rem",
                                 fontWeight: 500,
                                 cursor: "pointer",
                                 "&:hover": { textDecoration: "underline" },
@@ -752,7 +754,7 @@ export const StandardClaimsTable = ({
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography sx={{ color: "#64748b" }}>—</Typography>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#64748b" }}>—</Typography>
                         )}
                       </TableCell>
                     )}
@@ -763,10 +765,10 @@ export const StandardClaimsTable = ({
                       activeTab === 4) && (
                       <TableCell>
                         <Typography
-                          sx={{
+                          sx={{ fontFamily: "Inter, sans-serif", 
                             color: claim.eraStatus ? "#d93838" : "#64748b",
                             fontWeight: 600,
-                            fontSize: "0.72rem",
+                            fontSize: "0.75rem",
                           }}
                         >
                           {claim.eraStatus || "—"}
@@ -785,7 +787,7 @@ export const StandardClaimsTable = ({
                       >
                         <Typography
                           noWrap={!isExpanded && !expandAllMessages}
-                          sx={{
+                          sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
                             color: "#1e293b",
                             fontWeight: 500,
                             whiteSpace:
@@ -803,7 +805,7 @@ export const StandardClaimsTable = ({
                     {/* Submitted Value */}
                     {activeTab === 4 && (
                       <TableCell sx={{ verticalAlign: "top" }}>
-                        <Typography sx={{ color: "#1a3a6b", fontWeight: 700 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#1a3a6b", fontWeight: 700 }}>
                           $
                           {(claim.submittedValue || 0).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
@@ -862,18 +864,18 @@ export const StandardClaimsTable = ({
                               }}
                             >
                               <Typography
-                                sx={{
+                                sx={{ fontFamily: "Inter, sans-serif", 
                                   color: "#475569",
                                   fontStyle: "italic",
-                                  fontSize: "0.72rem",
-                                  fontFamily: "Inter, sans-serif",
+                                  fontSize: "0.75rem",
+                                  
                                 }}
                               >
                                 {shortDesc}
                               </Typography>
                               {longDesc && (
                                 <Typography
-                                  sx={{
+                                  sx={{ fontFamily: "Inter, sans-serif", 
                                     color: "#1e293b",
                                     whiteSpace: "normal",
                                     wordBreak: "break-word",
@@ -882,8 +884,8 @@ export const StandardClaimsTable = ({
                                     p: 1,
                                     border: "1px solid #e2e8f0",
                                     borderRadius: "4px",
-                                    fontSize: "0.72rem",
-                                    fontFamily: "Inter, sans-serif",
+                                    fontSize: "0.75rem",
+                                    
                                   }}
                                 >
                                   {longDesc}
@@ -900,11 +902,10 @@ export const StandardClaimsTable = ({
                         >
                           <Typography
                             noWrap
-                            sx={{
+                            sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
                               color: "#475569",
                               fontStyle: "italic",
                               cursor: "pointer",
-                              fontFamily: "Inter, sans-serif",
                             }}
                           >
                             {(() => {

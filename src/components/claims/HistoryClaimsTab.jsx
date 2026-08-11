@@ -33,6 +33,9 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   useEffect(() => {
     loadData();
+    const handleRefresh = () => loadData();
+    window.addEventListener('refresh-claims', handleRefresh);
+    return () => window.removeEventListener('refresh-claims', handleRefresh);
   }, []);
 
   async function loadData() {
@@ -246,6 +249,9 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
         expandedProcedures={expandedProcedures}
         handleToggleHide={toggleHide}
+        handleOpenEdit={onOpenEdit}
+        handleOpenAttach={onOpenAttach}
+        handleOpenPreview={onOpenPreview}
       />
     </Box>
   );
