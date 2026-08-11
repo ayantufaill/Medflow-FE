@@ -89,6 +89,16 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     applyFilters(claims, newFilters, showHidden);
   };
 
+  const handleRowStatusChange = async (claimId, newStatus) => {
+    try {
+      await claimService.quickStatusUpdate(claimId, newStatus, "Status updated from History tab");
+      window.dispatchEvent(new CustomEvent('refresh-claims'));
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Error updating status: " + (err.message || err));
+    }
+  };
+
   const handleClearAll = () => {
     const defaultFilters = {
       carrier: 'all',
@@ -163,6 +173,15 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         { value: 'readyForSubmission', label: 'Ready for Submission' },
         { value: 'validationError', label: 'Validation Error' },
         { value: 'draft', label: 'Draft' },
+        { value: 'error', label: 'Error' },
+        { value: 'submitted', label: 'Submitted' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'accepted', label: 'Accepted' },
+        { value: 'paid', label: 'Paid' },
+        { value: 'partial', label: 'Partial' },
+        { value: 'denied', label: 'Denied' },
+        { value: 'rejected', label: 'Rejected' },
+        { value: 'cancelled', label: 'Cancelled' },
       ],
       onChange: (val) => handleFilterChange('status', val),
     },
@@ -249,6 +268,7 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
         expandedProcedures={expandedProcedures}
         handleToggleHide={toggleHide}
+        handleRowStatusChange={handleRowStatusChange}
         handleOpenEdit={onOpenEdit}
         handleOpenAttach={onOpenAttach}
         handleOpenPreview={onOpenPreview}

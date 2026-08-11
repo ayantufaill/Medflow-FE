@@ -648,6 +648,15 @@ export const StandardClaimsTable = ({
                               <MenuItem value="draft" sx={{ fontSize: "0.75rem" }}>
                                 Draft
                               </MenuItem>
+                              <MenuItem value="readyForSubmission" sx={{ fontSize: "0.75rem" }}>
+                                Ready for Submission
+                              </MenuItem>
+                              <MenuItem value="error" sx={{ fontSize: "0.75rem", color: "#d93838" }}>
+                                Error
+                              </MenuItem>
+                              <MenuItem value="validationError" sx={{ fontSize: "0.75rem", color: "#d93838" }}>
+                                Validation Error
+                              </MenuItem>
                               <MenuItem
                                 value="submitted"
                                 sx={{ fontSize: "0.75rem" }}
