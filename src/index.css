@@ -14,6 +14,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Global Checkbox Tick Color Override (#2362EF) */
+input[type="checkbox"] {
+  accent-color: #2362EF !important;
+}
+
+.MuiCheckbox-root.Mui-checked,
+.MuiCheckbox-root.MuiCheckbox-indeterminate,
+.MuiCheckbox-root.Mui-checked .MuiSvgIcon-root,
+.MuiCheckbox-root.MuiCheckbox-indeterminate .MuiSvgIcon-root {
+  color: #2362EF !important;
+  fill: #2362EF !important;
+}
+
 /* Flashed on an appointment card when the user arrives via a notification, so the
    relevant appointment is easy to spot on the calendar without a page-level modal. */
 @keyframes notification-highlight-pulse {
