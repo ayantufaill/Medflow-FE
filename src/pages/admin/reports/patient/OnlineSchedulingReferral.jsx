@@ -7,6 +7,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { fetchOnlineSchedulingReferralReport, selectOnlineSchedulingReferralData, selectOnlineSchedulingReferralDataLoading } from '../../../../store/slices/patientReportSlice';
 
 
@@ -64,27 +65,67 @@ const OnlineSchedulingReferral = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1e293b' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(newValue) => setStartDate(newValue)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { size: 'small', sx: { width: 140, '& .MuiInputBase-root': { height: 26, fontSize: '0.75rem' }, '& .MuiInputBase-input': { px: 1, py: 0 } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1e293b' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(newValue) => setEndDate(newValue)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { size: 'small', sx: { width: 140, '& .MuiInputBase-root': { height: 26, fontSize: '0.75rem' }, '& .MuiInputBase-input': { px: 1, py: 0 } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
     </>
   );
@@ -93,13 +134,27 @@ const OnlineSchedulingReferral = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
       <ReportLayout title="Online Scheduling Referral">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          onApplyFilters={handleApply}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
+        <Box className="hide-on-print" sx={{ mb: 2 }}>
+          <ReportFilterBar 
+            topRowFilters={topFilters}
+            onApplyFilters={handleApply}
+            onCreateTemplate={() => setTemplateDialogOpen(true)}
+          />
+        </Box>
+
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of referrals = {reportData.length})
+          </Typography>
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={() => alert('Exporting CSV...')}
+              onPrint={() => window.print()}
+              hasData={reportData.length > 0}
+            />
+          </Box>
+        </Box>
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>

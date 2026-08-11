@@ -26,6 +26,7 @@ const LabCaseReport = () => {
   const [endDate, setEndDate] = useState(null);
   const [status, setStatus] = useState('all');
   const [dateFilterType, setDateFilterType] = useState('Lab Due Date');
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const fetchReport = () => {
@@ -33,7 +34,8 @@ const LabCaseReport = () => {
       startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
       endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
       status,
-      dateFilterType
+      dateFilterType,
+      includeInactive
     }));
   };
 
@@ -62,7 +64,7 @@ const LabCaseReport = () => {
     { label: 'Appointment Date' },
     { label: 'Shared Date' },
     { label: 'Status' },
-    { label: 'Notes' },
+    { label: 'Actions' },
   ];
 
   const renderRow = (row, i) => (
@@ -83,9 +85,9 @@ const LabCaseReport = () => {
       </TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton size="small" sx={{ p: 0.3 }}><DeleteOutline sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
-          <IconButton size="small" sx={{ p: 0.3 }}><EditOutlined sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
-          <IconButton size="small" sx={{ p: 0.3 }}><VisibilityOutlined sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
+          <IconButton onClick={() => alert('Delete Lab Case')} size="small" sx={{ p: 0.3 }}><DeleteOutline sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
+          <IconButton onClick={() => alert('Edit Lab Case')} size="small" sx={{ p: 0.3 }}><EditOutlined sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
+          <IconButton onClick={() => alert('View Lab Case')} size="small" sx={{ p: 0.3 }}><VisibilityOutlined sx={{ fontSize: '1rem', color: '#666' }} /></IconButton>
         </Box>
       </TableCell>
     </TableRow>
@@ -93,27 +95,67 @@ const LabCaseReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
       <ReportSelect 
         label="Select Status" 
@@ -127,7 +169,7 @@ const LabCaseReport = () => {
           { value: 'sent', label: 'Sent to Lab' }
         ]} 
       />
-      <ReportCheckbox label="Include Inactive" />
+      <ReportCheckbox label="Include Inactive" checked={includeInactive} onChange={(e) => setIncludeInactive(e.target.checked)} />
     </>
   );
 

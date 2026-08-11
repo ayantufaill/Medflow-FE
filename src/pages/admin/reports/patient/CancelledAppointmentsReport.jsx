@@ -83,33 +83,67 @@ const CancelledAppointmentsReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1e293b' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(newValue) => setStartDate(newValue)}
           format="MM/DD/YYYY"
           slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
             textField: { 
-              size: 'small',
-              sx: { width: 140, '& .MuiInputBase-root': { height: 26, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } }, '& .MuiInputBase-input': { px: 1, py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }, '& .MuiIconButton-root': { p: 0.2 } } 
-            }, openPickerIcon: { sx: { fontSize: 16 } }, desktopPaper: { sx: { transform: 'scale(0.9)', transformOrigin: 'top left' } }
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1e293b' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(newValue) => setEndDate(newValue)}
           format="MM/DD/YYYY"
           slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
             textField: { 
-              size: 'small',
-              sx: { width: 140, '& .MuiInputBase-root': { height: 26, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } }, '& .MuiInputBase-input': { px: 1, py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' }, '& .MuiIconButton-root': { p: 0.2 } } 
-            }, openPickerIcon: { sx: { fontSize: 16 } }, desktopPaper: { sx: { transform: 'scale(0.9)', transformOrigin: 'top left' } }
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
       <ReportCheckbox label="Show Inactive Patients" />
     </>

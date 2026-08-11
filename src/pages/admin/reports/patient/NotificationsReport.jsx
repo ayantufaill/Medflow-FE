@@ -62,19 +62,7 @@ const NotificationsReport = () => {
   const [template, setTemplate] = useState('none');
   const [status, setStatus] = useState('none');
 
-  React.useEffect(() => {
-    dispatch(fetchNotificationsReport({
-      plannedStart: plannedStart ? plannedStart.format('YYYY-MM-DD') : '',
-      plannedEnd: plannedEnd ? plannedEnd.format('YYYY-MM-DD') : '',
-      sentStart: sentStart ? sentStart.format('YYYY-MM-DD') : '',
-      sentEnd: sentEnd ? sentEnd.format('YYYY-MM-DD') : '',
-      notificationType,
-      template,
-      status
-    }));
-  }, [dispatch]);
-
-  const handleApplyFilters = () => {
+  const fetchReport = () => {
     dispatch(fetchNotificationsReport({
       plannedStart: plannedStart ? plannedStart.format('YYYY-MM-DD') : '',
       plannedEnd: plannedEnd ? plannedEnd.format('YYYY-MM-DD') : '',
@@ -85,6 +73,19 @@ const NotificationsReport = () => {
       status
     }));
   };
+
+  React.useEffect(() => {
+    fetchReport();
+  }, [dispatch]);
+
+  const handleApplyFilters = () => {
+    fetchReport();
+  };
+
+  // Client-side filtering by status since backend returns all records
+  const filteredData = status && status !== 'none'
+    ? reportData.filter(row => row.status?.toLowerCase() === status.toLowerCase())
+    : reportData;
 
   const columns = [
     { label: 'Sent to Patient' },
@@ -114,49 +115,129 @@ const NotificationsReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Planned On Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          planned on start date
+        </Typography>
         <DatePicker
           value={plannedStart}
           onChange={(v) => setPlannedStart(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Planned On End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          planned on end date
+        </Typography>
         <DatePicker
           value={plannedEnd}
           onChange={(v) => setPlannedEnd(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Sent On Start Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          sent on start date
+        </Typography>
         <DatePicker
           value={sentStart}
           onChange={(v) => setSentStart(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Sent On End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          sent on end date
+        </Typography>
         <DatePicker
           value={sentEnd}
           onChange={(v) => setSentEnd(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
     </>
   );
@@ -217,13 +298,13 @@ const NotificationsReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of notifications = {reportData.length})
+              (number of notifications = {filteredData.length})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={() => alert('Exporting CSV...')}
                 onPrint={() => window.print()}
-                hasData={reportData.length > 0}
+                hasData={filteredData.length > 0}
               />
             </Box>
           </Box>
@@ -235,7 +316,7 @@ const NotificationsReport = () => {
           ) : (
             <ReportDataTable 
               columns={columns} 
-              data={reportData} 
+              data={filteredData} 
               renderRow={renderRow} 
             />
           )}

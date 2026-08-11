@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Typography, Checkbox, Button, TableCell, TableRow, Select, MenuItem, TableHead, Table, TableBody, CircularProgress
 } from '@mui/material';
@@ -11,6 +11,7 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { fetchPatientLastAppointmentReport, selectLastAppointmentData, selectLastAppointmentDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
 
 
@@ -18,6 +19,7 @@ const PatientLastAppointmentReport = () => {
   const dispatch = useDispatch();
   const reportData = useSelector(selectLastAppointmentData) || [];
   const loading = useSelector(selectLastAppointmentDataLoading);
+  const providerList = useSelector(selectProviderDropdownList);
 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
@@ -29,11 +31,34 @@ const PatientLastAppointmentReport = () => {
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
+  const providerOptions = useMemo(() => [
+    { value: 'all', label: 'All Providers' },
+    ...(providerList || []).map((p) => {
+      const first = p.userId?.firstName || p.firstName || p.FName || '';
+      const last = p.userId?.lastName || p.lastName || p.LName || '';
+      const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+      return { value: p.id || p.ProvNum || name, label: name };
+    }),
+  ], [providerList]);
+
+  const apptStatusOptions = [
+    { value: 'all', label: 'All Appointment Status' },
+    { value: '1', label: 'Scheduled' },
+    { value: '2', label: 'CheckedoutCompleted' },
+    { value: '3', label: 'Broken' },
+    { value: '4', label: 'Cancelled' },
+    { value: '5', label: 'CancelledShortNotice' },
+    { value: '6', label: 'Unconfirmed' },
+  ];
+
   const fetchReport = () => {
+    let filterBy = patientStatus;
+    if (patientStatus === 'active') filterBy = undefined;
+
     dispatch(fetchPatientLastAppointmentReport({
       startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
       endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
-      patientStatus,
+      filterBy,
       provider,
       appointmentStatus,
       flagsFilter
@@ -41,6 +66,7 @@ const PatientLastAppointmentReport = () => {
   };
 
   useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
     fetchReport();
   }, []);
 
@@ -86,34 +112,72 @@ const PatientLastAppointmentReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 140, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 140, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
+      </Box>
       
-      <ReportSelect value={patientStatus} onChange={(e) => setPatientStatus(e.target.value)} prefix="Filter Report By:" options={[{ value: 'active', label: 'Active Patients Only' }, { value: 'all', label: 'All Patients' }]} width="140px" />
-      <ReportSelect value={provider} onChange={(e) => setProvider(e.target.value)} options={[{ value: 'all', label: 'All Providers' }]} width="120px" />
-      <ReportSelect value={appointmentStatus} onChange={(e) => setAppointmentStatus(e.target.value)} options={[{ value: 'all', label: 'All Appointment Status' }]} width="160px" />
+      <ReportSelect value={patientStatus} onChange={(e) => setPatientStatus(e.target.value)} prefix="Filter Report By:" options={[{ value: 'active', label: 'Active Patients Only' }, { value: 'inactive', label: 'Inactive Patients' }, { value: 'all', label: 'All Patients' }]} width="140px" />
+      <ReportSelect value={provider} onChange={(e) => setProvider(e.target.value)} options={providerOptions} width="120px" />
+      <ReportSelect value={appointmentStatus} onChange={(e) => setAppointmentStatus(e.target.value)} options={apptStatusOptions} width="160px" />
       
       <ReportSelect defaultValue="default" prefix="Sort Report By:" options={[{ value: 'default', label: 'Default' }]} width="100px" />
     </>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Radio, RadioGroup, FormControlLabel, TableCell, TableRow, Select, MenuItem, TextField, CircularProgress
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProceduresReport, selectProceduresData, selectProceduresDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -18,35 +19,44 @@ const ProceduresReport = () => {
   const dispatch = useDispatch();
   const reportData = useSelector(selectProceduresData) || [];
   const loading = useSelector(selectProceduresDataLoading);
+  const providerList = useSelector(selectProviderDropdownList) || [];
 
   const [dateType, setDateType] = useState('scheduled');
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
+  const [createdStartDate, setCreatedStartDate] = useState(null);
+  const [createdEndDate, setCreatedEndDate] = useState(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [provider, setProvider] = useState('none');
-  const [status, setStatus] = useState('none');
+  const [provider, setProvider] = useState('all');
+  const [status, setStatus] = useState('all');
   const [adaCode, setAdaCode] = useState('');
 
-  React.useEffect(() => {
+  const fetchReport = () => {
+    const activeDates = dateType === 'created'
+      ? {
+          startDate: createdStartDate ? createdStartDate.format('YYYY-MM-DD') : '',
+          endDate: createdEndDate ? createdEndDate.format('YYYY-MM-DD') : ''
+        }
+      : {
+          startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+          endDate: endDate ? endDate.format('YYYY-MM-DD') : ''
+        };
     dispatch(fetchProceduresReport({
       dateType,
-      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
-      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      ...activeDates,
       provider,
       status,
       adaCode
     }));
+  };
+
+  React.useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+    fetchReport();
   }, [dispatch]);
 
   const handleApplyFilters = () => {
-    dispatch(fetchProceduresReport({
-      dateType,
-      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
-      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
-      provider,
-      status,
-      adaCode
-    }));
+    fetchReport();
   };
 
   const columns = [
@@ -74,7 +84,7 @@ const ProceduresReport = () => {
   const topFilters = (
     <>
       <RadioGroup value={dateType} onChange={(e) => setDateType(e.target.value)} sx={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
           <FormControlLabel 
             value="scheduled" 
             control={<Radio size="small" sx={{ p: 0.5 }} />} 
@@ -84,26 +94,66 @@ const ProceduresReport = () => {
           <Select variant="standard" size="small" value="range" sx={{ fontSize: '0.75rem', width: 80, height: 24, backgroundColor: '#fff', '&:before, &:after': { display: 'none' } }}>
             <MenuItem value="range">Range</MenuItem>
           </Select>
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', ml: 1 }}>Start Date:</Typography>
-          <DatePicker
-            value={startDate}
-            format="MM/DD/YYYY"
-            disabled={dateType !== 'scheduled'}
-            slotProps={{ 
-              textField: { variant: 'standard', size: 'small', sx: { width: 100, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', opacity: dateType !== 'scheduled' ? 0.5 : 1, '&:before, &:after': { display: 'none' } } } }
-            }}
-          />
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', ml: 1 }}>End Date:</Typography>
-          <DatePicker
-            value={endDate}
-            format="MM/DD/YYYY"
-            disabled={dateType !== 'scheduled'}
-            slotProps={{ 
-              textField: { variant: 'standard', size: 'small', sx: { width: 100, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', opacity: dateType !== 'scheduled' ? 0.5 : 1, '&:before, &:after': { display: 'none' } } } }
-            }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
+        <DatePicker
+          value={startDate}
+          onChange={(v) => setStartDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
+        <DatePicker
+          value={endDate}
+          onChange={(v) => setEndDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
           <FormControlLabel 
             value="created" 
             control={<Radio size="small" sx={{ p: 0.5 }} />} 
@@ -113,26 +163,78 @@ const ProceduresReport = () => {
           <Select variant="standard" size="small" value="range" sx={{ fontSize: '0.75rem', width: 80, height: 24, opacity: dateType === 'created' ? 1 : 0.5, backgroundColor: '#fff', '&:before, &:after': { display: 'none' } }}>
             <MenuItem value="range">Range</MenuItem>
           </Select>
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', ml: 1, opacity: dateType === 'created' ? 1 : 0.5 }}>Start Date:</Typography>
-          <DatePicker
-            disabled={dateType !== 'created'}
-            format="MM/DD/YYYY"
-            slotProps={{ 
-              textField: { variant: 'standard', size: 'small', sx: { width: 100, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', opacity: dateType !== 'created' ? 0.5 : 1, '&:before, &:after': { display: 'none' } } } }
-            }}
-          />
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', ml: 1, opacity: dateType === 'created' ? 1 : 0.5 }}>End Date:</Typography>
-          <DatePicker
-            disabled={dateType !== 'created'}
-            format="MM/DD/YYYY"
-            slotProps={{ 
-              textField: { variant: 'standard', size: 'small', sx: { width: 100, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', opacity: dateType !== 'created' ? 0.5 : 1, '&:before, &:after': { display: 'none' } } } }
-            }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
+        <DatePicker
+          value={createdStartDate}
+          onChange={(v) => setCreatedStartDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
+        <DatePicker
+          value={createdEndDate}
+          onChange={(v) => setCreatedEndDate(v)}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
         </Box>
       </RadioGroup>
     </>
   );
+
+  const providerOptions = useMemo(() => [
+    { value: 'all', label: 'All Providers' },
+    ...(providerList || []).map((p) => {
+      const first = p.userId?.firstName || p.firstName || p.FName || '';
+      const last = p.userId?.lastName || p.lastName || p.LName || '';
+      const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+      return { value: String(p.id || p.ProvNum || name), label: name };
+    }),
+  ], [providerList]);
 
   const bottomFilters = (
     <>
@@ -141,11 +243,7 @@ const ProceduresReport = () => {
         prefix="Provider:" 
         value={provider} 
         onChange={(e) => setProvider(e.target.value)} 
-        options={[
-          { value: 'none', label: 'Select Provider' },
-          { value: 'smith', label: 'Dr. Smith' },
-          { value: 'sabour', label: 'Dr. Sabour' }
-        ]} 
+        options={providerOptions} 
       />
       <ReportSelect 
         label="Select Status" 
@@ -153,9 +251,13 @@ const ProceduresReport = () => {
         value={status} 
         onChange={(e) => setStatus(e.target.value)} 
         options={[
-          { value: 'none', label: 'Select Status' },
+          { value: 'all', label: 'All Statuses' },
+          { value: 'tp', label: 'Treatment Planned' },
           { value: 'completed', label: 'Completed' },
-          { value: 'pending', label: 'Pending' }
+          { value: 'existingCurrent', label: 'Existing Current' },
+          { value: 'existingOther', label: 'Existing Other' },
+          { value: 'referredOut', label: 'Referred Out' },
+          { value: 'deleted', label: 'Deleted' }
         ]} 
       />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
@@ -170,7 +272,7 @@ const ProceduresReport = () => {
       <React.Fragment>
         <ReportLayout title="Procedures Report:">
           <Box className="hide-on-print" sx={{ mb: 2 }}>
-            <ReportFilterBar 
+            <ReportFilterBar
               topRowFilters={topFilters}
               bottomRowFilters={bottomFilters}
               onApplyFilters={handleApplyFilters}
@@ -197,18 +299,18 @@ const ProceduresReport = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={reportData} 
-              renderRow={renderRow} 
+            <ReportDataTable
+              columns={columns}
+              data={reportData}
+              renderRow={renderRow}
             />
           )}
         </ReportLayout>
 
-        <CreateTemplateDialog 
-          open={templateDialogOpen} 
-          onClose={() => setTemplateDialogOpen(false)} 
-          onSave={(name) => alert(`Template "${name}" saved!`)} 
+        <CreateTemplateDialog
+          open={templateDialogOpen}
+          onClose={() => setTemplateDialogOpen(false)}
+          onSave={(name) => alert(`Template "${name}" saved!`)}
         />
       </React.Fragment>
     </LocalizationProvider>
