@@ -49,27 +49,28 @@ import ProductionReportActions from "../../../../components/reports/financial/Pr
 const ActionIcons = ({ onChatClick }) => (
   <Box
     className="no-print"
-    sx={{ display: "flex", gap: 0.5, mt: 0.5, alignItems: "center" }}
+    sx={{ display: "flex", gap: 1, mt: 0.5, alignItems: "center" }}
   >
     <PrintOutlinedIcon
-      sx={{ fontSize: 14, color: "#4a90e2", cursor: "pointer" }}
+      sx={{ fontSize: 16, color: "#475569", cursor: "pointer", '&:hover': { color: '#1a3a6b' } }}
     />
     <AttachMoneyOutlinedIcon
-      sx={{ fontSize: 14, color: "#4a90e2", cursor: "pointer" }}
+      sx={{ fontSize: 16, color: "#475569", cursor: "pointer", '&:hover': { color: '#1a3a6b' } }}
     />
     <Typography
       sx={{
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
-        color: "#4a90e2",
+        color: "#475569",
         cursor: "pointer",
         lineHeight: 1,
+        '&:hover': { color: '#1a3a6b' }
       }}
     >
       Tx
     </Typography>
     <ChatBubbleOutlineIcon
-      sx={{ fontSize: 14, color: "#4a90e2", cursor: "pointer" }}
+      sx={{ fontSize: 16, color: "#475569", cursor: "pointer", '&:hover': { color: '#1a3a6b' } }}
       onClick={onChatClick}
     />
   </Box>
@@ -294,7 +295,7 @@ const RecareList = ({
 
   // Normalize API data into display rows
   const baseRows = useMemo(() => {
-    let rows = apiData && apiData.length > 0 ? [...apiData] : [...MOCK_ROWS];
+    let rows = apiData || [];
 
     // Apply forced category from dialog
     if (forcedCategory && getRowCategory) {
@@ -319,6 +320,11 @@ const RecareList = ({
       rows = rows.filter((r) => r.dentistId === dentist);
     }
 
+    // Hygienist filter
+    if (hygienist !== "None") {
+      rows = rows.filter((r) => r.hygienistId === hygienist);
+    }
+
     return rows.map((item, i) => ({
       id: item.id || item.PatNum || i + 1,
       patient:
@@ -338,8 +344,10 @@ const RecareList = ({
       followUp: item.followUp || "",
       apptDate: item.apptDate || item.nextTreatmentAppt || "",
       contactCount: item.contactCount || 0,
+      dentistId: item.dentistId || "",
+      hygienistId: item.hygienistId || "",
     }));
-  }, [apiData, forcedCategory, getRowCategory, dentist]);
+  }, [apiData, forcedCategory, getRowCategory, dentist, hygienist]);
 
   // Apply all filters
   const filteredRows = useMemo(() => {
@@ -474,8 +482,7 @@ const RecareList = ({
     <Box
       sx={{
         p: hideFilters ? 0 : 3,
-        backgroundColor: hideFilters ? "transparent" : "#f5f7fa",
-        minHeight: "100vh",
+        backgroundColor: "transparent",
       }}
     >
       {!hideFilters && (
@@ -506,17 +513,20 @@ const RecareList = ({
             getProviderName={getProviderName}
           />
 
-          <ProductionReportActions
-            onExportCsv={handleExportCSV}
-            onPrint={handlePrint}
-            hasData={filteredRows.length > 0}
-          />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+              ({filteredRows.length} Patient/s)
+            </Typography>
+            <Box sx={{ transform: 'translateY(-8px)' }}>
+              <ProductionReportActions
+                onExportCsv={handleExportCSV}
+                onPrint={handlePrint}
+                hasData={filteredRows.length > 0}
+              />
+            </Box>
+          </Box>
         </>
       )}
-
-      <Typography variant="subtitle2" sx={{ textAlign: "center", mb: 2 }}>
-        ({filteredRows.length} Patient/s)
-      </Typography>
 
       {/* Loading */}
       {loading ? (
@@ -527,56 +537,62 @@ const RecareList = ({
         <>
           <TableContainer
             component={Paper}
-            sx={{ boxShadow: "none", border: "1px solid #eee" }}
+            sx={{
+              bgcolor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+              mt: 1
+            }}
           >
             <Table id="recare-list-table" size="small">
-              <TableHead sx={{ backgroundColor: "#f9fafb" }}>
+              <TableHead sx={{ backgroundColor: "rgba(240, 244, 249, 0.6)" }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Patient
                   </TableCell>
                   {showFlagsCol && (
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                       Flags
                     </TableCell>
                   )}
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Age
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Contact
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Recall Date
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Last Exam
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Last Prophy
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Last Main.
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Last Comm.
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Note
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Contact Again
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Follow up
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Appt Date
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Count
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Reset
                   </TableCell>
                 </TableRow>
@@ -598,16 +614,19 @@ const RecareList = ({
                   </TableRow>
                 ) : (
                   pagedRows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} hover sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
+                          fontSize: "0.85rem",
                           color: "#1a3a6b",
                           fontWeight: 600,
+                          verticalAlign: "middle"
                         }}
                       >
-                        {row.patient}
-                        <ActionIcons onChatClick={() => setChatPatient(row)} />
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.85rem" }}>{row.patient}</Typography>
+                          <ActionIcons onChatClick={() => setChatPatient(row)} />
+                        </Box>
                       </TableCell>
                       {showFlagsCol && (
                         <TableCell>
@@ -626,31 +645,30 @@ const RecareList = ({
                           )}
                         </TableCell>
                       )}
-                      <TableCell sx={{ fontSize: "0.75rem" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
                         {row.age}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem", color: "#4a90e2" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", color: "#4a90e2", verticalAlign: "middle" }}>
                         {row.contact}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
                         {row.recallDate}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
                         {row.lastExam}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
                         {row.lastProphy}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
                         {row.lastMaintenance}
                       </TableCell>
 
                       {/* Editable Last Comm Date */}
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
-                          verticalAlign: "top",
-                          pt: 1.5,
+                          fontSize: "0.85rem",
+                          verticalAlign: "middle",
                         }}
                       >
                         <span
@@ -684,13 +702,12 @@ const RecareList = ({
                       {/* Editable Note */}
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
+                          fontSize: "0.85rem",
                           maxWidth: 220,
-                          verticalAlign: "top",
-                          pt: 1.5,
+                          verticalAlign: "middle",
                         }}
                       >
-                        <Box sx={{ display: "flex", flexDirection: "column" }}>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
                           <Typography
                             className="no-print"
                             variant="caption"
@@ -744,7 +761,7 @@ const RecareList = ({
                                 <TextField
                                   className="no-print"
                                   multiline
-                                  minRows={2}
+                                  maxRows={3}
                                   fullWidth
                                   variant="outlined"
                                   size="small"
@@ -757,9 +774,10 @@ const RecareList = ({
                                   }
                                   InputProps={{
                                     sx: {
-                                      fontSize: "0.75rem",
+                                      fontSize: "0.8rem",
                                       p: 1,
-                                      borderRadius: 0,
+                                      borderRadius: '6px',
+                                      backgroundColor: '#ffffff'
                                     },
                                   }}
                                 />
@@ -772,9 +790,8 @@ const RecareList = ({
                       {/* Editable Contact Again */}
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
-                          verticalAlign: "top",
-                          pt: 1,
+                          fontSize: "0.85rem",
+                          verticalAlign: "middle",
                         }}
                       >
                         <span
@@ -863,31 +880,32 @@ const RecareList = ({
 
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
-                          verticalAlign: "top",
-                          pt: 1.5,
+                          fontSize: "0.85rem",
+                          verticalAlign: "middle",
                         }}
                       >
                         {row.apptDate}
                       </TableCell>
                       <TableCell
                         sx={{
-                          fontSize: "0.75rem",
-                          verticalAlign: "top",
-                          pt: 1.5,
+                          fontSize: "0.85rem",
+                          verticalAlign: "middle",
                         }}
                       >
                         {row.contactCount}
                       </TableCell>
-                      <TableCell sx={{ verticalAlign: "top", pt: 1.5 }}>
+                      <TableCell sx={{ verticalAlign: "middle" }}>
                         <Button
                           className="no-print"
                           size="small"
                           variant="contained"
                           sx={{
-                            fontSize: "0.65rem",
-                            p: "2px 8px",
-                            backgroundColor: "#d1a066",
+                            fontSize: "0.7rem",
+                            p: "4px 10px",
+                            backgroundColor: "#1a3a6b",
+                            textTransform: "none",
+                            borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#0f172a" },
                           }}
                         >
                           Reset

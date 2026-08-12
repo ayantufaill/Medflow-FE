@@ -15,28 +15,6 @@ import UnsignedProgressNotesFilters from '../../../../components/reports/clinica
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import dayjs from 'dayjs';
 
-// ─── Mock data (used as fallback when API returns no data) ───────────────────
-const MOCK_UNSIGNED = [
-  { id: 1, patient: 'Francis Fuller', date: '05/07/2026', kind: 'Exam', provider: 'Dr. Smith', note: 'CC: "I have a broken tooth #31". Patient had veneers done March of 2026...' },
-  { id: 2, patient: 'John Doe', date: '05/07/2026', kind: 'Recare', provider: 'Hygienist A', note: '' },
-  { id: 3, patient: 'Jane Smith', date: '05/05/2026', kind: 'Recare', provider: 'Hygienist B', note: '' },
-  { id: 4, patient: 'Robert Brown', date: '05/07/2026', kind: 'Conversation', provider: 'Dr. Smith', note: '' },
-  { id: 5, patient: 'Mary Johnson', date: '05/07/2026', kind: 'Treatment', provider: 'Dr. Wilson', note: '' },
-  { id: 6, patient: 'William White', date: '05/07/2026', kind: 'Recare', provider: 'Hygienist A', note: '' },
-  { id: 7, patient: 'Patricia Black', date: '05/06/2026', kind: 'Treatment', provider: 'Dr. Wilson', note: '' },
-  { id: 8, patient: 'Michael Gray', date: '05/05/2026', kind: 'Treatment', provider: 'Dr. Wilson', note: '' },
-  { id: 9, patient: 'Linda Green', date: '05/07/2026', kind: 'Recare', provider: 'Hygienist B', note: '' },
-  { id: 10, patient: 'Barbara Brown', date: '05/06/2026', kind: 'Treatment', provider: 'Dr. Smith', note: '' },
-  { id: 11, patient: 'James Wilson', date: '05/08/2026', kind: 'General', provider: 'Dr. Smith', note: '' },
-];
-
-const MOCK_SIGNED = [
-  { id: 101, patient: 'Patient X', date: '04/13/2026', kind: 'General', provider: 'Dr. Smith', note: 'bal on account - Two payments have been received and successfully posted for this claim...' },
-  { id: 102, patient: 'Patient Y', date: '04/21/2026', kind: 'Recare', provider: 'Hygienist A', note: '' },
-  { id: 103, patient: 'Patient Z', date: '04/24/2026', kind: 'Conversation', provider: 'Dr. Smith', note: '' },
-  { id: 104, patient: 'Patient W', date: '04/23/2026', kind: 'Treatment', provider: 'Dr. Wilson', note: '' },
-  { id: 105, patient: 'Patient V', date: '04/14/2026', kind: 'Treatment', provider: 'Dr. Wilson', note: '' },
-];
 
 // ─── Row renderers ───────────────────────────────────────────────────────────
 const columns = [
@@ -69,26 +47,75 @@ const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
       <TableRow>
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <Box sx={{ p: 3, backgroundColor: '#fff' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-line' }}>
+            <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #3CA2E0' }}>
+              {/* Note Content Card */}
+              <Box sx={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                p: 2.5,
+                mb: 2,
+                minHeight: 60,
+              }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.7, whiteSpace: 'pre-line', color: row.note ? '#1e293b' : '#94a3b8', fontStyle: row.note ? 'normal' : 'italic' }}>
                   {row.note || 'No note content available.'}
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-                  <Typography variant="caption" sx={{ color: '#337ab7', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                    Sign Progress Note
-                  </Typography>
-                </Box>
               </Box>
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>NV:</Typography>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>Franco RDA</Typography>
-                  <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.7rem', color: '#fff', '&:hover': { backgroundColor: '#c89255' } }}>
+
+              {/* Footer: Provider info + Action buttons */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#3CA2E0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#fff' }}>
+                      {(row.provider || 'P').charAt(0).toUpperCase()}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', display: 'block', lineHeight: 1.3 }}>
+                      {row.provider || 'Provider'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.65rem' }}>
+                      {row.date || ''}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      borderColor: '#3CA2E0',
+                      color: '#3CA2E0',
+                      borderRadius: '6px',
+                      px: 1.5,
+                      py: 0.5,
+                      '&:hover': { backgroundColor: 'rgba(60, 162, 224, 0.06)', borderColor: '#2b8ac3' },
+                    }}
+                  >
                     Edit Note
                   </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      backgroundColor: '#3CA2E0',
+                      borderRadius: '6px',
+                      px: 1.5,
+                      py: 0.5,
+                      boxShadow: 'none',
+                      '&:hover': { backgroundColor: '#2b8ac3', boxShadow: 'none' },
+                    }}
+                  >
+                    Sign Progress Note
+                  </Button>
                 </Box>
-                <Typography variant="caption" color="text.secondary">Babar Magsi</Typography>
               </Box>
             </Box>
           </Collapse>
@@ -120,10 +147,52 @@ const SignedRow = ({ row, index, signedExpandedRow, setSignedExpandedRow }) => {
       <TableRow>
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <Box sx={{ p: 3, backgroundColor: '#fff' }}>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                {row.note || 'This is a signed progress note. Content is locked for editing.'}
-              </Typography>
+            <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #22c55e' }}>
+              {/* Note Content Card */}
+              <Box sx={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                p: 2.5,
+                mb: 2,
+                minHeight: 60,
+              }}>
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.7, whiteSpace: 'pre-line', color: row.note ? '#1e293b' : '#94a3b8', fontStyle: row.note ? 'normal' : 'italic' }}>
+                  {row.note || 'This is a signed progress note. Content is locked for editing.'}
+                </Typography>
+              </Box>
+
+              {/* Footer: Provider info + Signed badge */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#fff' }}>
+                      {(row.provider || 'P').charAt(0).toUpperCase()}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', display: 'block', lineHeight: 1.3 }}>
+                      {row.provider || 'Provider'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.65rem' }}>
+                      {row.date || ''}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  px: 1.5,
+                  py: 0.5,
+                }}>
+                  <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#16a34a' }}>✓ Signed</Typography>
+                </Box>
+              </Box>
             </Box>
           </Collapse>
         </TableCell>
@@ -170,36 +239,57 @@ const UnsignedProgressNotesReport = () => {
     dispatch(fetchUnsignedProgressNotesReport({ startDate: sd, endDate: ed }));
   };
 
+  // Helper: get provider display name from provider dropdown item
+  const getProviderDisplayName = (p) => {
+    const first = p.userId?.firstName || p.firstName || p.FName || '';
+    const last = p.userId?.lastName || p.lastName || p.LName || '';
+    return `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+  };
+
+  // Build a lookup: provider _id -> display name
+  const providerNameById = useMemo(() => {
+    const map = {};
+    (providerList || []).forEach((p) => {
+      map[p._id] = getProviderDisplayName(p);
+    });
+    return map;
+  }, [providerList]);
+
   const processedData = useMemo(() => {
-    const source = apiData && apiData.length > 0
-      ? apiData.map((item, i) => ({
-          id: item.id || item._id || i + 1000,
-          patient: item.patient || item.patientName || 'Unknown Patient',
-          date: item.date || (item.createdAt ? dayjs(item.createdAt).format('MM/DD/YYYY') : ''),
-          kind: item.kind || item.type || 'General',
-          provider: item.provider || item.providerName || 'Unknown Provider',
-          note: item.note || item.content || '',
-          isSigned: !!item.isSigned || item.status === 'signed',
-        }))
-      : null;
+    const source = (apiData || []).map((item, i) => ({
+      id: item.id || item._id || i + 1000,
+      patient: item.patient || item.patientName || 'Unknown Patient',
+      date: item.date || (item.createdAt ? dayjs(item.createdAt).format('MM/DD/YYYY') : ''),
+      kind: item.kind || item.type || 'General',
+      provider: item.provider || item.providerName || 'Unknown Provider',
+      note: item.note || item.content || '',
+    }));
 
-    const applyFilters = (list) => {
-      let filtered = list;
-      if (kindFilter !== 'All') filtered = filtered.filter((r) => r.kind === kindFilter);
-      if (providerFilter !== 'All') filtered = filtered.filter((r) => r.provider === providerFilter);
-      return filtered;
-    };
+    let filtered = source;
 
-    if (source) {
-      const filtered = applyFilters(source);
-      return { unsigned: filtered.filter((r) => !r.isSigned), signed: filtered.filter((r) => r.isSigned) };
+    // Kind filter
+    if (kindFilter !== 'All') {
+      filtered = filtered.filter((r) => r.kind === kindFilter);
     }
 
-    return {
-      unsigned: applyFilters(MOCK_UNSIGNED),
-      signed: applyFilters(MOCK_SIGNED),
-    };
-  }, [apiData, kindFilter, providerFilter]);
+    // Provider filter — compare selected provider name to row's provider string
+    if (providerFilter !== 'All') {
+      const selectedName = providerNameById[providerFilter] || providerFilter;
+      filtered = filtered.filter((r) => r.provider === selectedName);
+    }
+
+    // Code filter — exclude rows whose kind matches the entered text
+    if (codeFilter === 'exclude' && codeText.trim()) {
+      const excludeTerms = codeText.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
+      filtered = filtered.filter((r) => {
+        const kindLower = r.kind.toLowerCase();
+        return !excludeTerms.some((term) => kindLower.includes(term));
+      });
+    }
+
+    // Backend only returns unsigned notes (ProcStatus: 2), so all results are unsigned
+    return { unsigned: filtered, signed: [] };
+  }, [apiData, kindFilter, providerFilter, providerNameById, codeFilter, codeText]);
 
   const renderUnsignedRow = (row, index) => (
     <UnsignedRow
@@ -242,7 +332,26 @@ const UnsignedProgressNotesReport = () => {
       />
 
       <ProductionReportActions
-        onExportCsv={() => alert('Exporting CSV...')}
+        onExportCsv={() => {
+          const headers = ['Patient', 'Created Date', 'Kind', 'Provider', 'Note'];
+          const csvRows = [
+            headers.join(','),
+            ...processedData.unsigned.map((r) =>
+              [
+                `"${r.patient}"`,
+                r.date,
+                r.kind,
+                `"${r.provider}"`,
+                `"${(r.note || '').replace(/"/g, '""')}"`,
+              ].join(',')
+            ),
+          ].join('\n');
+          const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.setAttribute('href', URL.createObjectURL(blob));
+          link.setAttribute('download', `unsigned_progress_notes_${new Date().toISOString().split('T')[0]}.csv`);
+          link.click();
+        }}
         onPrint={() => window.print()}
       />
 

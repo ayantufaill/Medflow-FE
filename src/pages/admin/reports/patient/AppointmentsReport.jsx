@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, Select, MenuItem
+  Box, Typography, Checkbox, Button, TableCell, TableRow, Radio, RadioGroup, FormControlLabel, Select, MenuItem, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchAppointmentsReport, selectAppointmentsData, selectAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
-const DUMMY_DATA = [
-  {
-    patient: 'John Doe', flags: '', type: 'Treatment', status: 'Checked out complete', providers: 'KAR', operatory: 'Consult', aptDate: 'Apr 20, 2026', time: 'Mon, 08:00 AM', duration: '60 mins', procedures: 'fl / Scal w inflam', nextAptDate: 'Oct 01, 2026',
-  },
-  {
-    patient: 'Jane Smith', flags: '', type: 'Recare', status: 'Checked out complete', providers: 'SAB', operatory: 'Operatory 2', aptDate: 'Apr 15, 2026', time: 'Wed, 10:30 AM', duration: '60 mins', procedures: 'fl / hygiene / URQ undefined / U...', nextAptDate: 'May 13, 2026',
-  },
-  {
-    patient: 'Robert Brown', flags: '', type: 'Treatment', status: 'Cancelled Short Notice', providers: 'SAB', operatory: 'Operatory 4', aptDate: 'May 06, 2026', time: 'Wed, 12:30 PM', duration: '60 mins', procedures: '#30 OB, comp / #31 OB, comp', nextAptDate: '',
-  },
-];
 
 const AppointmentsReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectAppointmentsData) || [];
+  const loading = useSelector(selectAppointmentsDataLoading);
+  const providerList = useSelector(selectProviderDropdownList);
+
+  const providerOptions = useMemo(() => [
+    { value: 'all', label: 'Select Provider' },
+    ...(providerList || []).map((p) => {
+      const first = p.userId?.firstName || p.firstName || p.FName || '';
+      const last = p.userId?.lastName || p.lastName || p.LName || '';
+      const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+      return { value: p.id || p.ProvNum || name, label: name };
+    }),
+  ], [providerList]);
+
+  const apptStatusOptions = [
+    { value: 'all', label: 'Select Status' },
+    { value: '1', label: 'Scheduled' },
+    { value: '2', label: 'CheckedoutCompleted' },
+    { value: '3', label: 'Broken' },
+    { value: '4', label: 'Cancelled' },
+    { value: '5', label: 'CancelledShortNotice' },
+    { value: '6', label: 'Unconfirmed' },
+  ];
+
   const [dateType, setDateType] = useState('aptDate');
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
@@ -29,6 +47,24 @@ const AppointmentsReport = () => {
   const [status, setStatus] = useState('all');
   const [locationType, setLocationType] = useState('office');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const fetchReport = () => {
+    dispatch(fetchAppointmentsReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      provider,
+      status
+    }));
+  };
+
+  useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const columns = [
     { label: 'Patient' },
@@ -62,7 +98,7 @@ const AppointmentsReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
         <RadioGroup row value={dateType} onChange={(e) => setDateType(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
           <FormControlLabel 
             value="aptDate" 
@@ -72,29 +108,67 @@ const AppointmentsReport = () => {
           />
         </RadioGroup>
         <ReportSelect defaultValue="range" options={[{ value: 'range', label: 'Range' }, { value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' }, { value: 'last7', label: 'Last 7 Days' }]} width="100px" />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Start Date:</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>End Date:</Typography>
+      </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
+      </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
         <RadioGroup row defaultValue="created" sx={{ flexWrap: 'nowrap' }}>
           <FormControlLabel 
             value="created" 
@@ -104,26 +178,64 @@ const AppointmentsReport = () => {
           />
         </RadioGroup>
         <ReportSelect defaultValue="range" options={[{ value: 'range', label: 'Range' }, { value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' }, { value: 'last7', label: 'Last 7 Days' }]} width="100px" />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Start Date:</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={() => {}}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>End Date:</Typography>
+      </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={() => {}}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 120, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
     </>
   );
@@ -135,7 +247,7 @@ const AppointmentsReport = () => {
         prefix="Provider:" 
         value={provider} 
         onChange={(e) => setProvider(e.target.value)} 
-        options={[{ value: 'all', label: 'Select Provider' }, { value: 'kar', label: 'KAR' }, { value: 'sab', label: 'SAB' }]} 
+        options={providerOptions} 
         width="160px"
       />
       <ReportSelect 
@@ -143,15 +255,17 @@ const AppointmentsReport = () => {
         prefix="Appointment Status:" 
         value={status} 
         onChange={(e) => setStatus(e.target.value)} 
-        options={[{ value: 'all', label: 'Select Status' }, { value: 'complete', label: 'Checked out complete' }, { value: 'cancelled', label: 'Cancelled' }]} 
+        options={apptStatusOptions} 
         width="180px"
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <RadioGroup row value={locationType} onChange={(e) => setLocationType(e.target.value)} sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel value="office" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Office Appointments</Typography>} sx={{ m: 0, mr: 1 }} />
-          <FormControlLabel value="online" control={<Radio size="small" />} label={<Typography sx={{ fontSize: '0.8rem', color: '#1e293b', whiteSpace: 'nowrap' }}>Online Appointments</Typography>} sx={{ m: 0 }} />
-        </RadioGroup>
-      </Box>
+      <ReportSelect 
+        label="Select Appointment Location" 
+        prefix="Appointment:" 
+        value={locationType} 
+        onChange={(e) => setLocationType(e.target.value)} 
+        options={[{ value: 'office', label: 'Office Appointments' }, { value: 'online', label: 'Online Appointments' }]} 
+        width="220px"
+      />
       <ReportCheckbox label="Include Shortlisted Appointments" />
       <ReportSelect defaultValue="all" options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} width="180px" />
     </>
@@ -161,20 +275,40 @@ const AppointmentsReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Appointments Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={handleApply}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of appointments = {reportData.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={reportData.length > 0}
+              />
+            </Box>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

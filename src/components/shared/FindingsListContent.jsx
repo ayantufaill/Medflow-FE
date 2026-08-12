@@ -1,16 +1,11 @@
 import { Box, Typography } from '@mui/material';
+import { COLORS } from '../../constants/colors';
+import { bodySx, labelSx, captionSx } from '../../constants/styles';
 
 /**
  * FindingsListContent Component
  * Displays a structured list of findings with label-value pairs,
  * optional secondary issues, and explanatory bullet points.
- * 
- * @param {Array} issues - Primary findings list (required)
- * @param {Array} secondaryIssues - Secondary/stable findings (optional)
- * @param {String} comment - Contextual comment in blue box (optional)
- * @param {Array} explanations - Explanatory bullet points (optional)
- * @param {String} allergiesTitle - Title for allergies section (optional)
- * @param {Array} allergies - Allergies list (optional)
  */
 const FindingsListContent = ({ 
   issues = [], 
@@ -29,16 +24,7 @@ const FindingsListContent = ({
       {/* Allergies Section (if present) */}
       {allergiesTitle && allergies && allergies.length > 0 && (
         <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="body2"
-            fontWeight={500}
-            sx={{
-              color: '#000000',
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '0.875rem',
-              mb: 1
-            }}
-          >
+          <Typography sx={{ ...labelSx, color: COLORS.TEXT_PRIMARY, mb: 1 }}>
             {allergiesTitle}
           </Typography>
           {allergies.map((allergy) => (
@@ -56,19 +42,17 @@ const FindingsListContent = ({
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  bgcolor: '#1976d2',
+                  bgcolor: COLORS.ACCENT,
                   mr: 1.5,
                   flexShrink: 0,
                   mt: 0.5
                 }}
               />
               <Typography
-                variant="body2"
                 sx={{
-                  color: allergy.value === 'None' ? '#4caf50' : '#f44336',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '0.875rem',
-                  fontWeight: 500
+                  ...bodySx,
+                  fontWeight: 500,
+                  color: allergy.value === 'None' ? COLORS.STATUS_SUCCESS : COLORS.STATUS_ERROR,
                 }}
               >
                 {allergy.value}
@@ -97,33 +81,25 @@ const FindingsListContent = ({
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    bgcolor: '#1976d2',
+                    bgcolor: COLORS.ACCENT,
                     mr: 1.5,
                     flexShrink: 0,
                     mt: 0.5
                   }}
                 />
               ) : null}
-              <Typography
-                variant="body2"
-                fontWeight={400}
-                sx={{
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.5
-                }}
-              >
+              <Typography sx={{ ...bodySx, lineHeight: 1.5 }}>
                 {issue.isCategoryHeader ? (
                   <>
-                    <span style={{ color: '#000000' }}>{issue.label}: </span>
-                    <span style={{ color: issue.value === 'None' || issue.value?.toLowerCase().includes('none') ? '#4caf50' : '#f44336' }}>
+                    <span style={{ color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>{issue.label}: </span>
+                    <span style={{ color: issue.value === 'None' || issue.value?.toLowerCase().includes('none') ? COLORS.STATUS_SUCCESS : COLORS.STATUS_ERROR }}>
                       {issue.value}
                     </span>
                   </>
                 ) : (
                   <>
-                    {issue.label && <span style={{ color: '#000000' }}>{issue.label}: </span>}
-                    <span style={{ color: issue.value === 'None' || issue.value?.toLowerCase().includes('none') ? '#4caf50' : '#f44336' }}>
+                    {issue.label && <span style={{ color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>{issue.label}: </span>}
+                    <span style={{ color: issue.value === 'None' || issue.value?.toLowerCase().includes('none') ? COLORS.STATUS_SUCCESS : COLORS.STATUS_ERROR }}>
                       {issue.value}
                     </span>
                   </>
@@ -147,25 +123,20 @@ const FindingsListContent = ({
               }}
             >
               <Typography
-                variant="body2"
-                fontWeight={400}
                 sx={{
+                  ...bodySx,
                   width: '200px',
                   flexShrink: 0,
-                  color: '#000000',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '0.875rem'
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               >
                 {issue.label ? `${issue.label}: ` : ''}
               </Typography>
               <Typography
-                variant="body2"
                 sx={{
-                  color: issue.value === 'None' ? '#4caf50' : '#f44336',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '0.875rem',
-                  fontWeight: 500
+                  ...bodySx,
+                  fontWeight: 500,
+                  color: issue.value === 'None' ? COLORS.STATUS_SUCCESS : COLORS.STATUS_ERROR,
                 }}
               >
                 {issue.value}
@@ -178,16 +149,7 @@ const FindingsListContent = ({
       {/* Explanations (if present) */}
       {explanations && explanations.length > 0 && (
         <Box sx={{ mt: 2 }}>
-          <Typography
-            variant="body2"
-            fontWeight={500}
-            sx={{
-              color: '#000000',
-              fontFamily: 'Roboto, sans-serif',
-              fontSize: '0.875rem',
-              mb: 1
-            }}
-          >
+          <Typography sx={{ ...labelSx, color: COLORS.TEXT_PRIMARY, mb: 1 }}>
             What we found:
           </Typography>
           {explanations.map((explanation, index) => (
@@ -205,20 +167,12 @@ const FindingsListContent = ({
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  bgcolor: '#1976d2',
-                  mr: 1,
+                  bgcolor: COLORS.TEXT_MUTED,
+                  mr: 1.5,
                   flexShrink: 0
                 }}
               />
-              <Typography
-                variant="body2"
-                sx={{
-                  color: '#424242',
-                  fontFamily: 'Roboto, sans-serif',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.5
-                }}
-              >
+              <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, lineHeight: 1.5 }}>
                 {explanation}
               </Typography>
             </Box>

@@ -163,7 +163,7 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
                 bgcolor: COLORS.SURFACE_TINT
               }}
               MenuProps={{
-                sx: { zIndex: 15000 },
+                sx: { zIndex: 140000 },
                 PaperProps: {
                   sx: {
                     mt: 1,
@@ -197,7 +197,7 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
                 bgcolor: COLORS.SURFACE_TINT
               }}
               MenuProps={{
-                sx: { zIndex: 15000 },
+                sx: { zIndex: 140000 },
                 PaperProps: {
                   sx: { mt: 1, '& .MuiMenuItem-root': { fontSize: '13px' } },
                 },

@@ -1,12 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Grid, Paper, Tabs, Tab, Button, Divider } from '@mui/material';
+import { Box, Typography, Tabs, Tab, Button } from '@mui/material';
 import CategoryTabContent from '../../components/shared/CategoryTabContent';
+import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
+import { usePatient } from '../../hooks/redux/usePatient';
+import { COLORS } from '../../constants/colors';
+import { radius } from '../../constants/styles';
 
 const RiskAssessmentPage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState(0);
+  
+  const { currentPatient: patient, fetchById } = usePatient();
+
+  useEffect(() => {
+    if (patientId) fetchById(patientId);
+  }, [patientId, fetchById]);
 
   // Navigation sections for the report pages
   const reportSections = [
@@ -98,23 +108,22 @@ const RiskAssessmentPage = () => {
       },
       medicalFactors: {
         score: 65,
-        status: 'moderate',
-        title: 'Factors affecting your dental health',
-        subtitle: '',
+        status: 'concern',
+        title: 'Medical Factors',
+        subtitle: 'Medical conditions that affect oral health',
+        description: 'Your overall medical health has a significant impact on your dental health. We carefully evaluate all aspects of your medical history that relate to your dental care.',
         findingsTitle: 'Findings list',
-        introductoryText: 'Thank you for your candid and complete medical history review. We have made note of your medications, supplements, and any other factors that may influence your dental health, and you can be assured that we will review these carefully to ensure your safety and comfort during all phases of treatment.',
-        contextualLeadIn: 'The specific issues you mentioned that may be important for your dental care include:',
         issues: [
           { 
             id: 1, 
-            label: 'Allergies or allergic reactions, which we will avoid in providing your care', 
-            value: 'Nickel, Penicillin',
+            label: 'Medications requiring a change in dental treatment', 
+            value: 'None',
             isCategoryHeader: true 
           },
           { 
             id: 2, 
-            label: 'Medical conditions impacting dental health or requiring special management', 
-            value: 'Diabetes (controlled), Hypertension',
+            label: 'Conditions requiring a change in dental treatment', 
+            value: 'None',
             isCategoryHeader: true 
           },
           { 
@@ -147,53 +156,75 @@ const RiskAssessmentPage = () => {
 
   return (
     <Box>
-      {/* Top Navigation Bar - Like Patient Pages */}
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-        {reportSections.map((section) => (
-          <Button
-            key={section.id}
-            variant="text"
-            size="small"
-            onClick={() => navigate(section.path)}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              letterSpacing: '0.02em',
-              py: 1,
-              px: 1.5,
-              borderRadius: 1,
-              bgcolor: section.id === 'risk' ? 'primary.main' : 'grey.100',
-              color: section.id === 'risk' ? 'primary.contrastText' : 'text.primary',
-              minWidth: 'auto',
-              '&:hover': {
-                bgcolor: section.id === 'risk' ? 'primary.dark' : 'grey.200',
-              },
-            }}
-          >
-            {section.label}
-          </Button>
-        ))}
+
+      {/* Patient Header Card */}
+      <Box sx={{
+        mb: 2,
+        p: 2,
+        backgroundColor: COLORS.SURFACE_CARD,
+        borderRadius: radius.xl,
+        border: `0.8px solid ${COLORS.BORDER}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 2,
+      }}>
+        {patient ? <PatientSummaryCard patient={patient} /> : <Box />}
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          {reportSections.map((section) => (
+            <Button
+              key={section.id}
+              variant="text"
+              size="small"
+              onClick={() => navigate(section.path)}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                letterSpacing: '0.02em',
+                py: 1,
+                px: 1.5,
+                borderRadius: 1,
+                bgcolor: section.id === 'risk' ? 'primary.main' : 'grey.100',
+                color: section.id === 'risk' ? 'primary.contrastText' : 'text.primary',
+                minWidth: 'auto',
+                '&:hover': {
+                  bgcolor: section.id === 'risk' ? 'primary.dark' : 'grey.200',
+                },
+              }}
+            >
+              {section.label}
+            </Button>
+          ))}
+        </Box>
       </Box>
 
+      {/* Main Content Area */}
+      <Box sx={{ pb: 4 }}>
+        {/* Unified Card with Navigation */}
+        <Box sx={{ 
+          backgroundColor: COLORS.SURFACE_CARD, 
+          borderRadius: radius.xl, 
+          border: `1px solid ${COLORS.BORDER}`, 
+          p: 3 
+        }}>
+          {/* Main Concern - Centered */}
+          <Box sx={{ mb: 3, textAlign: 'center' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                fontSize: '0.90rem',
+                color: COLORS.PRIMARY
+              }}
+            >
+              Main Concern: Cracked tooth
+            </Typography>
+          </Box>
 
-      {/* Main Concern - Centered */}
-      <Box sx={{ mb: 2, textAlign: 'center' }}>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            fontWeight: 600, 
-            fontSize: '0.90rem',
-            color: '#1976d2'
-          }}
-        >
-          Main Concern: Cracked tooth
-        </Typography>
-      </Box>
-
-      {/* Unified Card with Navigation */}
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', gap: 3 }}>
+          <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Side - Visual */}
           <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
             <img 
@@ -206,7 +237,7 @@ const RiskAssessmentPage = () => {
           {/* Vertical Divider */}
           <Box sx={{ 
             width: '1px', 
-            bgcolor: '#bdbdbd',
+            bgcolor: COLORS.BORDER,
             minHeight: '400px',
             flexShrink: 0
           }} />
@@ -214,12 +245,21 @@ const RiskAssessmentPage = () => {
           {/* Right Side - Content with Navigation */}
           <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 0 }}>
             {/* Category Navigation Tabs */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Box sx={{ borderBottom: 1, borderColor: COLORS.BORDER, mb: 3 }}>
               <Tabs
                 value={activeCategory}
                 onChange={(event, newValue) => setActiveCategory(newValue)}
                 variant="scrollable"
                 scrollButtons="auto"
+                sx={{
+                  '& .MuiTab-root': {
+                    color: COLORS.TEXT_MUTED,
+                    '&.Mui-selected': { color: COLORS.PRIMARY }
+                  },
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: COLORS.PRIMARY
+                  }
+                }}
               >
                 {riskCategories.map((name) => (
                   <Tab 
@@ -245,7 +285,8 @@ const RiskAssessmentPage = () => {
             </Box>
           </Box>
         </Box>
-      </Paper>
+        </Box>
+      </Box>
     </Box>
   );
 };

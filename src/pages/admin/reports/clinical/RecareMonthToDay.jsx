@@ -6,16 +6,16 @@ import { fetchRecareReport, selectRecareData, selectClinicalReportLoading } from
 import RecareCategoryDialog from './RecareCategoryDialog';
 
 const DEFAULT_DATA = [
-  { name: 'On-Time No Pre-appt', value: 22, color: '#7b61ff' },
-  { name: 'On-Time Pre-appt', value: 197, color: '#9e8aff' },
-  { name: 'No Recare', value: 152, color: '#4a90e2' },
-  { name: 'Flagged No-Recare', value: 1, color: '#82b1ff' },
-  { name: 'Late >12 months Appointed', value: 2, color: '#cfd8dc' },
-  { name: 'Late >12 months Broken Appointment', value: 41, color: '#90a4ae' },
-  { name: 'Late >12 months No Appointment', value: 17, color: '#455a64' },
-  { name: 'Late <12 months Appointed', value: 24, color: '#ffe0b2' },
-  { name: 'Late <12 months Broken Appointment', value: 62, color: '#ffcc80' },
-  { name: 'Late <12 months No Appointment', value: 18, color: '#ffb74d' },
+  { name: 'On-Time No Pre-appt', value: 22, color: '#a855f7' },
+  { name: 'On-Time Pre-appt', value: 197, color: '#d8b4fe' },
+  { name: 'No Recare', value: 152, color: '#3b82f6' },
+  { name: 'Flagged No-Recare', value: 1, color: '#93c5fd' },
+  { name: 'Late >12 months Appointed', value: 2, color: '#64748b' },
+  { name: 'Late >12 months Broken Appointment', value: 41, color: '#1e293b' },
+  { name: 'Late >12 months No Appointment', value: 17, color: '#475569' },
+  { name: 'Late <12 months Appointed', value: 24, color: '#fcd34d' },
+  { name: 'Late <12 months Broken Appointment', value: 62, color: '#fbbf24' },
+  { name: 'Late <12 months No Appointment', value: 18, color: '#f59e0b' },
 ];
 
 const RecareMonthToDay = ({ setSubtitle }) => {
@@ -25,12 +25,15 @@ const RecareMonthToDay = ({ setSubtitle }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchRecareReport({}));
+    if (!apiData || apiData.length === 0) {
+      dispatch(fetchRecareReport({}));
+    }
     if (setSubtitle) setSubtitle('Month-to-day metrics derived from Recare data');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, setSubtitle]);
 
   const chartData = useMemo(() => {
-    if (!apiData || apiData.length === 0) return DEFAULT_DATA; // Fallback to mock design data
+    if (!apiData) return []; // Return empty array if not loaded yet
 
     let onTimeNoPre = 0, onTimePre = 0, noRecare = 0, flaggedNoRecare = 0;
     let late12Appt = 0, late12Broken = 0, late12NoAppt = 0;
@@ -70,22 +73,57 @@ const RecareMonthToDay = ({ setSubtitle }) => {
     });
 
     return [
-      { name: 'On-Time No Pre-appt', value: onTimeNoPre, color: '#7b61ff' },
-      { name: 'On-Time Pre-appt', value: onTimePre, color: '#9e8aff' },
-      { name: 'No Recare', value: noRecare, color: '#4a90e2' },
-      { name: 'Flagged No-Recare', value: flaggedNoRecare, color: '#82b1ff' },
-      { name: 'Late >12 months Appointed', value: late12Appt, color: '#cfd8dc' },
-      { name: 'Late >12 months Broken Appointment', value: late12Broken, color: '#90a4ae' },
-      { name: 'Late >12 months No Appointment', value: late12NoAppt, color: '#455a64' },
-      { name: 'Late <12 months Appointed', value: lateU12Appt, color: '#ffe0b2' },
-      { name: 'Late <12 months Broken Appointment', value: lateU12Broken, color: '#ffcc80' },
-      { name: 'Late <12 months No Appointment', value: lateU12NoAppt, color: '#ffb74d' },
+      { name: 'On-Time No Pre-appt', value: onTimeNoPre, color: '#a855f7' },
+      { name: 'On-Time Pre-appt', value: onTimePre, color: '#d8b4fe' },
+      { name: 'No Recare', value: noRecare, color: '#3b82f6' },
+      { name: 'Flagged No-Recare', value: flaggedNoRecare, color: '#93c5fd' },
+      { name: 'Late >12 months Appointed', value: late12Appt, color: '#64748b' },
+      { name: 'Late >12 months Broken Appointment', value: late12Broken, color: '#1e293b' },
+      { name: 'Late >12 months No Appointment', value: late12NoAppt, color: '#475569' },
+      { name: 'Late <12 months Appointed', value: lateU12Appt, color: '#fcd34d' },
+      { name: 'Late <12 months Broken Appointment', value: lateU12Broken, color: '#fbbf24' },
+      { name: 'Late <12 months No Appointment', value: lateU12NoAppt, color: '#f59e0b' },
     ];
   }, [apiData]);
 
+  const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
+  const pieData = totalValue === 0 ? [{ name: 'No Data', value: 1, color: '#f8fafc' }] : chartData;
+  const legendPayload = chartData.map(item => ({
+    id: item.name,
+    type: 'square',
+    value: item.name,
+    color: item.color
+  }));
+
   return (
-    <Box sx={{ height: 450, width: '100%' }}>
-      {loading && (!apiData || apiData.length === 0) ? (
+    <Box
+      sx={{
+        height: 500,
+        width: '100%',
+        p: 3,
+        bgcolor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '12px',
+        boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+        boxSizing: 'border-box'
+      }}
+    >
+      <Typography 
+        variant="subtitle1" 
+        sx={{ 
+          mb: 2, 
+          textAlign: 'left', 
+          color: '#09121F', 
+          fontWeight: 600,
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '15px',
+          ml: 5
+        }}
+      >
+        Number of patients
+      </Typography>
+      <Box sx={{ height: 400, width: '100%' }}>
+        {loading && (!apiData || apiData.length === 0) ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
           <CircularProgress />
         </Box>
@@ -93,7 +131,7 @@ const RecareMonthToDay = ({ setSubtitle }) => {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
           <Pie
-            data={chartData}
+            data={pieData}
             cx="40%"
             cy="50%"
             innerRadius={0}
@@ -101,26 +139,27 @@ const RecareMonthToDay = ({ setSubtitle }) => {
             paddingAngle={0}
             dataKey="value"
           >
-            {chartData.map((entry, index) => (
+            {pieData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
                 fill={entry.color} 
-                onClick={() => setSelectedCategory(entry.name)}
-                style={{ cursor: 'pointer' }}
+                onClick={() => totalValue > 0 && setSelectedCategory(entry.name)}
+                style={{ cursor: totalValue > 0 ? 'pointer' : 'default' }}
               />
             ))}
           </Pie>
           <Tooltip 
-            formatter={(value, name) => [value, name]}
+            formatter={(value, name) => [totalValue === 0 ? 0 : value, name]}
             contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
           />
           <Legend 
             layout="vertical" 
             align="right" 
             verticalAlign="middle"
-            onClick={(e) => e && e.value && setSelectedCategory(e.value)}
-            wrapperStyle={{ cursor: 'pointer' }}
-            formatter={(value, entry) => {
+            payload={legendPayload}
+            onClick={(e) => totalValue > 0 && e && e.value && setSelectedCategory(e.value)}
+            wrapperStyle={{ cursor: totalValue > 0 ? 'pointer' : 'default' }}
+            formatter={(value) => {
               const item = chartData.find(d => d.name === value);
               return <span style={{ fontSize: '0.8rem', color: '#666' }}>{value} ({item?.value || 0})</span>;
             }}
@@ -128,6 +167,7 @@ const RecareMonthToDay = ({ setSubtitle }) => {
         </PieChart>
         </ResponsiveContainer>
       )}
+      </Box>
       <RecareCategoryDialog 
         open={!!selectedCategory} 
         onClose={() => setSelectedCategory(null)} 
