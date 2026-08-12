@@ -32,12 +32,10 @@ const AppointmentsReport = () => {
 
   const apptStatusOptions = [
     { value: 'all', label: 'Select Status' },
-    { value: '1', label: 'Scheduled' },
-    { value: '2', label: 'CheckedoutCompleted' },
-    { value: '3', label: 'Broken' },
-    { value: '4', label: 'Cancelled' },
-    { value: '5', label: 'CancelledShortNotice' },
-    { value: '6', label: 'Unconfirmed' },
+    { value: 'scheduled', label: 'Scheduled' },
+    { value: 'complete', label: 'CheckedoutCompleted' },
+    { value: 'broken', label: 'Broken' },
+    { value: 'cancelled', label: 'Cancelled' },
   ];
 
   const [dateType, setDateType] = useState('aptDate');
@@ -46,14 +44,20 @@ const AppointmentsReport = () => {
   const [provider, setProvider] = useState('all');
   const [status, setStatus] = useState('all');
   const [locationType, setLocationType] = useState('office');
+  const [includeShortlisted, setIncludeShortlisted] = useState(false);
+  const [flagFilter, setFlagFilter] = useState('all');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const fetchReport = () => {
     dispatch(fetchAppointmentsReport({
+      dateType,
       startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
       endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
       provider,
-      status
+      status,
+      locationType,
+      includeShortlisted,
+      flagFilter
     }));
   };
 
@@ -104,6 +108,12 @@ const AppointmentsReport = () => {
             value="aptDate" 
             control={<Radio size="small" />} 
             label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Appointment Date:</Typography>} 
+            sx={{ m: 0 }}
+          />
+          <FormControlLabel 
+            value="created" 
+            control={<Radio size="small" />} 
+            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Created Date:</Typography>} 
             sx={{ m: 0 }}
           />
         </RadioGroup>
@@ -167,76 +177,6 @@ const AppointmentsReport = () => {
         />
       </Box>
       </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <RadioGroup row defaultValue="created" sx={{ flexWrap: 'nowrap' }}>
-          <FormControlLabel 
-            value="created" 
-            control={<Radio size="small" />} 
-            label={<Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Appointment Created Date:</Typography>} 
-            sx={{ m: 0 }}
-          />
-        </RadioGroup>
-        <ReportSelect defaultValue="range" options={[{ value: 'range', label: 'Range' }, { value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' }, { value: 'last7', label: 'Last 7 Days' }]} width="100px" />
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          start date
-        </Typography>
-        <DatePicker
-          value={startDate}
-          onChange={() => {}}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          end date
-        </Typography>
-        <DatePicker
-          value={endDate}
-          onChange={() => {}}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-      </Box>
     </>
   );
 
@@ -266,8 +206,21 @@ const AppointmentsReport = () => {
         options={[{ value: 'office', label: 'Office Appointments' }, { value: 'online', label: 'Online Appointments' }]} 
         width="220px"
       />
-      <ReportCheckbox label="Include Shortlisted Appointments" />
-      <ReportSelect defaultValue="all" options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} width="180px" />
+      <ReportCheckbox 
+        label="Include Shortlisted Appointments" 
+        checked={includeShortlisted}
+        onChange={(e) => setIncludeShortlisted(e.target.checked)}
+      />
+      <ReportSelect 
+        value={flagFilter}
+        onChange={(e) => setFlagFilter(e.target.value)}
+        options={[
+          { value: 'all', label: 'Pts With Or Without Flags' },
+          { value: 'withFlags', label: 'Pts With Flags' },
+          { value: 'withoutFlags', label: 'Pts Without Flags' }
+        ]} 
+        width="180px" 
+      />
     </>
   );
 

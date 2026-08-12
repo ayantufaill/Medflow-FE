@@ -28,6 +28,7 @@ const PatientLastAppointmentReport = () => {
   const [provider, setProvider] = useState('all');
   const [appointmentStatus, setAppointmentStatus] = useState('all');
   const [flagsFilter, setFlagsFilter] = useState('all');
+  const [showFlags, setShowFlags] = useState(false);
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
@@ -61,7 +62,8 @@ const PatientLastAppointmentReport = () => {
       filterBy,
       provider,
       appointmentStatus,
-      flagsFilter
+      flagsFilter,
+      showFlags
     }));
   };
 
@@ -77,6 +79,7 @@ const PatientLastAppointmentReport = () => {
   const columns = [
     { label: 'ID' },
     { label: 'Patient' },
+    ...(showFlags ? [{ label: 'Flags' }] : []),
     { label: 'Patient Status' },
     { label: 'Appt Date' },
     { label: 'Appt Type' },
@@ -95,6 +98,7 @@ const PatientLastAppointmentReport = () => {
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+      {showFlags && <TableCell sx={{ fontSize: '0.7rem' }}>{row.flags?.join(', ') || ''}</TableCell>}
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.apptDate}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.type}</TableCell>
@@ -185,8 +189,21 @@ const PatientLastAppointmentReport = () => {
 
   const bottomFilters = (
     <>
-      <ReportCheckbox label="Show Flags in Report" />
-      <ReportSelect value={flagsFilter} onChange={(e) => setFlagsFilter(e.target.value)} options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} width="180px" />
+      <ReportCheckbox 
+        label="Show Flags in Report" 
+        checked={showFlags}
+        onChange={(e) => setShowFlags(e.target.checked)}
+      />
+      <ReportSelect 
+        value={flagsFilter} 
+        onChange={(e) => setFlagsFilter(e.target.value)} 
+        options={[
+          { value: 'all', label: 'Pts With Or Without Flags' },
+          { value: 'withFlags', label: 'Pts With Flags' },
+          { value: 'withoutFlags', label: 'Pts Without Flags' }
+        ]} 
+        width="180px" 
+      />
     </>
   );
 

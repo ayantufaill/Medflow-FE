@@ -24,12 +24,14 @@ const NoShowAppointmentsReport = () => {
 
   const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
   const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
+  const [showInactive, setShowInactive] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const fetchReport = () => {
     dispatch(fetchNoShowAppointmentsReport({
       startDate: startDate.format('YYYY-MM-DD'),
-      endDate: endDate.format('YYYY-MM-DD')
+      endDate: endDate.format('YYYY-MM-DD'),
+      showInactive
     }));
   };
 
@@ -133,7 +135,11 @@ const NoShowAppointmentsReport = () => {
         />
       </Box>
       </Box>
-      <ReportCheckbox label="Show Inactive Patients" />
+      <ReportCheckbox 
+        label="Show Inactive Patients" 
+        checked={showInactive}
+        onChange={(e) => setShowInactive(e.target.checked)}
+      />
     </>
   );
 
