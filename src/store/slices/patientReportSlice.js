@@ -3,9 +3,9 @@ import { reportingService } from '../../services/reporting.service';
 
 export const fetchPatientInsuranceCoverageReport = createAsyncThunk(
   'patientReport/fetchPatientInsuranceCoverageReport',
-  async (_, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
-      const data = await reportingService.getPatientReport('insurance-coverage');
+      const data = await reportingService.getPatientReport('insurance-coverage', params);
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');
@@ -63,9 +63,9 @@ export const fetchPatientsReferralReport = createAsyncThunk(
 
 export const fetchPatientMembershipPlanReport = createAsyncThunk(
   'patientReport/fetchPatientMembershipPlanReport',
-  async (_, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
-      const data = await reportingService.getPatientReport('membership-plan');
+      const data = await reportingService.getPatientReport('membership-plan', params);
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch report');

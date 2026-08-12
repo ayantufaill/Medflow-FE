@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Tabs, Tab, Button } from '@mui/material';
 import CategoryTabContent from '../../components/shared/CategoryTabContent';
 import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
+import ClickableReportImage from '../../components/patient-reports/ClickableReportImage';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
@@ -227,11 +228,7 @@ const RiskAssessmentPage = () => {
           <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Side - Visual */}
           <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
-            <img 
-              src="/report_visual.png" 
-              alt="Dental Assessment Visualization"
-              style={{ width: '100%', height: 'auto', display: 'block' }}
-            />
+            <ClickableReportImage />
           </Box>
 
           {/* Vertical Divider */}

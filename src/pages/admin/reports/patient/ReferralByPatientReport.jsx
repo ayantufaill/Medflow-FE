@@ -165,14 +165,18 @@ const ReferralByPatientReport = () => {
     }
   };
 
-  // Fetch from backend when date or range changes
-  useEffect(() => {
+  const fetchReport = () => {
     dispatch(fetchReferralByPatientReport({ 
       startDate,
       endDate,
       range: dateRange
     }));
-  }, [dispatch, startDate, endDate, dateRange]);
+  };
+
+  useEffect(() => {
+    fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync redux state to local state
   useEffect(() => {
@@ -303,6 +307,7 @@ const ReferralByPatientReport = () => {
         <Box className="hide-on-print" sx={{ mb: 2 }}>
           <ReportFilterBar 
             topRowFilters={topFilters}
+            onApplyFilters={fetchReport}
             onClearAll={handleClearFilters}
             onCreateTemplate={() => setTemplateDialogOpen(true)}
           />

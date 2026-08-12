@@ -37,10 +37,6 @@ const PatientMembershipPlan = () => {
   const reduxData = useSelector(selectMembershipPlanData) || [];
   const loading = useSelector(selectMembershipPlanDataLoading);
 
-  useEffect(() => {
-    dispatch(fetchPatientMembershipPlanReport());
-  }, [dispatch]);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [data, setData] = useState([]);
   const [grouping, setGrouping] = useState('no');
@@ -74,64 +70,36 @@ const PatientMembershipPlan = () => {
     setSearchResults(filtered);
     setShowDropdown(true);
   };
-
-  const handleApplyFilters = () => {
-    const filtered = reduxData.filter((item) => {
-      // 1. Search Query
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || (
-        (item.patient && item.patient.toLowerCase().includes(searchLower)) ||
-        (item.planName && item.planName.toLowerCase().includes(searchLower)) ||
-        (item.number && String(item.number).toLowerCase().includes(searchLower))
-      );
-
-      // 2. Renewal Month
-      const matchesMonth = !renewalMonth || item.renewalMonth === renewalMonth;
-
-      // 3. Appt Date
-      let matchesApptDate = true;
-      if (apptFilterType !== 'no') {
-        if (!item.lastAppointment) {
-          matchesApptDate = false;
-        } else {
-          const apptDate = new Date(item.lastAppointment);
-          if (apptFilterType === 'range') {
-            const start = apptStartDate ? new Date(apptStartDate) : null;
-            const end = apptEndDate ? new Date(apptEndDate) : null;
-            if (start && apptDate < start) matchesApptDate = false;
-            if (end && apptDate > end) matchesApptDate = false;
-          } else if (apptFilterType === 'before') {
-            const single = apptSingleDate ? new Date(apptSingleDate) : null;
-            if (single && apptDate >= single) matchesApptDate = false;
-          } else if (apptFilterType === 'after') {
-            const single = apptSingleDate ? new Date(apptSingleDate) : null;
-            if (single && apptDate <= single) matchesApptDate = false;
-          }
-        }
-      }
-
-      // 4. Show patients with no plan
-      const hasPlan = Boolean(item.planName && item.planName !== 'N/A' && item.planName.trim() !== '');
-      const matchesPlan = showNoPlan ? !hasPlan : hasPlan;
-
-      return matchesSearch && matchesMonth && matchesApptDate && matchesPlan;
-    });
-
-    setData(filtered);
-  };
+  useEffect(() => {
+    dispatch(fetchPatientMembershipPlanReport({
+      searchQuery,
+      renewalMonth,
+      apptFilterType,
+      apptStartDate,
+      apptEndDate,
+      apptSingleDate,
+      showNoPlan
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    handleApplyFilters();
-  }, [
-    searchQuery,
-    renewalMonth,
-    apptFilterType,
-    apptStartDate,
-    apptEndDate,
-    apptSingleDate,
-    showNoPlan,
-    reduxData
-  ]);
+    if (reduxData) {
+      setData(reduxData);
+    }
+  }, [reduxData]);
+
+  const handleApplyFilters = () => {
+    dispatch(fetchPatientMembershipPlanReport({
+      searchQuery,
+      renewalMonth,
+      apptFilterType,
+      apptStartDate,
+      apptEndDate,
+      apptSingleDate,
+      showNoPlan
+    }));
+  };
 
   const groupedData = useMemo(() => {
     if (grouping === 'no') return null;
