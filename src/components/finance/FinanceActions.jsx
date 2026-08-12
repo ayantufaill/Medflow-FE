@@ -58,8 +58,18 @@ const FinanceActions = ({
     navigate('/insurance');
   };
 
-  // Add Claim dialog
-  const [showAddClaimDialog, setShowAddClaimDialog] = useState(false);
+  // Add Claim dialog (dropdown state)
+  const [addClaimAnchorEl, setAddClaimAnchorEl] = useState(null);
+  const handleAddClaimClick = (e) => setAddClaimAnchorEl(e.currentTarget);
+  const handleAddClaimClose = () => setAddClaimAnchorEl(null);
+  const handleAddClaimSelect = (type) => {
+    handleAddClaimClose();
+    if (type === 'manual') {
+      onTriggerPatientFinanceIcon?.('claim');
+    } else if (type === 'electronic') {
+      onTriggerPatientFinanceIcon?.('electronicClaim');
+    }
+  };
 
   // Past Statements dialog
   const [showPastStatements, setShowPastStatements] = useState(false);
@@ -106,7 +116,7 @@ const FinanceActions = ({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <Tooltip title="Invoices"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('invoice')}><Box component="img" src={invoicesIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Patient Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('userWallet')}><Box component="img" src={patientpaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
-        <Tooltip title="Add Claim"><IconButton size="small" onClick={() => setShowAddClaimDialog(true)}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+        <Tooltip title="Add Claim"><IconButton size="small" onClick={handleAddClaimClick}><Box component="img" src={addclaimIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Insurance Payment"><IconButton size="small" onClick={() => onTriggerPatientFinanceIcon?.('insuranceWallet')}><Box component="img" src={insurancepaymentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
         <Tooltip title="Courtesy Refund"><IconButton size="small" onClick={onRefreshCoinClick}><Box component="img" src={courtestrefundIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>     
         <Tooltip title="Patient Deposit"><IconButton size="small" onClick={onOpenDepositMenu}><Box component="img" src={patientdepositIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
@@ -233,10 +243,24 @@ const FinanceActions = ({
         patient={patient}
       />
 
-      <InsuranceCoverageDialog
-        open={showAddClaimDialog}
-        onClose={() => setShowAddClaimDialog(false)}
-      />
+      {/* Add Claim Dropdown Menu */}
+      <Menu
+        anchorEl={addClaimAnchorEl}
+        open={Boolean(addClaimAnchorEl)}
+        onClose={handleAddClaimClose}
+        PaperProps={{
+          sx: {
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            minWidth: 150,
+            '& .MuiMenuItem-root': {
+              fontSize: '0.875rem'
+            }
+          }
+        }}
+      >
+        <MenuItem onClick={() => handleAddClaimSelect('manual')}>Manual Claim</MenuItem>
+        <MenuItem onClick={() => handleAddClaimSelect('electronic')}>Electronic Claim</MenuItem>
+      </Menu>
 
       <PatientPrintOptions
         anchorEl={printAnchorEl}

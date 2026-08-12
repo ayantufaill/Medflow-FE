@@ -254,7 +254,6 @@ export default function ImportedCoverageModal({
       subscriberName: ins?.subscriberName,
       subscriberDateOfBirth: ins?.subscriberDateOfBirth,
       relationshipToPatient: ins?.relationshipToPatient || 'self',
-      insuranceType: ins?.insuranceType || 'primary',
       effectiveDate: ins?.effectiveDate,
       expirationDate: ins?.expirationDate,
       employerName: newPlanEmployerName,
@@ -288,9 +287,8 @@ export default function ImportedCoverageModal({
     return map[rel] || rel || '–';
   };
 
-  const getPolicyTypeLabel = (type) => {
-    const map = { primary: 'PRIMARY', secondary: 'SECONDARY', tertiary: 'TERTIARY' };
-    return map[(type || '').toLowerCase()] || (type || 'Primary').toUpperCase();
+  const getPolicyTypeLabel = (ins) => {
+    return ins?.Ordinal ? `COVERAGE #${ins.Ordinal}` : 'COVERAGE';
   };
 
   return (
@@ -720,7 +718,7 @@ export default function ImportedCoverageModal({
               const insId = ins._id || ins.id;
               const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
               const isExpanded = expandedId === insId;
-              const policyType = getPolicyTypeLabel(ins.insuranceType);
+              const policyType = getPolicyTypeLabel(ins);
 
               return (
                 <Box
@@ -821,7 +819,7 @@ export default function ImportedCoverageModal({
                     '&:hover': { bgcolor: 'primary.dark' },
                   }}
                 >
-                  {creating ? 'Creating...' : `Create ${getPolicyTypeLabel(selectedInsurance?.insuranceType || inactiveInsurances[0]?.insuranceType) || 'PRIMARY'} Policy`}
+                  {creating ? 'Creating...' : `Create ${getPolicyTypeLabel(selectedInsurance || inactiveInsurances[0])} Policy`}
                 </Button>
               </Box>
             </Box>

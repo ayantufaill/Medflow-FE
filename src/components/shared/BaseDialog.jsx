@@ -37,7 +37,7 @@ const BaseDialog = ({
     sx={{ zIndex: 130000 }}
     PaperProps={{
       sx: {
-        borderRadius: radius.md,
+        borderRadius: '14px',
         overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         ...paperSx,
@@ -51,18 +51,16 @@ const BaseDialog = ({
         color: COLORS.TEXT_PRIMARY,
         fontSize: '15px',
         fontWeight: fontWeight.semiBold,
-        textAlign: 'center',
-        py: 1.5,
+        py: 2,
         px: 3,
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
         gap: 1
       }}
     >
       {Icon && <Icon sx={{ fontSize: '18px', color: COLORS.ACCENT }} />}
-      <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, flex: 1, textAlign: 'center' }}>
+      <Typography sx={{ fontSize: '15px', fontWeight: fontWeight.semiBold, flex: 1, textAlign: 'left' }}>
         {title}
       </Typography>
       {showCloseButton && (

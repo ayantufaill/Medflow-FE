@@ -4,6 +4,7 @@ import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import ClaimFooterTip from './ClaimFooterTip';
+import InvalidInfoDialog from './InvalidInfoDialog';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES } from '../../pages/claims/claimsConstants';
@@ -31,6 +32,9 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   
   // Menu anchors
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
+  
+  // Dialog state
+  const [invalidInfoClaim, setInvalidInfoClaim] = useState(null);
   
   // Use shared actions
   const {
@@ -155,6 +159,22 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   const handleSelectClaim = (id) => {
     setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleRevalidate = async (claimId) => {
+    try {
+      const result = await claimService.validateClaim(claimId);
+      if (result.isValid) {
+        await claimService.updateClaim(claimId, { status: 'readyForSubmission' });
+        showMessage("Claim revalidated and is ready for submission!", "success");
+        window.dispatchEvent(new CustomEvent('refresh-claims'));
+      } else {
+        showMessage(`Claim still has ${result.errors.length} validation error(s).`, "error");
+      }
+    } catch (err) {
+      console.error("Revalidation failed", err);
+      showMessage("Failed to revalidate claim.", "error");
+    }
   };
 
   const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
@@ -288,14 +308,21 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
         expandedProcedures={expandedProcedures}
         handleToggleHide={toggleHide}
-        handleRevalidate={(id) => showMessage("Claim revalidated!")}
+        handleRevalidate={handleRevalidate}
         handleNoteOpen={() => {}}
         handleOpenEdit={onOpenEdit}
         handleOpenAttach={onOpenAttach}
         handleOpenPreview={onOpenPreview}
+        handleOpenInvalidInfo={(claim) => setInvalidInfoClaim(claim)}
       />
 
       <ClaimFooterTip />
+
+      <InvalidInfoDialog 
+        open={!!invalidInfoClaim} 
+        onClose={() => setInvalidInfoClaim(null)} 
+        claim={invalidInfoClaim} 
+      />
     </Box>
   );
 };

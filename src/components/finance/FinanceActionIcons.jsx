@@ -76,8 +76,8 @@ export const IconInsuranceWithDropdown = ({ onClaimSelect }) => {
         onClose={handleClose}
         PaperProps={{ sx: { boxShadow: '0px 2px 8px rgba(0,0,0,0.1)', minWidth: 150 } }}
       >
-        <MenuItem onClick={() => handleSelect('manual')} sx={{ fontSize: '0.875rem' }}>Manual Claims</MenuItem>
-        <MenuItem onClick={() => handleSelect('electronic')} sx={{ fontSize: '0.875rem' }}>Electronic Claims</MenuItem>
+        <MenuItem onClick={() => handleSelect('manual')} sx={{ fontSize: '0.875rem' }}>Manual Claim</MenuItem>
+        <MenuItem onClick={() => handleSelect('electronic')} sx={{ fontSize: '0.875rem' }}>Electronic Claim</MenuItem>
       </Menu>
     </>
   );

@@ -412,7 +412,7 @@ export default function BatchActionsPage() {
         <ReportFilterBar
           topRowFilters={
             <>
-              <ReportSearchInput placeholder="Search payments…" value={searchQuery} onChange={setSearchQuery} />
+              <ReportSearchInput placeholder="Search payments…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               <Button variant="outlined" size="small" startIcon={<RefreshIcon sx={{ fontSize: 15 }} />} onClick={handleRefreshBatchPayments}
                 sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#64748b', bgcolor: '#f8fafc', borderRadius: '6px', px: 2, fontWeight: 600, fontSize: '0.85rem', '&:hover': { borderColor: '#cbd5e1', bgcolor: '#f1f5f9' } }}
               >
@@ -441,7 +441,7 @@ export default function BatchActionsPage() {
       ) : activeTab === 'BATCH INVOICES' ? (
         <ReportFilterBar
           topRowFilters={
-            <ReportSelect label="SORT BY" value={sortReportBy} onChange={setSortReportBy} options={[{value: 'Date of Service', label: 'Date of Service'}, {value: 'Patient Name', label: 'Patient Name'}, {value: 'Provider', label: 'Provider'}]} />
+            <ReportSelect label="SORT BY" value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} options={[{value: 'Date of Service', label: 'Date of Service'}, {value: 'Patient Name', label: 'Patient Name'}, {value: 'Provider', label: 'Provider'}]} />
           }
           topRowActions={
             <>
@@ -461,9 +461,9 @@ export default function BatchActionsPage() {
         <ReportFilterBar
           topRowFilters={
             <>
-              <ReportSelect label="SORT BY" value={sortReportBy} onChange={setSortReportBy} options={[{value: 'Date of Service', label: 'Date of Service'}, {value: 'Patient Name', label: 'Patient Name'}]} />
-              <ReportSelect label="CLAIM TYPE" value={filterClaimType} onChange={setFilterClaimType} options={[{value: 'All', label: 'All'}, {value: 'Manual & Electronic', label: 'Manual & Electronic'}]} />
-              <ReportSelect label="CARRIER" value={filterClaimsCarrier} onChange={setFilterClaimsCarrier} options={[{value: 'All', label: 'All'}, {value: 'Membership Payer', label: 'Membership Payer'}]} />
+              <ReportSelect label="SORT BY" value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} options={[{value: 'Date of Service', label: 'Date of Service'}, {value: 'Patient Name', label: 'Patient Name'}]} />
+              <ReportSelect label="CLAIM TYPE" value={filterClaimType} onChange={(e) => setFilterClaimType(e.target.value)} options={[{value: 'All', label: 'All'}, {value: 'Manual & Electronic', label: 'Manual & Electronic'}]} />
+              <ReportSelect label="CARRIER" value={filterClaimsCarrier} onChange={(e) => setFilterClaimsCarrier(e.target.value)} options={[{value: 'All', label: 'All'}, {value: 'Membership Payer', label: 'Membership Payer'}]} />
             </>
           }
           topRowActions={null}
@@ -482,7 +482,7 @@ export default function BatchActionsPage() {
           }
           bottomRowFilters={
             <>
-              <ReportSearchInput placeholder="Search claims…" value={claimsSearchQuery} onChange={setClaimsSearchQuery} />
+              <ReportSearchInput placeholder="Search claims…" value={claimsSearchQuery} onChange={(e) => setClaimsSearchQuery(e.target.value)} />
               <FormControlLabel
                 control={<Checkbox checked={excludeClosedInvoices} onChange={(e) => setExcludeClosedInvoices(e.target.checked)} size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' }, p: 0.5 }} />}
                 label={<Typography sx={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>Exclude closed invoices</Typography>}
