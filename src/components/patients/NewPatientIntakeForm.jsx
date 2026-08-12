@@ -1165,14 +1165,15 @@ const NewPatientIntakeForm = ({ onSubmit, loading = false, onCancel }) => {
                     <Controller
                       name="patientCountry"
                       control={control}
+                      defaultValue="United States"
                       render={({ field }) => (
-                        <AddressSelect field={field} label="Country:">
-                          {COUNTRY_OPTIONS.map((country) => (
-                            <MenuItem key={country} value={country}>
-                              {country}
-                            </MenuItem>
-                          ))}
-                        </AddressSelect>
+                        <AddressTextInput
+                          {...field}
+                          value="United States"
+                          label="Country:"
+                          disabled
+                          readOnly
+                        />
                       )}
                     />
                     <AddressTextInput

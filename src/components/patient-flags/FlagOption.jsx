@@ -4,7 +4,7 @@ import { COLORS } from '../../constants/colors';
 
 const FlagOption = ({ label, color, checked, onChange }) => {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
       <Checkbox 
         size="small" 
         checked={checked || false}

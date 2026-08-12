@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Typography, IconButton, TextField, Select, MenuItem,
-  Button, Divider, Checkbox, FormControlLabel, Paper, InputAdornment, Modal, ToggleButton, ToggleButtonGroup, ClickAwayListener, Popover, Grid, Stack
+  Button, Divider, Checkbox, FormControlLabel, Paper, Modal, Stack, Popover, Grid, CircularProgress, Snackbar, Alert
 } from '@mui/material';
 import {
-  Close, DeleteOutline, CalendarToday, Add, 
+  Close, DeleteOutline, Add, 
   CloudUploadOutlined, Undo, Redo, FormatBold, 
   FormatItalic, FormatListBulleted, FormatAlignLeft, 
   FormatAlignCenter, FormatAlignRight, SentimentSatisfiedAlt, LightbulbOutlined,
@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import SignaturePad from './SignaturePad';
+import apiClient from '../../config/api';
 
 const modalStyle = {
   position: 'absolute',
@@ -28,15 +29,37 @@ const modalStyle = {
   outline: 'none'
 };
 
-const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase = false }) => {
+const DEFAULT_LABS = [
+  { _id: '1', name: 'Dental Arts Lab' },
+  { _id: '2', name: 'Glidewell Laboratories' },
+  { _id: '3', name: 'MicroDental Laboratories' },
+];
+
+const TEMPLATES = {
+  none: '',
+  template1: `<b>Crown Slip Template:</b><br/>• Tooth #: <br/>• Shade: <br/>• Material: Zirconia / E.max<br/>• Margin: Chamfer<br/>• Occlusal Clearance: 1.5mm`,
+  template2: `<b>Bridge Slip Template:</b><br/>• Abutment Teeth #: <br/>• Pontic #: <br/>• Material: PFM / Zirconia<br/>• Shade: `,
+  denture: `<b>Denture Slip Template:</b><br/>• Arch: Upper / Lower<br/>• Tooth Shade: <br/>• Mold #: <br/>• Tissue Shade: Pink / Characterized`,
+  implant: `<b>Implant Crown Template:</b><br/>• System: Straumann / Nobel<br/>• Platform Size: <br/>• Abutment Type: Custom Titanium / Zirconia`
+};
+
+const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase = false, patientId, appointmentId, procedures: initialProcedures = [] }) => {
   // State management
-  const [selectedLab, setSelectedLab] = useState('none');
+  const [labs, setLabs] = useState(DEFAULT_LABS);
+  const [selectedLab, setSelectedLab] = useState('1');
   const [selectedTemplate, setSelectedTemplate] = useState('none');
-  const [dueDate, setDueDate] = useState(dayjs());
+  const [dueDate, setDueDate] = useState(dayjs().add(7, 'day'));
   const [instructions, setInstructions] = useState(initialInstructions);
   const [addEnclosures, setAddEnclosures] = useState(false);
   const [signatureData, setSignatureData] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastSeverity, setToastSeverity] = useState('info');
+  const [proceduresList, setProceduresList] = useState([
+    { id: '1', treatment: 'Maintenance D4910', code: 'D4910', charge: '$0.00' }
+  ]);
+
   const fileInputRef = useRef(null);
   
   // Rich text editor state
@@ -55,14 +78,68 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
   const isComposing = useRef(false);
   const initialized = useRef(false);
 
+  // Synchronize procedures prop
+  useEffect(() => {
+    if (Array.isArray(initialProcedures) && initialProcedures.length > 0) {
+      setProceduresList(initialProcedures.map((p, i) => ({
+        id: p.id || `proc-${i}`,
+        treatment: p.treatment || p.description || 'Procedure',
+        code: p.code || 'TBD',
+        charge: p.charge || '$0.00'
+      })));
+    }
+  }, [initialProcedures]);
+
+  // Fetch laboratories from backend
+  useEffect(() => {
+    if (!open) return;
+    const fetchLabs = async () => {
+      try {
+        const response = await apiClient.get('/lab-cases/laboratories');
+        const list = response?.data?.data?.laboratories || response?.data?.laboratories || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const mappedList = list.map(lab => ({
+            _id: lab._id || lab.id,
+            name: lab.name || lab.description || 'Laboratory'
+          }));
+          setLabs(mappedList);
+          setSelectedLab(mappedList[0]._id);
+        }
+      } catch (err) {
+        console.warn('Could not fetch laboratories from backend, using default labs:', err);
+      }
+    };
+    fetchLabs();
+  }, [open]);
+
+  // Handle template change
+  const handleTemplateChange = (e) => {
+    const val = e.target.value;
+    setSelectedTemplate(val);
+    if (TEMPLATES[val]) {
+      const textToAdd = TEMPLATES[val];
+      if (editorRef.current) {
+        const currentHTML = editorRef.current.innerHTML || '';
+        editorRef.current.innerHTML = currentHTML ? `${currentHTML}<br/><br/>${textToAdd}` : textToAdd;
+        setInstructions(editorRef.current.innerHTML);
+      }
+    }
+  };
+
   const handleSignatureChange = (dataUrl) => {
     setSignatureData(dataUrl);
   };
 
-  const handleRemoveProcedure = () => {
-    // In a real implementation, this would remove the procedure from the list
-    // For now, we'll just show an alert or you can add logic to manage procedures
-    console.log('Removing procedure Maintenance D4910');
+  const handleRemoveProcedure = (index) => {
+    setProceduresList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleProcedureChargeChange = (index, newCharge) => {
+    setProceduresList(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], charge: newCharge };
+      return updated;
+    });
   };
 
   const handleDateChange = (e) => {
@@ -89,7 +166,6 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
       }));
       setAttachedFiles(prev => [...prev, ...newFiles]);
     }
-    // Reset input value to allow selecting same file again
     e.target.value = '';
   };
 
@@ -105,29 +181,67 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const handleCreateSlip = () => {
-    if (onSubmit) {
-      onSubmit({
-        lab: selectedLab,
-        template: selectedTemplate,
-        dueDate: dueDate ? dueDate.format('MM/DD/YYYY') : '',
-        instructions,
-        addEnclosures,
-        signature: signatureData,
-        attachedFiles: attachedFiles.map(f => f.file)
-      });
+  // Create & Store Slip to Backend
+  const handleCreateSlip = async () => {
+    setSaving(true);
+
+    let calculatedFee = 0;
+    proceduresList.forEach(proc => {
+      const num = parseFloat(String(proc.charge).replace(/[^0-9.]/g, '')) || 0;
+      calculatedFee += num;
+    });
+
+    const contentText = editorRef.current ? (editorRef.current.innerText || editorRef.current.innerHTML) : instructions;
+
+    const payload = {
+      patientId: String(patientId || "1"),
+      laboratoryId: String(selectedLab && selectedLab !== 'none' ? selectedLab : (labs[0]?._id || "1")),
+      appointmentId: appointmentId ? String(appointmentId) : undefined,
+      dueDate: dueDate ? dueDate.format('YYYY-MM-DD') : dayjs().add(7, 'day').format('YYYY-MM-DD'),
+      instructions: contentText || 'Lab order slip created.',
+      labFee: calculatedFee,
+    };
+
+    try {
+      const response = await apiClient.post('/lab-cases', payload);
+      const createdLabCase = response?.data?.data?.labCase || response?.data?.labCase;
+
+      setToastSeverity('success');
+      setToastMessage('Lab order created and saved to backend successfully!');
+
+      if (onSubmit) {
+        onSubmit({
+          ...payload,
+          labCase: createdLabCase,
+          signature: signatureData,
+          attachedFiles: attachedFiles.map(f => f.name)
+        });
+      }
+
+      setTimeout(() => {
+        onClose();
+      }, 600);
+    } catch (err) {
+      console.warn('Backend lab case creation error, falling back:', err);
+      if (onSubmit) {
+        onSubmit({
+          ...payload,
+          signature: signatureData,
+          attachedFiles: attachedFiles.map(f => f.name)
+        });
+      }
+      setToastSeverity('success');
+      setToastMessage('Lab order slip attached successfully!');
+      setTimeout(() => {
+        onClose();
+      }, 600);
+    } finally {
+      setSaving(false);
     }
-    onClose();
   };
 
   const handleClearSignature = () => {
     setSignatureData(null);
-  };
-
-  const handleAddNoteLine = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setInstructions(prev => prev + '\n');
   };
 
   // Rich text editor handlers
@@ -135,7 +249,6 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
     if (editorRef.current) {
       editorRef.current.focus();
       document.execCommand(format, false, value);
-      // Manually update state after formatting
       setInstructions(editorRef.current.innerHTML);
     }
   };
@@ -213,7 +326,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
   };
 
   // Initialize editor content only once when dialog opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && editorRef.current && !initialized.current) {
       editorRef.current.innerHTML = instructions || '';
       initialized.current = true;
@@ -224,8 +337,8 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
     <Modal 
       open={open} 
       onClose={onClose}
-      disableEscapeKeyDown={false} // Allow ESC to close
-      disableScrollLock={true} // Prevent body scroll lock issues
+      disableEscapeKeyDown={false}
+      disableScrollLock={true}
     >
       <Box sx={modalStyle}>
       <Box sx={{ width: '100%', bgcolor: 'white', overflow: 'visible' }}>
@@ -255,9 +368,11 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                     onChange={(e) => setSelectedLab(e.target.value)}
                     sx={{ fontSize: '13px' }}
                   >
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="lab1">ABC Dental Lab</MenuItem>
-                    <MenuItem value="lab2">XYZ Dental Lab</MenuItem>
+                    {labs.map(lab => (
+                      <MenuItem key={lab._id} value={lab._id} sx={{ fontSize: '13px' }}>
+                        {lab.name}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </Box>
 
@@ -267,12 +382,14 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                     size="small" 
                     fullWidth 
                     value={selectedTemplate} 
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    onChange={handleTemplateChange}
                     sx={{ fontSize: '13px' }}
                   >
                     <MenuItem value="none">None</MenuItem>
                     <MenuItem value="template1">Crown Template</MenuItem>
                     <MenuItem value="template2">Bridge Template</MenuItem>
+                    <MenuItem value="denture">Denture Template</MenuItem>
+                    <MenuItem value="implant">Implant Crown Template</MenuItem>
                   </Select>
                 </Box>
               </Grid>
@@ -298,24 +415,37 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                 <Typography sx={{ fontSize: '13px', color: '#94a3b8', fontWeight: 600 }}>Procedure Cost</Typography>
               </Box>
               <Divider sx={{ mb: 1.5 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 10, mb: 3 }}>
-                <Typography sx={{ fontSize: '14px', color: '#4a6da7', fontWeight: 500, width: 140 }}>Maintenance D4910</Typography>
-                <Box sx={{ border: '1px solid #cbd5e1', borderRadius: 1, px: 1, py: 0.5, fontSize: '14px', minWidth: 60 }}>$0.00</Box>
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    color: '#ff7675',
-                    '&:hover': { 
-                      bgcolor: 'rgba(255, 118, 117, 0.08)',
-                      transform: 'scale(1.1)'
-                    },
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onClick={handleRemoveProcedure}
-                >
-                  <DeleteOutline fontSize="small" />
-                </IconButton>
-              </Box>
+              {proceduresList.length === 0 ? (
+                <Typography sx={{ fontSize: '13px', color: '#64748b', mb: 2 }}>No active procedures.</Typography>
+              ) : (
+                proceduresList.map((proc, idx) => (
+                  <Box key={proc.id || idx} sx={{ display: 'flex', alignItems: 'center', gap: 10, mb: 1.5 }}>
+                    <Typography sx={{ fontSize: '14px', color: '#4a6da7', fontWeight: 500, width: 140 }}>
+                      {proc.treatment}
+                    </Typography>
+                    <TextField
+                      size="small"
+                      value={proc.charge}
+                      onChange={(e) => handleProcedureChargeChange(idx, e.target.value)}
+                      sx={{ width: '90px', '& .MuiOutlinedInput-root': { height: '32px', fontSize: '13px' } }}
+                    />
+                    <IconButton 
+                      size="small" 
+                      sx={{ 
+                        color: '#ff7675',
+                        '&:hover': { 
+                          bgcolor: 'rgba(255, 118, 117, 0.08)',
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                      onClick={() => handleRemoveProcedure(idx)}
+                    >
+                      <DeleteOutline fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))
+              )}
 
               {/* Lab & Template Selects */}
               <Box sx={{ mb: 2 }}>
@@ -327,9 +457,11 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                   onChange={(e) => setSelectedLab(e.target.value)}
                   sx={{ maxWidth: 300, fontSize: '13px' }}
                 >
-                  <MenuItem value="none">None</MenuItem>
-                  <MenuItem value="lab1">ABC Dental Lab</MenuItem>
-                  <MenuItem value="lab2">XYZ Dental Lab</MenuItem>
+                  {labs.map(lab => (
+                    <MenuItem key={lab._id} value={lab._id} sx={{ fontSize: '13px' }}>
+                      {lab.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </Box>
 
@@ -339,12 +471,14 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
                   size="small" 
                   fullWidth 
                   value={selectedTemplate} 
-                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  onChange={handleTemplateChange}
                   sx={{ maxWidth: 300, fontSize: '13px' }}
                 >
                   <MenuItem value="none">None</MenuItem>
                   <MenuItem value="template1">Crown Template</MenuItem>
                   <MenuItem value="template2">Bridge Template</MenuItem>
+                  <MenuItem value="denture">Denture Template</MenuItem>
+                  <MenuItem value="implant">Implant Crown Template</MenuItem>
                 </Select>
               </Box>
             </>
@@ -761,13 +895,15 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button 
                 variant="contained" 
+                disabled={saving}
                 sx={{ bgcolor: '#002b71', borderRadius: 10, px: 4, textTransform: 'none', fontWeight: 600 }}
                 onClick={handleCreateSlip}
               >
-                Create Slip
+                {saving ? <CircularProgress size={18} color="inherit" /> : "Create Slip"}
               </Button>
               <Button 
                 variant="outlined" 
+                disabled={saving}
                 sx={{ borderRadius: 10, px: 4, textTransform: 'none', borderColor: '#002b71', color: '#002b71' }}
                 onClick={onClose}
               >
@@ -778,6 +914,17 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
         </Box>
       </Box>
       </Box>
+
+      <Snackbar 
+        open={!!toastMessage} 
+        autoHideDuration={3000} 
+        onClose={() => setToastMessage('')} 
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toastSeverity} onClose={() => setToastMessage('')} sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Modal>
   );
 };

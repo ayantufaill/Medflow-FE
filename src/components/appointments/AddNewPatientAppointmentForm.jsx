@@ -881,6 +881,12 @@ const AddNewPatientAppointmentForm = ({
           open={isLabOrderOpen} 
           onClose={() => setIsLabOrderOpen(false)} 
           procedures={procedures} 
+          patientId={patient?.patientId || patient?.chartNumber || patient?.id || patient?._id || ""}
+          appointmentId={initialAppointment?._id || initialAppointment?.id || ""}
+          onSave={(labCase) => {
+            console.log("Lab Case created:", labCase);
+            setToastMessage("Lab order slip created and saved successfully!");
+          }}
         />
       )}
 

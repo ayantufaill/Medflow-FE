@@ -15,9 +15,9 @@ export const COLORS = {
   TEXT_BODY:      '#374151',   // standard body text in detail rows
 
   /* ── Brand / Accent ─────────────────────────────────── */
-  ACCENT:         '#2262ef',   // buttons, links, icons, active states
-  ACCENT_HOVER:   '#1a50cc',   // button hover state
-  ACCENT_BG:      'rgba(34, 98, 239, 0.10)',  // active icon background
+  ACCENT:         '#2362EF',   // buttons, links, icons, active states
+  ACCENT_HOVER:   '#1b52cf',   // button hover state
+  ACCENT_BG:      'rgba(35, 98, 239, 0.10)',  // active icon background
 
   /* ── Status ─────────────────────────────────────────── */
   STATUS_CONFIRMED:    '#059669',
