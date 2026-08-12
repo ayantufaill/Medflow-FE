@@ -3,7 +3,7 @@ import { createTheme } from '@mui/material';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#2362EF',
     },
     secondary: {
       main: '#dc004e',
@@ -11,6 +11,21 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Manrope", "Segoe UI", sans-serif',
+  },
+  components: {
+    MuiCheckbox: {
+      styleOverrides: {
+        root: {
+          color: '#cbd5e1',
+          '&.Mui-checked': {
+            color: '#2362EF',
+          },
+          '&.MuiCheckbox-indeterminate': {
+            color: '#2362EF',
+          },
+        },
+      },
+    },
   },
 });
 

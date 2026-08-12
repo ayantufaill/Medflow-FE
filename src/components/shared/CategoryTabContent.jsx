@@ -1,6 +1,8 @@
 import { Box, Typography, Divider, Grid, Card, CardContent } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import FindingsListContent from './FindingsListContent';
+import { COLORS } from '../../constants/colors';
+import { headingPrimarySx, headingSecondarySx, bodySx, captionSx, radius } from '../../constants/styles';
 
 const mockClinicalImages = [
   { id: 1, url: '/Damaged_teeth.png', type: 'Bitewing X-ray', date: '2024-01-15' },
@@ -13,20 +15,6 @@ const mockClinicalImages = [
  * - Section header with title and description
  * - Findings list (using FindingsListContent component)
  * - Optional clinical images (only for Periodontal Health)
- * 
- * @param {Object} category - Category data object containing:
- *   - title: Section title
- *   - subtitle: Section subtitle
- *   - description: Introductory text
- *   - findingsTitle: "Findings list" header text
- *   - issues: Array of primary findings
- *   - secondaryIssues: Array of secondary findings (optional)
- *   - comment: Contextual comment in blue box (optional)
- *   - explanations: Array of explanatory bullet points (optional)
- *   - footerTitle: Footer title before diagram (optional)
- *   - introductoryText: Acknowledgment text for Medical Factors section (optional)
- *   - contextualLeadIn: Lead-in text before findings list (optional)
- * @param {Number} sectionNumber - Section number to display (default: 1)
  */
 const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
   if (!category) return null;
@@ -36,15 +24,7 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
       {/* Initial Findings Header - Only for Periodontal Health */}
       {category.title === 'Periodontal Health' && (
         <Box sx={{ mb: 2 }}>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            sx={{ 
-              fontSize: '1.25rem', 
-              color: '#1976d2', 
-              fontFamily: 'Roboto, sans-serif' 
-            }}
-          >
+          <Typography sx={{ ...headingPrimarySx, color: COLORS.PRIMARY }}>
             Initial Findings
           </Typography>
         </Box>
@@ -52,56 +32,34 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
 
       {/* Section Header */}
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" fontWeight={400} gutterBottom sx={{ fontSize: '1.125rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif' }}>
-          {sectionNumber}- {category.title || 'Periodontal Health'}{category.subtitle ? `: ${category.subtitle}` : ''}
+        <Typography sx={{ ...headingPrimarySx, mb: 1 }}>
+          {sectionNumber}. {category.title || 'Periodontal Health'}{category.subtitle ? `: ${category.subtitle}` : ''}
         </Typography>
-
-        {/* Thick Blue Line */}
-        <Box sx={{ height: '3px', bgcolor: '#1976d2', width: '100%', mb: 2, mt: 1 }} />
         
         {/* Descriptive Sub-header */}
         {category.description && (
-          <Typography variant="body2" color="text.secondary" paragraph sx={{ fontSize: '0.875rem', color: '#666666', lineHeight: 1.5, fontFamily: 'Roboto, sans-serif' }}>
+          <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, lineHeight: 1.5 }}>
             {category.description}
           </Typography>
         )}
 
         {/* Introductory Acknowledgment Text (Section 5 only) */}
         {sectionNumber === 5 && category.introductoryText && (
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontSize: '0.875rem', 
-              color: '#424242', 
-              lineHeight: 1.6,
-              mb: 2,
-              fontFamily: 'Roboto, sans-serif'
-            }}
-          >
+          <Typography sx={{ ...bodySx, color: COLORS.TEXT_PRIMARY, lineHeight: 1.6, mt: 2 }}>
             {category.introductoryText}
           </Typography>
         )}
 
         {/* Contextual Lead-in (Section 5 only) */}
         {sectionNumber === 5 && category.contextualLeadIn && (
-          <Typography 
-            variant="body2" 
-            fontWeight={500}
-            sx={{ 
-              fontSize: '0.875rem', 
-              color: '#1976d2',
-              mb: 1,
-              mt: 2,
-              fontFamily: 'Roboto, sans-serif'
-            }}
-          >
+          <Typography sx={{ ...bodySx, fontWeight: 500, color: COLORS.PRIMARY, mt: 2 }}>
             {category.contextualLeadIn}
           </Typography>
         )}
 
         {/* Findings List Header */}
         {category.findingsTitle && sectionNumber !== 5 && (
-          <Typography variant="subtitle1" fontWeight={400} gutterBottom sx={{ fontSize: '1rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif', mt: 1 }}>
+          <Typography sx={{ ...headingSecondarySx, mt: 2 }}>
             {category.findingsTitle}
           </Typography>
         )}
@@ -116,9 +74,9 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
           explanations={category.explanations}
         />
       ) : (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <CheckCircleIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-          <Typography variant="h6" color="success.main">
+        <Box sx={{ textAlign: 'center', py: 4, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.md, border: `1px dashed ${COLORS.BORDER}` }}>
+          <CheckCircleIcon sx={{ fontSize: 48, color: COLORS.STATUS_SUCCESS, mb: 1 }} />
+          <Typography sx={{ ...headingSecondarySx, color: COLORS.STATUS_SUCCESS }}>
             No issues detected in this category
           </Typography>
         </Box>
@@ -127,16 +85,24 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
       {/* Clinical Images - Show for Periodontal Health OR when footerTitle exists */}
       {(category.title === 'Periodontal Health' || category.footerTitle) && (
         <>
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 3, borderColor: COLORS.BORDER }} />
 
-          <Typography variant="h6" fontWeight={400} gutterBottom sx={{ fontSize: '0.95rem', color: '#1976d2', fontFamily: 'Roboto, sans-serif' }}>
+          <Typography sx={{ ...headingSecondarySx, mb: 2 }}>
             {category.footerTitle || 'Your Teeth'} 
           </Typography>
           <Grid container spacing={2}>
             {mockClinicalImages.map((image) => (
               <Grid item xs={6} key={image.id}>
-                <Card sx={{ cursor: 'pointer', '&:hover': { transform: 'scale(1.02)', transition: '0.2s' } }}>
-                  <CardContent>
+                <Card 
+                  elevation={0}
+                  sx={{ 
+                    cursor: 'pointer', 
+                    borderRadius: radius.md,
+                    border: `1px solid ${COLORS.BORDER}`,
+                    '&:hover': { borderColor: COLORS.PRIMARY, bgcolor: COLORS.SURFACE_HOVER, transition: '0.2s' } 
+                  }}
+                >
+                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                     <Box 
                       component="img"
                       src={image.url}
@@ -145,14 +111,14 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
                         width: '100%',
                         height: 120,
                         objectFit: 'cover',
-                        borderRadius: 1,
+                        borderRadius: radius.sm,
                         mb: 1
                       }}
                     />
-                    <Typography variant="subtitle2" fontWeight="600" sx={{ fontSize: '0.875rem' }}>
+                    <Typography sx={{ ...bodySx, fontWeight: 600 }}>
                       {image.type}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                    <Typography sx={{ ...captionSx, color: COLORS.TEXT_MUTED }}>
                       {image.date}
                     </Typography>
                   </CardContent>

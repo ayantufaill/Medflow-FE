@@ -1,27 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow, Select, MenuItem, TableHead, Table, TableBody
+  Box, Typography, Checkbox, Button, TableCell, TableRow, Select, MenuItem, TableHead, Table, TableBody, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchPatientNextAppointmentReport, selectNextAppointmentData, selectNextAppointmentDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
-const DUMMY_DATA = [
-  { id: '192', patient: 'Alice Smith', status: 'Active', apptDate: 'Jul 21, 2026', type: 'Recare', apptStatus: 'Unconfirmed', newPatient: 'No', provider: 'Christina Sabour', email: 'alice@example.com', phone: '123-456-7890', text: 'Yes', emailPerm: 'Yes', review: 'No' },
-  { id: '610', patient: 'Bob Johnson', status: 'Active', apptDate: 'May 14, 2026', type: 'Recare', apptStatus: 'Unconfirmed', newPatient: 'No', provider: 'Christina Sabour', email: 'bob@example.com', phone: '123-456-7891', text: 'Yes', emailPerm: 'Yes', review: 'No' },
-];
+
 
 const PatientNextAppointmentReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectNextAppointmentData) || [];
+  const loading = useSelector(selectNextAppointmentDataLoading);
+  const providerList = useSelector(selectProviderDropdownList);
+
   const [startDate, setStartDate] = useState(dayjs('2026-05-08'));
   const [endDate, setEndDate] = useState(null);
+  
+  const [patientStatus, setPatientStatus] = useState('active');
+  const [provider, setProvider] = useState('all');
+  const [appointmentStatus, setAppointmentStatus] = useState('all');
+  const [flagsFilter, setFlagsFilter] = useState('all');
+  const [showFlags, setShowFlags] = useState(false);
+
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const providerOptions = useMemo(() => [
+    { value: 'all', label: 'All Providers' },
+    ...(providerList || []).map((p) => {
+      const first = p.userId?.firstName || p.firstName || p.FName || '';
+      const last = p.userId?.lastName || p.lastName || p.LName || '';
+      const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+      return { value: p.id || p.ProvNum || name, label: name };
+    }),
+  ], [providerList]);
+
+  const apptStatusOptions = [
+    { value: 'all', label: 'All Appointment Status' },
+    { value: '1', label: 'Scheduled' },
+    { value: '2', label: 'CheckedoutCompleted' },
+    { value: '3', label: 'Broken' },
+    { value: '4', label: 'Cancelled' },
+    { value: '5', label: 'CancelledShortNotice' },
+    { value: '6', label: 'Unconfirmed' },
+  ];
+
+  const fetchReport = () => {
+    let filterBy = patientStatus;
+    if (patientStatus === 'active') filterBy = undefined;
+
+    dispatch(fetchPatientNextAppointmentReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      filterBy,
+      provider,
+      appointmentStatus,
+      flagsFilter
+    }));
+  };
+
+  useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
+    fetchReport();
+  }, []);
+
+  const handleApply = () => {
+    fetchReport();
+  };
 
   const columns = [
     { label: 'ID' },
     { label: 'Patient' },
+    ...(showFlags ? [{ label: 'Flags' }] : []),
     { label: 'Patient Status' },
     { label: 'Appt Date' },
     { label: 'Appt Type' },
@@ -39,6 +96,11 @@ const PatientNextAppointmentReport = () => {
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+      {showFlags && (
+        <TableCell sx={{ fontSize: '0.7rem', color: '#e53e3e', fontWeight: 500 }}>
+          {Array.isArray(row.flags) ? row.flags.join(', ') : ''}
+        </TableCell>
+      )}
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.apptDate}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.type}</TableCell>
@@ -55,72 +117,135 @@ const PatientNextAppointmentReport = () => {
 
   const topFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'outlined', size: 'small', sx: { width: 140, '& .MuiOutlinedInput-root': { height: 36, fontSize: '0.75rem', backgroundColor: '#fff', borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
       <ReportSelect 
         label="Active Patients Only" 
         prefix="Filter Report By:" 
-        defaultValue="active" 
-        options={[{ value: 'active', label: 'Active Patients Only' }]} 
+        value={patientStatus} 
+        onChange={(e) => setPatientStatus(e.target.value)}
+        options={[{ value: 'active', label: 'Active Patients Only' }, { value: 'inactive', label: 'Inactive Patients' }, { value: 'all', label: 'All Patients' }]} 
       />
-      <ReportSelect label="All Providers" defaultValue="all" options={[{ value: 'all', label: 'All Providers' }]} />
-      <ReportSelect label="All Appointment Status" defaultValue="all" options={[{ value: 'all', label: 'All Appointment Status' }]} />
+      <ReportSelect label="All Providers" value={provider} onChange={(e) => setProvider(e.target.value)} options={providerOptions} />
+      <ReportSelect label="All Appointment Status" value={appointmentStatus} onChange={(e) => setAppointmentStatus(e.target.value)} options={apptStatusOptions} />
       <ReportSelect label="Default" prefix="Sort Report By:" defaultValue="default" options={[{ value: 'default', label: 'Default' }]} />
     </>
   );
 
   const bottomFilters = (
     <>
-      <ReportCheckbox label="Show Flags in Report" />
-      <ReportSelect label="Pts With Or Without Flags" defaultValue="all" options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} />
+      <ReportCheckbox label="Show Flags in Report" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />
+      <ReportSelect 
+        label="Pts With Or Without Flags" 
+        value={flagsFilter} 
+        onChange={(e) => setFlagsFilter(e.target.value)} 
+        options={[
+          { value: 'all', label: 'Pts With Or Without Flags' },
+          { value: 'withFlags', label: 'Pts With Flags' },
+          { value: 'withoutFlags', label: 'Pts Without Flags' }
+        ]} 
+      />
     </>
-  );
-
-  const bottomRowLeftActions = (
-    <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mr: 2, color: '#1e293b' }}>Patient Count: 251</Typography>
   );
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Patient By Next Appointment Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            bottomRowLeftActions={bottomRowLeftActions}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={handleApply}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of patients = {reportData.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={reportData.length > 0}
+              />
+            </Box>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

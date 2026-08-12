@@ -128,7 +128,6 @@ export default function InsuranceDialog({
         subscriberName: '',
         subscriberDateOfBirth: null,
         relationshipToPatient: 'self',
-        insuranceType: 'primary',
         effectiveDate: null,
         expirationDate: null,
         copayAmount: '',
@@ -233,24 +232,6 @@ export default function InsuranceDialog({
   const effectiveDateValue = watch('effectiveDate');
   const expirationDateValue = watch('expirationDate');
 
-  const validateInsuranceType = (value) => {
-    if (mode === 'add' && value) {
-      const activeInsurances = existingInsurances.filter((ins) => ins.isActive);
-      const activeTypes = activeInsurances.map((ins) => (ins.insuranceType || '').toLowerCase());
-      const hasPrimary = activeTypes.includes('primary');
-      const hasSecondary = activeTypes.includes('secondary');
-      const hasTertiary = activeTypes.includes('tertiary');
-      if (hasPrimary && hasSecondary && hasTertiary) {
-        return 'Patient already has all three insurance types. Please deactivate an existing one first.';
-      }
-      const selectedType = value.toLowerCase();
-      if (activeTypes.includes(selectedType)) {
-        const typeName = selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
-        return `Patient already has an active ${typeName} insurance. Please deactivate it first.`;
-      }
-    }
-    return true;
-  };
 
   const onSubmit = async (data) => {
     try {
@@ -276,7 +257,6 @@ export default function InsuranceDialog({
           subscriberName: '',
           subscriberDateOfBirth: null,
           relationshipToPatient: 'self',
-          insuranceType: 'primary',
           effectiveDate: null,
           expirationDate: null,
           copayAmount: '',
@@ -422,7 +402,7 @@ export default function InsuranceDialog({
                               try {
                                 const insurances = await patientService.getPatientInsurances(selectedMember._id || selectedMember.id, true);
                                 if (insurances && insurances.length > 0) {
-                                  const primary = insurances.find(i => (i.insuranceType || i.Ordinal) === 'primary' || i.insuranceType === 'Primary') || insurances[0];
+                                  const primary = insurances.find(i => i.Ordinal === 1) || insurances[0];
                                   if (primary) {
                                     if (primary.insuranceCompanyId || primary.insuranceCompany?._id) {
                                       setValue('insuranceCompanyId', primary.insuranceCompanyId || primary.insuranceCompany?._id);
@@ -491,24 +471,7 @@ export default function InsuranceDialog({
                   />
                 </FormControl>
               </Grid>
-              <Grid item size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth error={!!errors.insuranceType}>
-                  <InputLabel>Insurance Type *</InputLabel>
-                  <Controller
-                    name="insuranceType"
-                    control={control}
-                    rules={{ required: true, validate: validateInsuranceType }}
-                    render={({ field }) => (
-                      <Select {...field} label="Insurance Type *">
-                        <MenuItem value="primary">Primary</MenuItem>
-                        <MenuItem value="secondary">Secondary</MenuItem>
-                        <MenuItem value="tertiary">Tertiary</MenuItem>
-                      </Select>
-                    )}
-                  />
-                  {errors.insuranceType && <FormHelperText>{errors.insuranceType.message}</FormHelperText>}
-                </FormControl>
-              </Grid>
+
               <Grid item size={{ xs: 12, sm: 6 }}>
                 <Controller
                   name="effectiveDate"

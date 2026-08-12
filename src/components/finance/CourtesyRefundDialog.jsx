@@ -40,6 +40,8 @@ const CourtesyRefundDialog = ({ patient, onClose }) => {
           backgroundColor: COLORS.SURFACE_TINT,
           m: 0,
           flexShrink: 0,
+          borderTopLeftRadius: '14px',
+          borderTopRightRadius: '14px',
       }}>
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Courtesy Refund #24633

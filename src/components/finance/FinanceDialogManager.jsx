@@ -36,8 +36,8 @@ const DialogWrapper = ({ children, onClose, maxWidth = '1200px' }) => (
         maxWidth: maxWidth, 
         width: '90%',
         bgcolor: '#fff',
-        borderRadius: '8px',
-        overflow: 'visible',
+        borderRadius: '14px',
+        overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
       }}
       onClick={(e) => e.stopPropagation()}
@@ -72,13 +72,13 @@ const FinanceDialogManager = ({
       )}
 
       {showInsurancePayment && (
-        <DialogWrapper onClose={() => setShowInsurancePayment(false)}>
+        <DialogWrapper onClose={() => setShowInsurancePayment(false)} maxWidth="1300px">
           <InsurancePaymentDialog patient={patient} onClose={() => setShowInsurancePayment(false)} onSave={handleInsurancePaymentSave} />
         </DialogWrapper>
       )}
 
       {showAddPayment && (
-        <DialogWrapper onClose={() => setShowAddPayment(false)}>
+        <DialogWrapper onClose={() => setShowAddPayment(false)} maxWidth="1300px">
           <AddPaymentDialog patient={patient} onClose={() => setShowAddPayment(false)} onPaymentApply={handlePaymentApply} />
         </DialogWrapper>
       )}

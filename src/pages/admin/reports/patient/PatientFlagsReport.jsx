@@ -1,34 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Box, Typography, Button, Select, MenuItem, TableCell, TableRow
+  Box, Typography, Button, Select, MenuItem, TableCell, TableRow, CircularProgress, TextField, Autocomplete
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
-import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { fetchPatientFlagsReport, selectPatientFlagsReportData, selectPatientFlagsReportDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchCurrentPracticeInfo, selectPracticeInfo } from '../../../../store/slices/practiceInfoSlice';
 
-const DUMMY_DATA = [
-  { number: '1249', patient: 'John Doe', flags: 'VIP, Pre-med', lastAppointment: '05/01/2026' },
-  { number: '1210', patient: 'Jane Smith', flags: 'Billing Alert', lastAppointment: '04/22/2026' },
-  { number: '540', patient: 'Robert Brown', flags: 'X-Ray needed', lastAppointment: '05/05/2026' },
-];
 
-const ActionIcons = () => (
-  <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
-    <PrintOutlined sx={{ fontSize: 14, color: '#ccc', cursor: 'not-allowed' }} />
-    <AttachMoneyOutlined sx={{ fontSize: 14, color: '#ccc', cursor: 'not-allowed' }} />
-    <MedicationOutlined sx={{ fontSize: 14, color: '#ccc', cursor: 'not-allowed' }} />
-    <ChatBubbleOutline sx={{ fontSize: 14, color: '#ccc', cursor: 'not-allowed' }} />
-  </Box>
-);
 
 const PatientFlagsReport = () => {
   const dispatch = useDispatch();
-  const { patientFlagsReportData, loading } = useSelector((state) => state.patientReport || { patientFlagsReportData: [], loading: false });
+  const reportData = useSelector(selectPatientFlagsReportData) || [];
+  const loading = useSelector(selectPatientFlagsReportDataLoading);
 
   const [filterBy, setFilterBy] = useState('active');
+  const [includeFlags, setIncludeFlags] = useState([]);
+  const [excludeFlags, setExcludeFlags] = useState([]);
   const [showData, setShowData] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const practiceInfo = useSelector(selectPracticeInfo);
+  
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  const allFlags = practiceInfo?.patientFlags || [];
+
+  const fetchReport = () => {
+    dispatch(fetchPatientFlagsReport({ 
+      filterBy, 
+      includeFlags: includeFlags.map(f => f.name).join(','), 
+      excludeFlags: excludeFlags.map(f => f.name).join(',') 
+    }));
+    setShowData(true);
+  };
 
   const columns = [
     { label: 'Patient Number' },
@@ -38,11 +48,18 @@ const PatientFlagsReport = () => {
   ];
 
   const renderRow = (row, index) => (
-    <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.number}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1, color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.flags}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem', py: 1, px: 1 }}>{row.lastAppointment}</TableCell>
+    <TableRow 
+      key={index} 
+      hover
+      sx={{ 
+        '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
+        '&:hover': { backgroundColor: '#f1f5f9' }
+      }}
+    >
+      <TableCell>{row.number}</TableCell>
+      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{row.patient}</TableCell>
+      <TableCell>{row.flags}</TableCell>
+      <TableCell>{row.lastAppointment}</TableCell>
     </TableRow>
   );
 
@@ -60,110 +77,100 @@ const PatientFlagsReport = () => {
         ]} 
         width="180px"
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Including Flags:</Typography>
-        <Button
-          variant="contained"
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'uppercase' }}>Including Flags:</Typography>
+        <Autocomplete
+          multiple
           size="small"
-          endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#2362EF', textTransform: 'none', fontSize: '0.75rem', height: 26, minWidth: 80, '&:hover': { bgcolor: '#1a4bbd' }, boxShadow: 'none' }}
-        >
-          Flags
-        </Button>
+          options={allFlags}
+          groupBy={(option) => option.category}
+          getOptionLabel={(option) => option.name}
+          value={includeFlags}
+          onChange={(e, newValue) => setIncludeFlags(newValue)}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              placeholder="Select flags" 
+              sx={{ 
+                width: '250px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                },
+                '& fieldset': { borderColor: '#e2e8f0' }
+              }}
+            />
+          )}
+        />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Excluding Flags:</Typography>
-        <Button
-          variant="contained"
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'uppercase' }}>Excluding Flags:</Typography>
+        <Autocomplete
+          multiple
           size="small"
-          endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#2362EF', textTransform: 'none', fontSize: '0.75rem', height: 26, minWidth: 80, '&:hover': { bgcolor: '#1a4bbd' }, boxShadow: 'none' }}
-        >
-          Flags
-        </Button>
+          options={allFlags}
+          groupBy={(option) => option.category}
+          getOptionLabel={(option) => option.name}
+          value={excludeFlags}
+          onChange={(e, newValue) => setExcludeFlags(newValue)}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              placeholder="Select flags" 
+              sx={{ 
+                width: '250px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                },
+                '& fieldset': { borderColor: '#e2e8f0' }
+              }}
+            />
+          )}
+        />
       </Box>
     </>
   );
 
-  const bottomRowLeftActions = (
-    <Typography variant="caption" sx={{ fontWeight: 700, textDecoration: 'underline', color: '#1e293b', mr: 2 }}>
-      Number of Patients: {showData ? DUMMY_DATA.length : 0}
-    </Typography>
-  );
 
-  const handleSaveFlags = (flags) => {
-    if (dialogMode === 'include') {
-      setIncludeFlags(flags);
-    } else if (dialogMode === 'exclude') {
-      setExcludeFlags(flags);
-    }
-  };
-
-  const renderFlagSquares = (flagIds) => {
-    if (!flagIds) return null;
-    const idsArray = Array.isArray(flagIds) ? flagIds : [flagIds];
-    let splitIds = [];
-    idsArray.forEach(f => {
-      if (typeof f === 'string') {
-        splitIds.push(...f.split(/[,;]/).map(s => s.trim()).filter(Boolean));
-      } else {
-        splitIds.push(f);
-      }
-    });
-
-    if (splitIds.length === 0) return null;
-    
-    return (
-      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-        {splitIds.map((flagObj, i) => {
-          const flagId = typeof flagObj === 'object' ? (flagObj.id || flagObj.name || flagObj.label) : flagObj;
-          const flagDef = ALL_FLAGS.find(f => f.id === flagId || (typeof flagId === 'string' && f.label.toLowerCase() === flagId.toLowerCase()));
-          
-          if (!flagDef) {
-            return (
-              <Tooltip key={`unknown-${i}`} title={typeof flagId === 'string' ? flagId : 'Flag'} arrow>
-                <Box 
-                  sx={{ 
-                    width: 16, 
-                    height: 16, 
-                    backgroundColor: '#ccc', 
-                    borderRadius: '2px',
-                    cursor: 'pointer'
-                  }} 
-                />
-              </Tooltip>
-            );
-          }
-          
-          return (
-            <Tooltip key={`${flagId}-${i}`} title={flagDef.label} arrow>
-              <Box 
-                sx={{ 
-                  width: 16, 
-                  height: 16, 
-                  backgroundColor: flagDef.color, 
-                  borderRadius: '2px',
-                  cursor: 'pointer'
-                }} 
-              />
-            </Tooltip>
-          );
-        })}
-      </Box>
-    );
-  };
 
   return (
     <React.Fragment>
       <ReportLayout title="Patient Flags Report:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          bottomRowLeftActions={bottomRowLeftActions}
-          onApplyFilters={() => setShowData(true)}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
+        <Box className="hide-on-print" sx={{ mb: 2 }}>
+          <ReportFilterBar 
+            topRowFilters={topFilters}
+            onApplyFilters={fetchReport}
+            onClearAll={() => { setFilterBy('active'); setIncludeFlags([]); setExcludeFlags([]); setShowData(false); }}
+            onCreateTemplate={() => setTemplateDialogOpen(true)}
+          />
+        </Box>
+
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of patients = {showData ? reportData.length : 0})
+          </Typography>
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={() => alert('Exporting CSV...')}
+              onPrint={() => window.print()}
+              hasData={showData && reportData.length > 0}
+            />
+          </Box>
+        </Box>
 
         {!showData ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -171,10 +178,14 @@ const PatientFlagsReport = () => {
               Please select which flags you would like to include/exclude, then click on "apply filters"
             </Typography>
           </Box>
+        ) : loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
         ) : (
           <ReportDataTable 
             columns={columns} 
-            data={DUMMY_DATA} 
+            data={reportData} 
             renderRow={renderRow} 
           />
         )}

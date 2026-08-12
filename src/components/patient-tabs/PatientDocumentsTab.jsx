@@ -61,6 +61,8 @@ const formatFileSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+import { downloadDocumentFile } from '../../utils/downloadUtils';
+
 const PatientDocumentsTab = ({ patientId }) => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
@@ -89,10 +91,8 @@ const PatientDocumentsTab = ({ patientId }) => {
     return dayjs(dateString).format('MMM DD, YYYY');
   };
 
-  const handleDownload = (document) => {
-    if (document.storagePath) {
-      window.open(document.storagePath, '_blank');
-    }
+  const handleDownload = (doc) => {
+    downloadDocumentFile(doc, showSnackbar);
   };
 
   const getUploadedByName = (doc) => {

@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Grid, Paper, Tabs, Tab, Button, Divider } from '@mui/material';
+import { Box, Typography, Grid, Button, Divider } from '@mui/material';
+import { WarningAmber as ConcernsIcon, QuestionAnswer as QuestionIcon } from '@mui/icons-material';
+import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
+import SectionCard from '../../components/shared/SectionCard';
+import ClickableReportImage from '../../components/patient-reports/ClickableReportImage';
+import { usePatient } from '../../hooks/redux/usePatient';
+import { COLORS } from '../../constants/colors';
+import { radius, bodySx, captionSx, headingPrimarySx, headingSecondarySx } from '../../constants/styles';
 
 const ConcernsPage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState(0);
+
+  const { currentPatient: patient, fetchById } = usePatient();
+
+  useEffect(() => {
+    if (patientId) fetchById(patientId);
+  }, [patientId, fetchById]);
 
   // Navigation sections for the report pages
   const reportSections = [
@@ -70,216 +83,133 @@ const ConcernsPage = () => {
 
   return (
     <Box>
-      {/* Top Navigation Bar - Report Sections */}
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-        {reportSections.map((section) => (
-          <Button
-            key={section.id}
-            variant="text"
-            size="small"
-            onClick={() => navigate(section.path)}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              letterSpacing: '0.02em',
-              py: 1,
-              px: 1.5,
-              borderRadius: 1,
-              bgcolor: section.id === 'concerns' ? 'primary.main' : 'grey.100',
-              color: section.id === 'concerns' ? 'primary.contrastText' : 'text.primary',
-              minWidth: 'auto',
-              '&:hover': {
-                bgcolor: section.id === 'concerns' ? 'primary.dark' : 'grey.200',
-              },
-            }}
-          >
-            {section.label}
-          </Button>
-        ))}
+      {/* Patient Header Card */}
+      <Box sx={{
+        mb: 2,
+        p: 2,
+        backgroundColor: COLORS.SURFACE_CARD,
+        borderRadius: radius.xl,
+        border: `0.8px solid ${COLORS.BORDER}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 2,
+      }}>
+        {patient ? <PatientSummaryCard patient={patient} /> : <Box />}
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          {reportSections.map((section) => (
+            <Button
+              key={section.id}
+              variant="text"
+              size="small"
+              onClick={() => navigate(section.path)}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                letterSpacing: '0.02em',
+                py: 1,
+                px: 1.5,
+                borderRadius: 1,
+                bgcolor: section.id === 'concerns' ? 'primary.main' : 'grey.100',
+                color: section.id === 'concerns' ? 'primary.contrastText' : 'text.primary',
+                minWidth: 'auto',
+                '&:hover': {
+                  bgcolor: section.id === 'concerns' ? 'primary.dark' : 'grey.200',
+                },
+              }}
+            >
+              {section.label}
+            </Button>
+          ))}
+        </Box>
       </Box>
 
-      {/* Main Content Card with Header */}
-      <Paper sx={{ p: 3, bgcolor: '#fbfdff', maxWidth: 1000, margin: 'auto' }}>
-        {/* Header Section with Logo and Title */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Typography 
-            variant="overline" 
-            sx={{ 
-              color: '#61c057ff', 
-              fontSize: '0.95rem',
-              fontFamily: 'Roboto, sans-serif'
-            }}
-          >
-            INFORMED CONSENT DOCUMENTATION
-          </Typography>
-          {/* Mock Logo */}
-          <Box sx={{ 
-            border: '1px solid #61c057ff', 
-            p: 0.5, 
-            color: '#61c057ff', 
-            fontWeight: 'bold',
-            fontSize: '0.875rem'
-          }}>
-            fn
+      {/* Main Content Area */}
+      <Box sx={{ pb: 4 }}>
+        {/* Main Content Card with Header */}
+        <Box sx={{ 
+          p: 3, 
+          bgcolor: COLORS.SURFACE_CARD, 
+          borderRadius: radius.xl, 
+          border: `1px solid ${COLORS.BORDER}` 
+        }}>
+          {/* Header Section with Logo and Title */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+            <Typography 
+              sx={{ 
+                color: COLORS.PRIMARY, 
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            >
+              INFORMED CONSENT DOCUMENTATION
+            </Typography>
+            {/* Mock Logo */}
+            <Box sx={{ 
+              border: `1px solid ${COLORS.PRIMARY}`, 
+              p: 0.5, 
+              color: COLORS.PRIMARY, 
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              borderRadius: radius.sm
+            }}>
+              fn
+            </Box>
           </Box>
-        </Box>
 
-        {/* Subtitle */}
-        <Typography 
-          sx={{ 
-            color: '#000000', 
-            mb: 2, 
-            fontSize: '1rem',
-            fontFamily: 'Roboto, sans-serif'
-          }}
-        >
-          {jawJointData.subtitle}
-        </Typography>
+          {/* Subtitle */}
+          <Typography sx={{ ...headingPrimarySx, mb: 2 }}>
+            {jawJointData.subtitle}
+          </Typography>
 
-        {/* Description */}
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            color: '#444', 
-            lineHeight: 1.6, 
-            mb: 2,
-            fontSize: '0.85rem',
-            fontFamily: 'Roboto, sans-serif'
-          }}
-        >
-          {jawJointData.description}
-        </Typography>
+          {/* Description */}
+          <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, mb: 4, lineHeight: 1.6 }}>
+            {jawJointData.description}
+          </Typography>
 
-        {/* Decorative Tri-Color Line */}
-        <Box sx={{ display: 'flex', height: '2px', mb: 4 }}>
-          <Box sx={{ flex: 1, bgcolor: '#9cb99e' }} />
-          <Box sx={{ flex: 1, bgcolor: '#f1c40f' }} />
-          <Box sx={{ flex: 1, bgcolor: '#e74c3c' }} />
-        </Box>
+          {/* Frequently Asked Questions Section */}
+          <Typography sx={{ ...headingSecondarySx, color: COLORS.PRIMARY, mb: 3 }}>
+            Frequently Asked Questions
+          </Typography>
 
-        {/* Frequently Asked Questions Section */}
-        <Typography 
-          variant="subtitle2" 
-          sx={{ 
-            color: '#9cb99e', 
-            mb: 2, 
-            fontSize: '0.975rem',
-            fontFamily: 'Roboto, sans-serif',
-            fontWeight: 500
-          }}
-        >
-          Frequently Asked Questions
-        </Typography>
-
-        {jawJointData.questions.map((q, index) => (
-          <Box key={q.id} sx={{ mb: 4 }}>
-            {/* Two-Column Layout for Each Question */}
-            <Grid container spacing={3}>
-              {/* Left Column: Text Content */}
-              <Grid size={{ xs: 12, lg: 7 }}>
-                {/* Question Title */}
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    color: '#61c057ff', 
-                    mb: 2,
-                    fontSize: '0.95rem',
-                    fontFamily: 'Roboto, sans-serif'
-                  }}
-                >
-                  {q.question}
-                </Typography>
-
-                {/* Answer Text */}
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    mb: 2, 
-                    color: '#000000',
-                    fontSize: '0.875rem',
-                    lineHeight: 1.6,
-                    fontFamily: 'Roboto, sans-serif'
-                  }}
-                >
-                  {q.answer}
-                </Typography>
-
-                {/* Risk Factors */}
-                {q.riskFactorsTitle && (
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      mb: 1.5, 
-                      color: '#000000',
-                      fontSize: '0.95rem',
-                      fontFamily: 'Roboto, sans-serif'
-                    }}
-                  >
-                    {q.riskFactorsTitle}
+          {jawJointData.questions.map((q, index) => (
+            <SectionCard
+              key={q.id}
+              title={q.question}
+              icon={QuestionIcon}
+              sx={{ mb: 4 }}
+              collapsible={true}
+              defaultExpanded={false}
+            >
+              <Grid container spacing={4}>
+                {/* Left Column: Text Content */}
+                <Grid size={{ xs: 12, md: 7, lg: 7 }}>
+                  {/* Answer Text */}
+                  <Typography sx={{ ...bodySx, mb: 3, lineHeight: 1.6 }}>
+                    {q.answer}
                   </Typography>
-                )}
 
-                {q.items && (
-                  <Box sx={{ ml: 1.5 }}>
-                    {q.items.map((item, idx) => (
-                      <Box
-                        key={idx}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          mb: 1
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            bgcolor: '#000000',
-                            mr: 1.5,
-                            flexShrink: 0,
-                            mt: 0.75
-                          }}
-                        />
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: '#000000',
-                            fontSize: '0.875rem',
-                            lineHeight: 1.5,
-                            fontFamily: 'Roboto, sans-serif'
-                          }}
-                        >
-                          {item}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-
-                {/* Protocol Section */}
-                {q.protocolTitle && (
-                  <>
-                    <Typography 
-                      variant="subtitle1" 
-                      sx={{ 
-                        mb: 1.5, 
-                        color: '#000000',
-                        fontSize: '0.95rem',
-                        fontFamily: 'Roboto, sans-serif'
-                      }}
-                    >
-                      {q.protocolTitle}
+                  {/* Risk Factors */}
+                  {q.riskFactorsTitle && (
+                    <Typography sx={{ ...headingSecondarySx, mb: 2 }}>
+                      {q.riskFactorsTitle}
                     </Typography>
-                    
-                    {q.protocols.map((p, idx) => (
-                      <Box key={idx} sx={{ mb: 1.5, ml: 1.5 }}>
+                  )}
+
+                  {q.items && (
+                    <Box sx={{ ml: 1, mb: 3 }}>
+                      {q.items.map((item, idx) => (
                         <Box
+                          key={idx}
                           sx={{
                             display: 'flex',
                             alignItems: 'flex-start',
-                            mb: 0.5
+                            mb: 1.5
                           }}
                         >
                           <Box
@@ -287,164 +217,147 @@ const ConcernsPage = () => {
                               width: 6,
                               height: 6,
                               borderRadius: '50%',
-                              bgcolor: '#000000',
+                              bgcolor: COLORS.ACCENT,
                               mr: 1.5,
                               flexShrink: 0,
                               mt: 0.75
                             }}
                           />
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: '#000000',
-                              fontSize: '0.875rem',
-                              lineHeight: 1.5,
-                              fontFamily: 'Roboto, sans-serif'
-                            }}
-                          >
-                            {p.label}
+                          <Typography sx={{ ...bodySx, lineHeight: 1.5 }}>
+                            {item}
                           </Typography>
                         </Box>
-                        
-                        {p.subItems && (
-                          <Box sx={{ ml: 3, mt: 0.5 }}>
-                            {p.subItems.map((sub, sIdx) => (
-                              <Typography 
-                                key={sIdx}
-                                variant="body2" 
-                                sx={{ 
-                                  color: '#000000',
-                                  fontSize: '0.875rem',
-                                  lineHeight: 1.5,
-                                  mb: 0.5,
-                                  fontFamily: 'Roboto, sans-serif'
-                                }}
-                              >
-                                • {sub}
-                              </Typography>
-                            ))}
+                      ))}
+                    </Box>
+                  )}
+
+                  {/* Protocol Section */}
+                  {q.protocolTitle && (
+                    <>
+                      <Typography sx={{ ...headingSecondarySx, mb: 2 }}>
+                        {q.protocolTitle}
+                      </Typography>
+                      
+                      {q.protocols.map((p, idx) => (
+                        <Box key={idx} sx={{ mb: 2, ml: 1 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              mb: 0.5
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: COLORS.ACCENT,
+                                mr: 1.5,
+                                flexShrink: 0,
+                                mt: 0.75
+                              }}
+                            />
+                            <Typography sx={{ ...bodySx, fontWeight: 500 }}>
+                              {p.label}
+                            </Typography>
                           </Box>
-                        )}
-                      </Box>
-                    ))}
-                    
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        mt: 2, 
-                        color: '#000000',
-                        fontSize: '0.875rem',
-                        lineHeight: 1.6,
-                        fontFamily: 'Roboto, sans-serif'
-                      }}
-                    >
-                      {q.footer}
-                    </Typography>
-                  </>
-                )}
+                          
+                          {p.subItems && (
+                            <Box sx={{ ml: 3, mt: 1 }}>
+                              {p.subItems.map((sub, sIdx) => (
+                                <Box key={sIdx} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                  <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: COLORS.TEXT_MUTED, mr: 1 }} />
+                                  <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY }}>
+                                    {sub}
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                        </Box>
+                      ))}
+                      
+                      <Typography sx={{ ...bodySx, color: COLORS.TEXT_SECONDARY, mt: 3, p: 2, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.md }}>
+                        {q.footer}
+                      </Typography>
+                    </>
+                  )}
+                </Grid>
+
+                {/* Right Column: Images */}
+                <Grid size={{ xs: 12, md: 5, lg: 5 }}>
+                  {q.image && (
+                    <Box sx={{ mb: 3 }}>
+                      <ClickableReportImage 
+                        src={q.image} 
+                        sx={{ 
+                          width: '100%', 
+                          maxWidth: 280,
+                          mx: 'auto',
+                          display: 'block',
+                          borderRadius: radius.md,
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
+                        }} 
+                      />
+                      {q.imageCaption && (
+                        <Typography sx={{ ...captionSx, color: COLORS.TEXT_MUTED, mt: 1, textAlign: 'center' }}>
+                          {q.imageCaption}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {q.diagramImage && (
+                    <Box sx={{ mb: 3 }}>
+                      <ClickableReportImage 
+                        src={q.diagramImage} 
+                        sx={{ 
+                          width: '100%', 
+                          maxWidth: 280,
+                          mx: 'auto',
+                          display: 'block',
+                          borderRadius: radius.md,
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
+                        }} 
+                      />
+                      {q.diagramCaption && (
+                        <Typography sx={{ ...captionSx, color: COLORS.TEXT_MUTED, mt: 1, textAlign: 'center' }}>
+                          {q.diagramCaption}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {q.warningImage && (
+                    <Box sx={{ mb: 3 }}>
+                      <ClickableReportImage 
+                        src={q.warningImage} 
+                        sx={{ 
+                          width: '100%', 
+                          maxWidth: 280,
+                          mx: 'auto',
+                          display: 'block',
+                          borderRadius: radius.md,
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
+                        }} 
+                      />
+                      {q.warningCaption && (
+                        <Typography sx={{ ...captionSx, color: COLORS.STATUS_ERROR, fontWeight: 500, mt: 1, textAlign: 'center' }}>
+                          {q.warningCaption}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Grid>
               </Grid>
-
-              {/* Right Column: Images */}
-              <Grid size={{ xs: 12, lg: 5 }}>
-                {q.image && (
-                  <Box sx={{ mb: 2 }}>
-                    <img 
-                      src={q.image} 
-                      alt={q.imageCaption || "Illustration"} 
-                      style={{ 
-                        width: '100%', 
-                        height: 'auto', 
-                        display: 'block',
-                        borderRadius: '0'
-                      }} 
-                    />
-                    {q.imageCaption && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          color: '#666666',
-                          fontSize: '0.75rem',
-                          mt: 0.5,
-                          display: 'block',
-                          fontFamily: 'Roboto, sans-serif',
-                          textAlign: 'center'
-                        }}
-                      >
-                        {q.imageCaption}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-
-                {q.diagramImage && (
-                  <Box sx={{ mb: 2 }}>
-                    <img 
-                      src={q.diagramImage} 
-                      alt={q.diagramCaption || "Medical diagram"} 
-                      style={{ 
-                        width: '100%', 
-                        height: 'auto', 
-                        display: 'block'
-                      }} 
-                    />
-                    {q.diagramCaption && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          color: '#666666',
-                          fontSize: '0.75rem',
-                          mt: 0.5,
-                          display: 'block',
-                          fontFamily: 'Roboto, sans-serif',
-                          textAlign: 'center'
-                        }}
-                      >
-                        {q.diagramCaption}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-
-                {q.warningImage && (
-                  <Box sx={{ mb: 2 }}>
-                    <img 
-                      src={q.warningImage} 
-                      alt={q.warningCaption || "Warning illustration"} 
-                      style={{ 
-                        width: '100%', 
-                        height: 'auto', 
-                        display: 'block',
-                        borderRadius: '0'
-                      }} 
-                    />
-                    {q.warningCaption && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          color: '#f44336',
-                          fontSize: '0.75rem',
-                          mt: 0.5,
-                          display: 'block',
-                          fontFamily: 'Roboto, sans-serif',
-                          fontWeight: 500,
-                          textAlign: 'center'
-                        }}
-                      >
-                        {q.warningCaption}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-              </Grid>
-            </Grid>
-
-            {/* Divider between questions (except last) */}
-            {index < jawJointData.questions.length - 1 && (
-              <Divider sx={{ my: 3, borderColor: '#e0e0e0' }} />
-            )}
-          </Box>
-        ))}
-      </Paper>
+            </SectionCard>
+          ))}
+        </Box>
+      </Box>
     </Box>
   );
 };

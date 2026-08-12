@@ -304,7 +304,6 @@ const AddCoveragePage = () => {
         subscriberName: formData.subscriber.name,
         subscriberDateOfBirth: new Date(formData.subscriber.dateOfBirth).toISOString(),
         relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
-        insuranceType: 'primary', // Hardcoded as primary for initial coverage
         effectiveDate: new Date(formData.policyStarted).toISOString(),
         expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
         deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,

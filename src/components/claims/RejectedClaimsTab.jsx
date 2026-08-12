@@ -31,6 +31,9 @@ const RejectedClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   useEffect(() => {
     loadData();
+    const handleRefresh = () => loadData();
+    window.addEventListener('refresh-claims', handleRefresh);
+    return () => window.removeEventListener('refresh-claims', handleRefresh);
   }, []);
 
   async function loadData() {

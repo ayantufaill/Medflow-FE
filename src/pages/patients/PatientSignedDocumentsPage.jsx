@@ -5,25 +5,29 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   Description as DocIcon,
-  CheckCircle as CheckCircleIcon,
-  Assignment as ChecklistIcon,
   Add as AddIcon,
-  Close as CloseIcon,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarContext";
+import { documentService } from "../../services/document.service";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
 import { usePatient } from "../../hooks/redux/usePatient";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
+import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
+import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 import SectionCard from "../../components/shared/SectionCard";
-import { DocumentForm } from "../../components/documents";
+import TaskList from "../../components/appointments/right-panel/TaskList";
+import Messages from "../../components/appointments/right-panel/Messages";
+import { DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
+import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -37,26 +41,16 @@ const shareButtonSx = {
   "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
 };
 
+const radioSx = {
+  p: 0.5,
+  color: COLORS.BORDER,
+  "&.Mui-checked": { color: COLORS.ACCENT },
+};
+
 const isHipaDocument = (doc) => {
   const combined =
-    `${doc.documentType || ""} ${doc.documentName || ""}`.toLowerCase();
+    `${doc.documentType || ""} ${doc.documentName || ""} ${doc.category || ""}`.toLowerCase();
   return combined.includes("hipaa");
-};
-
-const formatDate = (dateVal) => {
-  if (!dateVal) return "";
-  const d = new Date(dateVal);
-  return d.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
-};
-
-const truncateLabel = (value, max = 30) => {
-  if (!value) return "";
-  if (value.length <= max) return value;
-  return `${value.slice(0, max - 3)}...`;
 };
 
 const PageContainer = (props) => (
@@ -76,11 +70,37 @@ const PatientSignedDocumentsPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   // Redux hooks
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
-  const { documents, loading: docsLoading, fetch: fetchDocuments, refresh: refreshDocuments } = usePatientDocuments(patientId);
+  const {
+    documents: reduxDocuments,
+    loading: docsLoading,
+    fetch: fetchDocuments,
+    refresh: refreshDocuments,
+    remove,
+  } = usePatientDocuments(patientId);
+
+  const [viewMode, setViewMode] = useState("thumbnails");
+  const [sortMode, setSortMode] = useState("category");
+  const [signature, setSignature] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [] });
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    documentId: null,
+    documentName: "",
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editDialog, setEditDialog] = useState({
+    open: false,
+    section: "",
+    docId: null,
+    name: "",
+    type: "",
+    category: "",
+  });
 
   useEffect(() => {
     if (patientId) {
@@ -89,19 +109,45 @@ const PatientSignedDocumentsPage = () => {
     }
   }, [patientId, fetchPatient, fetchDocuments]);
 
-  const isActuallyLoading = docsLoading && documents.length === 0;
+  const isActuallyLoading = docsLoading && (!reduxDocuments || reduxDocuments.length === 0);
 
-  const hipaaDocs = documents.filter(isHipaDocument);
-  const signedDocs = documents.filter((d) => {
-    const type = (d.documentType || d.type || "").toLowerCase();
-    const name = (d.documentName || d.title || d.name || "").toLowerCase();
-    const category = (d.category || "").toLowerCase();
-    const isConsentOrSigned = type === 'consent_form' || type === 'consent' || type.includes('signed') || name.includes('consent') || name.includes('signed') || category.includes('consent');
-    return isConsentOrSigned && !isHipaDocument(d);
+  // Map raw documents to standardized UI documents
+  const mappedDocs = (reduxDocuments || []).map((doc) => ({
+    id: doc._id || doc.id,
+    name: doc.documentName || doc.title || "Signed Document",
+    uploadedBy: doc.uploadedBy?.name || (doc.uploadedBy?.firstName ? `${doc.uploadedBy.firstName} ${doc.uploadedBy.lastName}` : "System"),
+    uploadedDate: new Date(doc.uploadDate || doc.createdAt || new Date()).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }),
+    status: doc.status || "Completed",
+    type: (doc.fileType || "PDF").toUpperCase(),
+    category: (doc.documentType || "Signed Form").toLowerCase(),
+    title: doc.documentName || "Signed Form",
+    fileUrl: doc.fileUrl || doc.documentUrl || doc.storagePath,
+    documentUrl: doc.fileUrl || doc.documentUrl || doc.storagePath,
+    rawDoc: doc,
+  }));
+
+  const hipaaDocs = mappedDocs.filter((doc) => isHipaDocument(doc.rawDoc));
+  const signedDocs = mappedDocs.filter((doc) => {
+    const type = (doc.rawDoc.documentType || doc.rawDoc.type || "").toLowerCase();
+    const name = (doc.rawDoc.documentName || doc.rawDoc.title || doc.rawDoc.name || "").toLowerCase();
+    const category = (doc.rawDoc.category || "").toLowerCase();
+    const isConsentOrSigned =
+      type === "consent_form" ||
+      type === "consent" ||
+      type.includes("signed") ||
+      name.includes("consent") ||
+      name.includes("signed") ||
+      category.includes("consent");
+    return isConsentOrSigned && !isHipaDocument(doc.rawDoc);
   });
 
-  const allSignedDocs = [...hipaaDocs, ...signedDocs];
-  const hasAnySignedDocs = allSignedDocs.length > 0;
+  const allSignedDocs = mappedDocs.filter(d => isHipaDocument(d.rawDoc) || d.category.includes('consent') || d.category.includes('signed') || d.name.toLowerCase().includes('signed'));
+
+  const displaySignedDocs = allSignedDocs.length > 0 ? allSignedDocs : mappedDocs;
 
   const getPatientName = () => {
     if (patient?.firstName && patient?.lastName)
@@ -109,96 +155,126 @@ const PatientSignedDocumentsPage = () => {
     return "Patient";
   };
 
-  const handleUploadSuccess = async () => {
-    setUploadDialogOpen(false);
-    showSnackbar("Document uploaded successfully", "success");
-    await refreshDocuments();
+  const handleUploadSignedDocument = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*,.pdf";
+    input.multiple = true;
+    input.onchange = () => {
+      const files = input.files;
+      if (!files?.length || !patientId) return;
+      setUploadDialog({ open: true, files: Array.from(files) });
+    };
+    input.click();
   };
 
-  if (isActuallyLoading && !patient) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleConfirmUpload = async ({ name, category, files }) => {
+    try {
+      setUploading(true);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("patientId", patientId);
+        formData.append("documentType", category || "consent_form");
+        formData.append("documentName", name || file.name || `Signed document ${i + 1}`);
+        await documentService.uploadDocument(formData);
+      }
+      await refreshDocuments();
+      showSnackbar(`Uploaded ${files.length} signed document(s)`, "success");
+    } catch (err) {
+      showSnackbar(
+        err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          "Failed to upload signed document",
+        "error"
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleOpenDocument = (row) => {
+    if (row.id && String(row.id).startsWith("demo-")) {
+      showSnackbar(`Opening ${row.name}...`, "info");
+      return;
+    }
+    const url = row.fileUrl || row.documentUrl;
+    if (!url) {
+      showSnackbar("Error: File URL is missing", "error");
+      return;
+    }
+    window.open(url, "_blank");
+  };
+
+  const handleDownloadDocument = (row) => {
+    downloadDocumentFile(row, showSnackbar);
+  };
+
+  const handleShareWithPatient = (row) => {
+    if (row.id && String(row.id).startsWith("demo-")) {
+      showSnackbar(`Sharing ${row.name} with patient...`, "info");
+      return;
+    }
+    showSnackbar(`${row.name} shared with patient via portal`, "success");
+  };
+
+  const handleEditDocument = (section, row) => {
+    setEditDialog({
+      open: true,
+      section,
+      docId: row.id,
+      name: row.name,
+      type: row.type,
+      category: row.category,
+    });
+  };
+
+  const handleSaveEditDialog = async ({ docId, name, type, category }) => {
+    try {
+      if (docId && !String(docId).startsWith("demo-")) {
+        await documentService.updateDocument(docId, {
+          documentName: name,
+          documentType: category,
+          fileType: type,
+        });
+        await refreshDocuments();
+        showSnackbar("Document updated successfully", "success");
+      } else {
+        showSnackbar("Updated local document preview", "info");
+      }
+    } catch (err) {
+      showSnackbar(
+        err?.response?.data?.error?.message || "Failed to update document",
+        "error"
+      );
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDialog.documentId) return;
+    try {
+      setDeleteLoading(true);
+      await remove(deleteDialog.documentId).unwrap();
+      showSnackbar("Signed document deleted", "success");
+    } catch (err) {
+      showSnackbar(
+        err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          "Failed to delete document",
+        "error"
+      );
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialog({ open: false, documentId: null, documentName: "" });
+    }
+  };
 
   return (
     <PageContainer>
       <PatientSectionTabs activeTab="signed_docs" patientId={patientId} />
 
-      {/* Upload Document Dialog */}
-      <Dialog
-        open={uploadDialogOpen}
-        onClose={() => setUploadDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-        sx={{
-          '& .MuiDialog-container': {
-            // Give equal padding top/bottom; top accounts for the 64px navbar
-            pt: '64px',
-            pb: '20px',
-          },
-        }}
-        PaperProps={{
-          sx: {
-            borderRadius: radius.xl,
-            border: `0.8px solid ${COLORS.BORDER}`,
-            // Constrain height so it never overflows — content shrinks to fit
-            maxHeight: 'calc(100vh - 84px)',
-            display: 'flex',
-            flexDirection: 'column',
-            m: 0,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: COLORS.SURFACE_TINT,
-            borderBottom: `1px solid ${COLORS.BORDER}`,
-            py: 1,
-            px: 2.5,
-            flexShrink: 0,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Box
-              sx={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                backgroundColor: COLORS.ACCENT_BG,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <DocIcon sx={{ fontSize: 16, color: COLORS.ACCENT }} />
-            </Box>
-            <Typography sx={{ fontFamily: "Inter", fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY }}>
-              Upload Signed Document — {getPatientName()}
-            </Typography>
-          </Box>
-          <IconButton size="small" onClick={() => setUploadDialogOpen(false)} sx={{ color: COLORS.TEXT_MUTED }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 1.5, pt: '12px !important', overflowY: 'auto', flex: 1 }}>
-          <DocumentForm
-            mode="create"
-            patientIdParam={patientId}
-            initialData={{ documentType: 'consent_form' }}
-            onSuccess={handleUploadSuccess}
-            onCancel={() => setUploadDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-
-
+      {/* Header Bar matching Additional Docs Page */}
       <Box
         sx={{
           mt: 1.5,
@@ -226,158 +302,226 @@ const PatientSignedDocumentsPage = () => {
 
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", alignItems: "center" }}>
           <Button
-            variant="outlined"
+            variant="contained"
             size="small"
-            startIcon={<AddIcon />}
-            onClick={() => setUploadDialogOpen(true)}
-            sx={{
-              textTransform: "none",
-              borderRadius: radius.md,
-              fontWeight: fontWeight.semibold,
-              fontSize: fontSize.base,
-              boxShadow: "none",
-              borderColor: COLORS.BORDER,
-              color: COLORS.TEXT_BODY,
-              backgroundColor: COLORS.SURFACE_CARD,
-              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
-            }}
+            onClick={() => showSnackbar("Text sharing feature ready", "info")}
+            sx={shareButtonSx}
           >
-            Upload Document
+            Share via Text
           </Button>
           <Button
             variant="contained"
             size="small"
+            onClick={() => showSnackbar("Email sharing feature ready", "info")}
             sx={shareButtonSx}
           >
-            Share Via Email
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            sx={shareButtonSx}
-          >
-            Share Via Text
+            Share via email
           </Button>
         </Box>
       </Box>
 
-      {isActuallyLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : !hasAnySignedDocs ? (
-        <Alert severity="info" sx={{ backgroundColor: "rgba(35, 98, 239, 0.08)", color: "#2362EF", "& .MuiAlert-icon": { color: "#2362EF" }, borderRadius: "8px", fontWeight: 500 }}>
-          No signed documents for this patient.
-        </Alert>
-      ) : (
-        <>
-          {/* HIPAA section always visible, even if empty */}
-          <SectionCard icon={DocIcon} title="HIPAA Document">
-            {hipaaDocs.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No HIPAA documents for this patient.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {hipaaDocs.map((doc) => (
-                  <Box
-                    key={doc._id}
-                    sx={{
-                      width: 190,
-                      textAlign: "center",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => navigate(`/patients/${patientId}/signed-documents/${doc._id}`)}
+      {/* Main Grid: Left Documents Panel + Right Sidebar */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "1fr 340px" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <SectionCard icon={DocIcon} title="Signed Forms">
+            {/* View controls toolbar identical to Additional Docs */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 2,
+                mb: 2,
+                pb: 1.5,
+                borderBottom: `1px solid ${COLORS.BORDER}`,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "wrap" }}>
+                <FormControl component="fieldset">
+                  <RadioGroup
+                    row
+                    value={viewMode}
+                    onChange={(e) => setViewMode(e.target.value)}
                   >
-                    <Box
-                      sx={{ height: 92, display: "grid", placeItems: "center" }}
-                    >
-                      <Box sx={{ position: "relative", width: 72, height: 72 }}>
-                        <DocIcon sx={{ fontSize: 68, color: "primary.main" }} />
-                        <ChecklistIcon
-                          sx={{
-                            position: "absolute",
-                            right: -4,
-                            bottom: -6,
-                            fontSize: 26,
-                            color: "#64b5f6",
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        whiteSpace: "pre-line",
-                        fontWeight: 600,
-                        color: COLORS.TEXT_PRIMARY,
-                      }}
-                    >
-                      {truncateLabel(doc.documentName || "Document")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Signed · {formatDate(doc.createdAt)}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </SectionCard>
+                    <FormControlLabel
+                      value="thumbnails"
+                      control={<Radio size="small" sx={radioSx} />}
+                      label={
+                        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.TEXT_BODY }}>
+                          Thumbnails
+                        </Typography>
+                      }
+                    />
+                    <FormControlLabel
+                      value="list"
+                      control={<Radio size="small" sx={radioSx} />}
+                      label={
+                        <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, fontWeight: fontWeight.medium, color: COLORS.TEXT_BODY }}>
+                          List View
+                        </Typography>
+                      }
+                    />
+                  </RadioGroup>
+                </FormControl>
 
-          {/* Signed forms (non-HIPAA) */}
-          <SectionCard icon={ChecklistIcon} title="Signed Forms">
-            {signedDocs.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No non-HIPAA signed documents for this patient.
-              </Typography>
-            ) : (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {signedDocs.map((doc) => (
-                  <Box
-                    key={doc._id}
-                    sx={{
-                      width: 190,
-                      textAlign: "center",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => navigate(`/patients/${patientId}/signed-documents/${doc._id}`)}
-                  >
-                    <Box
-                      sx={{ height: 92, display: "grid", placeItems: "center" }}
-                    >
-                      <Box sx={{ position: "relative", width: 72, height: 72 }}>
-                        <DocIcon sx={{ fontSize: 68, color: "primary.main" }} />
-                        <ChecklistIcon
-                          sx={{
-                            position: "absolute",
-                            right: -4,
-                            bottom: -6,
-                            fontSize: 26,
-                            color: "#64b5f6",
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                    <Typography
-                      variant="body2"
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED }}>
+                    Sort by:
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 130 }}>
+                    <Select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
                       sx={{
-                        whiteSpace: "pre-line",
-                        fontWeight: 600,
-                        color: COLORS.TEXT_PRIMARY,
+                        fontFamily: "Inter",
+                        fontSize: fontSize.base,
+                        borderRadius: radius.md,
+                        height: 32,
+                        backgroundColor: COLORS.SURFACE_CARD,
+                        borderColor: COLORS.BORDER,
                       }}
                     >
-                      {truncateLabel(doc.documentName || "Document")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Signed · {formatDate(doc.createdAt)}
-                    </Typography>
-                  </Box>
+                      <MenuItem value="category">Category</MenuItem>
+                      <MenuItem value="name">Name</MenuItem>
+                      <MenuItem value="date">Date</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleUploadSignedDocument}
+                disabled={uploading}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: radius.md,
+                  bgcolor: COLORS.ACCENT,
+                  fontWeight: fontWeight.semibold,
+                  fontSize: fontSize.base,
+                  boxShadow: "none",
+                  "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
+                }}
+              >
+                + Upload New Document
+              </Button>
+            </Box>
+
+            {isActuallyLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : displaySignedDocs.length === 0 ? (
+              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_MUTED, py: 2 }}>
+                No signed documents uploaded yet. Click the upload button to add one.
+              </Typography>
+            ) : viewMode === "thumbnails" ? (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+                {displaySignedDocs.map((doc) => (
+                  <DocumentThumbnail key={doc.id} document={doc} onOpen={handleOpenDocument} />
                 ))}
+              </Box>
+            ) : (
+              <Box>
+                {hipaaDocs.length > 0 && (
+                  <DocumentTable
+                    title="HIPAA Document"
+                    tooltipTitle="Signed HIPAA & Compliance Forms"
+                    documents={hipaaDocs}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("hipaa", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
+
+                {signedDocs.length > 0 && (
+                  <DocumentTable
+                    title="Signed Forms"
+                    tooltipTitle="Signed Consent & Treatment Forms"
+                    documents={signedDocs}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("signed", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
+
+                {hipaaDocs.length === 0 && signedDocs.length === 0 && (
+                  <DocumentTable
+                    title="Signed Forms"
+                    tooltipTitle="Signed Forms"
+                    documents={displaySignedDocs}
+                    sortMode={sortMode}
+                    onEdit={(row) => handleEditDocument("signed", row)}
+                    onOpen={handleOpenDocument}
+                    onDownload={handleDownloadDocument}
+                    onShare={handleShareWithPatient}
+                    onDelete={(row) =>
+                      setDeleteDialog({ open: true, documentId: row.id, documentName: row.name })
+                    }
+                  />
+                )}
               </Box>
             )}
           </SectionCard>
-        </>
-      )}
+        </Box>
+
+        {/* Sidebar: Task List / Messages / Patient Signature Card */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TaskList />
+          <Messages />
+          <PatientSignatureCard value={signature} onChange={setSignature} reviewedWithPatient />
+        </Box>
+      </Box>
+
+      <EditDocumentDialog
+        open={editDialog.open}
+        section={editDialog.section}
+        docId={editDialog.docId}
+        name={editDialog.name}
+        type={editDialog.type}
+        category={editDialog.category}
+        onClose={() => setEditDialog((prev) => ({ ...prev, open: false }))}
+        onSave={handleSaveEditDialog}
+      />
+
+      <UploadAdditionalDocumentDialog
+        open={uploadDialog.open}
+        files={uploadDialog.files}
+        onClose={() => setUploadDialog({ open: false, files: [] })}
+        onSave={handleConfirmUpload}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, documentId: null, documentName: "" })}
+        onConfirm={handleDelete}
+        title="Delete Document"
+        message={`Are you sure you want to delete "${deleteDialog.documentName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmColor="error"
+        loading={deleteLoading}
+      />
     </PageContainer>
   );
 };

@@ -1,35 +1,50 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Button, Select, MenuItem, TextField, TableCell, TableRow
+  Box, Typography, Button, Select, MenuItem, TextField, TableCell, TableRow, CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPatientTrackersReport, selectPatientTrackersData, selectPatientTrackersDataLoading } from '../../../../store/slices/patientReportSlice';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 
-const DUMMY_DATA = [
-  { 
-    patient: 'Alice Smith (59)', 
-    trackerName: 'UI with Dr. Miller', 
-    startDate: 'May 12, 2026', 
-    endDate: 'Jun 15, 2026', 
-    duration: '34 days', 
-    description: 'Having #12-15 + Impacted #11 EXT. Need full photo series, tx plan, wax up ready for her.', 
-    status: 'On Track', 
-    createdBy: 'C. Yasi Sabour on May 07, 2026', 
-    completedBy: '--', 
-    deletedBy: '--' 
-  },
-];
+
 
 const PatientTrackersReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectPatientTrackersData) || [];
+  const loading = useSelector(selectPatientTrackersDataLoading);
+
   const [startDate, setStartDate] = useState(dayjs('2026-01-01'));
   const [endDate, setEndDate] = useState(dayjs('2027-01-01'));
+  const [patientSearch, setPatientSearch] = useState('');
   const [createdBy, setCreatedBy] = useState('all');
   const [status, setStatus] = useState('all');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  React.useEffect(() => {
+    dispatch(fetchPatientTrackersReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      patientSearch,
+      createdBy,
+      status
+    }));
+  }, [dispatch]);
+
+  const handleApplyFilters = () => {
+    dispatch(fetchPatientTrackersReport({
+      startDate: startDate ? startDate.format('YYYY-MM-DD') : '',
+      endDate: endDate ? endDate.format('YYYY-MM-DD') : '',
+      patientSearch,
+      createdBy,
+      status
+    }));
+  };
 
   const columns = [
     { label: 'Patient' },
@@ -63,7 +78,7 @@ const PatientTrackersReport = () => {
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Filter by Patient:</Typography>
-        <ReportSearchInput placeholder="Search patient" width="180px" />
+        <ReportSearchInput placeholder="Search patient" width="180px" value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} />
       </Box>
 
       <ReportSelect 
@@ -93,29 +108,67 @@ const PatientTrackersReport = () => {
 
   const bottomFilters = (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>Start Date:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          start date
+        </Typography>
         <DatePicker
           value={startDate}
           onChange={(v) => setStartDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 120, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#1e293b' }}>End Date:</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
+          end date
+        </Typography>
         <DatePicker
           value={endDate}
           onChange={(v) => setEndDate(v)}
           format="MM/DD/YYYY"
           slotProps={{ 
-            textField: { variant: 'standard', size: 'small', sx: { width: 120, '& .MuiInputBase-root': { height: 24, fontSize: '0.75rem', backgroundColor: '#fff', '&:before, &:after': { display: 'none' } } } },
-            openPickerIcon: { sx: { display: 'none' } }
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
           }}
         />
+      </Box>
       </Box>
     </>
   );
@@ -124,20 +177,40 @@ const PatientTrackersReport = () => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Patient Trackers Report:">
-          <ReportFilterBar 
-            topRowFilters={topFilters}
-            bottomRowFilters={bottomFilters}
-            onApplyFilters={() => console.log('Apply Filters')}
-            onCreateTemplate={() => setTemplateDialogOpen(true)}
-            onExportCsv={() => alert('Exporting CSV...')}
-            onPrint={() => window.print()}
-          />
+          <Box className="hide-on-print" sx={{ mb: 2 }}>
+            <ReportFilterBar 
+              topRowFilters={topFilters}
+              bottomRowFilters={bottomFilters}
+              onApplyFilters={handleApplyFilters}
+              onCreateTemplate={() => setTemplateDialogOpen(true)}
+            />
+          </Box>
 
-          <ReportDataTable 
-            columns={columns} 
-            data={DUMMY_DATA} 
-            renderRow={renderRow} 
-          />
+          {/* Summary Text and Actions */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+              (number of patient trackers = {reportData.length})
+            </Typography>
+            <Box sx={{ transform: 'translateY(-4px)' }}>
+              <ProductionReportActions
+                onExportCsv={() => alert('Exporting CSV...')}
+                onPrint={() => window.print()}
+                hasData={reportData.length > 0}
+              />
+            </Box>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <ReportDataTable 
+              columns={columns} 
+              data={reportData} 
+              renderRow={renderRow} 
+            />
+          )}
         </ReportLayout>
 
         <CreateTemplateDialog 

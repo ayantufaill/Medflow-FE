@@ -14,12 +14,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   TextField,
-  InputBase,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import { COLORS } from '../../constants/colors';
 
 const LateFeeDialog = ({ onClose, onAddFee, adjustmentType }) => {
   const [selectedInvoices, setSelectedInvoices] = useState(['25136', '25135']);
@@ -50,20 +52,36 @@ const LateFeeDialog = ({ onClose, onAddFee, adjustmentType }) => {
   };
 
   return (
-    <Box sx={{ width: '1100px', bgcolor: '#fff', borderRadius: '4px', overflow: 'hidden' }}>
+    <Box sx={{ width: '100%', bgcolor: '#fff', borderRadius: '14px', overflow: 'hidden', border: `1px solid ${COLORS.BORDER}`, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: '#7788bb', p: 1.5, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.9rem' }}>
-          Invoices
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '25px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Invoices {adjustmentType ? `— ${adjustmentType}` : ''}
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
       {/* Content */}
-      <Box sx={{ p: 2 }}>
+      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2, display: 'flex', flexDirection: 'column' }}>
         <TableContainer component={Box} sx={{ border: 'none', boxShadow: 'none' }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid #eee', py: 1.5, color: '#ff7043', fontWeight: 500, fontSize: '0.85rem' } }}>
+              <TableRow sx={{ '& th': { borderBottom: `1px solid ${COLORS.BORDER}`, py: 1.5, color: COLORS.TEXT_PRIMARY, fontWeight: 600, fontSize: '13px' } }}>
                 <TableCell padding="checkbox">
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Checkbox 
@@ -71,9 +89,9 @@ const LateFeeDialog = ({ onClose, onAddFee, adjustmentType }) => {
                       checked={selectedInvoices.length === invoices.length}
                       indeterminate={selectedInvoices.length > 0 && selectedInvoices.length < invoices.length}
                       onChange={handleToggleAll}
-                      sx={{ p: 0 }} 
+                      sx={{ p: 0, color: COLORS.ACCENT, '&.Mui-checked': { color: COLORS.ACCENT }, '&.MuiCheckbox-indeterminate': { color: COLORS.ACCENT } }} 
                     />
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#333' }}>All</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>All</Typography>
                   </Stack>
                 </TableCell>
                 <TableCell>Patient</TableCell>
@@ -84,110 +102,115 @@ const LateFeeDialog = ({ onClose, onAddFee, adjustmentType }) => {
             </TableHead>
             <TableBody>
               {invoices.map((inv) => (
-                <TableRow key={inv.id} sx={{ '& td': { borderBottom: '1px solid #eee', py: 1, fontSize: '0.85rem' } }}>
+                <TableRow key={inv.id} sx={{ '& td': { borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.2, fontSize: '13px', color: COLORS.TEXT_BODY } }}>
                   <TableCell padding="checkbox">
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <Checkbox 
                         size="small" 
                         checked={selectedInvoices.includes(inv.id)}
                         onChange={() => handleToggleInvoice(inv.id)}
-                        sx={{ p: 0 }} 
+                        sx={{ p: 0, color: COLORS.ACCENT, '&.Mui-checked': { color: COLORS.ACCENT } }} 
                       />
-                      <Typography variant="caption" sx={{ color: '#555', whiteSpace: 'nowrap' }}>
+                      <Typography sx={{ color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap', fontSize: '13px' }}>
                         Invoice #{inv.id}: {inv.date} for {inv.patient}
                       </Typography>
                     </Stack>
                   </TableCell>
-                  <TableCell sx={{ color: '#ff7043', fontWeight: 500 }}>${inv.amount.toFixed(2)}</TableCell>
+                  <TableCell sx={{ color: COLORS.ACCENT, fontWeight: 600 }}>${inv.amount.toFixed(2)}</TableCell>
                   <TableCell>${inv.ins.toFixed(2)}</TableCell>
                   <TableCell>${inv.writeoff.toFixed(2)}</TableCell>
-                  <TableCell sx={{ color: '#ff7043', fontWeight: 500 }}>${inv.owing.toFixed(2)}</TableCell>
+                  <TableCell sx={{ color: COLORS.ACCENT, fontWeight: 600 }}>${inv.owing.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
+      </DialogContent>
 
-        {/* Footer Actions */}
-        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={4} sx={{ mt: 3, mb: 1 }}>
-          <RadioGroup 
-            row 
-            value={outstandingType} 
-            onChange={(e) => setOutstandingType(e.target.value)}
-          >
-            <FormControlLabel 
-              value="total" 
-              control={<Radio size="small" />} 
-              label={<Typography variant="caption" sx={{ fontWeight: 500 }}>Total Outstanding</Typography>} 
-            />
-            <FormControlLabel 
-              value="patient" 
-              control={<Radio size="small" />} 
-              label={<Typography variant="caption" sx={{ fontWeight: 500 }}>Patient Outstanding</Typography>} 
-            />
-          </RadioGroup>
-          
-          {showCustomRate && (
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#004d40' }}>
-                {isPercentage ? 'Percentage:' : 'Flate Rate:'}
-              </Typography>
-              <TextField
-                variant="standard"
-                size="small"
-                value={rateValue}
-                onChange={(e) => setRateValue(e.target.value)}
-                InputProps={{
-                  endAdornment: <Typography variant="body2" sx={{ ml: 0.5, color: '#004d40' }}>{isPercentage ? '%' : '$'}</Typography>,
-                }}
-                sx={{ 
-                  width: '80px',
-                  '& .MuiInput-underline:before': { borderBottomColor: '#ccc' },
-                  '& .MuiInput-underline:after': { borderBottomColor: '#004d40' },
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.9rem',
-                    textAlign: 'center',
-                    color: '#004d40'
-                  }
-                }}
-              />
-            </Stack>
-          )}
-
-          <Stack direction="row" spacing={1.5}>
-            <Button 
-              variant="contained" 
-              onClick={() => onAddFee(selectedInvoices, rateValue)}
-              sx={{ 
-                bgcolor: '#d2b48c', 
-                color: '#fff', 
-                textTransform: 'none', 
-                px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#c4a47c' }
+      {/* Footer */}
+      <DialogActions sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, px: 3, py: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+        <RadioGroup 
+          row 
+          value={outstandingType} 
+          onChange={(e) => setOutstandingType(e.target.value)}
+        >
+          <FormControlLabel 
+            value="total" 
+            control={<Radio size="small" sx={{ color: COLORS.ACCENT, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
+            label={<Typography sx={{ fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>Total Outstanding</Typography>} 
+          />
+          <FormControlLabel 
+            value="patient" 
+            control={<Radio size="small" sx={{ color: COLORS.ACCENT, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
+            label={<Typography sx={{ fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>Patient Outstanding</Typography>} 
+          />
+        </RadioGroup>
+        
+        {showCustomRate && (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography sx={{ fontWeight: 600, color: COLORS.TEXT_PRIMARY, fontSize: '13px' }}>
+              {isPercentage ? 'Percentage:' : 'Flat Rate:'}
+            </Typography>
+            <TextField
+              variant="standard"
+              size="small"
+              value={rateValue}
+              onChange={(e) => setRateValue(e.target.value)}
+              InputProps={{
+                endAdornment: <Typography sx={{ ml: 0.5, color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>{isPercentage ? '%' : '$'}</Typography>,
               }}
-            >
-              Add {adjustmentType || 'Fee'}
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={onClose}
               sx={{ 
-                bgcolor: '#9e9e9e', 
-                color: '#fff', 
-                textTransform: 'none', 
-                px: 3,
-                boxShadow: 'none',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: '#8e8e8e' }
+                width: '80px',
+                '& .MuiInput-underline:before': { borderBottomColor: COLORS.BORDER },
+                '& .MuiInput-underline:after': { borderBottomColor: COLORS.ACCENT },
+                '& .MuiInputBase-input': {
+                  fontSize: '13px',
+                  textAlign: 'center',
+                  color: COLORS.TEXT_PRIMARY
+                }
               }}
-            >
-              Cancel
-            </Button>
+            />
           </Stack>
+        )}
+
+        <Stack direction="row" spacing={1}>
+          <Button 
+            variant="contained" 
+            onClick={() => onAddFee(selectedInvoices, rateValue)}
+            sx={{ 
+              bgcolor: COLORS.ACCENT, 
+              color: '#fff', 
+              textTransform: 'none', 
+              px: 3,
+              fontSize: '13px',
+              fontWeight: 500,
+              boxShadow: 'none',
+              borderRadius: '6px',
+              '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
+            }}
+          >
+            Add {adjustmentType || 'Fee'}
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={onClose}
+            sx={{ 
+              color: COLORS.TEXT_SECONDARY, 
+              borderColor: COLORS.BORDER, 
+              bgcolor: 'white',
+              textTransform: 'none', 
+              px: 3,
+              fontSize: '13px',
+              fontWeight: 500,
+              boxShadow: 'none',
+              borderRadius: '6px',
+              '&:hover': { bgcolor: '#f5f5f5', boxShadow: 'none' }
+            }}
+          >
+            Cancel
+          </Button>
         </Stack>
-      </Box>
+      </DialogActions>
     </Box>
   );
 };

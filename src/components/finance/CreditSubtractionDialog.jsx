@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 
@@ -27,40 +28,69 @@ const HeaderLabel = ({ label, color }) => (
   </Typography>
 );
 
-const CreditSubtractionDialog = ({ onClose }) => {
-  const columns = [
-    { label: "Ins Writeoff", width: 80, color: COLORS.TEXT_SECONDARY },
-    { label: "Patient:", width: 80, color: COLORS.TEXT_SECONDARY },
-    { label: "Insurance:", width: 80, color: COLORS.TEXT_SECONDARY },
-    { label: "Charges: $100.00", width: 100, color: COLORS.TEXT_SECONDARY },
-    { label: "Payment: $0.00", width: 80, color: '#22c55e', align: "right" },
-    { label: "Adjust: $0.00", width: 80, color: COLORS.ACCENT, align: "right" },
-  ];
+const CreditSubtractionDialog = ({ onClose, editTarget }) => {
+  const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
+  const rawDate = editTarget?.invoiceDate || editTarget?.createdAt || editTarget?.dateService;
+  const invoiceDate = rawDate ? dayjs(rawDate).format('MM/DD/YYYY') : 'N/A';
+  const adjustmentDate = dayjs().format('MM/DD/YYYY');
+  const patientName = editTarget?.patient?.firstName 
+    ? `${editTarget.patient.firstName} ${editTarget.patient.lastName}` 
+    : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
 
-  const headerInfo = {
-    invoiceNum: "#24636",
-    adjustmentDate: "04/15/2026",
-    adjustmentType: "Credit Adjustment #24642",
-    invoiceDate: "04/14/2026",
-  };
-
-  const lineItems = [
-    {
-      code: "L5001 Broken appt",
-      patient: "test test",
+  let totalCharges = 0;
+  let totalPayment = 0;
+  
+  const procedures = editTarget?.lineItems || editTarget?.procedures || [];
+  
+  const dynamicLineItems = procedures.map(p => {
+    const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
+    const ptBalance = Number(p.patientBalance || p.ptBalance || 0);
+    const insBalance = Number(p.insuranceBalance || p.insBalance || 0);
+    const ptPaid = Number(p.patientPaid || 0);
+    const insPaid = Number(p.insurancePaid || 0);
+    const pay = ptPaid + insPaid;
+    
+    totalCharges += charge;
+    totalPayment += pay;
+    
+    return {
+      code: p.code || p.cptCode || p.ProcCode || 'Item',
+      patient: patientName,
       values: [
         { val: "$0.00", width: 80 },
-        { val: "$100.00", width: 80 },
+        { val: `$${ptBalance.toFixed(2)}`, width: 80 },
+        { val: `$${insBalance.toFixed(2)}`, width: 80 },
+        { val: `$${charge.toFixed(2)}`, width: 100 },
+        { val: `$${pay.toFixed(2)}`, width: 80 },
+      ],
+      percent: "0%",
+    };
+  });
+
+  const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems : [
+    {
+      code: "No items found",
+      patient: patientName,
+      values: [
         { val: "$0.00", width: 80 },
-        { val: "$100.00", width: 100, bold: true },
+        { val: "$0.00", width: 80 },
+        { val: "$0.00", width: 80 },
+        { val: "$0.00", width: 100, bold: true },
         { val: "$0.00", width: 80, bold: true, color: '#22c55e' },
       ],
       percent: "0%",
-    },
+    }
   ];
 
+  const headerInfo = {
+    invoiceNum: invoiceNum,
+    adjustmentDate: adjustmentDate,
+    adjustmentType: "Credit Adjustment",
+    invoiceDate: invoiceDate,
+  };
+
   return (
-    <Box sx={{ width: "100%", bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: "hidden" }}>
+    <Box sx={{ width: "100%", minWidth: "950px", bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: "hidden" }}>
       {/* Header Bar */}
       <DialogTitle
         sx={{
@@ -102,14 +132,26 @@ const CreditSubtractionDialog = ({ onClose }) => {
             <Select
               variant="outlined"
               size="small"
-              defaultValue=""
+              defaultValue="Write Off"
               sx={{ 
                 width: 150, 
-                height: '36px',
-                borderRadius: radius.sm,
-                fontSize: "13px",
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-                bgcolor: COLORS.SURFACE_TINT
+                height: 36,
+                fontSize: '13px',
+                fontFamily: 'Inter',
+                fontWeight: 500,
+                color: '#09121f',
+                backgroundColor: '#fafbfe',
+                borderRadius: '4px',
+                '& .MuiSelect-select': {
+                  py: 1,
+                  pl: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#e2e8f0'
+                }
               }}
               MenuProps={{ 
                 sx: { zIndex: 150000 },
@@ -119,12 +161,18 @@ const CreditSubtractionDialog = ({ onClose }) => {
                     border: `1px solid ${COLORS.BORDER_LIGHT}`,
                     borderRadius: radius.sm,
                     mt: 0.5,
-                    '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
+                    '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
                   }
                 }
               }}
             >
-              <MenuItem value=""><em>None</em></MenuItem>
+              <MenuItem value="Write Off">Write Off</MenuItem>
+              <MenuItem value="Un-Collected">Un-Collected</MenuItem>
+              <MenuItem value="pre payment">pre payment</MenuItem>
+              <MenuItem value="wellness">wellness</MenuItem>
+              <MenuItem value="Small Balance W/O">Small Balance W/O</MenuItem>
+              <MenuItem value="Curtsey W/O">Curtsey W/O</MenuItem>
+              <MenuItem value="NON PAYMENT">NON PAYMENT</MenuItem>
             </Select>
           </Box>
 
@@ -154,11 +202,23 @@ const CreditSubtractionDialog = ({ onClose }) => {
             size="small"
             defaultValue="Percentage"
             sx={{ 
-              fontSize: "13px", 
-              height: '36px',
-              borderRadius: radius.sm,
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-              bgcolor: COLORS.SURFACE_TINT
+              height: 36,
+              fontSize: '13px',
+              fontFamily: 'Inter',
+              fontWeight: 500,
+              color: '#09121f',
+              backgroundColor: '#fafbfe',
+              borderRadius: '4px',
+              '& .MuiSelect-select': {
+                py: 1,
+                pl: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#e2e8f0'
+              }
             }}
             MenuProps={{ 
               sx: { zIndex: 150000 },
@@ -168,7 +228,7 @@ const CreditSubtractionDialog = ({ onClose }) => {
                   border: `1px solid ${COLORS.BORDER_LIGHT}`,
                   borderRadius: radius.sm,
                   mt: 0.5,
-                  '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
+                  '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
                 }
               }
             }}
@@ -193,58 +253,51 @@ const CreditSubtractionDialog = ({ onClose }) => {
         </Stack>
 
         {/* Financial Category Headers */}
-        <Stack direction="row" sx={{ mb: 1, width: "100%", alignItems: 'flex-end' }}>
-          <Typography sx={{ fontWeight: "bold", fontSize: "12px", color: COLORS.TEXT_PRIMARY, width: 220 }}>
-            Invoice {headerInfo.invoiceNum} : {headerInfo.invoiceDate} for
-          </Typography>
-
-          <Stack direction="row" spacing={0} sx={{ flexGrow: 1 }}>
-            {columns.map((col, idx) => (
-              <Box key={idx} sx={{ width: col.width, textAlign: col.align || "left" }}>
-                <HeaderLabel label={col.label} color={col.color} />
-              </Box>
-            ))}
-          </Stack>
-        </Stack>
-
-        <Divider sx={{ mb: 1.5, mt: 0.5, borderColor: COLORS.BORDER_LIGHT }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+          <Box sx={{ width: '220px', display: 'flex', alignItems: 'center' }}>
+            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#333' }}>
+              Invoice {headerInfo.invoiceNum} : {headerInfo.invoiceDate} for
+            </Typography>
+          </Box>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Ins Writeoff</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Patient:</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Insurance:</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Charges: ${totalCharges.toFixed(2)}</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: '#22c55e' }}>Payment: ${totalPayment.toFixed(2)}</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: $0.00</Typography>
+          </Box>
+        </Box>
 
         {/* Detailed Line Items */}
-        {lineItems.map((item, idx) => (
-          <Box key={idx} sx={{ display: "flex", alignItems: "center", py: 1.5, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
-            <Box sx={{ width: 220, display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '12px', fontWeight: fontWeight.medium }}>
-                {item.code}
-              </Typography>
-              <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: "11px" }}>
-                {item.patient}
-              </Typography>
+        {finalLineItems.map((item, idx) => (
+          <Box key={idx} sx={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #f5f5f5' }}>
+            <Box sx={{ width: '220px', display: 'flex', alignItems: 'center', py: 1, gap: 1 }}>
+              <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{item.code}</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.patient}</Typography>
             </Box>
-
-            <Stack direction="row" spacing={0} sx={{ flexGrow: 1, alignItems: 'center' }}>
-              {item.values.map((v, vIdx) => (
-                <Typography
-                  key={vIdx}
-                  sx={{
-                    color: v.color || COLORS.TEXT_PRIMARY,
-                    width: v.width,
-                    textAlign: "right",
-                    pr: 1,
-                    fontSize: '12px',
-                    fontWeight: v.bold ? fontWeight.semiBold : fontWeight.regular,
-                  }}
-                >
-                  {v.val}
-                </Typography>
-              ))}
-              <Box sx={{ width: 80, display: "flex", justifyContent: "flex-end", pr: 1 }}>
-                <Box sx={{ border: `1px dashed ${COLORS.BORDER}`, px: 1, py: 0.5, borderRadius: '4px', bgcolor: COLORS.SURFACE_TINT }}>
-                  <Typography sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY }}>
-                    {item.percent}
-                  </Typography>
-                </Box>
-              </Box>
-            </Stack>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[0].val}</Typography>
+               </Box>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[1].val}</Typography>
+               </Box>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[2].val}</Typography>
+               </Box>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                 <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 600 }}>{item.values[3].val}</Typography>
+               </Box>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1 }}>
+                 <Typography sx={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>{item.values[4].val}</Typography>
+               </Box>
+               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1, pr: 1 }}>
+                 <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px' }}>
+                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.percent}</Typography>
+                 </Box>
+               </Box>
+            </Box>
           </Box>
         ))}
       </DialogContent>

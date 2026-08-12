@@ -1,20 +1,24 @@
-import React, { useState } from 'react';
-import { TableCell, TableRow, Button } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { TableCell, TableRow, Button, CircularProgress, Box } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportDataTable } from '../../../../components/reports/ui';
+import { fetchPatientContactPreferencesReport, selectContactPreferencesData, selectContactPreferencesDataLoading } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { firstName: 'Sarah', lastName: 'Miller', email: 'sarah.m@gmail.com', phone: '+1 234 567 8901', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
-  { firstName: 'James', lastName: 'Wilson', email: 'j.wilson@yahoo.com', phone: '+1 234 567 8902', text: 'Yes', emailPerm: 'Yes', review: 'No' },
-  { firstName: 'Mary', lastName: 'Davis', email: 'maryd@outlook.com', phone: '+1 234 567 8903', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
-  { firstName: 'John', lastName: 'Doe', email: 'john.doe@gmail.com', phone: '+1 234 567 8904', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
-  { firstName: 'Jane', lastName: 'Smith', email: 'jsmith@health.org', phone: '+1 234 567 8905', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
-  { firstName: 'Robert', lastName: 'Brown', email: 'rbrown@tech.net', phone: '+1 234 567 8906', text: 'Yes', emailPerm: 'Yes', review: 'Yes' },
-];
+
 
 const PatientContactPreferencesReport = () => {
+  const dispatch = useDispatch();
+  const reportData = useSelector(selectContactPreferencesData) || [];
+  const loading = useSelector(selectContactPreferencesDataLoading);
+
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchPatientContactPreferencesReport());
+  }, [dispatch]);
+
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   const handlePrint = () => window.print();
@@ -23,7 +27,7 @@ const PatientContactPreferencesReport = () => {
     const headers = ['First Name', 'Last Name', 'Email', 'Phone Number', 'Permission to Text', 'Permission to Email', 'Request Review'];
     const csvRows = [
       headers.join(','),
-      ...DUMMY_DATA.map((row) =>
+      ...reportData.map((row) =>
         [row.firstName, row.lastName, row.email, row.phone, row.text, row.emailPerm, row.review].join(',')
       ),
     ].join('\n');
@@ -65,11 +69,17 @@ const PatientContactPreferencesReport = () => {
           onPrint={handlePrint}
         />
 
-        <ReportDataTable 
-          columns={columns} 
-          data={DUMMY_DATA} 
-          renderRow={renderRow} 
-        />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <ReportDataTable 
+            columns={columns} 
+            data={reportData} 
+            renderRow={renderRow} 
+          />
+        )}
       </ReportLayout>
 
       <CreateTemplateDialog 

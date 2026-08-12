@@ -28,6 +28,7 @@ import SectionCard from "../../components/shared/SectionCard";
 import TaskList from "../../components/appointments/right-panel/TaskList";
 import Messages from "../../components/appointments/right-panel/Messages";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
+import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
@@ -64,6 +65,8 @@ const PatientAdditionalDocumentsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState("thumbnails");
   const [sortMode, setSortMode] = useState("category");
+  const [customFormViewMode, setCustomFormViewMode] = useState("thumbnails");
+  const [customFormSortMode, setCustomFormSortMode] = useState("category");
   const [signature, setSignature] = useState(null);
 
   const [uploadDialog, setUploadDialog] = useState({ open: false, files: [] });
@@ -184,23 +187,7 @@ const PatientAdditionalDocumentsPage = () => {
   };
 
   const handleDownloadDocument = (row) => {
-    if (row.id.startsWith("demo-")) {
-      showSnackbar(`Downloading ${row.name}...`, "info");
-      return;
-    }
-    const url = row.fileUrl || row.documentUrl;
-    if (!url) {
-      showSnackbar("Error: File URL is missing", "error");
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = row.name || "document";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showSnackbar("Document downloaded", "success");
+    downloadDocumentFile(row, showSnackbar);
   };
 
   const handleShareWithPatient = (row) => {
@@ -376,30 +363,113 @@ const PatientAdditionalDocumentsPage = () => {
           <SectionCard
             icon={CustomFormsIcon}
             title="Custom Forms"
-            action={
-              <AddIcon
-                onClick={uploading ? undefined : handleUploadCustomFormDocument}
-                sx={{ fontSize: "20px", color: COLORS.TEXT_MUTED, cursor: uploading ? "default" : "pointer", "&:hover": uploading ? undefined : { color: COLORS.ACCENT } }}
-              />
-            }
           >
-            <CustomFormsSection
-              customForms={forms}
-              selectedFormId={customFormDeleteDialog.formId}
-              onFormClick={(f) =>
-                showSnackbar(
-                  `Opening form: ${(f.title || f.name || "Unknown Form").replace(/\n/g, " ")}`,
-                  "info",
-                )
-              }
-              onFormDeleteClick={(f) =>
-                setCustomFormDeleteDialog({
-                  open: true,
-                  formId: f.id,
-                  formTitle: (f.title || f.name || "Unknown Form").replace(/\n/g, " "),
-                })
-              }
-            />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+                flexWrap: "wrap",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                <RadioGroup
+                  row
+                  value={customFormViewMode}
+                  onChange={(_, v) => setCustomFormViewMode(v)}
+                  sx={{ gap: 0.5 }}
+                >
+                  <FormControlLabel
+                    value="thumbnails"
+                    control={<Radio size="small" sx={radioSx} />}
+                    label={<Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>Thumbnails</Typography>}
+                  />
+                  <FormControlLabel
+                    value="list"
+                    control={<Radio size="small" sx={radioSx} />}
+                    label={<Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY }}>List View</Typography>}
+                  />
+                </RadioGroup>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY }}>
+                    Sort by:
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 130 }}>
+                    <Select
+                      value={customFormSortMode}
+                      onChange={(e) => setCustomFormSortMode(e.target.value)}
+                      sx={{
+                        height: 32,
+                        fontFamily: "Inter",
+                        fontSize: fontSize.base,
+                        bgcolor: COLORS.SURFACE_CARD,
+                        "& fieldset": { borderColor: COLORS.BORDER },
+                        "&:hover fieldset": { borderColor: COLORS.ACCENT },
+                      }}
+                    >
+                      <MenuItem value="category">Category</MenuItem>
+                      <MenuItem value="date">Date</MenuItem>
+                      <MenuItem value="name">Name</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+
+              <Button
+                variant="contained"
+                startIcon={<AddIcon fontSize="small" />}
+                onClick={uploading ? undefined : handleUploadCustomFormDocument}
+                disabled={uploading}
+                sx={shareButtonSx}
+              >
+                Upload New Document
+              </Button>
+            </Box>
+
+            {customFormViewMode === "thumbnails" ? (
+              <CustomFormsSection
+                customForms={forms}
+                selectedFormId={customFormDeleteDialog.formId}
+                onFormClick={(f) =>
+                  showSnackbar(
+                    `Opening form: ${(f.title || f.name || "Unknown Form").replace(/\n/g, " ")}`,
+                    "info",
+                  )
+                }
+                onFormDeleteClick={(f) =>
+                  setCustomFormDeleteDialog({
+                    open: true,
+                    formId: f.id,
+                    formTitle: (f.title || f.name || "Unknown Form").replace(/\n/g, " "),
+                  })
+                }
+              />
+            ) : forms.length === 0 ? (
+              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, py: 2 }}>
+                No custom form uploaded yet. Click the upload button to add one.
+              </Typography>
+            ) : (
+              <DocumentTable
+                title=""
+                tooltipTitle="Uploaded Custom Forms"
+                documents={forms}
+                sortMode={customFormSortMode}
+                onEdit={(row) => handleEditDocument("form", row)}
+                onOpen={handleOpenDocument}
+                onDownload={handleDownloadDocument}
+                onShare={handleShareWithPatient}
+                onDelete={(row) =>
+                  setCustomFormDeleteDialog({
+                    open: true,
+                    formId: row.id,
+                    formTitle: row.name,
+                  })
+                }
+              />
+            )}
           </SectionCard>
 
           <SectionCard icon={AdditionalDocsIcon} title="Additional Docs" sx={{ minHeight: 560 }}>

@@ -58,12 +58,17 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
       <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px', fontSize: '0.8rem', fontWeight: 500, color: '#333' }}>
         {row.age || '—'}
       </TableCell>
-      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px' }}>
+      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '80px' }}>
         <Box 
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} 
-          onClick={() => setActiveToothSelection(index)}
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} 
+          onClick={() => setActiveToothSelection(row.code || index)}
         >
-          <EditIcon sx={{ fontSize: 16, color: '#42a5f5' }} />
+          <EditIcon sx={{ fontSize: 16, color: row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0) ? '#2362EF' : '#94a3b8' }} />
+          {(row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0)) ? (
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2362EF', bgcolor: '#e6f0fd', px: 0.8, py: 0.2, borderRadius: '10px' }}>
+              {Array.isArray(row.teeth) ? row.teeth.join(', ') : row.teethLimit}
+            </Typography>
+          ) : null}
         </Box>
       </TableCell>
       <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px' }}>

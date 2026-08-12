@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { ReportLayout, ReportFilterBar, ReportSelect, ReportDivider } from '../../../../components/reports/ui';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 import {
   Box,
   Typography,
@@ -21,17 +26,14 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import {
   fetchReferralByPatientReport,
-  selectReferralByPatientData,
+  selectReferralByPatient,
   selectPatientReportLoading,
 } from '../../../../store/slices/patientReportSlice';
 
-const DUMMY_DATA = [
-  { patient: 'Melina Heck', referralSource: 'Melina Jackson', phone: '+13607368380', email: '' },
-  { patient: 'Brad Pitt', referralSource: 'john bosco', phone: '+14022107551', email: 'nicole@pannetondental.com' },
-  { patient: 'Travis Kendall', referralSource: 'Melina Sistoso', phone: '+19037462410', email: 'traviskendall1@gmail.com' },
-];
+
 
 const DATE_RANGES = [
   'Daily',
@@ -61,7 +63,7 @@ const ActionIcons = () => (
 
 const ReferralByPatientReport = () => {
   const dispatch = useDispatch();
-  const rawReportData = useSelector(selectReferralByPatientData);
+  const rawReportData = useSelector(selectReferralByPatient);
   const loading = useSelector(selectPatientReportLoading);
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -70,7 +72,7 @@ const ReferralByPatientReport = () => {
   const [endDate, setEndDate] = useState(getTodayString());
   const [dateRange, setDateRange] = useState('Daily');
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [data, setData] = useState(DUMMY_DATA);
+  const [data, setData] = useState([]);
 
   const computeDates = (mode) => {
     const today = new Date();
@@ -163,29 +165,31 @@ const ReferralByPatientReport = () => {
     }
   };
 
-  // Fetch from backend when date or range changes
-  useEffect(() => {
+  const fetchReport = () => {
     dispatch(fetchReferralByPatientReport({ 
       startDate,
       endDate,
       range: dateRange
     }));
-  }, [dispatch, startDate, endDate, dateRange]);
+  };
 
-  // Sync redux state to local state (with fallback to dummy data)
   useEffect(() => {
-    if (rawReportData && rawReportData.length > 0) {
+    fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync redux state to local state
+  useEffect(() => {
+    if (rawReportData) {
       const mapped = rawReportData.map((item) => ({
-        patient: item.referred,
-        referralSource: item.referredBy,
-        phone: '',
-        email: '',
+        patient: item.referred || item.patient,
+        referralSource: item.referredBy || item.referralSource,
+        phone: item.phone || '',
+        email: item.email || '',
       }));
       setData(mapped);
-    } else if (!loading) {
-      setData(DUMMY_DATA);
     }
-  }, [rawReportData, loading]);
+  }, [rawReportData]);
 
   const groupedData = useMemo(() => {
     const groups = {};
@@ -221,86 +225,107 @@ const ReferralByPatientReport = () => {
   const handleExport = () => alert('Exporting report as CSV...');
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
+  const handleClearFilters = () => {
+    setDateRange('Daily');
+    setStartDate(getTodayString());
+    setEndDate(getTodayString());
+  };
+
+  const topFilters = (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <ReportSelect 
+        label="DATE RANGE" 
+        options={DATE_RANGES.map(r => ({ value: r, label: r }))} 
+        value={dateRange} 
+        onChange={handleDateRangeChange} 
+        width="160px" 
+      />
+
+      <ReportDivider />
+
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>start date</Typography>
+        <DatePicker
+          value={startDate ? dayjs(startDate) : null}
+          onChange={(newValue) => setStartDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>end date</Typography>
+        <DatePicker
+          value={endDate ? dayjs(endDate) : null}
+          onChange={(newValue) => setEndDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+          format="MM/DD/YYYY"
+          slotProps={{ 
+            popper: { sx: { zIndex: 1400 } },
+            textField: { 
+              size: 'small', 
+              sx: { 
+                width: '180px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  height: '32px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                }, 
+                '& .MuiInputBase-input': { padding: '4px 10px' },
+                '& fieldset': { borderColor: '#e2e8f0' } 
+              } 
+            }
+          }}
+        />
+      </Box>
+    </LocalizationProvider>
+  );
+
   return (
     <React.Fragment>
       <ReportLayout title="Referral By Patient:">
-        <ReportFilterBar 
-          topRowFilters={topFilters}
-          onCreateTemplate={() => setTemplateDialogOpen(true)}
-          onExportCsv={() => alert('Exporting CSV...')}
-          onPrint={() => window.print()}
-        />
-
-      {/* Filter Section */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 4 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>Date Range:</Typography>
-          <Select 
-            variant="standard"
-            size="small" 
-            value={dateRange} 
-            onChange={handleDateRangeChange}
-            sx={{ fontSize: '0.75rem', width: 120, height: 24 }}
-          >
-            {DATE_RANGES.map((range) => (
-              <MenuItem key={range} value={range}>{range}</MenuItem>
-            ))}
-          </Select>
+        <Box className="hide-on-print" sx={{ mb: 2 }}>
+          <ReportFilterBar 
+            topRowFilters={topFilters}
+            onApplyFilters={fetchReport}
+            onClearAll={handleClearFilters}
+            onCreateTemplate={() => setTemplateDialogOpen(true)}
+          />
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            Start Date:
-            <input 
-              type="date" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
-            />
+        {/* Summary Text and Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
+          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
+            (number of patients = {data.length})
           </Typography>
-          <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            End Date:
-            <input 
-              type="date" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '2px 4px', fontSize: '11px' }}
+          <Box sx={{ transform: 'translateY(-4px)' }}>
+            <ProductionReportActions
+              onExportCsv={handleExport}
+              onPrint={handlePrint}
+              hasData={data.length > 0}
             />
-          </Typography>
+          </Box>
         </Box>
-
-        <Button 
-          variant="contained" 
-          size="small" 
-          disabled
-          onClick={() => setTemplateDialogOpen(true)}
-          sx={{ ml: 'auto', textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Create Template
-        </Button>
-      </Box>
-
-      <Divider sx={{ mb: 2, opacity: 0.3 }} />
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handleExport}
-          sx={{ textTransform: 'none', backgroundColor: '#4a89dc', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Export as CSV
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          onClick={handlePrint}
-          sx={{ textTransform: 'none', backgroundColor: '#d9a366', color: '#fff', fontSize: '0.75rem', height: 24, boxShadow: 'none' }}
-        >
-          Print
-        </Button>
-      </Box>
 
       {/* Table Section */}
       {loading ? (
@@ -308,29 +333,35 @@ const ReferralByPatientReport = () => {
           <CircularProgress size={40} sx={{ color: '#4a89dc' }} />
         </Box>
       ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #ddd', borderRadius: 0 }}>
+        <TableContainer component={Paper} elevation={0} sx={{ 
+          bgcolor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+          mt: 1 
+        }}>
           <Table id="referral-report-table" size="small">
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', color: '#666', borderBottom: '1px solid #ddd' }}>Referral Patient</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', color: '#666', borderBottom: '1px solid #ddd' }}>Referred Patients</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', color: '#666', borderBottom: '1px solid #ddd' }}>Phone Number</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', color: '#666', borderBottom: '1px solid #ddd' }}>Email Address</TableCell>
-                <TableCell sx={{ borderBottom: '1px solid #ddd', width: 80 }}></TableCell>
+              <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', color: '#1a3353', textTransform: 'uppercase', py: 1.5 } }}>
+                <TableCell>Referral Patient</TableCell>
+                <TableCell>Referred Patients</TableCell>
+                <TableCell>Phone Number</TableCell>
+                <TableCell>Email Address</TableCell>
+                <TableCell width={80}></TableCell>
               </TableRow>
             </TableHead>
-            <TableBody>
+            <TableBody sx={{ '& .MuiTableRow-root:hover': { backgroundColor: '#f8fafc' }, '& .MuiTableCell-root': { fontSize: "0.85rem", verticalAlign: "middle", borderBottom: '1px solid #e2e8f0' } }}>
               {Object.entries(groupedData).map(([referrer, patients]) => (
                 <React.Fragment key={referrer}>
                   {/* Group Header Row */}
                   <TableRow sx={{ backgroundColor: '#fff' }}>
-                    <TableCell sx={{ fontSize: '0.7rem', color: '#666', borderBottom: '1px solid #eee' }}>
+                    <TableCell sx={{ fontWeight: 600, color: '#1e293b' }}>
                       {referrer}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #eee' }}></TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #eee' }}></TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #eee' }}></TableCell>
-                    <TableCell className="no-print" sx={{ borderBottom: '1px solid #eee' }}>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="no-print">
                       <ActionIcons />
                     </TableCell>
                   </TableRow>
@@ -338,23 +369,23 @@ const ReferralByPatientReport = () => {
                   {/* Item Rows */}
                   {patients.map((p, idx) => (
                     <TableRow key={idx} sx={{ backgroundColor: '#fff' }}>
-                      <TableCell sx={{ borderBottom: '1px solid #eee' }}></TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', color: '#666', borderBottom: '1px solid #eee' }}>{p.patient}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', color: '#666', borderBottom: '1px solid #eee' }}>{p.phone || ''}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', color: '#666', borderBottom: '1px solid #eee' }}>{p.email || ''}</TableCell>
-                      <TableCell className="no-print" sx={{ borderBottom: '1px solid #eee' }}>
+                      <TableCell></TableCell>
+                      <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{p.patient}</TableCell>
+                      <TableCell sx={{ color: '#475569' }}>{p.phone || ''}</TableCell>
+                      <TableCell sx={{ color: '#475569' }}>{p.email || ''}</TableCell>
+                      <TableCell className="no-print">
                         <ActionIcons />
                       </TableCell>
                     </TableRow>
                   ))}
 
                   {/* Summary Row */}
-                  <TableRow sx={{ backgroundColor: '#fff' }}>
-                    <TableCell sx={{ borderBottom: '1px solid #ddd' }}></TableCell>
-                    <TableCell sx={{ fontSize: '0.7rem', color: '#333', borderBottom: '1px solid #ddd' }}>Total Referrals:</TableCell>
-                    <TableCell sx={{ fontSize: '0.7rem', color: '#333', borderBottom: '1px solid #ddd' }}>{patients.length}</TableCell>
-                    <TableCell sx={{ borderBottom: '1px solid #ddd' }}></TableCell>
-                    <TableCell className="no-print" sx={{ borderBottom: '1px solid #ddd' }}></TableCell>
+                  <TableRow sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableCell></TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#1e293b' }}>Total Referrals:</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#1e293b' }}>{patients.length}</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="no-print"></TableCell>
                   </TableRow>
                 </React.Fragment>
               ))}

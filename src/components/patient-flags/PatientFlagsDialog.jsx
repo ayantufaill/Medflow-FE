@@ -54,15 +54,20 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      sx={{ zIndex: 9999 }}
-      PaperProps={{
-        sx: { borderRadius: '14px', overflow: 'hidden' }
+      sx={{ 
+        zIndex: 9999,
+        '& .MuiDialog-paper': { 
+          borderRadius: '14px', 
+          overflow: 'hidden',
+          maxWidth: '750px',
+          width: '100%' 
+        }
       }}
     >
       <DialogTitle sx={{ 
         boxSizing: 'border-box', 
-        px: '25px', 
-        py: '16px', 
+        px: '20px', 
+        py: '14px', 
         display: 'flex', 
         alignItems: 'center', 
         gap: '8px', 
@@ -79,12 +84,12 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ px: '25px', pt: '25px !important', pb: '25px', bgcolor: '#f8fafc', display: 'flex', gap: '20px' }}>
+      <DialogContent sx={{ px: '20px', pt: '16px !important', pb: '16px', bgcolor: '#f8fafc', display: 'flex', gap: '16px' }}>
         <FlagCommunicationColumn flags={flags} handleFlagToggle={handleFlagToggle} />
         <FlagBillingPatientColumn flags={flags} handleFlagToggle={handleFlagToggle} />
       </DialogContent>
 
-      <DialogActions sx={{ p: '16px 25px', bgcolor: COLORS.SURFACE_CARD, justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+      <DialogActions sx={{ p: '12px 20px', bgcolor: COLORS.SURFACE_CARD, justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>
         <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_MUTED }}>
           You can add up to 15 flags per patient. {activeFlagsCount} flag{activeFlagsCount !== 1 ? 's' : ''} selected.
         </Typography>
@@ -99,7 +104,7 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
               fontSize: '13px',
               fontWeight: 500,
               borderRadius: '6px',
-              height: '36px',
+              height: '34px',
               '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' } 
             }}
           >
@@ -115,7 +120,7 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
               fontSize: '13px',
               fontWeight: 500,
               borderRadius: '6px',
-              height: '36px',
+              height: '34px',
               '&:hover': { backgroundColor: '#1a50cc' } 
             }}
           >

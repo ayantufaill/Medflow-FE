@@ -27,12 +27,15 @@ const RecareMonthly = ({ setSubtitle }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchRecareReport({}));
+    if (!apiData || apiData.length === 0) {
+      dispatch(fetchRecareReport({}));
+    }
     if (setSubtitle) setSubtitle('Monthly metrics derived from Recare data');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, setSubtitle]);
 
   const chartData = useMemo(() => {
-    if (!apiData || apiData.length === 0) return DEFAULT_DATA; // Fallback
+    if (!apiData) return []; // Return empty array if not loaded yet
     
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
@@ -87,14 +90,28 @@ const RecareMonthly = ({ setSubtitle }) => {
   }, [apiData]);
 
   return (
-    <Box sx={{ height: 'auto', width: '100%', p: 2, overflow: 'hidden' }}>
+    <Box
+      sx={{
+        height: 'auto',
+        width: '100%',
+        p: 3,
+        overflow: 'hidden',
+        bgcolor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '12px',
+        boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)',
+        boxSizing: 'border-box'
+      }}
+    >
       <Typography 
         variant="subtitle1" 
         sx={{ 
-          mb: 1, 
+          mb: 2, 
           textAlign: 'left', 
-          color: '#673ab7', 
+          color: '#09121F', 
           fontWeight: 600,
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '15px',
           ml: 5
         }}
       >
@@ -141,21 +158,21 @@ const RecareMonthly = ({ setSubtitle }) => {
             formatter={(value) => <span style={{ color: '#666', fontSize: '0.75rem' }}>{value}</span>}
             onClick={(e) => e && e.value && setSelectedCategory(e.value)}
           />
-          <Bar dataKey="No Recare" stackId="a" fill="#4a90e2" onClick={() => setSelectedCategory("No Recare")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late >12 months Appointed" stackId="a" fill="#cfd8dc" onClick={() => setSelectedCategory("Late >12 months Appointed")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late >12 months Broken Appointment" stackId="a" fill="#90a4ae" onClick={() => setSelectedCategory("Late >12 months Broken Appointment")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late >12 months No Appointment" stackId="a" fill="#455a64" onClick={() => setSelectedCategory("Late >12 months No Appointment")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late <12 months Appointed" stackId="a" fill="#ffe0b2" onClick={() => setSelectedCategory("Late <12 months Appointed")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late <12 months Broken Appointment" stackId="a" fill="#ffcc80" onClick={() => setSelectedCategory("Late <12 months Broken Appointment")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="Late <12 months No Appointment" stackId="a" fill="#ffb74d" onClick={() => setSelectedCategory("Late <12 months No Appointment")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="On-Time Pre-appt" stackId="a" fill="#9e8aff" onClick={() => setSelectedCategory("On-Time Pre-appt")} style={{ cursor: 'pointer' }} />
-          <Bar dataKey="On-Time No Pre-appt" stackId="a" fill="#7b61ff" onClick={() => setSelectedCategory("On-Time No Pre-appt")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="No Recare" stackId="a" fill="#3b82f6" onClick={() => setSelectedCategory("No Recare")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late >12 months Appointed" stackId="a" fill="#64748b" onClick={() => setSelectedCategory("Late >12 months Appointed")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late >12 months Broken Appointment" stackId="a" fill="#1e293b" onClick={() => setSelectedCategory("Late >12 months Broken Appointment")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late >12 months No Appointment" stackId="a" fill="#475569" onClick={() => setSelectedCategory("Late >12 months No Appointment")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late <12 months Appointed" stackId="a" fill="#fcd34d" onClick={() => setSelectedCategory("Late <12 months Appointed")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late <12 months Broken Appointment" stackId="a" fill="#fbbf24" onClick={() => setSelectedCategory("Late <12 months Broken Appointment")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="Late <12 months No Appointment" stackId="a" fill="#f59e0b" onClick={() => setSelectedCategory("Late <12 months No Appointment")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="On-Time Pre-appt" stackId="a" fill="#d8b4fe" onClick={() => setSelectedCategory("On-Time Pre-appt")} style={{ cursor: 'pointer' }} />
+          <Bar dataKey="On-Time No Pre-appt" stackId="a" fill="#a855f7" onClick={() => setSelectedCategory("On-Time No Pre-appt")} style={{ cursor: 'pointer' }} />
         </BarChart>
         </ResponsiveContainer>
         )}
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', pr: 10 }}>
-        <Typography variant="body2" sx={{ color: '#673ab7', fontWeight: 500 }}>2025 - 2026</Typography>
+        <Typography variant="body2" sx={{ color: '#5C646F', fontWeight: 500, fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>2025 - 2026</Typography>
       </Box>
       <RecareCategoryDialog 
         open={!!selectedCategory} 

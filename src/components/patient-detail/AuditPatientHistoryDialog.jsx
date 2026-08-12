@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Dialog,
   Box,
@@ -26,9 +26,6 @@ import {
   roundedSelectMenuProps,
 } from "../../constants/styles";
 
-// Nested Key/Old/New sub-header for the "Difference" column group — same idea as
-// before, restyled to match the table header convention (see below) instead of
-// hardcoded hex colors.
 const diffSubHeaderSx = {
   fontFamily: "Inter",
   fontSize: fontSize.xs,
@@ -47,20 +44,221 @@ const diffCellSx = {
   py: 0.75,
   px: 1,
   wordBreak: "break-word",
+  whiteSpace: "pre-line",
 };
 
 /**
- * AuditPatientHistoryDialog — audit log of patient-record changes.
- * @param {Object} props
- * @param {boolean} props.open
- * @param {Function} props.onClose
- * @param {Array} [props.auditData] - defaults to sample data when not provided
- * @param {String} [props.patientId]
+ * Utility function to format key names (e.g. mouthCondition -> Mouth Condition)
  */
-const formatValue = (val) => {
-  if (val === null || val === undefined) return "";
-  if (typeof val === "object") return JSON.stringify(val);
+const formatFieldKey = (key) => {
+  if (!key || typeof key !== "string") return String(key || "");
+
+  const knownMap = {
+    mouthCondition: "Mouth Condition",
+    previousDentist: "Previous Dentist",
+    recentExamDate: "Recent Exam Date",
+    recentTreatmentDate: "Recent Treatment Date",
+    immediateConcern: "Immediate Concern",
+    patientsSince: "Patients Since",
+    recentXrayDate: "Recent X-Ray Date",
+    dentistVisitFrequency: "Dentist Visit Frequency",
+    generalInfo: "General Info",
+    personalHistory: "Personal History",
+    medicalHistory: "Medical History",
+    dentalHistory: "Dental History",
+    dental_history: "Dental History",
+    dental_history_updated: "Dental History Updated",
+    patient_updated: "Patient Updated",
+    patient_created: "Patient Created",
+    patient_profile: "Patient Profile",
+    "fearful-treatment": "Fearful of Dental Treatment",
+  };
+
+  if (knownMap[key]) return knownMap[key];
+
+  return key
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .trim();
+};
+
+/**
+ * Try parsing stringified JSON safely
+ */
+const tryParseJson = (val) => {
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch (_) {
+        return val;
+      }
+    }
+  }
+  return val;
+};
+
+/**
+ * Format any value to human readable plain text
+ */
+const formatValueToText = (val) => {
+  if (
+    val === null ||
+    val === undefined ||
+    val === "" ||
+    val === "null" ||
+    val === "undefined"
+  ) {
+    return "-";
+  }
+  if (typeof val === "boolean") {
+    return val ? "Yes" : "No";
+  }
+  if (typeof val === "number") {
+    return String(val);
+  }
+  if (typeof val === "string") {
+    const parsed = tryParseJson(val);
+    if (parsed !== val && typeof parsed === "object") {
+      return formatValueToText(parsed);
+    }
+    // Format ISO dates if applicable
+    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(val)) {
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          if (val.includes("T")) {
+            return d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            });
+          }
+          return val;
+        }
+      } catch (_) {}
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    if (val.length === 0) return "-";
+    const items = val
+      .map((item) => {
+        if (typeof item === "object" && item !== null) {
+          if (item.question && item.answer !== undefined) {
+            return `${item.question}: ${formatValueToText(item.answer)}`;
+          }
+          if (item.question) {
+            return `${item.question}`;
+          }
+          if (item.label) return item.label;
+          if (item.name) return item.name;
+          return Object.entries(item)
+            .filter(([k]) => k !== "id")
+            .map(([k, v]) => `${formatFieldKey(k)}: ${formatValueToText(v)}`)
+            .join(", ");
+        }
+        return formatValueToText(item);
+      })
+      .filter(Boolean);
+
+    return items.length > 0 ? items.join("\n") : "-";
+  }
+  if (typeof val === "object") {
+    const entries = Object.entries(val).filter(
+      ([, v]) => v !== null && v !== undefined && v !== ""
+    );
+    if (entries.length === 0) return "-";
+    return entries
+      .map(([k, v]) => `${formatFieldKey(k)}: ${formatValueToText(v)}`)
+      .join("\n");
+  }
   return String(val);
+};
+
+/**
+ * Extract clean key-old-new difference rows from object/value diffs
+ */
+const extractDifferences = (oldVal, newVal, parentKey = "") => {
+  const diffs = [];
+
+  const oldParsed = tryParseJson(oldVal);
+  const newParsed = tryParseJson(newVal);
+
+  const isOldObj =
+    oldParsed && typeof oldParsed === "object" && oldParsed !== null;
+  const isNewObj =
+    newParsed && typeof newParsed === "object" && newParsed !== null;
+
+  if (isOldObj || isNewObj) {
+    const o = isOldObj ? oldParsed : {};
+    const n = isNewObj ? newParsed : {};
+
+    const allKeys = Array.from(new Set([...Object.keys(o), ...Object.keys(n)]));
+
+    allKeys.forEach((k) => {
+      const oVal = o[k];
+      const nVal = n[k];
+      const fieldName = formatFieldKey(k);
+      const subKey =
+        parentKey &&
+        !["General Info", "General Information", "Personal History"].includes(
+          parentKey
+        )
+          ? `${parentKey} - ${fieldName}`
+          : fieldName;
+
+      if (JSON.stringify(oVal) !== JSON.stringify(nVal)) {
+        if (
+          (oVal && typeof oVal === "object" && !Array.isArray(oVal)) ||
+          (nVal && typeof nVal === "object" && !Array.isArray(nVal))
+        ) {
+          diffs.push(...extractDifferences(oVal, nVal, fieldName));
+        } else {
+          diffs.push({
+            key: subKey,
+            old: formatValueToText(oVal),
+            new: formatValueToText(nVal),
+          });
+        }
+      }
+    });
+  } else {
+    diffs.push({
+      key: parentKey ? parentKey : "Value",
+      old: formatValueToText(oldVal),
+      new: formatValueToText(newVal),
+    });
+  }
+
+  return diffs;
+};
+
+/**
+ * Format ISO date string into readable date time
+ */
+const formatDate = (dateStr) => {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (_) {
+    return dateStr;
+  }
 };
 
 const normalizeAuditData = (payload) => {
@@ -72,76 +270,45 @@ const normalizeAuditData = (payload) => {
     let differences = [];
 
     if (Array.isArray(entry?.differences)) {
-      differences = entry.differences.map((diff) => ({
-        key: diff?.key || diff?.field || diff?.path || "value",
-        old: formatValue(diff?.old ?? diff?.previous),
-        new: formatValue(diff?.new ?? diff?.current),
-      }));
+      entry.differences.forEach((diff) => {
+        const subDiffs = extractDifferences(
+          diff?.old ?? diff?.previous,
+          diff?.new ?? diff?.current,
+          formatFieldKey(diff?.key || diff?.field || diff?.path || "")
+        );
+        differences.push(...subDiffs);
+      });
     } else if (entry?.oldValue !== undefined || entry?.newValue !== undefined) {
-      if (
-        (entry?.oldValue && typeof entry.oldValue === "object") ||
-        (entry?.newValue && typeof entry.newValue === "object")
-      ) {
-        const oldObj =
-          typeof entry.oldValue === "object" && entry.oldValue !== null
-            ? entry.oldValue
-            : {};
-        const newObj =
-          typeof entry.newValue === "object" && entry.newValue !== null
-            ? entry.newValue
-            : {};
-        
-        const oldKeys = Object.keys(oldObj);
-        const newKeys = Object.keys(newObj);
-        const keysToCompare = oldKeys.filter((k) => newKeys.includes(k));
-
-        keysToCompare.forEach((key) => {
-          if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-            differences.push({
-              key,
-              old: formatValue(oldObj[key]),
-              new: formatValue(newObj[key]),
-            });
-          }
-        });
-
-        // If there are truly no measurable differences between the keys we can compare,
-        // we don't dump the whole object. We just show that the update happened.
-        if (differences.length === 0) {
-          differences.push({
-            key: "Update logged",
-            old: "-",
-            new: "-",
-          });
-        }
-      } else {
-        differences = [
-          {
-            key: entry?.section || "value",
-            old: formatValue(entry?.oldValue),
-            new: formatValue(entry?.newValue),
-          },
-        ];
-      }
+      differences = extractDifferences(entry.oldValue, entry.newValue, "");
     }
+
+    if (differences.length === 0) {
+      differences.push({
+        key: "Record Status",
+        old: "-",
+        new: "Updated",
+      });
+    }
+
+    const rawActor = entry?.actor;
+    const actorName =
+      typeof rawActor === "object" && rawActor !== null
+        ? `${rawActor.firstName || ""} ${rawActor.lastName || ""}`.trim() ||
+          rawActor.email ||
+          "System"
+        : entry?.actorName || entry?.userName || entry?.user || "System";
 
     return {
       id: entry?._id || entry?.id || entry?.eventId || `audit-${index}`,
-      date:
-        entry?.changedAt ||
-        entry?.createdAt ||
-        entry?.timestamp ||
-        entry?.date ||
-        "",
-      user:
-        entry?.actor?.name ||
-        entry?.actorName ||
-        entry?.user?.name ||
-        entry?.userName ||
-        entry?.user ||
-        "System",
-      name: entry?.name || entry?.section || entry?.patientName || "Patient",
-      action: entry?.action || entry?.type || "Update",
+      date: formatDate(
+        entry?.changedAt || entry?.createdAt || entry?.timestamp || entry?.date
+      ),
+      user: actorName || "System",
+      name: formatFieldKey(
+        entry?.name || entry?.section || entry?.patientName || "Patient"
+      ),
+      action: formatFieldKey(entry?.action || entry?.type || "Update"),
+      rawAction: entry?.action || entry?.type || "Update",
       differences,
     };
   });
@@ -153,20 +320,22 @@ const AuditPatientHistoryDialog = ({
   auditData: propAuditData,
   patientId,
 }) => {
-  const [auditData, setAuditData] = useState(propAuditData || []);
+  const [auditData, setAuditData] = useState([]);
+  const [selectedAction, setSelectedAction] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!open) {
-      setAuditData(propAuditData || []);
+      setAuditData([]);
+      setSelectedAction("ALL");
       setLoading(false);
       setError(null);
       return;
     }
 
-    if (propAuditData) {
-      setAuditData(propAuditData);
+    if (!patientId && propAuditData) {
+      setAuditData(normalizeAuditData(propAuditData));
       setError(null);
       setLoading(false);
       return;
@@ -188,7 +357,7 @@ const AuditPatientHistoryDialog = ({
       try {
         const response = await apiClient.get(
           `/patients/${patientId}/audit-history`,
-          { signal: controller.signal },
+          { signal: controller.signal }
         );
         const payload = response?.data?.data || response?.data || {};
         setAuditData(normalizeAuditData(payload));
@@ -196,7 +365,7 @@ const AuditPatientHistoryDialog = ({
         if (err?.name === "CanceledError") return;
         setError(
           err?.response?.data?.message ||
-            "Failed to load patient audit history.",
+            "Failed to load patient audit history."
         );
       } finally {
         setLoading(false);
@@ -207,6 +376,21 @@ const AuditPatientHistoryDialog = ({
 
     return () => controller.abort();
   }, [open, patientId, propAuditData]);
+
+  // Extract unique actions for filtering
+  const availableActions = useMemo(() => {
+    const actions = new Set(
+      auditData.map((item) => item.rawAction || item.action)
+    );
+    return Array.from(actions);
+  }, [auditData]);
+
+  const filteredAuditData = useMemo(() => {
+    if (selectedAction === "ALL") return auditData;
+    return auditData.filter(
+      (item) => (item.rawAction || item.action) === selectedAction
+    );
+  }, [auditData, selectedAction]);
 
   return (
     <Dialog
@@ -219,7 +403,7 @@ const AuditPatientHistoryDialog = ({
         sx: { borderRadius: radius.lg, p: 0, maxHeight: "calc(80vh - 96px)" },
       }}
     >
-      {/* Header — same SURFACE_TINT + close-X treatment as BlockSlotModal.jsx / AddCreditCardModal.jsx */}
+      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -277,14 +461,15 @@ const AuditPatientHistoryDialog = ({
           </Typography>
           <Select
             size="small"
-            defaultValue="Update"
+            value={selectedAction}
+            onChange={(e) => setSelectedAction(e.target.value)}
             MenuProps={
               roundedSelectMenuProps.PaperProps
                 ? roundedSelectMenuProps
                 : undefined
             }
             sx={{
-              minWidth: 120,
+              minWidth: 160,
               fontFamily: "Inter",
               fontSize: fontSize.md,
               "& .MuiSelect-select": { py: "6px" },
@@ -292,11 +477,20 @@ const AuditPatientHistoryDialog = ({
             }}
           >
             <MenuItem
-              value="Update"
+              value="ALL"
               sx={{ fontFamily: "Inter", fontSize: fontSize.md }}
             >
-              Update
+              All Actions
             </MenuItem>
+            {availableActions.map((actionKey) => (
+              <MenuItem
+                key={actionKey}
+                value={actionKey}
+                sx={{ fontFamily: "Inter", fontSize: fontSize.md }}
+              >
+                {formatFieldKey(actionKey)}
+              </MenuItem>
+            ))}
           </Select>
         </Box>
 
@@ -315,7 +509,7 @@ const AuditPatientHistoryDialog = ({
           <Box sx={{ py: 4 }}>
             <Alert severity="info">{error}</Alert>
           </Box>
-        ) : auditData.length === 0 ? (
+        ) : filteredAuditData.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 8 }}>
             <Typography
               sx={{
@@ -353,8 +547,8 @@ const AuditPatientHistoryDialog = ({
                     },
                   }}
                 >
-                  <TableCell sx={{ width: 130 }}>Date</TableCell>
-                  <TableCell sx={{ width: 90 }}>User</TableCell>
+                  <TableCell sx={{ width: 170 }}>Date</TableCell>
+                  <TableCell sx={{ width: 100 }}>User</TableCell>
                   <TableCell sx={{ width: 140 }}>Name</TableCell>
                   <TableCell sx={{ width: 170 }}>Action</TableCell>
                   <TableCell colSpan={3} sx={{ p: 0 }}>
@@ -393,7 +587,7 @@ const AuditPatientHistoryDialog = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {auditData.map((row, rowIndex) => (
+                {filteredAuditData.map((row, rowIndex) => (
                   <TableRow key={row.id || rowIndex} hover>
                     <TableCell
                       sx={{
@@ -402,6 +596,7 @@ const AuditPatientHistoryDialog = ({
                         color: COLORS.TEXT_BODY,
                         verticalAlign: "top",
                         borderBottom: `1px solid ${COLORS.BORDER_VERY_LIGHT}`,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {row.date}
@@ -461,7 +656,15 @@ const AuditPatientHistoryDialog = ({
                                 : "none",
                           }}
                         >
-                          <Box sx={{ ...diffCellSx, flex: 1 }}>{diff.key}</Box>
+                          <Box
+                            sx={{
+                              ...diffCellSx,
+                              flex: 1,
+                              fontWeight: fontWeight.medium,
+                            }}
+                          >
+                            {diff.key}
+                          </Box>
                           <Box
                             sx={{
                               ...diffCellSx,
@@ -491,7 +694,7 @@ const AuditPatientHistoryDialog = ({
         )}
       </Box>
 
-      {/* Footer — same treatment as AddCreditCardModal.jsx / AddBankAccountModal.jsx */}
+      {/* Footer */}
       <Box
         sx={{
           px: 2.5,

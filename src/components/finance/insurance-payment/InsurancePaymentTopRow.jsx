@@ -51,11 +51,10 @@ const InsurancePaymentTopRow = ({
         ) : (
           claims.map((claim) => (
             <MenuItem key={claim.id} value={claim.id}>
-              Claim #{claim.id} ({claim.status})
+              Claim #{claim.claimNumber || claim.id} ({claim.status})
             </MenuItem>
           ))
         )}
-        <MenuItem value="select a claim">Claim #3127, Billing Training Oryx by Delta Dental of Washington</MenuItem>
       </Select>
 
       <Typography sx={{ fontSize: '0.8125rem', ml: 1 }}>with</Typography>

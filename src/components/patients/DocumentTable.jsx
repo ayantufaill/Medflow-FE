@@ -11,41 +11,25 @@ import {
 } from "@mui/material";
 import { InfoOutlined as InfoIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 
+import { downloadDocumentFile } from "../../utils/downloadUtils";
+
 const truncateLabel = (value, max = 30) => {
   if (!value) return "";
   if (value.length <= max) return value;
   return `${value.slice(0, max - 3)}...`;
 };
 
-// Blob-based download — works for cross-origin URLs (S3/CloudFront)
-// where the `download` attribute on <a> is silently ignored by browsers.
-const downloadFile = async (url, filename) => {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Fetch failed");
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = filename || "document";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  } catch {
-    // Fallback: open in new tab if blob fetch fails
-    window.open(url, "_blank");
-  }
-};
-
-const DownloadCell = ({ row }) => {
+const DownloadCell = ({ row, onDownload }) => {
   const [downloading, setDownloading] = useState(false);
-  const fileUrl = row.fileUrl || row.documentUrl;
 
   const handleDownload = async () => {
-    if (!fileUrl || downloading) return;
+    if (downloading) return;
     setDownloading(true);
-    await downloadFile(fileUrl, row.name);
+    if (onDownload) {
+      await onDownload(row);
+    } else {
+      await downloadDocumentFile(row);
+    }
     setDownloading(false);
   };
 
@@ -187,7 +171,7 @@ export const DocumentTable = ({
                 </Typography>
               </TableCell>
               <TableCell>
-                <DownloadCell row={row} />
+                <DownloadCell row={row} onDownload={onDownload} />
               </TableCell>
               <TableCell>
                 <Typography

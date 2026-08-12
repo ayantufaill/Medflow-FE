@@ -352,14 +352,14 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
           fullWidth
           onClick={(e) => setTemplateAnchorEl(e.currentTarget)}
           sx={{
-            bgcolor: "#2563eb",
+            bgcolor: "#2362EF",
             borderRadius: "6px",
             textTransform: "none",
             fontWeight: 600,
             py: 1,
             fontSize: "0.8rem",
             boxShadow: "none",
-            "&:hover": { bgcolor: "#1d4ed8" },
+            "&:hover": { bgcolor: "#1b52cf" },
           }}
         >
           Copy Plan Billing Info From Template
@@ -369,7 +369,15 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
         anchorEl={templateAnchorEl}
         open={Boolean(templateAnchorEl)}
         onClose={() => setTemplateAnchorEl(null)}
-        PaperProps={{ sx: { width: 300, maxHeight: 300 } }}
+        PaperProps={{
+          sx: {
+            minWidth: templateAnchorEl ? `${templateAnchorEl.clientWidth}px` : "360px",
+            maxWidth: "450px",
+            maxHeight: 380,
+            borderRadius: "8px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+          },
+        }}
       >
         {formData.coverageTemplates?.length > 0 ? (
           formData.coverageTemplates.map((template, idx) => (
@@ -381,15 +389,37 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                   formData.handleApplyTemplate(template);
                 }
               }}
+              sx={{
+                whiteSpace: "normal",
+                wordBreak: "break-word",
+                alignItems: "flex-start",
+                py: 1.25,
+                px: 2,
+                borderBottom: idx < formData.coverageTemplates.length - 1 ? "1px solid #f1f5f9" : "none",
+                "&:hover": {
+                  bgcolor: "#f8fafc",
+                },
+              }}
             >
               <ListItemText
                 primary={template.name || "Unnamed Template"}
                 secondary={template.description || "No description available"}
                 primaryTypographyProps={{
-                  fontSize: "0.8rem",
+                  fontSize: "0.825rem",
                   fontWeight: 600,
+                  color: "#1e293b",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  lineHeight: 1.35,
                 }}
-                secondaryTypographyProps={{ fontSize: "0.7rem" }}
+                secondaryTypographyProps={{
+                  fontSize: "0.75rem",
+                  color: "#64748b",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  lineHeight: 1.35,
+                  mt: 0.25,
+                }}
               />
             </MenuItem>
           ))

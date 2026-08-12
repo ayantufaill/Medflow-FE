@@ -45,4 +45,11 @@ export const mapClaimFields = (c, tab) => ({
   clearingHouseMessage: c.denialReason || c.clearingHouseMessage || "",
   eraStatus: c.eraStatus || "",
   description: c.notes || c.description || "",
+  submittedValue: c.submittedValue ?? c.submittedAmount ?? 0,
+  planName: c.planName ?? c.policyNumber ?? (c.insuranceCompany?.name || "Standard Insurance Plan"),
+  daysSinceSent: c.daysSinceSent ?? (
+    c.submittedDate || c.submissionDate || c.sentDate || c.createdAt
+      ? Math.floor(Math.abs(new Date().getTime() - new Date(c.submittedDate || c.submissionDate || c.sentDate || c.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : 0
+  ),
 });

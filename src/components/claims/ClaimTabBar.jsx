@@ -57,26 +57,6 @@ const ClaimTabBar = ({ activeTab, onTabChange, tabCounts = {} }) => (
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {tab.label}
-                {count !== undefined && count > 0 && (
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 20,
-                      height: 20,
-                      borderRadius: '10px',
-                      backgroundColor: isActive ? 'rgba(59, 130, 246, 0.1)' : '#f1f5f9',
-                      color: isActive ? '#3b82f6' : '#64748b',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      px: 0.6,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {count}
-                  </Box>
-                )}
               </Box>
             }
           />
