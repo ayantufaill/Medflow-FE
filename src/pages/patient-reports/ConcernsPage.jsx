@@ -4,6 +4,7 @@ import { Box, Typography, Grid, Button, Divider } from '@mui/material';
 import { WarningAmber as ConcernsIcon, QuestionAnswer as QuestionIcon } from '@mui/icons-material';
 import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
 import SectionCard from '../../components/shared/SectionCard';
+import ClickableReportImage from '../../components/patient-reports/ClickableReportImage';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius, bodySx, captionSx, headingPrimarySx, headingSecondarySx } from '../../constants/styles';
@@ -288,18 +289,16 @@ const ConcernsPage = () => {
                 <Grid size={{ xs: 12, md: 5, lg: 5 }}>
                   {q.image && (
                     <Box sx={{ mb: 3 }}>
-                      <Box 
-                        component="img"
+                      <ClickableReportImage 
                         src={q.image} 
-                        alt={q.imageCaption || "Illustration"} 
                         sx={{ 
                           width: '100%', 
                           maxWidth: 280,
                           mx: 'auto',
-                          height: 'auto', 
                           display: 'block',
                           borderRadius: radius.md,
-                          border: `1px solid ${COLORS.BORDER}`
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
                         }} 
                       />
                       {q.imageCaption && (
@@ -312,18 +311,16 @@ const ConcernsPage = () => {
 
                   {q.diagramImage && (
                     <Box sx={{ mb: 3 }}>
-                      <Box 
-                        component="img"
+                      <ClickableReportImage 
                         src={q.diagramImage} 
-                        alt={q.diagramCaption || "Medical diagram"} 
                         sx={{ 
                           width: '100%', 
                           maxWidth: 280,
                           mx: 'auto',
-                          height: 'auto', 
                           display: 'block',
                           borderRadius: radius.md,
-                          border: `1px solid ${COLORS.BORDER}`
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
                         }} 
                       />
                       {q.diagramCaption && (
@@ -336,18 +333,16 @@ const ConcernsPage = () => {
 
                   {q.warningImage && (
                     <Box sx={{ mb: 3 }}>
-                      <Box 
-                        component="img"
+                      <ClickableReportImage 
                         src={q.warningImage} 
-                        alt={q.warningCaption || "Warning illustration"} 
                         sx={{ 
                           width: '100%', 
                           maxWidth: 280,
                           mx: 'auto',
-                          height: 'auto', 
                           display: 'block',
                           borderRadius: radius.md,
-                          border: `1px solid ${COLORS.BORDER}`
+                          border: `1px solid ${COLORS.BORDER}`,
+                          overflow: 'hidden'
                         }} 
                       />
                       {q.warningCaption && (

@@ -4,6 +4,7 @@ import { Box, Typography, Grid, Button } from '@mui/material';
 import { AutoAwesome as ShowcaseIcon } from '@mui/icons-material';
 import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
 import SectionCard from '../../components/shared/SectionCard';
+import ClickableReportImage from '../../components/patient-reports/ClickableReportImage';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius, bodySx, captionSx } from '../../constants/styles';
@@ -124,11 +125,7 @@ const ShowcasePage = () => {
           <Box sx={{ display: 'flex', gap: 3 }}>
             {/* Left Side - Visual */}
             <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
-              <img
-                src="/report_visual.png"
-                alt="Treatment Showcase Visualization"
-                style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto', objectFit: 'contain' }}
-              />
+              <ClickableReportImage />
             </Box>
 
             {/* Vertical Divider */}
