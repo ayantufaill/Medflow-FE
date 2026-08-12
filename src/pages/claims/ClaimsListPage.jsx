@@ -56,7 +56,13 @@ const ClaimsListPage = () => {
         console.error("Failed to load tab counts", err);
       }
     };
+    
     fetchCounts();
+    
+    window.addEventListener('refresh-claims', fetchCounts);
+    return () => {
+      window.removeEventListener('refresh-claims', fetchCounts);
+    };
   }, []);
 
   const ActiveTabComponent = TAB_COMPONENTS[activeTab];
@@ -118,7 +124,38 @@ const ClaimsListPage = () => {
         setOpenPreviewDialog={setOpenPreviewDialog}
         previewingClaim={previewingClaim}
         activeTab={activeTab}
-        handleSaveEdit={() => setOpenEditDialog(false)}
+        handleSaveEdit={async () => {
+          if (editingClaim?.id) {
+            try {
+              // Map frontend UI fields back to API fields
+              const payload = {
+                status: editingClaim.status,
+              };
+              
+              if (editingClaim.submittedValue !== undefined) payload.submittedAmount = editingClaim.submittedValue;
+              if (editingClaim.description !== undefined) payload.notes = editingClaim.description;
+              if (editingClaim.clearingHouseMessage !== undefined) payload.denialReason = editingClaim.clearingHouseMessage;
+              if (editingClaim.planName !== undefined) payload.policyNumber = editingClaim.planName;
+
+              // Sanitize populated objects back to string IDs for the backend validator
+              if (editingClaim.invoiceId) {
+                payload.invoiceId = typeof editingClaim.invoiceId === 'object' ? (editingClaim.invoiceId._id || editingClaim.invoiceId.id) : editingClaim.invoiceId;
+              }
+              if (editingClaim.insuranceCompanyId) {
+                payload.insuranceCompanyId = typeof editingClaim.insuranceCompanyId === 'object' ? (editingClaim.insuranceCompanyId._id || editingClaim.insuranceCompanyId.id) : editingClaim.insuranceCompanyId;
+              } else if (editingClaim.insuranceCompany) {
+                payload.insuranceCompanyId = typeof editingClaim.insuranceCompany === 'object' ? (editingClaim.insuranceCompany._id || editingClaim.insuranceCompany.id) : editingClaim.insuranceCompany;
+              }
+
+              await claimService.updateClaim(editingClaim.id, payload);
+              window.dispatchEvent(new CustomEvent('refresh-claims'));
+            } catch (err) {
+              console.error('Failed to update claim', err);
+              alert('Failed to update claim. Please try again.');
+            }
+          }
+          setOpenEditDialog(false);
+        }}
         handleSaveAttach={async (data) => {
           if (data.newFiles && data.newFiles.length > 0 && attachingClaim?.id) {
             try {

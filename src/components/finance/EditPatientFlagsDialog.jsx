@@ -63,37 +63,34 @@ const EditPatientFlagsDialog = ({ onClose, onSave, initialFlags = [] }) => {
       </Box>
 
       <Box sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          {/* Left Column: Patient Communication */}
-          <Grid item xs={12} sm={5}>
+        <Grid container spacing={2}>
+          {/* Left Column: Patient Communication & Patient */}
+          <Grid item xs={12} sm={6}>
             <Typography sx={{ fontWeight: 'bold', mb: 1, color: labelGrey, fontSize: '0.85rem' }}>
               Patient Communication
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
               <Checkbox 
                 size="small" 
                 checked={flags['appointment_reminder'] || false}
                 onChange={() => handleFlagToggle('appointment_reminder')}
                 sx={{ p: 0.5, mt: -0.5 }} 
               />
-              <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Box sx={{ width: 40, height: 24, bgcolor: '#94bc74', borderRadius: '2px', flexShrink: 0 }} />
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                <Box sx={{ width: 36, height: 22, bgcolor: '#94bc74', borderRadius: '2px', flexShrink: 0 }} />
                 <Typography sx={{ fontSize: '0.8rem', lineHeight: 1.2 }}>
                   Send appointment reminder earlier than scheduled time
                 </Typography>
               </Box>
             </Box>
-          </Grid>
 
-          {/* Right Column: Billing & Patient */}
-          <Grid item xs={12} sm={7}>
-            {/* Billing Section */}
+            {/* Patient Section */}
             <Typography sx={{ fontWeight: 'bold', mb: 1, color: labelGrey, fontSize: '0.85rem' }}>
-              Billing
+              Patient
             </Typography>
-            
-            {billingFlags.map((flag) => (
-              <Box key={flag.label} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+
+            {patientFlags.map((flag) => (
+              <Box key={flag.label} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Checkbox 
                   size="small" 
                   checked={flags[flag.label] || false}
@@ -104,14 +101,17 @@ const EditPatientFlagsDialog = ({ onClose, onSave, initialFlags = [] }) => {
                 <Typography sx={{ fontSize: '0.8rem' }}>{flag.label}</Typography>
               </Box>
             ))}
+          </Grid>
 
-            {/* Patient Section */}
-            <Typography sx={{ fontWeight: 'bold', mt: 2, mb: 1, color: labelGrey, fontSize: '0.85rem' }}>
-              Patient
+          {/* Right Column: Billing */}
+          <Grid item xs={12} sm={6}>
+            {/* Billing Section */}
+            <Typography sx={{ fontWeight: 'bold', mb: 1, color: labelGrey, fontSize: '0.85rem' }}>
+              Billing
             </Typography>
-
-            {patientFlags.map((flag) => (
-              <Box key={flag.label} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+            
+            {billingFlags.map((flag) => (
+              <Box key={flag.label} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Checkbox 
                   size="small" 
                   checked={flags[flag.label] || false}

@@ -5,7 +5,9 @@ import { COLORS } from '../../../constants/colors';
 const InsurancePaymentFooter = ({
   handleSwitchToSimpleBilling,
   handleApplyAndPay,
-  onClose
+  onClose,
+  totalWo = 0,
+  totalPay = 0
 }) => {
   return (
     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
@@ -27,8 +29,8 @@ const InsurancePaymentFooter = ({
           Before applying payment, please make sure the deductibles and total insurance payment match your EOB
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#d32f2f' }}>Ins Writeoff: $0.00</Typography>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: $142.00</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#d32f2f' }}>Ins Writeoff: ${totalWo.toFixed(2)}</Typography>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: ${totalPay.toFixed(2)}</Typography>
           
           <Button 
             variant="contained" 

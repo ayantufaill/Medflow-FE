@@ -943,7 +943,12 @@ const AppointmentPage = ({ patient, open, onClose, onSave, appointments: initial
       </Box>
       
       {/* Lab Order Dialog */}
-      <LabOrder open={labOrderOpen} onClose={() => setLabOrderOpen(false)} />
+      <LabOrder 
+        open={labOrderOpen} 
+        onClose={() => setLabOrderOpen(false)} 
+        patientId={patient?._id || patient?.id}
+        patient={patient}
+      />
     </Dialog>
   );
 };

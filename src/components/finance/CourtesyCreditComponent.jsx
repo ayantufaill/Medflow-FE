@@ -101,6 +101,8 @@ const CourtesyCreditComponent = ({
           alignItems: "center",
           gap: "8px",
           borderBottom: `1px solid ${COLORS.BORDER}`,
+          borderTopLeftRadius: "13px",
+          borderTopRightRadius: "13px",
           backgroundColor: COLORS.SURFACE_TINT,
           m: 0,
           flexShrink: 0,
@@ -202,7 +204,7 @@ const CourtesyCreditComponent = ({
       </DialogContent>
 
       {/* Action Buttons - Always visible */}
-      <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+      <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT, borderBottomLeftRadius: '13px', borderBottomRightRadius: '13px' }}>
         {showAmountSection ? (
           <Typography 
             sx={{ 

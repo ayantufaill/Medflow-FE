@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Checkbox, Select,
-  MenuItem, TextField, Autocomplete,
+  MenuItem, TextField, Autocomplete, DialogTitle, IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
+import { COLORS } from '../../constants/colors';
+import { radius, fontWeight } from '../../constants/styles';
 
 // Redux — providers & patients
 import {
@@ -32,11 +35,12 @@ import {
 
 const DROPDOWN_MENU_PROPS = {
   disablePortal: true,
+  anchorOrigin: { vertical: "bottom", horizontal: "left" },
+  transformOrigin: { vertical: "top", horizontal: "left" },
   PaperProps: {
     sx: {
       bgcolor: '#fff',
       '& .MuiMenuItem-root': { fontSize: '12px', py: 0.5 },
-      '& .Mui-selected': { bgcolor: '#5c6bc0 !important', color: '#fff' },
     },
   },
 };
@@ -73,8 +77,23 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   const patientId = selectedPatientId || patient?._id || patient?.id;
 
   // Memoised selector for the current patient's draft invoices
-  const invoices = useSelector(selectDraftInvoicesForPatient(patientId));
-
+  const rawInvoices = useSelector(selectDraftInvoicesForPatient(patientId));
+  const invoices = React.useMemo(() => {
+    return (rawInvoices || [])
+      .map(inv => ({
+        ...inv,
+        lineItems: (inv.lineItems || []).filter(item => {
+          if (item.dbi) return false;
+          const writeoff = Number(item.writeoff || 0);
+          const ins = Number(item.insPortion || item.insurance || 0);
+          const pt = Number(item.ptPortion || 0);
+          const total = Number(item.total || item.totalPrice || 0);
+          const patientBal = pt > 0 ? pt : ins > 0 ? 0 : Math.max(0, total - writeoff - ins);
+          return !(patientBal > 0 && ins === 0);
+        })
+      }))
+      .filter(inv => inv.lineItems.length > 0);
+  }, [rawInvoices]);
   const activeInsurances = patientId && insurancesCache?.[patientId]
     ? (insurancesCache[patientId].data || []).filter((ins) => ins.isActive !== false)
     : [];
@@ -189,139 +208,240 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
       : '';
 
-  const headerBackground = '#7788bb';
-  const textGrey         = '#555';
-  const linkBlue         = '#5b7bb1';
+  const linkBlue         = COLORS.ACCENT;
   const errorRed         = '#d32f2f';
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ width: '100%', minWidth: '1000px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff', pb: 2 }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: headerBackground, py: 1.5, textAlign: 'center' }}>
-        <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 600 }}>
+    <Box sx={{ width: '100%', minWidth: '1000px', borderRadius: '14px', border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden', bgcolor: '#fff', display: 'flex', flexDirection: 'column' }}>
+      <DialogTitle sx={{
+        boxSizing: "border-box",
+        px: "25px",
+        py: "16px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        backgroundColor: COLORS.SURFACE_TINT,
+        m: 0,
+        flexShrink: 0,
+      }}>
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Manual Claim
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
+      </DialogTitle>
 
-      <Box sx={{ p: 2, maxHeight: '80vh', overflowY: 'auto' }}>
+      <Box sx={{ p: 3, maxHeight: '80vh', overflowY: 'auto' }}>
         {/* ── Top Info Row ── */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2, borderBottom: '1px solid #eee', pb: 1.5, flexWrap: 'wrap' }}>
-          <Typography sx={{ color: headerBackground, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, borderBottom: `1px solid ${COLORS.BORDER}`, pb: 2, flexWrap: 'wrap' }}>
+          <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif' }}>
             {dayjs().format('MM/DD/YYYY')}
           </Typography>
 
           {/* Patient search */}
-          <Typography sx={{ fontSize: '0.75rem', ml: 1 }}>For</Typography>
-          <Autocomplete
-            options={patients}
-            getOptionLabel={(p) => `${p.firstName || ''} ${p.lastName || ''}`.trim()}
-            value={patients.find((p) => (p._id || p.id) === selectedPatientId) || null}
-            onChange={handlePatientChange}
-            onInputChange={handlePatientSearch}
-            isOptionEqualToValue={(opt, val) => (opt._id || opt.id) === (val._id || val.id)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="standard"
-                placeholder="Search patient..."
-                sx={{ fontSize: '0.75rem', minWidth: 160, mr: 1, '& input': { fontSize: '0.75rem', pb: 0.5 } }}
-              />
-            )}
-            sx={{ minWidth: 160, mr: 1 }}
-            size="small"
-            disablePortal
-            ListboxProps={{ sx: { fontSize: '12px' } }}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>For</Typography>
+            <Autocomplete
+              options={patients}
+              getOptionLabel={(p) => `${p.firstName || ''} ${p.lastName || ''}`.trim()}
+              value={patients.find((p) => (p._id || p.id) === selectedPatientId) || null}
+              onChange={handlePatientChange}
+              onInputChange={handlePatientSearch}
+              isOptionEqualToValue={(opt, val) => (opt._id || opt.id) === (val._id || val.id)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Search patient..."
+                  size="small"
+                  sx={{ 
+                    '& .MuiInputBase-root': { 
+                      height: '36px', 
+                      bgcolor: COLORS.SURFACE_TINT, 
+                      borderRadius: radius.sm,
+                      fontSize: '13px',
+                      color: COLORS.TEXT_PRIMARY,
+                      fontWeight: 500,
+                      '& fieldset': { borderColor: COLORS.BORDER }
+                    }
+                  }}
+                />
+              )}
+              sx={{ width: 150 }}
+              size="small"
+              disablePortal
+              ListboxProps={{ sx: { fontSize: '13px' } }}
+            />
+          </Box>
 
           {/* Insurance */}
-          <Typography sx={{ fontSize: '0.75rem' }}>To</Typography>
-          <Select
-            variant="standard"
-            value={selectedInsuranceId}
-            onChange={(e) => setSelectedInsuranceId(e.target.value)}
-            displayEmpty
-            sx={{ fontSize: '0.75rem', mr: 1, '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
-            MenuProps={DROPDOWN_MENU_PROPS}
-          >
-            {activeInsurances.length === 0
-              ? <MenuItem value="" disabled>No active insurance</MenuItem>
-              : [
-                  <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
-                  ...activeInsurances.map((ins) => {
-                    const label =
-                      ins.insuranceCompany?.name ||
-                      ins.insuranceCompanyId?.name ||
-                      ins.payer ||
-                      ins.planType ||
-                      ins.plan ||
-                      'Insurance Plan';
-                    return (
-                      <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
-                        {label}
-                      </MenuItem>
-                    );
-                  }),
-                ]
-            }
-          </Select>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>To</Typography>
+            <Select
+              value={selectedInsuranceId}
+              onChange={(e) => setSelectedInsuranceId(e.target.value)}
+              displayEmpty
+              size="small"
+              sx={{ 
+                height: "36px",
+                width: "150px",
+                bgcolor: COLORS.SURFACE_TINT,
+                borderRadius: radius.sm,
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "13px",
+                  color: COLORS.TEXT_PRIMARY,
+                  fontWeight: 500,
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: COLORS.BORDER,
+                }
+              }}
+              MenuProps={DROPDOWN_MENU_PROPS}
+            >
+              {activeInsurances.length === 0
+                ? <MenuItem value="" disabled>No active insurance</MenuItem>
+                : [
+                    <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
+                    ...activeInsurances.map((ins) => {
+                      const label =
+                        ins.insuranceCompany?.name ||
+                        ins.insuranceCompanyId?.name ||
+                        ins.payer ||
+                        ins.planType ||
+                        ins.plan ||
+                        'Insurance Plan';
+                      return (
+                        <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
+                          {label}
+                        </MenuItem>
+                      );
+                    }),
+                  ]
+              }
+            </Select>
+          </Box>
 
           {/* Treating Provider */}
-          <Typography sx={{ fontSize: '0.75rem' }}>
-            Treating Provider <span style={{ color: '#999' }}>(for claim)</span>
-          </Typography>
-          <Select
-            variant="standard"
-            value={selectedTreatingProvider}
-            onChange={(e) => setSelectedTreatingProvider(e.target.value)}
-            displayEmpty
-            sx={{ fontSize: '0.75rem', mr: 1, '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
-            MenuProps={DROPDOWN_MENU_PROPS}
-          >
-            <MenuItem value="" disabled>
-              {providers.length === 0 ? 'Loading providers...' : 'Select Provider'}
-            </MenuItem>
-            {providers.map((p) => (
-              <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                {getProviderName(p)}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>
+                Treating Provider
+              </Typography>
+              <Typography sx={{ fontSize: '10px', fontWeight: 400, color: '#999', mt: 0.5, lineHeight: 1 }}>
+                (for claim)
+              </Typography>
+            </Box>
+            <Select
+              value={selectedTreatingProvider}
+              onChange={(e) => setSelectedTreatingProvider(e.target.value)}
+              displayEmpty
+              size="small"
+              sx={{ 
+                height: "36px",
+                width: "130px",
+                bgcolor: COLORS.SURFACE_TINT,
+                borderRadius: radius.sm,
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "13px",
+                  color: COLORS.TEXT_PRIMARY,
+                  fontWeight: 500,
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: COLORS.BORDER,
+                }
+              }}
+              MenuProps={DROPDOWN_MENU_PROPS}
+            >
+              <MenuItem value="" disabled>
+                {providers.length === 0 ? 'Loading providers...' : 'Select Provider'}
               </MenuItem>
-            ))}
-          </Select>
+              {providers.map((p) => (
+                <MenuItem key={p._id || p.id} value={p._id || p.id}>
+                  {getProviderName(p)}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
           {/* Billing Entity */}
-          <Typography sx={{ fontSize: '0.75rem' }}>
-            Billing Entity <span style={{ color: '#999' }}>(for claim)</span>
-          </Typography>
-          <Select
-            variant="standard"
-            value={selectedBillingEntity}
-            onChange={(e) => setSelectedBillingEntity(e.target.value)}
-            displayEmpty
-            sx={{ fontSize: '0.75rem', mr: 1, '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
-            MenuProps={DROPDOWN_MENU_PROPS}
-          >
-            <MenuItem value="" disabled>
-              {providers.length === 0 ? 'Loading providers...' : 'Select Provider'}
-            </MenuItem>
-            {providers.map((p) => (
-              <MenuItem key={p._id || p.id} value={p._id || p.id}>
-                {getProviderName(p)}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, lineHeight: 1 }}>
+                Billing Entity
+              </Typography>
+              <Typography sx={{ fontSize: '10px', fontWeight: 400, color: '#999', mt: 0.5, lineHeight: 1 }}>
+                (for claim)
+              </Typography>
+            </Box>
+            <Select
+              value={selectedBillingEntity}
+              onChange={(e) => setSelectedBillingEntity(e.target.value)}
+              displayEmpty
+              size="small"
+              sx={{ 
+                height: "36px",
+                width: "130px",
+                bgcolor: COLORS.SURFACE_TINT,
+                borderRadius: radius.sm,
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "13px",
+                  color: COLORS.TEXT_PRIMARY,
+                  fontWeight: 500,
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: COLORS.BORDER,
+                }
+              }}
+              MenuProps={DROPDOWN_MENU_PROPS}
+            >
+              <MenuItem value="" disabled>
+                {providers.length === 0 ? 'Loading providers...' : 'Select Provider'}
               </MenuItem>
-            ))}
-          </Select>
+              {providers.map((p) => (
+                <MenuItem key={p._id || p.id} value={p._id || p.id}>
+                  {getProviderName(p)}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
           {/* Claim Type */}
-          <Typography sx={{ fontSize: '0.75rem' }}>Type:</Typography>
-          <Select
-            variant="standard"
-            value={claimType}
-            onChange={(e) => setClaimType(e.target.value)}
-            sx={{ fontSize: '0.75rem', '& .MuiSelect-select': { pb: 0.5, pt: 0.5 } }}
-            MenuProps={DROPDOWN_MENU_PROPS}
-          >
-            <MenuItem value="Manual">Manual Claim</MenuItem>
-            <MenuItem value="Electronic">Electronic Claim</MenuItem>
-          </Select>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Type:</Typography>
+            <Select
+              value={claimType}
+              onChange={(e) => setClaimType(e.target.value)}
+              size="small"
+              sx={{ 
+                height: "36px",
+                width: "130px",
+                bgcolor: COLORS.SURFACE_TINT,
+                borderRadius: radius.sm,
+                "& .MuiSelect-select": {
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "13px",
+                  color: COLORS.TEXT_PRIMARY,
+                  fontWeight: 500,
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: COLORS.BORDER,
+                }
+              }}
+              MenuProps={DROPDOWN_MENU_PROPS}
+            >
+              <MenuItem value="Manual">Manual Claim</MenuItem>
+              <MenuItem value="Electronic">Electronic Claim</MenuItem>
+            </Select>
+          </Box>
         </Box>
 
         {/* ── Invoice / Procedure list ── */}
@@ -373,24 +493,24 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                       checked={proc.checked}
                       onChange={() => handleProcedureToggle(inv.id, proc.id)}
                     />
-                    <Typography sx={{ fontSize: '0.75rem', width: '60px', color: textGrey, ml: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '60px', color: COLORS.TEXT_SECONDARY, ml: 1 }}>
                       {proc.cptCode || proc.code}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '200px', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '200px', color: COLORS.TEXT_SECONDARY }}>
                       {proc.description || proc.name || proc.notes}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_SECONDARY }}>
                       {inv.provider?.userId?.firstName || inv.provider?.firstName || ''} {inv.provider?.userId?.lastName || inv.provider?.lastName || ''}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, pr: 6 }}>
-                    <Typography sx={{ fontSize: '0.75rem', width: '100px', textAlign: 'right', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '100px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
                       {proc.ptAmount}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '130px', textAlign: 'right', color: textGrey }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '130px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
                       {proc.insAmount}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.75rem', width: '260px', textAlign: 'right', color: textGrey, whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: '0.75rem', width: '260px', textAlign: 'right', color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap' }}>
                       {proc.prevAmount}
                     </Typography>
                   </Box>
@@ -426,7 +546,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             {!showNote ? (
               <Typography
                 onClick={() => setShowNote(true)}
-                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer' }}
+                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
               >
                 + Add note/narrative
               </Typography>
@@ -437,33 +557,27 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                 onChange={(e) => setNote(e.target.value)}
                 variant="standard"
                 autoFocus
-                sx={{ width: 200, input: { fontSize: '0.8125rem' } }}
+                sx={{ width: 200, input: { fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif' } }}
               />
             )}
+
+            <Button
+              variant="outlined"
+              onClick={onClose}
+              sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
+            >
+              Cancel
+            </Button>
 
             <Button
               variant="contained"
               onClick={handleSendToBatch}
               disabled={isSubmitting}
               sx={{
-                bgcolor: headerBackground,
-                color: '#fff',
-                textTransform: 'none',
-                boxShadow: 'none',
-                px: 2,
-                fontSize: '0.8125rem',
-                '&:hover': { bgcolor: '#6677aa' },
+                textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif'
               }}
             >
               {isSubmitting ? 'Sending...' : 'Send to Batch'}
-            </Button>
-
-            <Button
-              variant="contained"
-              onClick={onClose}
-              sx={{ bgcolor: '#a9a9a9', color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem' }}
-            >
-              Cancel
             </Button>
           </Box>
         </Box>

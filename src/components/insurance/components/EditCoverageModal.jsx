@@ -73,7 +73,7 @@ export default function EditCoverageModal({ open, onClose, insurance, getInsuran
 
   const companyName = getInsuranceCompanyName?.(insurance?.insuranceCompanyId) || 'Unknown';
   const planName = insurance?.employerName || insurance?.planName?.split(' by ')[0] || companyName;
-  const policyType = (insurance?.insuranceType || 'Primary').charAt(0).toUpperCase() + (insurance?.insuranceType || 'primary').slice(1);
+  const policyType = insurance?.Ordinal ? `Coverage #${insurance.Ordinal}` : 'Coverage';
 
   const handleSave = () => {
     onSave?.({ deductibles, notes });

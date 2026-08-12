@@ -292,7 +292,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       >
         <ReceiptIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Invoice #{invoiceData?.invoiceId || "3125"}
+          {invoiceData?.invoiceId ? `Invoice #${invoiceData.invoiceId}` : 'New Invoice'}
         </Typography>
         <IconButton onClick={onClose || onCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: "18px" }} />

@@ -89,18 +89,43 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
     const proc = mergedData.find(p => p.code === activeToothSelection);
     if (!proc) return;
     
-    let currentTeeth = proc.teethLimit ? proc.teethLimit.split(',').map(t => t.trim()).filter(Boolean) : [];
-    if (currentTeeth.includes(tooth)) {
-      currentTeeth = currentTeeth.filter(t => t !== tooth);
-    } else {
-      currentTeeth.push(tooth);
+    let currentTeeth = [];
+    if (Array.isArray(proc.teeth)) {
+      currentTeeth = proc.teeth.map(t => String(t).trim()).filter(Boolean);
+    } else if (proc.teethLimit) {
+      currentTeeth = String(proc.teethLimit).split(',').map(t => t.trim()).filter(Boolean);
     }
-    handleFieldChange(activeToothSelection, 'teethLimit', currentTeeth.join(', '));
+
+    const toothStr = String(tooth).trim();
+    if (currentTeeth.includes(toothStr)) {
+      currentTeeth = currentTeeth.filter(t => t !== toothStr);
+    } else {
+      currentTeeth.push(toothStr);
+    }
+
+    currentTeeth.sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+
+    const updatedLimit = currentTeeth.join(', ');
+    handleFieldChange(activeToothSelection, 'teethLimit', updatedLimit);
+    handleFieldChange(activeToothSelection, 'teeth', currentTeeth);
   }, [activeToothSelection, mergedData, handleFieldChange]);
 
   const isToothSelected = useCallback((tooth) => {
     if (!activeToothSelection) return false;
-    return mergedData.find(p => p.code === activeToothSelection)?.teethLimit?.includes(tooth);
+    const proc = mergedData.find(p => p.code === activeToothSelection);
+    if (!proc) return false;
+    let list = [];
+    if (Array.isArray(proc.teeth)) {
+      list = proc.teeth.map(t => String(t).trim());
+    } else if (proc.teethLimit) {
+      list = String(proc.teethLimit).split(',').map(t => t.trim()).filter(Boolean);
+    }
+    return list.includes(String(tooth).trim());
   }, [activeToothSelection, mergedData]);
 
   return {

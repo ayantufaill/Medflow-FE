@@ -12,17 +12,174 @@ import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import StatementFooter from './StatementFooter';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
+import { useSelector } from 'react-redux';
+import { selectCurrentPatient } from '../../store/slices/patientSlice';
+import { selectLedgerItemsForPatient } from '../../store/slices/billingSlice';
 
-const DetailedStatementDialog = ({ onClose }) => {
+const DetailedStatementDialog = ({ onClose, printItem }) => {
   const contentRef = useRef(null);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notes, setNotes] = useState('');
+  const [startDate, setStartDate] = useState(dayjs().subtract(30, 'day'));
+  const [endDate, setEndDate] = useState(dayjs());
+  const [onlyOpen, setOnlyOpen] = useState(false);
+
+  const currentPatient = useSelector(selectCurrentPatient);
+  const ledgerItems = useSelector(selectLedgerItemsForPatient(currentPatient?._id || currentPatient?.id));
   
   const primaryBlue = COLORS.ACCENT;
   const lightBlue = COLORS.BORDER;
   const textDarkBlue = COLORS.TEXT_PRIMARY;
   const tanButton = COLORS.ACCENT;
   const tableHeaderBg = COLORS.SURFACE_TINT;
+
+  let rawTransactions = [];
+  const itemsToProcess = printItem ? [printItem] : (ledgerItems || []);
+  itemsToProcess.forEach(item => {
+    const itemDate = dayjs(item.rawDate || item.date);
+    
+    if (item.method === 'Invoice' || item.method === 'Statement') {
+      const allProcedures = [];
+      const seenProcIds = new Set();
+      
+      item.details?.forEach(detail => {
+        if (detail.isPayment) {
+          let paymentAmt = 0;
+          const match = (detail.title || '').match(/\$([0-9,.]+)\s*\/\s*\$[0-9,.]+$/);
+          if (match) paymentAmt = Number(match[1].replace(/,/g, ''));
+          else paymentAmt = Number((String(detail.amount) || '$0').replace(/[^0-9.-]+/g, ''));
+          
+          rawTransactions.push({
+            date: itemDate,
+            desc: detail.title || 'Payment',
+            sub: '',
+            prov: item.initials || 'N/A',
+            amt: 0,
+            crd: paymentAmt,
+            isPayment: true,
+            rawItem: item
+          });
+        } else if (detail.isAdjustment) {
+          rawTransactions.push({
+            date: itemDate,
+            desc: detail.title || 'Adjustment',
+            sub: '',
+            prov: item.initials || 'N/A',
+            amt: 0,
+            crd: Number((String(detail.amount) || '$0').replace(/[^0-9.-]+/g, '')),
+            isAdjustment: true,
+            rawItem: item
+          });
+        } else if (detail.procedures) {
+          detail.procedures.forEach(p => {
+            const procId = p.id || p._id || p.ProcNum || (p.code + p.charge);
+            if (!seenProcIds.has(procId)) {
+              seenProcIds.add(procId);
+              allProcedures.push(p);
+            }
+          });
+        }
+      });
+      
+      allProcedures.forEach(proc => {
+        rawTransactions.push({
+          date: dayjs(proc.date || itemDate),
+          desc: `Invoice #${item.invoiceNumber || item.id}`,
+          sub: `${proc.code || ''} ${proc.description || ''}`,
+          prov: proc.provider || item.initials || 'N/A',
+          amt: Number(proc.total || proc.totalPrice || proc.charge || proc.unitPrice || 0),
+          crd: 0,
+          isCharge: true,
+          insPortion: Number(proc.insPortion || 0),
+          rawItem: item
+        });
+      });
+    } else if (item.isAdjustment || item.method === 'Adjustment') {
+      const amt = Number((String(item.amount) || '$0').replace(/[^0-9.-]+/g, ''));
+      rawTransactions.push({
+        date: itemDate,
+        desc: item.title || 'Adjustment',
+        sub: '',
+        prov: item.initials || 'N/A',
+        amt: 0,
+        crd: amt,
+        isAdjustment: true,
+        rawItem: item
+      });
+    } else if (item.method === 'Payment') {
+      const amt = Number((String(item.amount) || '$0').replace(/[^0-9.-]+/g, ''));
+      rawTransactions.push({
+        date: itemDate,
+        desc: item.title || 'Payment',
+        sub: '',
+        prov: item.initials || 'N/A',
+        amt: 0,
+        crd: amt,
+        isPayment: true,
+        rawItem: item
+      });
+    }
+  });
+
+  rawTransactions.sort((a, b) => {
+    const timeDiff = a.date.valueOf() - b.date.valueOf();
+    if (timeDiff !== 0) return timeDiff;
+    if (a.isCharge && !b.isCharge) return -1;
+    if (!a.isCharge && b.isCharge) return 1;
+    return 0;
+  });
+
+  let runningBalance = 0;
+  let totalCharges = 0;
+  let totalPatientPayments = 0;
+  let totalInsPayments = 0;
+  let totalAdjustments = 0;
+  let insEstimate = 0;
+
+  const filteredTransactions = [];
+
+  rawTransactions.forEach(t => {
+    if (t.isCharge) {
+      runningBalance += t.amt;
+      totalCharges += t.amt;
+      insEstimate += t.insPortion;
+    } else if (t.isPayment || t.isAdjustment) {
+      runningBalance -= t.crd;
+      if (t.isAdjustment) totalAdjustments += t.crd;
+      else {
+        if (t.desc.toLowerCase().includes('ins ')) totalInsPayments += t.crd;
+        else totalPatientPayments += t.crd;
+      }
+    }
+
+    t.bal = runningBalance;
+
+    const isAfterStart = t.date.isSame(startDate, 'day') || t.date.isAfter(startDate, 'day');
+    const isBeforeEnd = t.date.isSame(endDate, 'day') || t.date.isBefore(endDate, 'day');
+    let keep = (isAfterStart && isBeforeEnd) || !!printItem;
+    
+    if (onlyOpen && !printItem && t.rawItem) {
+       const invBal = Number((String(t.rawItem.summary?.invBal) || '$0').replace(/[^0-9.-]+/g, ''));
+       if (invBal <= 0) keep = false;
+    }
+
+    if (keep) {
+      filteredTransactions.push({
+        date: t.date.format('MM/DD/YYYY'),
+        desc: t.desc,
+        sub: t.sub,
+        prov: t.prov,
+        amt: t.amt > 0 ? `$${t.amt.toFixed(2)}` : '',
+        crd: t.crd > 0 ? `$${t.crd.toFixed(2)}` : '',
+        bal: `$${t.bal.toFixed(2)}`,
+        insPortionText: t.insPortion > 0 ? 'insurance est.' : ''
+      });
+    }
+  });
+
+  let remainingIns = Math.max(0, insEstimate - totalInsPayments);
+  let outstandingBalance = Math.max(0, totalCharges - totalPatientPayments - totalInsPayments - totalAdjustments);
+
 
   const LabelInput = ({ label, defaultValue = "" }) => (
     <TextField
@@ -118,99 +275,103 @@ const DetailedStatementDialog = ({ onClose }) => {
 
       <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
       <Box ref={contentRef} sx={{ p: '25px' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
-            <FormControlLabel
-              control={<Checkbox size="small" />}
-              label={<Typography sx={{ fontSize: '13px' }}>Only Open Invoices</Typography>}
-            />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Header Type</Typography>
-              <Select 
-                MenuProps={{ 
-                  sx: { zIndex: 1500 },
-                  anchorOrigin: { vertical: "bottom", horizontal: "left" },
-                  transformOrigin: { vertical: "top", horizontal: "left" }
-                }} 
-                size="small" 
-                defaultValue="Detachable Slip" 
-                sx={{ 
-                  height: "36px",
-                  width: "180px",
-                  bgcolor: COLORS.SURFACE_TINT,
-                  borderRadius: radius.sm,
-                  "& .MuiSelect-select": {
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "13px",
-                    color: COLORS.TEXT_PRIMARY,
-                    fontWeight: 500,
-                  },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: COLORS.BORDER,
-                  }
-                }}
-              >
-                <MenuItem value="Detachable Slip" sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Detachable Slip</MenuItem>
-              </Select>
-            </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+          {!printItem && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+              <FormControlLabel
+                control={<Checkbox size="small" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} />}
+                label={<Typography sx={{ fontSize: '13px' }}>Only Open Invoices</Typography>}
+              />
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Start Date</Typography>
-              <DatePicker
-                defaultValue={dayjs("2026-04-06")}
-                format="MM/DD/YYYY"
-                slotProps={{ 
-                  popper: { sx: { zIndex: 1500 } },
-                  textField: { 
-                    size: 'small', 
-                    sx: { 
-                      width: '180px', 
-                      '& .MuiInputBase-root': { 
-                        fontSize: '13px', 
-                        borderRadius: '4px', 
-                        height: '36px', 
-                        bgcolor: COLORS.SURFACE_TINT, 
-                        color: COLORS.TEXT_PRIMARY 
-                      }, 
-                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
-                      '& fieldset': { borderColor: COLORS.BORDER } 
-                    } 
-                  }
-                }}
-              />
+                <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Header Type</Typography>
+                <Select 
+                  MenuProps={{ 
+                    sx: { zIndex: 999999 },
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" }
+                  }} 
+                  size="small" 
+                  defaultValue="Detachable Slip" 
+                  sx={{ 
+                    height: "36px",
+                    width: "180px",
+                    bgcolor: COLORS.SURFACE_TINT,
+                    borderRadius: radius.sm,
+                    "& .MuiSelect-select": {
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: "13px",
+                      color: COLORS.TEXT_PRIMARY,
+                      fontWeight: 500,
+                    },
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: COLORS.BORDER,
+                    }
+                  }}
+                >
+                  <MenuItem value="Detachable Slip" sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Detachable Slip</MenuItem>
+                </Select>
+              </Box>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Start Date</Typography>
+                <DatePicker
+                  value={startDate}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  format="MM/DD/YYYY"
+                  slotProps={{ 
+                    popper: { sx: { zIndex: 999999 } },
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: '180px', 
+                        '& .MuiInputBase-root': { 
+                          fontSize: '13px', 
+                          borderRadius: '4px', 
+                          height: '36px', 
+                          bgcolor: COLORS.SURFACE_TINT, 
+                          color: COLORS.TEXT_PRIMARY 
+                        }, 
+                        '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                        '& fieldset': { borderColor: COLORS.BORDER } 
+                      } 
+                    }
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>End Date</Typography>
+                <DatePicker
+                  value={endDate}
+                  onChange={(newValue) => setEndDate(newValue)}
+                  format="MM/DD/YYYY"
+                  slotProps={{ 
+                    popper: { sx: { zIndex: 999999 } },
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: '180px', 
+                        '& .MuiInputBase-root': { 
+                          fontSize: '13px', 
+                          borderRadius: '4px', 
+                          height: '36px', 
+                          bgcolor: COLORS.SURFACE_TINT, 
+                          color: COLORS.TEXT_PRIMARY 
+                        }, 
+                        '& .MuiInputBase-input': { padding: '4px 10px' }, 
+                        '& fieldset': { borderColor: COLORS.BORDER } 
+                      } 
+                    }
+                  }}
+                />
+              </Box>
+                <Button variant="contained" sx={{ bgcolor: tanButton, textTransform: 'none', fontSize: '13px', ml: 'auto', boxShadow: 'none' }}>Load Statement</Button>
+              </Box>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>End Date</Typography>
-              <DatePicker
-                defaultValue={dayjs("2026-05-06")}
-                format="MM/DD/YYYY"
-                slotProps={{ 
-                  popper: { sx: { zIndex: 1500 } },
-                  textField: { 
-                    size: 'small', 
-                    sx: { 
-                      width: '180px', 
-                      '& .MuiInputBase-root': { 
-                        fontSize: '13px', 
-                        borderRadius: '4px', 
-                        height: '36px', 
-                        bgcolor: COLORS.SURFACE_TINT, 
-                        color: COLORS.TEXT_PRIMARY 
-                      }, 
-                      '& .MuiInputBase-input': { padding: '4px 10px' }, 
-                      '& fieldset': { borderColor: COLORS.BORDER } 
-                    } 
-                  }
-                }}
-              />
-            </Box>
-              <Button variant="contained" sx={{ bgcolor: tanButton, textTransform: 'none', fontSize: '13px', ml: 'auto', boxShadow: 'none' }}>Load Statement</Button>
-            </Box>
-          </Box>
+          )}
 
-          <Divider sx={{ mb: 2 }} />
+          {!printItem && <Divider sx={{ mb: 2 }} />}
 
           <Box sx={{ pr: 1 }}>
             <Grid container spacing={16} alignItems="flex-start">
@@ -226,8 +387,9 @@ const DetailedStatementDialog = ({ onClose }) => {
                   </Box>
                   <TextField
                     variant="standard"
-                    defaultValue="Vicky Widener"
+                    value={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : 'Patient Name'}
                     fullWidth
+                    InputProps={{ readOnly: true }}
                     sx={{ '& .MuiInputBase-root': { fontSize: '1rem' } }}
                   />
                 </Box>
@@ -248,15 +410,15 @@ const DetailedStatementDialog = ({ onClose }) => {
                     <Box sx={{ bgcolor: lightBlue, display: 'flex' }}>
                       <Box sx={{ flex: 1, p: 1.5 }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#2c3e50' }}>Outstanding:</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>$200.00</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>${outstandingBalance.toFixed(2)}</Typography>
                       </Box>
                       <Box sx={{ flex: 1, p: 1.5 }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#2c3e50' }}>Insurance Estimate:</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>$0.00</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>${insEstimate.toFixed(2)}</Typography>
                       </Box>
                       <Box sx={{ flex: 1, p: 1.5 }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#2c3e50' }}>Your Portion:</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>$200.00</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#2c3e50' }}>${outstandingBalance.toFixed(2)}</Typography>
                       </Box>
                     </Box>
                     <Box sx={{ p: 1.5, display: 'flex', alignItems: 'center' }}>
@@ -296,11 +458,11 @@ const DetailedStatementDialog = ({ onClose }) => {
                 <Box sx={{ border: `1px solid ${lightBlue}`, borderRadius: '4px', overflow: 'hidden' }}>
                   <Box sx={{ display: 'flex', borderBottom: `1px solid ${lightBlue}` }}>
                     <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>Patient Name</Typography>
-                    <InputBase defaultValue="Vicky Widener" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
+                    <InputBase value={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''} readOnly sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
                   </Box>
                   <Box sx={{ display: 'flex' }}>
                     <Typography sx={{ width: '150px', p: 1, pl: 1.5, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, fontWeight: 500 }}>Statement Date</Typography>
-                    <InputBase defaultValue="05/06/2026" sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
+                    <InputBase value={dayjs().format('MM/DD/YYYY')} readOnly sx={{ flex: 1, p: 1, fontSize: '0.8rem', color: COLORS.TEXT_PRIMARY, borderLeft: `1px solid ${lightBlue}`, paddingLeft: '1.5rem' }} />
                   </Box>
                 </Box>
               </Grid>
@@ -320,10 +482,7 @@ const DetailedStatementDialog = ({ onClose }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {[
-                    { date: '05/06/2026', desc: 'Invoice #25135: $100.00', sub: 'L5001 Broken appt', prov: 'Christina Sabour', amt: '$100.00', crd: '', bal: '$100.00' },
-                    { date: '05/06/2026', desc: 'Invoice #25136: $100.00', sub: 'L5002 Late cancellation', prov: 'Christina Sabour', amt: '$100.00', crd: '', bal: '$200.00' },
-                  ].map((row, i) => (
+                  {filteredTransactions.map((row, i) => (
                     <TableRow key={i} sx={{ bgcolor: i % 2 === 0 ? '#fff' : '#f4f7fa' }}>
                       <TableCell sx={{ fontSize: '12px', color: '#5c7bb5', verticalAlign: 'top' }}>{row.date}</TableCell>
                       <TableCell sx={{ fontSize: '12px', verticalAlign: 'top' }}>
@@ -332,7 +491,7 @@ const DetailedStatementDialog = ({ onClose }) => {
                       </TableCell>
                       <TableCell sx={{ fontSize: '12px', verticalAlign: 'top' }}>
                         <Typography sx={{ fontSize: '12px' }}>{row.prov}</Typography>
-                        <Typography sx={{ fontSize: '10px', color: '#999', fontStyle: 'italic' }}>insurance est.</Typography>
+                        {row.insPortionText && <Typography sx={{ fontSize: '10px', color: '#999', fontStyle: 'italic' }}>{row.insPortionText}</Typography>}
                       </TableCell>
                       <TableCell sx={{ textAlign: 'right', verticalAlign: 'top', fontSize: '12px', fontWeight: 'bold', color: '#003366' }}>{row.amt}</TableCell>
                       <TableCell sx={{ textAlign: 'right', verticalAlign: 'top', fontSize: '12px' }}>{row.crd}</TableCell>
@@ -341,7 +500,7 @@ const DetailedStatementDialog = ({ onClose }) => {
                   ))}
                   <TableRow sx={{ bgcolor: '#d1d9e6' }}>
                     <TableCell colSpan={5} sx={{ textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>Outstanding Balance</TableCell>
-                    <TableCell sx={{ textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>$200.00</TableCell>
+                    <TableCell sx={{ textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>${outstandingBalance.toFixed(2)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -358,11 +517,11 @@ const DetailedStatementDialog = ({ onClose }) => {
                 </TableHead>
                 <TableBody>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$200.00</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$200.00</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${totalCharges.toFixed(2)}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${totalPatientPayments.toFixed(2)}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${totalInsPayments.toFixed(2)}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${totalAdjustments.toFixed(2)}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${outstandingBalance.toFixed(2)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -371,7 +530,7 @@ const DetailedStatementDialog = ({ onClose }) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', mb: 3 }}>
               <Box sx={{ display: 'flex', gap: 4, mb: 0.5 }}>
                 <Typography sx={{ fontSize: '12px', color: '#333' }}>Estimated Remaining Insurance</Typography>
-                <Typography sx={{ fontSize: '12px', color: '#333', width: '60px', textAlign: 'right' }}>$0.00</Typography>
+                <Typography sx={{ fontSize: '12px', color: '#333', width: '60px', textAlign: 'right' }}>${remainingIns.toFixed(2)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 4 }}>
                 <Typography sx={{ fontSize: '12px', color: '#333' }}>Estimated Remaining Insurance Adjustment</Typography>
@@ -381,7 +540,7 @@ const DetailedStatementDialog = ({ onClose }) => {
 
             <Box sx={{ bgcolor: '#a4b4cb', p: 1, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography sx={{ fontSize: '16px', fontWeight: 'bold', color: '#333', textAlign: 'center', flex: 1 }}>Your Portion</Typography>
-              <Typography sx={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>$200.00</Typography>
+              <Typography sx={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>${outstandingBalance.toFixed(2)}</Typography>
             </Box>
 
             <TableContainer sx={{ mb: 3 }}>
@@ -395,7 +554,7 @@ const DetailedStatementDialog = ({ onClose }) => {
                 </TableHead>
                 <TableBody>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$200.00</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>${outstandingBalance.toFixed(2)}</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', fontSize: '13px' }}>$0.00</TableCell>
@@ -408,7 +567,14 @@ const DetailedStatementDialog = ({ onClose }) => {
             <Box sx={{ border: '1px solid #5c7bb5', borderRadius: '4px', p: 1.5, mb: 3, display: 'flex' }}>
               <Typography sx={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>Statement Summary:</Typography>
               <Box sx={{ width: '250px' }}>
-                {[{ label: 'Total Charges', value: '$200.00' }, { label: 'Total Patient Payments', value: '$0.00' }, { label: 'Total Insurance Payments', value: '$0.00' }, { label: 'Total Insurance Write-Offs', value: '$0.00' }, { label: 'Total Office Adjustments', value: '$0.00' }, { label: 'Total Refunds', value: '$0.00' }].map((item, idx) => (
+                {[
+                  { label: 'Total Charges', value: `$${totalCharges.toFixed(2)}` }, 
+                  { label: 'Total Patient Payments', value: `$${totalPatientPayments.toFixed(2)}` }, 
+                  { label: 'Total Insurance Payments', value: `$${totalInsPayments.toFixed(2)}` }, 
+                  { label: 'Total Insurance Write-Offs', value: '$0.00' }, 
+                  { label: 'Total Office Adjustments', value: `$${totalAdjustments.toFixed(2)}` }, 
+                  { label: 'Total Refunds', value: '$0.00' }
+                ].map((item, idx) => (
                   <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                     <Typography sx={{ fontSize: '12px', color: '#333' }}>{item.label}</Typography>
                     <Typography sx={{ fontSize: '12px', color: '#333', fontWeight: 500 }}>{item.value}</Typography>

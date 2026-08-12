@@ -36,6 +36,11 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   useEffect(() => {
     loadData();
+    const handleRefresh = () => loadData();
+    window.addEventListener('refresh-claims', handleRefresh);
+    return () => {
+      window.removeEventListener('refresh-claims', handleRefresh);
+    };
   }, []);
 
   async function loadData() {
@@ -302,6 +307,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
                 handleOpenAttach={onOpenAttach}
                 handleOpenPreview={onOpenPreview}
                 handleToggleHide={toggleHide}
+                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
               />
             );
           }
@@ -331,6 +337,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
                 handleOpenAttach={onOpenAttach}
                 handleOpenPreview={onOpenPreview}
                 handleToggleHide={toggleHide}
+                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
               />
             </Box>
           ));
@@ -356,6 +363,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           handleOpenAttach={onOpenAttach}
           handleOpenPreview={onOpenPreview}
           handleToggleHide={toggleHide}
+          handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
         />
       )}
     </Box>
