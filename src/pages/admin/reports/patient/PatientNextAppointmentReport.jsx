@@ -28,6 +28,7 @@ const PatientNextAppointmentReport = () => {
   const [provider, setProvider] = useState('all');
   const [appointmentStatus, setAppointmentStatus] = useState('all');
   const [flagsFilter, setFlagsFilter] = useState('all');
+  const [showFlags, setShowFlags] = useState(false);
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
@@ -77,6 +78,7 @@ const PatientNextAppointmentReport = () => {
   const columns = [
     { label: 'ID' },
     { label: 'Patient' },
+    ...(showFlags ? [{ label: 'Flags' }] : []),
     { label: 'Patient Status' },
     { label: 'Appt Date' },
     { label: 'Appt Type' },
@@ -94,6 +96,11 @@ const PatientNextAppointmentReport = () => {
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
+      {showFlags && (
+        <TableCell sx={{ fontSize: '0.7rem', color: '#e53e3e', fontWeight: 500 }}>
+          {Array.isArray(row.flags) ? row.flags.join(', ') : ''}
+        </TableCell>
+      )}
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.apptDate}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.type}</TableCell>
@@ -187,8 +194,17 @@ const PatientNextAppointmentReport = () => {
 
   const bottomFilters = (
     <>
-      <ReportCheckbox label="Show Flags in Report" />
-      <ReportSelect label="Pts With Or Without Flags" value={flagsFilter} onChange={(e) => setFlagsFilter(e.target.value)} options={[{ value: 'all', label: 'Pts With Or Without Flags' }]} />
+      <ReportCheckbox label="Show Flags in Report" checked={showFlags} onChange={(e) => setShowFlags(e.target.checked)} />
+      <ReportSelect 
+        label="Pts With Or Without Flags" 
+        value={flagsFilter} 
+        onChange={(e) => setFlagsFilter(e.target.value)} 
+        options={[
+          { value: 'all', label: 'Pts With Or Without Flags' },
+          { value: 'withFlags', label: 'Pts With Flags' },
+          { value: 'withoutFlags', label: 'Pts Without Flags' }
+        ]} 
+      />
     </>
   );
 

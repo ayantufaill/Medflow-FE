@@ -101,88 +101,53 @@ const PatientInsuranceCoverage = () => {
   }, [rawReportData]);
 
   useEffect(() => {
-    dispatch(fetchPatientInsuranceCoverageReport());
-  }, [dispatch]);
+    dispatch(fetchPatientInsuranceCoverageReport({
+      searchQuery,
+      assignmentFilter,
+      apptFilterType,
+      apptStartDate,
+      apptEndDate,
+      apptSingleDate,
+      showNoCoverage
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (reduxData) {
       setRawReportData(reduxData);
-      setData(reduxData);
     }
   }, [reduxData]);
 
   const handleApplyFilters = () => {
-    const filtered = rawReportData.filter((item) => {
-      // 1. Search Query
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearchInput = !searchQuery || (
-        (item.patient && item.patient.toLowerCase().includes(searchLower)) ||
-        (item.planName && item.planName.toLowerCase().includes(searchLower)) ||
-        (item.payer && item.payer.toLowerCase().includes(searchLower)) ||
-        (item.number && String(item.number).toLowerCase().includes(searchLower))
-      );
-
-      const matchesSelectedItems = selectedSearchItems.length === 0 || selectedSearchItems.some(selected => {
-        const sLower = selected.toLowerCase();
-        return (
-          (item.planName && item.planName.toLowerCase().includes(sLower)) ||
-          (item.payer && item.payer.toLowerCase().includes(sLower))
-        );
-      });
-
-      const matchesSearch = matchesSearchInput && matchesSelectedItems;
-
-      // 2. Assignment Status
-      const matchesAssignment = 
-        assignmentFilter === 'no' || 
-        (assignmentFilter === 'assignment' && item.assignmentStatus === 'Assignment') ||
-        (assignmentFilter === 'non-assignment' && item.assignmentStatus !== 'Assignment');
-
-      // 3. Appt Date
-      let matchesApptDate = true;
-      if (apptFilterType !== 'no') {
-        if (!item.lastAppointment) {
-          matchesApptDate = false;
-        } else {
-          const apptDate = new Date(item.lastAppointment);
-          if (apptFilterType === 'range') {
-            const start = apptStartDate ? new Date(apptStartDate) : null;
-            const end = apptEndDate ? new Date(apptEndDate) : null;
-            if (start && apptDate < start) matchesApptDate = false;
-            if (end && apptDate > end) matchesApptDate = false;
-          } else if (apptFilterType === 'before') {
-            const single = apptSingleDate ? new Date(apptSingleDate) : null;
-            if (single && apptDate >= single) matchesApptDate = false;
-          } else if (apptFilterType === 'after') {
-            const single = apptSingleDate ? new Date(apptSingleDate) : null;
-            if (single && apptDate <= single) matchesApptDate = false;
-          }
-        }
-      }
-
-      // 4. Show patients with no coverage
-      const hasCoverage = Boolean((item.payer && item.payer !== 'N/A') || (item.planName && item.planName !== 'N/A'));
-      const matchesCoverage = showNoCoverage ? !hasCoverage : hasCoverage;
-
-      return matchesSearch && matchesAssignment && matchesApptDate && matchesCoverage;
-    });
-
-    setData(filtered);
+    dispatch(fetchPatientInsuranceCoverageReport({
+      searchQuery,
+      assignmentFilter,
+      apptFilterType,
+      apptStartDate,
+      apptEndDate,
+      apptSingleDate,
+      showNoCoverage
+    }));
   };
 
   useEffect(() => {
-    handleApplyFilters();
-  }, [
-    searchQuery,
-    selectedSearchItems,
-    rawReportData,
-    assignmentFilter,
-    apptFilterType,
-    apptStartDate,
-    apptEndDate,
-    apptSingleDate,
-    showNoCoverage
-  ]);
+    let filtered = rawReportData || [];
+    
+    if (selectedSearchItems.length > 0) {
+      filtered = filtered.filter((item) => {
+        return selectedSearchItems.some(selected => {
+          const sLower = selected.toLowerCase();
+          return (
+            (item.planName && item.planName.toLowerCase().includes(sLower)) ||
+            (item.payer && item.payer.toLowerCase().includes(sLower))
+          );
+        });
+      });
+    }
+
+    setData(filtered);
+  }, [rawReportData, selectedSearchItems]);
 
   const groupedData = useMemo(() => {
     if (grouping === 'no') return null;

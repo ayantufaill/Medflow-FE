@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Box, Typography, Button, Select, MenuItem, TableCell, TableRow, CircularProgress
+  Box, Typography, Button, Select, MenuItem, TableCell, TableRow, CircularProgress, TextField, Autocomplete
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { fetchPatientFlagsReport, selectPatientFlagsReportData, selectPatientFlagsReportDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchCurrentPracticeInfo, selectPracticeInfo } from '../../../../store/slices/practiceInfoSlice';
 
 
 
@@ -17,11 +18,25 @@ const PatientFlagsReport = () => {
   const loading = useSelector(selectPatientFlagsReportDataLoading);
 
   const [filterBy, setFilterBy] = useState('active');
+  const [includeFlags, setIncludeFlags] = useState([]);
+  const [excludeFlags, setExcludeFlags] = useState([]);
   const [showData, setShowData] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
+  const practiceInfo = useSelector(selectPracticeInfo);
+  
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
+
+  const allFlags = practiceInfo?.patientFlags || [];
+
   const fetchReport = () => {
-    dispatch(fetchPatientFlagsReport({ filterBy }));
+    dispatch(fetchPatientFlagsReport({ 
+      filterBy, 
+      includeFlags: includeFlags.map(f => f.name).join(','), 
+      excludeFlags: excludeFlags.map(f => f.name).join(',') 
+    }));
     setShowData(true);
   };
 
@@ -65,30 +80,66 @@ const PatientFlagsReport = () => {
 
       <ReportDivider />
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', textTransform: 'uppercase' }}>Including Flags:</Typography>
-        <Button
-          variant="contained"
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'uppercase' }}>Including Flags:</Typography>
+        <Autocomplete
+          multiple
           size="small"
-          endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#3b82f6', textTransform: 'none', fontSize: '0.75rem', height: 28, borderRadius: '6px', minWidth: 80, '&:hover': { bgcolor: '#2563eb' }, boxShadow: 'none' }}
-        >
-          Flags
-        </Button>
+          options={allFlags}
+          groupBy={(option) => option.category}
+          getOptionLabel={(option) => option.name}
+          value={includeFlags}
+          onChange={(e, newValue) => setIncludeFlags(newValue)}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              placeholder="Select flags" 
+              sx={{ 
+                width: '250px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                },
+                '& fieldset': { borderColor: '#e2e8f0' }
+              }}
+            />
+          )}
+        />
       </Box>
 
       <ReportDivider />
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', textTransform: 'uppercase' }}>Excluding Flags:</Typography>
-        <Button
-          variant="contained"
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'uppercase' }}>Excluding Flags:</Typography>
+        <Autocomplete
+          multiple
           size="small"
-          endIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          sx={{ backgroundColor: '#3b82f6', textTransform: 'none', fontSize: '0.75rem', height: 28, borderRadius: '6px', minWidth: 80, '&:hover': { bgcolor: '#2563eb' }, boxShadow: 'none' }}
-        >
-          Flags
-        </Button>
+          options={allFlags}
+          groupBy={(option) => option.category}
+          getOptionLabel={(option) => option.name}
+          value={excludeFlags}
+          onChange={(e, newValue) => setExcludeFlags(newValue)}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              placeholder="Select flags" 
+              sx={{ 
+                width: '250px',
+                '& .MuiInputBase-root': { 
+                  fontFamily: 'Inter', 
+                  fontSize: '13px', 
+                  borderRadius: '4px', 
+                  backgroundColor: '#fafbfe',
+                  color: '#09121f'
+                },
+                '& fieldset': { borderColor: '#e2e8f0' }
+              }}
+            />
+          )}
+        />
       </Box>
     </>
   );
@@ -102,7 +153,7 @@ const PatientFlagsReport = () => {
           <ReportFilterBar 
             topRowFilters={topFilters}
             onApplyFilters={fetchReport}
-            onClearAll={() => { setFilterBy('active'); setShowData(false); }}
+            onClearAll={() => { setFilterBy('active'); setIncludeFlags([]); setExcludeFlags([]); setShowData(false); }}
             onCreateTemplate={() => setTemplateDialogOpen(true)}
           />
         </Box>
