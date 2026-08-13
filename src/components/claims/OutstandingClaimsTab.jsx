@@ -201,12 +201,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       width: '140px',
       value: filters.dateRange,
       options: [
-        { value: 'none', label: 'None' },
-        { value: 'dos', label: 'DOS' },
-        { value: '0-30', label: '0-30 days' },
-        { value: '31-60', label: '31-60 days' },
-        { value: '61-90', label: '61-90 days' },
-        { value: '>90', label: '>90 days' },
+        { value: 'dos', label: 'Claim Date of Service' },
       ],
       onChange: (val) => handleFilterChange('dateRange', val),
     },
@@ -229,12 +224,12 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       <ClaimFilterPanel
         filters={panelFilters}
         bottomRowFilters={bottomPanelFilters}
-        searchPlaceholder="Search by .."
+        searchPlaceholder="Search by name"
         searchValue={filters.searchPatient}
         onSearchChange={(v) => handleFilterChange('searchPatient', v)}
         extraSearchInputs={[
           {
-            placeholder: 'Search by claim # or sent dat',
+            placeholder: 'Search by claim',
             value: filters.searchClaim,
             onChange: (v) => handleFilterChange('searchClaim', v)
           }

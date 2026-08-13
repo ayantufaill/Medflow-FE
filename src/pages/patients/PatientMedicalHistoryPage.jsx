@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -128,6 +128,18 @@ const PatientMedicalHistoryPage = () => {
     patientId,
     20,
   );
+  const location = useLocation();
+  const hasPrinted = useRef(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("print") === "true" && !loading && !hasPrinted.current) {
+      hasPrinted.current = true;
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    }
+  }, [location.search, loading]);
 
   const [historyTab, setHistoryTab] = useState(0); // 0 = Summary, 1 = Full Medical History
   const [medications, setMedications] = useState([]);

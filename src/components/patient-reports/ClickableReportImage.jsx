@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box } from '@mui/material';
 
-const ClickableReportImage = ({ src = "/report_visual.png", sx = {} }) => {
+const ClickableReportImage = ({ src = "/report_visual.png", sx = {}, onQuadrantClick }) => {
   const navigate = useNavigate();
   const { patientId } = useParams();
 
@@ -26,28 +26,28 @@ const ClickableReportImage = ({ src = "/report_visual.png", sx = {} }) => {
       }}>
         {/* Top Left - Side 4 (Showcase) */}
         <Box 
-          onClick={() => navigate(`/patients/${patientId}/report/showcase`)}
+          onClick={() => onQuadrantClick ? onQuadrantClick('topLeft') : navigate(`/patients/${patientId}/report/showcase`)}
           sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
           title="Showcase"
         />
         
         {/* Top Right - Side 1 (Risk Assessment) */}
         <Box 
-          onClick={() => navigate(`/patients/${patientId}/report/risk`)}
+          onClick={() => onQuadrantClick ? onQuadrantClick('topRight') : navigate(`/patients/${patientId}/report/risk`)}
           sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
           title="Risk Assessment"
         />
         
         {/* Bottom Left - Side 3 (Concerns) */}
         <Box 
-          onClick={() => navigate(`/patients/${patientId}/report/concerns`)}
+          onClick={() => onQuadrantClick ? onQuadrantClick('bottomLeft') : navigate(`/patients/${patientId}/report/concerns`)}
           sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
           title="Concerns"
         />
         
         {/* Bottom Right - Side 2 (Home Care) */}
         <Box 
-          onClick={() => navigate(`/patients/${patientId}/report/homecare`)}
+          onClick={() => onQuadrantClick ? onQuadrantClick('bottomRight') : navigate(`/patients/${patientId}/report/homecare`)}
           sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' } }}
           title="Home Care"
         />

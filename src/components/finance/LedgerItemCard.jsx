@@ -122,9 +122,9 @@ const LedgerItemCard = ({
           {displayItem.isVoided ? null : (
             <Stack direction="row" spacing={2} sx={{ ml: 2, alignItems: 'center' }}>
               <Box component="img" src={ButtonScheduleIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleCalendarClick(displayItem, e); }} />
-              <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-              <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-              <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
+              <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); }} />
+              <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }} />
+              <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
             </Stack>
           )}
         </Box>

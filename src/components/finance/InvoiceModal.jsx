@@ -34,6 +34,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [addClaim, setAddClaim] = useState(false);
+  const [description, setDescription] = useState("");
+  const [showDescription, setShowDescription] = useState(false);
 
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);
@@ -156,7 +158,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       });
     });
 
-    if (field === "charge" && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+    if (["charge", "dbi"].includes(field) && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
       try {
         const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
         const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
@@ -440,13 +442,25 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           >
             Re-estimate
           </Button>
-          <Button
-            variant="text"
-            size="small"
-            sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
-          >
-            + Add description
-          </Button>
+          {!showDescription ? (
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => setShowDescription(true)}
+              sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
+            >
+              + Add description
+            </Button>
+          ) : (
+            <TextField 
+              placeholder="Description" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              variant="standard" 
+              autoFocus 
+              sx={{ width: 250, input: { fontSize: '13px' } }} 
+            />
+          )}
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -465,7 +479,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           <Button
             variant="contained"
             size="small"
-            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures }); }}
+            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures, description }); }}
             sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0" } }}
           >
             Add New Invoice

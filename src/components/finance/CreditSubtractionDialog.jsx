@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -6,7 +8,6 @@ import {
   Select,
   MenuItem,
   Stack,
-  Divider,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -17,30 +18,32 @@ import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
-
-// Helper for the colored financial column headers
-const HeaderLabel = ({ label, color }) => (
-  <Typography
-    variant="caption"
-    sx={{ color: color, fontWeight: "bold", fontSize: "11px" }}
-  >
-    {label}
-  </Typography>
-);
+import { createInvoiceAdjustment } from '../../store/slices/billingSlice';
 
 const CreditSubtractionDialog = ({ onClose, editTarget }) => {
+  const dispatch = useDispatch();
+  
+  const [adjustmentType, setAdjustmentType] = useState("Write Off");
+  const [reason, setReason] = useState("");
+  const [calcMode, setCalcMode] = useState("Percentage");
+  const [calcValue, setCalcValue] = useState("");
+
   const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
   const rawDate = editTarget?.invoiceDate || editTarget?.createdAt || editTarget?.dateService;
   const invoiceDate = rawDate ? dayjs(rawDate).format('MM/DD/YYYY') : 'N/A';
   const adjustmentDate = dayjs().format('MM/DD/YYYY');
+  const patientId = editTarget?.patientId || editTarget?.patient?.id || editTarget?.patient?._id;
   const patientName = editTarget?.patient?.firstName 
     ? `${editTarget.patient.firstName} ${editTarget.patient.lastName}` 
     : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
 
-  let totalCharges = 0;
-  let totalPayment = 0;
-  
-  const procedures = editTarget?.lineItems || editTarget?.procedures || [];
+  const procedures = editTarget?.lineItems || 
+                     editTarget?.procedures || 
+                     (editTarget?.details?.find(d => d.isGrouped)?.procedures) || 
+                     [];
+
+  const totalCharges = procedures.reduce((sum, p) => sum + Number(p.totalPrice || p.charge || p.ProcFee || 0), 0);
+  const totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
   
   const dynamicLineItems = procedures.map(p => {
     const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
@@ -50,65 +53,71 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     const insPaid = Number(p.insurancePaid || 0);
     const pay = ptPaid + insPaid;
     
-    totalCharges += charge;
-    totalPayment += pay;
-    
     return {
       code: p.code || p.cptCode || p.ProcCode || 'Item',
       patient: patientName,
       values: [
-        { val: "$0.00", width: 80 },
-        { val: `$${ptBalance.toFixed(2)}`, width: 80 },
-        { val: `$${insBalance.toFixed(2)}`, width: 80 },
-        { val: `$${charge.toFixed(2)}`, width: 100 },
-        { val: `$${pay.toFixed(2)}`, width: 80 },
+        { val: "$0.00" },
+        { val: `$${ptBalance.toFixed(2)}` },
+        { val: `$${insBalance.toFixed(2)}` },
+        { val: `$${charge.toFixed(2)}` },
+        { val: `$${pay.toFixed(2)}` },
       ],
-      percent: "0%",
+      charge,
     };
   });
 
-  const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems : [
+  const parsedValue = parseFloat(calcValue) || 0;
+  const adjustmentAmount = calcMode === "Percentage" 
+    ? totalCharges * (parsedValue / 100) 
+    : parsedValue;
+
+  const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems.map(item => {
+    // Pro-rate adjustment for line items if it's a percentage or just show 0 if flat
+    let percentStr = "0%";
+    if (calcMode === "Percentage") {
+      percentStr = `${parsedValue}%`;
+    }
+    return { ...item, percent: percentStr };
+  }) : [
     {
       code: "No items found",
       patient: patientName,
       values: [
-        { val: "$0.00", width: 80 },
-        { val: "$0.00", width: 80 },
-        { val: "$0.00", width: 80 },
-        { val: "$0.00", width: 100, bold: true },
-        { val: "$0.00", width: 80, bold: true, color: '#22c55e' },
+        { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" },
       ],
       percent: "0%",
     }
   ];
 
-  const headerInfo = {
-    invoiceNum: invoiceNum,
-    adjustmentDate: adjustmentDate,
-    adjustmentType: "Credit Adjustment",
-    invoiceDate: invoiceDate,
+  const handleAdjust = async () => {
+    if (!adjustmentAmount) {
+      alert("Please enter a valid adjustment value.");
+      return;
+    }
+    
+    try {
+      await dispatch(createInvoiceAdjustment({
+        patientId,
+        invoiceId: editTarget?.id,
+        adjustmentType,
+        adjustmentAmount,
+        reason
+      })).unwrap();
+      
+      if (onClose) onClose();
+    } catch (err) {
+      console.error("Adjustment failed", err);
+      alert("Failed to create adjustment: " + err);
+    }
   };
 
   return (
     <Box sx={{ width: "100%", minWidth: "950px", bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: "hidden" }}>
-      {/* Header Bar */}
-      <DialogTitle
-        sx={{
-          boxSizing: 'border-box',
-          px: '24px',
-          py: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          borderBottom: `1px solid ${COLORS.BORDER}`,
-          backgroundColor: COLORS.SURFACE_TINT,
-          m: 0,
-          flexShrink: 0,
-        }}
-      >
+      <DialogTitle sx={{ boxSizing: 'border-box', px: '24px', py: '16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: `1px solid ${COLORS.BORDER}`, backgroundColor: COLORS.SURFACE_TINT, m: 0, flexShrink: 0 }}>
         <EditNoteOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
         <Typography sx={{ fontSize: '15px', fontWeight: "bold", color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Adjust invoice {headerInfo.invoiceNum}
+          Adjust invoice {invoiceNum}
         </Typography>
         {onClose && (
           <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
@@ -118,53 +127,23 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       </DialogTitle>
 
       <DialogContent sx={{ px: '24px', py: '20px', pt: '24px !important', overflow: 'visible' }}>
-        {/* Top Input Row: Date, Type, Reason */}
         <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 3 }}>
           <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
-            {headerInfo.adjustmentDate}
+            {adjustmentDate}
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
-              {headerInfo.adjustmentType}
+              Credit Adjustment
             </Typography>
             <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>type</Typography>
             <Select
               variant="outlined"
               size="small"
-              defaultValue="Write Off"
-              sx={{ 
-                width: 150, 
-                height: 36,
-                fontSize: '13px',
-                fontFamily: 'Inter',
-                fontWeight: 500,
-                color: '#09121f',
-                backgroundColor: '#fafbfe',
-                borderRadius: '4px',
-                '& .MuiSelect-select': {
-                  py: 1,
-                  pl: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#e2e8f0'
-                }
-              }}
-              MenuProps={{ 
-                sx: { zIndex: 150000 },
-                PaperProps: {
-                  sx: {
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    border: `1px solid ${COLORS.BORDER_LIGHT}`,
-                    borderRadius: radius.sm,
-                    mt: 0.5,
-                    '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
-                  }
-                }
-              }}
+              value={adjustmentType}
+              onChange={(e) => setAdjustmentType(e.target.value)}
+              sx={{ width: 150, height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
+              MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
             >
               <MenuItem value="Write Off">Write Off</MenuItem>
               <MenuItem value="Un-Collected">Un-Collected</MenuItem>
@@ -184,79 +163,48 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               variant="outlined"
               size="small"
               fullWidth
-              sx={{ 
-                '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-              }}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              sx={{ '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
             />
             <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px', whiteSpace: "nowrap" }}>
-              for invoice: {headerInfo.invoiceNum}:
+              for invoice: {invoiceNum}:
             </Typography>
           </Box>
         </Stack>
 
-        {/* Calculation Logic Row */}
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
           <Select
             variant="outlined"
             size="small"
-            defaultValue="Percentage"
-            sx={{ 
-              height: 36,
-              fontSize: '13px',
-              fontFamily: 'Inter',
-              fontWeight: 500,
-              color: '#09121f',
-              backgroundColor: '#fafbfe',
-              borderRadius: '4px',
-              '& .MuiSelect-select': {
-                py: 1,
-                pl: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#e2e8f0'
-              }
-            }}
-            MenuProps={{ 
-              sx: { zIndex: 150000 },
-              PaperProps: {
-                sx: {
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  border: `1px solid ${COLORS.BORDER_LIGHT}`,
-                  borderRadius: radius.sm,
-                  mt: 0.5,
-                  '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
-                }
-              }
-            }}
+            value={calcMode}
+            onChange={(e) => setCalcMode(e.target.value)}
+            sx={{ height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
+            MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
           >
             <MenuItem value="Percentage">Percentage</MenuItem>
+            <MenuItem value="Flat rate">Flat rate</MenuItem>
           </Select>
-          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>%</Typography>
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
+            {calcMode === "Percentage" ? "%" : "$"}
+          </Typography>
           <TextField
             variant="outlined"
             size="small"
-            defaultValue="0"
-            sx={{
-              width: 50,
-              '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-              '& input': { textAlign: "center", py: 0 },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-            }}
+            value={calcValue}
+            onChange={(e) => setCalcValue(e.target.value)}
+            type="number"
+            sx={{ width: 60, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
           />
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
-            = $0
+            = ${adjustmentAmount.toFixed(2)}
           </Typography>
         </Stack>
 
-        {/* Financial Category Headers */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
           <Box sx={{ width: '220px', display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#333' }}>
-              Invoice {headerInfo.invoiceNum} : {headerInfo.invoiceDate} for
+              Invoice {invoiceNum} : {invoiceDate} for {patientName}
             </Typography>
           </Box>
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
@@ -265,11 +213,10 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Insurance:</Typography>
              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Charges: ${totalCharges.toFixed(2)}</Typography>
              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: '#22c55e' }}>Payment: ${totalPayment.toFixed(2)}</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: $0.00</Typography>
+             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: -${adjustmentAmount.toFixed(2)}</Typography>
           </Box>
         </Box>
 
-        {/* Detailed Line Items */}
         {finalLineItems.map((item, idx) => (
           <Box key={idx} sx={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #f5f5f5' }}>
             <Box sx={{ width: '220px', display: 'flex', alignItems: 'center', py: 1, gap: 1 }}>
@@ -302,45 +249,16 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         ))}
       </DialogContent>
 
-      {/* Footer with Description and Actions */}
       <DialogActions sx={{ p: '16px 24px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'space-between' }}>
         <Typography sx={{ color: COLORS.ACCENT, cursor: "pointer", fontWeight: fontWeight.medium, fontSize: '13px', '&:hover': { textDecoration: 'underline' } }}>
           + Add description
         </Typography>
         
         <Stack direction="row" spacing={1.5}>
-          <Button
-            variant="outlined"
-            onClick={onClose}
-            sx={{
-              borderColor: COLORS.BORDER,
-              color: COLORS.TEXT_PRIMARY,
-              textTransform: "none",
-              fontSize: "13px",
-              fontWeight: fontWeight.medium,
-              borderRadius: radius.sm,
-              height: '36px',
-              px: 3,
-              "&:hover": { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' },
-            }}
-          >
+          <Button variant="outlined" onClick={onClose} sx={{ borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY, textTransform: "none", fontSize: "13px", fontWeight: fontWeight.medium, borderRadius: radius.sm, height: '36px', px: 3, "&:hover": { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' } }}>
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            sx={{
-              bgcolor: COLORS.ACCENT,
-              color: COLORS.WHITE,
-              textTransform: "none",
-              fontSize: "13px",
-              fontWeight: fontWeight.medium,
-              borderRadius: radius.sm,
-              height: '36px',
-              px: 3,
-              boxShadow: 'none',
-              "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
-            }}
-          >
+          <Button variant="contained" onClick={handleAdjust} sx={{ bgcolor: COLORS.ACCENT, color: COLORS.WHITE, textTransform: "none", fontSize: "13px", fontWeight: fontWeight.medium, borderRadius: radius.sm, height: '36px', px: 3, boxShadow: 'none', "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>
             Adjust
           </Button>
         </Stack>
