@@ -283,9 +283,7 @@ export const ClaimsFilters = ({
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Group Date By Range:</Typography>
                 <FormControl fullWidth size="small">
                   <Select value={groupDateRange} onChange={(e) => setGroupDateRange(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
-                    {DATE_RANGES.map((r) => (
-                      <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>
-                    ))}
+                    <MenuItem value="DOS">Claim Date of Service</MenuItem>
                   </Select>
                 </FormControl>
               </Box>

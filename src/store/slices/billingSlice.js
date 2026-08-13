@@ -198,6 +198,9 @@ export const fetchLedgerItems = createAsyncThunk(
           color: '#5c6bc0',
           isAdjustment: false,
           initials: 'STAFF',
+          isVoided:
+            String(invoice.status || '').toLowerCase() === 'voided' ||
+            String(invoice.status || '').toLowerCase() === 'void',
           success:
             String(invoice.status || '').toLowerCase() !== 'draft' &&
             String(invoice.status || '').toLowerCase() !== 'voided' &&
@@ -217,18 +220,20 @@ export const fetchLedgerItems = createAsyncThunk(
 
       const mappedAdjustments = adjustments.map((adj) => {
         const amt = Number(adj.amount || 0);
+        const isVoided = String(adj.status || '').toLowerCase() === 'void' || String(adj.status || '').toLowerCase() === 'voided';
         return {
           id: adj._id || adj.id,
-          invoiceNumber: `Adj #${adj._id || adj.id}`,
+          invoiceNumber: `Adj #${adj._id || adj.id}${isVoided ? ' (VOIDED)' : ''}`,
           date: adj.date ? dayjs(adj.date).format('MM/DD/YYYY') : 'N/A',
           rawDate: adj.date || '',
           method: 'Adjustment',
-          amount: `$${Math.abs(amt).toFixed(2)}`,
-          color: '#7e57c2',
+          amount: isVoided ? '(Voided)' : `$${Math.abs(amt).toFixed(2)}`,
+          color: isVoided ? '#9e9e9e' : '#7e57c2',
           isAdjustment: true,
           useCheckmark: false,
           initials: 'STAFF',
-          success: true,
+          isVoided,
+          success: !isVoided,
           summary: {
             insWo:     '$0.00',
             ptBal:     `$${amt.toFixed(2)}`,
@@ -265,6 +270,7 @@ export const fetchLedgerItems = createAsyncThunk(
             isTopLevelPayment: true,
             useCheckmark: true,
             initials: 'STAFF',
+            isVoided,
             success: !isVoided,
             summary: {
               insWo:    '$0.00',
@@ -426,7 +432,7 @@ export const backdateTransaction = createAsyncThunk(
       if (isAdjustment) {
         await apiClient.patch(`/adjustments/${itemId}`, { date: new Date(date) });
       } else {
-        await invoiceService.updateInvoice(itemId, { dueDate: new Date(date) });
+        await invoiceService.updateInvoice(itemId, { invoiceDate: new Date(date) });
       }
       await dispatch(fetchLedgerItems(patientId));
     } catch (err) {
@@ -473,6 +479,7 @@ export const transferOutstandingToPatient = createAsyncThunk(
       await apiClient.post(`/invoices/${invoiceId}/items/${procedureId}/transfer-outstanding`);
       if (!skipFetch) {
         await dispatch(fetchLedgerItems(patientId));
+        await dispatch(fetchInvoiceDetails({ patientId, invoiceId }));
       }
       return { procedureId, invoiceId };
     } catch (err) {
@@ -498,9 +505,39 @@ export const applyCourtesyCredit = createAsyncThunk(
         await apiClient.post(`/invoices/${invoiceId}/recalculate`);
       }
       await dispatch(fetchLedgerItems(patientId));
+      if (invoiceId) {
+        await dispatch(fetchInvoiceDetails({ patientId, invoiceId }));
+      }
       return { procedureId, invoiceId, adjustmentType };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to apply courtesy credit');
+    }
+  }
+);
+
+/**
+ * Apply a generic adjustment to an invoice.
+ */
+export const createInvoiceAdjustment = createAsyncThunk(
+  'billing/createInvoiceAdjustment',
+  async ({ patientId, invoiceId, adjustmentType, adjustmentAmount, reason }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post('/adjustments', {
+        patientId,
+        amount: -Math.abs(adjustmentAmount),
+        date: new Date(),
+        notes: `${adjustmentType} applied to Invoice #${invoiceId}${reason ? ` - ${reason}` : ''}`,
+      });
+      if (invoiceId) {
+        await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+      }
+      await dispatch(fetchLedgerItems(patientId));
+      if (invoiceId) {
+        await dispatch(fetchInvoiceDetails({ patientId, invoiceId }));
+      }
+      return { invoiceId, adjustmentType };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to create invoice adjustment');
     }
   }
 );
@@ -1173,6 +1210,24 @@ const billingSlice = createSlice({
       inv.lineItems.forEach((item) => { item.checked = inv.checked; });
     },
 
+    /** Toggle all payment invoices' checked state for a patient. */
+    toggleAllPaymentInvoices: (state, action) => {
+      const { patientId, checked } = action.payload;
+      const invoices = state.paymentInvoicesCache[patientId];
+      if (!invoices) return;
+      invoices.forEach((inv) => {
+        // Only select invoices that have pt balance > 0
+        if (Number(inv.patientPortion) > 0) {
+          inv.checked = checked;
+          inv.lineItems.forEach((item) => {
+            if (Number(item.patientBalance) > 0) {
+              item.checked = checked;
+            }
+          });
+        }
+      });
+    },
+
     /** Toggle a single payment line-item's checked state. */
     togglePaymentLineItemChecked: (state, action) => {
       const { patientId, invoiceId, itemId } = action.payload;
@@ -1547,6 +1602,7 @@ export const {
   setLoading,
   setError,
   togglePaymentInvoiceChecked,
+  toggleAllPaymentInvoices,
   togglePaymentLineItemChecked,
   invalidatePaymentInvoices,
   setAdjustmentTypeForItem,

@@ -92,14 +92,14 @@ export const calculatePortionsForCategory = ({
       insPortion: 0,
       ptPortion: owed,
       balance: owed,
-      coveragePct: 0,
+      coveragePct: explicitPct,
       categoryKey: getCategoryByCdtCode(code),
     };
   }
 
   const categoryKey = getCategoryByCdtCode(code);
   const patientPct = getPatientCategoryCoverage(categoryKey, coverageTable);
-  const defaultPct = CATEGORIES_12[categoryKey]?.defaultPct ?? 80;
+  const defaultPct = 100;
 
   const pct = explicitPct !== null && explicitPct !== undefined
     ? explicitPct

@@ -19,6 +19,7 @@ import {
   selectPaymentInvoicesForPatient,
   selectPaymentInvoicesLoading,
   invalidatePaymentInvoices,
+  toggleAllPaymentInvoices,
 } from '../../store/slices/billingSlice';
 
 const MENU_PROPS = {
@@ -84,6 +85,11 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const handleProcedureToggle = (invoiceId, itemId) =>
     dispatch(togglePaymentLineItemChecked({ patientId, invoiceId, itemId }));
 
+  const handleToggleAll = (checked) => {
+    setPatientAmountChecked(checked);
+    dispatch(toggleAllPaymentInvoices({ patientId, checked }));
+  };
+
   const handleLineItemAmountChange = (invoiceId, procId, amount) => {
     // Optional: Dispatch a Redux action to update the line item amount here
   };
@@ -145,7 +151,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
 
         <AddPaymentAmountRow 
           patientAmountChecked={patientAmountChecked}
-          setPatientAmountChecked={setPatientAmountChecked}
+          setPatientAmountChecked={handleToggleAll}
           amountType={amountType}
           setAmountType={setAmountType}
           displayAmount={displayAmount}
