@@ -155,6 +155,25 @@ const RiskAssessmentPage = () => {
     'Medical Factors',
   ];
 
+  const handleQuadrantClick = (quadrant) => {
+    switch (quadrant) {
+      case 'topRight':
+        setActiveCategory(0); // Periodontal Health
+        break;
+      case 'bottomRight':
+        setActiveCategory(1); // Tooth Structure
+        break;
+      case 'bottomLeft':
+        setActiveCategory(2); // Bite & Jaw Joint
+        break;
+      case 'topLeft':
+        setActiveCategory(3); // Appearance
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <Box>
 
@@ -228,7 +247,7 @@ const RiskAssessmentPage = () => {
           <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Side - Visual */}
           <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
-            <ClickableReportImage />
+            <ClickableReportImage onQuadrantClick={handleQuadrantClick} />
           </Box>
 
           {/* Vertical Divider */}
