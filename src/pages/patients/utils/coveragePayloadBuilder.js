@@ -3,6 +3,11 @@ import { monthMap } from './coverageConstants';
 export const buildCoveragePayload = (formData, coverageBookData, coverageCategoryData) => {
   const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
 
+  const indMaxVal = formData.coverage?.individual?.annualMax;
+  const indUsedVal = formData.coverage?.individual?.usedAmount;
+  const parsedIndMax = indMaxVal != null && indMaxVal !== '' ? parseFloat(String(indMaxVal).replace(/[^0-9.-]+/g, "")) : undefined;
+  const parsedIndUsed = indUsedVal != null && indUsedVal !== '' ? parseFloat(String(indUsedVal).replace(/[^0-9.-]+/g, "")) : undefined;
+
   return {
     insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
     policyNumber: formData.subscriber.subscriberId,
@@ -14,6 +19,8 @@ export const buildCoveragePayload = (formData, coverageBookData, coverageCategor
     effectiveDate: new Date(formData.policyStarted).toISOString(),
     expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
     deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
+    individualAnnualMax: !isNaN(parsedIndMax) ? parsedIndMax : undefined,
+    usedAmount: !isNaN(parsedIndUsed) ? parsedIndUsed : undefined,
 
     // Advanced Dentistry Fields
     deductiblesGrid: formData.deductibles,

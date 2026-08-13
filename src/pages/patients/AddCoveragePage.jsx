@@ -295,6 +295,11 @@ const AddCoveragePage = () => {
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
 
+      const indMaxVal = formData.coverage?.individual?.annualMax;
+      const indUsedVal = formData.coverage?.individual?.usedAmount;
+      const parsedIndMax = indMaxVal != null && indMaxVal !== '' ? parseFloat(String(indMaxVal).replace(/[^0-9.-]+/g, "")) : undefined;
+      const parsedIndUsed = indUsedVal != null && indUsedVal !== '' ? parseFloat(String(indUsedVal).replace(/[^0-9.-]+/g, "")) : undefined;
+
       const payload = {
         insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
         payerId: formData.payerId || undefined,
@@ -307,6 +312,8 @@ const AddCoveragePage = () => {
         effectiveDate: new Date(formData.policyStarted).toISOString(),
         expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
         deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
+        individualAnnualMax: !isNaN(parsedIndMax) ? parsedIndMax : undefined,
+        usedAmount: !isNaN(parsedIndUsed) ? parsedIndUsed : undefined,
         
         // Advanced Dentistry Fields
         deductiblesGrid: formData.deductibles,
