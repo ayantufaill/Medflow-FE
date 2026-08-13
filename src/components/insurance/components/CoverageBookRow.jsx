@@ -3,6 +3,8 @@ import { TableRow, TableCell, TextField, InputAdornment, Typography, Select, Men
 import { Edit as EditIcon } from "@mui/icons-material";
 import { inputFieldSx, deliveryPatternSx, bodyCellSx } from '../styles/coverageStyles';
 
+import DeliveryPatternInput from './DeliveryPatternInput';
+
 const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelection }) => {
   return (
     <TableRow sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
@@ -24,25 +26,10 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
         />
       </TableCell>
       <TableCell sx={{ ...bodyCellSx, minWidth: '110px' }}>
-        <Select
-          size="small"
-          displayEmpty
+        <DeliveryPatternInput
           value={row.deliveryPattern || ''}
-          onChange={(e) => handleFieldChange(index, 'deliveryPattern', e.target.value)}
-          renderValue={(selected) => {
-            if (!selected) return <Typography sx={{ color: '#999', fontSize: '0.7rem' }}>__ / __ M</Typography>;
-            return selected;
-          }}
-          sx={deliveryPatternSx}
-        >
-          <MenuItem value="" disabled><em>Select</em></MenuItem>
-          <MenuItem value="1/1 M" sx={{ fontSize: '0.7rem' }}>1/1 M</MenuItem>
-          <MenuItem value="1/6 M" sx={{ fontSize: '0.7rem' }}>1/6 M</MenuItem>
-          <MenuItem value="1/12 M" sx={{ fontSize: '0.7rem' }}>1/12 M</MenuItem>
-          <MenuItem value="2/12 M" sx={{ fontSize: '0.7rem' }}>2/12 M</MenuItem>
-          <MenuItem value="1/1 Y" sx={{ fontSize: '0.7rem' }}>1/1 Y</MenuItem>
-          <MenuItem value="1/5 Y" sx={{ fontSize: '0.7rem' }}>1/5 Y</MenuItem>
-        </Select>
+          onChange={(val) => handleFieldChange(index, 'deliveryPattern', val)}
+        />
       </TableCell>
       <TableCell sx={{ ...bodyCellSx, minWidth: '90px' }}>
         <TextField 
