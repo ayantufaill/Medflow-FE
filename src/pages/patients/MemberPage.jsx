@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box, Grid, Typography, CircularProgress, IconButton, Button, TextField, MenuItem
+  Box, Grid, Typography, CircularProgress, IconButton, Button, TextField, MenuItem, Tooltip
 } from "@mui/material";
 import { 
   Book as BookIcon,
@@ -13,6 +13,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { insuranceCompanyService } from '../../services/insurance.service';
 import { feeService } from '../../services/fee.service';
+import { providerService } from '../../services/provider.service';
 import {
   Renewal,
   DeductiblesTable,
@@ -34,6 +35,20 @@ const MemberPage = () => {
   const [allCompanies, setAllCompanies] = useState({ companies: [] });
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [feeGuides, setFeeGuides] = useState([]);
+  const [systemProviders, setSystemProviders] = useState([]);
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const data = await providerService.getAllProviders(1, 100);
+        const list = data?.providers || data?.items || (Array.isArray(data) ? data : []);
+        setSystemProviders(list);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadProviders();
+  }, []);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -484,12 +499,33 @@ const MemberPage = () => {
               {formData.providersPlanFeeGuides?.map((guide, index) => (
                 <Box key={index} sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
                   <TextField
-                    placeholder="Provider Name/ID"
+                    select
                     size="small"
-                    value={guide.providerId}
+                    value={guide.providerId || ''}
                     onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
                     sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '0.65rem' } }}
-                  />
+                  >
+                    <MenuItem value="" disabled sx={{ fontSize: '0.65rem', color: '#aaa' }}>
+                      <em>Select Provider</em>
+                    </MenuItem>
+                    {systemProviders.map((p) => {
+                      const pId = String(p._id || p.id || p.ProvNum || p.providerId || '');
+                      const firstName = p.userId?.firstName || p.firstName || '';
+                      const lastName = p.userId?.lastName || p.lastName || '';
+                      const fullName = `${firstName} ${lastName}`.trim();
+                      const code = p.providerCode || p.Abbr || p.abbreviation || '';
+
+                      let displayName = fullName;
+                      if (!displayName && code) displayName = code;
+                      if (!displayName) displayName = p.name || `Provider #${pId}`;
+
+                      return (
+                        <MenuItem key={pId} value={pId} sx={{ fontSize: '0.65rem' }}>
+                          {displayName}
+                        </MenuItem>
+                      );
+                    })}
+                  </TextField>
                   <TextField
                     select
                     size="small"
@@ -516,7 +552,38 @@ const MemberPage = () => {
 
             <Grid item xs={12} md={5.5}>
               <Typography sx={sectionTitle}>
-                Coverage Type <InfoIcon sx={{ fontSize: 11, verticalAlign: 'middle', ml: 0.5, color: '#999' }} />
+                Coverage Type{' '}
+                <Tooltip
+                  title={
+                    <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                      Choosing the option “copay/fixed benefits plan” for any plan will remove the coverage table. This will also add a 'patient co-pay' column in the coverage book
+                    </Typography>
+                  }
+                  placement="top"
+                  arrow
+                  componentsProps={{
+                    tooltip: {
+                      sx: {
+                        bgcolor: '#ffffff',
+                        color: '#1e3a8a',
+                        border: '1px solid #1e3a8a',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                        borderRadius: '6px',
+                        maxWidth: 270,
+                        p: 1,
+                        '& .MuiTooltip-arrow': {
+                          color: '#ffffff',
+                          '&::before': {
+                            border: '1px solid #1e3a8a',
+                            backgroundColor: '#ffffff',
+                          },
+                        },
+                      },
+                    },
+                  }}
+                >
+                  <InfoIcon sx={{ fontSize: 11, verticalAlign: 'middle', ml: 0.5, color: '#999', cursor: 'pointer' }} />
+                </Tooltip>
               </Typography>
               <TextField
                 select

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem
+  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip
 } from "@mui/material";
 import { 
   CheckCircle as CheckCircleIcon, 
@@ -10,6 +10,9 @@ import {
   InfoOutlined as InfoIcon
 } from "@mui/icons-material";
 import FormInput from './FormInput';
+
+const ASSIGNMENT_TOOLTIP_TEXT = "Assignment of Benefits is an authorization of payment. It indicates that the benefits paid from the insurance company will go directly to the office if pay to dentist is selected. It will also populate the signature of subscriber field on the claim form. If this is marked as non assignment the signature field on the claim form will be blank and payment will go directly to the patient.";
+const RELEASE_INFO_TOOLTIP_TEXT = "With this check box selected, the subscriber authorizes the release of information to the practice.“Signature on File” populates box 36 on insurance claims. With this check box blank, box 36 will be empty.";
 
 const SubscriberInformation = ({ 
   formData, 
@@ -187,7 +190,40 @@ const SubscriberInformation = ({
           <FormInput
             select
             label="Assignment of Benefit to"
-            labelEndAdornment={<InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />}
+            labelEndAdornment={
+              <Tooltip
+                PopperProps={{ sx: { zIndex: 999999 } }}
+                title={
+                  <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                    {ASSIGNMENT_TOOLTIP_TEXT}
+                  </Typography>
+                }
+                placement="top"
+                arrow
+                componentsProps={{
+                  tooltip: {
+                    sx: {
+                      bgcolor: '#ffffff',
+                      color: '#1e3a8a',
+                      border: '1px solid #1e3a8a',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                      borderRadius: '6px',
+                      maxWidth: 290,
+                      p: 1,
+                      '& .MuiTooltip-arrow': {
+                        color: '#ffffff',
+                        '&::before': {
+                          border: '1px solid #1e3a8a',
+                          backgroundColor: '#ffffff',
+                        },
+                      },
+                    },
+                  },
+                }}
+              >
+                <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', cursor: 'pointer', '&:hover': { color: '#2563eb' } }} />
+              </Tooltip>
+            }
             value={formData.assignmentOfBenefits || 1}
             onChange={(e) => handleInputChange('assignmentOfBenefits', e.target.value)}
           >
@@ -210,8 +246,39 @@ const SubscriberInformation = ({
             label={<Typography variant="body2" sx={{ fontSize: '0.8rem' }}>Release info</Typography>}
             sx={{ m: 0 }}
           />
-          <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
-      </Box>
+          <Tooltip
+            PopperProps={{ sx: { zIndex: 999999 } }}
+            title={
+              <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                {RELEASE_INFO_TOOLTIP_TEXT}
+              </Typography>
+            }
+            placement="top"
+            arrow
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: '#ffffff',
+                  color: '#1e3a8a',
+                  border: '1px solid #1e3a8a',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                  borderRadius: '6px',
+                  maxWidth: 270,
+                  p: 1,
+                  '& .MuiTooltip-arrow': {
+                    color: '#ffffff',
+                    '&::before': {
+                      border: '1px solid #1e3a8a',
+                      backgroundColor: '#ffffff',
+                    },
+                  },
+                },
+              },
+            }}
+          >
+            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', cursor: 'pointer', '&:hover': { color: '#2563eb' } }} />
+          </Tooltip>
+        </Box>
       </Box>
       </Box>
     </Box>

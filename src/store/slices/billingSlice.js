@@ -426,7 +426,7 @@ export const backdateTransaction = createAsyncThunk(
       if (isAdjustment) {
         await apiClient.patch(`/adjustments/${itemId}`, { date: new Date(date) });
       } else {
-        await invoiceService.updateInvoice(itemId, { dueDate: new Date(date) });
+        await invoiceService.updateInvoice(itemId, { invoiceDate: new Date(date) });
       }
       await dispatch(fetchLedgerItems(patientId));
     } catch (err) {
