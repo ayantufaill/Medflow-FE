@@ -19,7 +19,6 @@ const AddPaymentInvoiceList = ({
   }
 
   const activeInvoices = invoices
-    .filter(inv => Number(inv.patientPortion) > 0)
     .map(inv => ({
       ...inv,
       lineItems: (inv.lineItems || []).filter(proc => Number(proc.patientBalance) > 0)

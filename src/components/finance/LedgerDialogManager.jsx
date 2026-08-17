@@ -18,6 +18,7 @@ import InvoiceModal from './InvoiceModal';
 import TransferCreditConfirmationDialog from './TransferCreditConfirmationDialog';
 import EditInvoiceDetailsDialog from './EditInvoiceDetailsDialog';
 import ClaimAttachmentsDialog from '../claims/attachments/ClaimAttachmentsDialog';
+import { ClaimsDialogs } from '../claims/ClaimsDialogs';
 
 const LedgerDialogManager = ({
   anchorEl, setAnchorEl, handleBackdateDone,
@@ -38,6 +39,7 @@ const LedgerDialogManager = ({
   showTransferConfirmation, setShowTransferConfirmation, handleTransferConfirm,
   showEditInvoice, setShowEditInvoice, editInvoiceTarget,
   showAttachDialog, setShowAttachDialog, attachTarget,
+  showAdaDialog, setShowAdaDialog, adaTarget,
   printItem
 }) => (
   <>
@@ -138,6 +140,14 @@ const LedgerDialogManager = ({
           }
           setShowAttachDialog(false);
         }}
+      />
+    )}
+
+    {showAdaDialog && adaTarget && (
+      <ClaimsDialogs
+        openPreviewDialog={showAdaDialog}
+        setOpenPreviewDialog={setShowAdaDialog}
+        previewingClaim={adaTarget}
       />
     )}
   </>

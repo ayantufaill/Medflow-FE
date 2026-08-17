@@ -36,6 +36,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     const newProcedures = [...procedures];
     const proc = { ...newProcedures[index] };
     
+    proc[field] = value;
+
+    // If user checks "Move to new claim", zero out their payment for this procedure
+    if (field === 'moveToNewClaim' && value === true) {
+      proc['pay'] = '0.00';
+      proc['allowed'] = '0.00';
+    }
+    
     if (['ded', 'allowed', 'wo', 'pay'].includes(field)) {
       if (!/^\d*\.?\d*$/.test(value) && value !== '') return;
     }
@@ -104,35 +112,47 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     }
     
     let claimProcs = [];
-    if (claim.procedures && claim.procedures.length > 0) {
-      claimProcs = claim.procedures.filter(p => !p.dbi).map(p => ({
-        code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || ''}`,
-        submitted: `$${Number(p.ProcFee || p.charge || 0).toFixed(2)}`,
-        bal: `$${Number(p.ProcFee || p.balance || p.charge || 0).toFixed(2)}`,
-        ded: '0.00',
-        allowed: Number(p.ProcFee || p.charge || 0).toFixed(2),
-        wo: '0.00',
-        pay: Number(p.ProcFee || p.charge || 0).toFixed(2)
-      }));
-    } else if (claim.selectedItems && claim.selectedItems.length > 0) {
-      claimProcs = claim.selectedItems.filter(item => !item.dbi).map(item => ({
-        code: `Item ID: ${item.itemId}`,
-        submitted: `$${Number(item.amount || 0).toFixed(2)}`,
-        bal: `$${Number(item.amount || 0).toFixed(2)}`,
-        ded: '0.00',
-        allowed: Number(item.amount || 0).toFixed(2),
-        wo: '0.00',
-        pay: Number(item.amount || 0).toFixed(2)
-      }));
-    } else if (claim.invoice && claim.invoice.lineItems) {
-      claimProcs = claim.invoice.lineItems.filter(l => !l.dbi).map(l => ({
+    if (claim.invoice && claim.invoice.lineItems && claim.invoice.lineItems.length > 0) {
+      claimProcs = claim.invoice.lineItems.filter(l => !l.dbi && String(l.dbi) !== 'true').map(l => ({
+        id: l.id || l._id || l.procedureId || l.procId,
         code: `${l.code || ''} - ${l.description || l.name || ''}`,
         submitted: `$${Number(l.charge || l.totalPrice || 0).toFixed(2)}`,
         bal: `$${Number(l.balance || l.charge || 0).toFixed(2)}`,
         ded: '0.00',
         allowed: Number(l.charge || l.totalPrice || 0).toFixed(2),
         wo: '0.00',
-        pay: Number(l.charge || l.totalPrice || 0).toFixed(2)
+        pay: Number(l.charge || l.totalPrice || 0).toFixed(2),
+        updateAllowedFee: false,
+        updateInsFlatPortion: false,
+        moveToNewClaim: false
+      }));
+    } else if (claim.procedures && claim.procedures.length > 0) {
+      claimProcs = claim.procedures.filter(p => !p.dbi && String(p.dbi) !== 'true').map(p => ({
+        id: p.id || p._id || p.ProcNum || p.procedureId,
+        code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
+        submitted: `$${Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2)}`,
+        bal: `$${Number(p.fee || p.ProcFee || p.balance || p.charge || 0).toFixed(2)}`,
+        ded: '0.00',
+        allowed: Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2),
+        wo: '0.00',
+        pay: Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2),
+        updateAllowedFee: false,
+        updateInsFlatPortion: false,
+        moveToNewClaim: false
+      }));
+    } else if (claim.selectedItems && claim.selectedItems.length > 0) {
+      claimProcs = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true').map(item => ({
+        id: item.id || item._id || item.itemId || item.procedureId,
+        code: `Item ID: ${item.itemId}`,
+        submitted: `$${Number(item.amount || 0).toFixed(2)}`,
+        bal: `$${Number(item.amount || 0).toFixed(2)}`,
+        ded: '0.00',
+        allowed: Number(item.amount || 0).toFixed(2),
+        wo: '0.00',
+        pay: Number(item.amount || 0).toFixed(2),
+        updateAllowedFee: false,
+        updateInsFlatPortion: false,
+        moveToNewClaim: false
       }));
     }
     setProcedures(claimProcs);
@@ -184,8 +204,15 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         finalInvoiceId = finalInvoiceId.id || finalInvoiceId._id;
       }
       if (!finalInvoiceId) {
-        finalInvoiceId = selectedClaimObj.invoice?.id || selectedClaimObj.invoice?._id || selectedClaimObj.id || selectedClaimObj.ClaimNum;
-      }                
+        const inv = selectedClaimObj.invoice;
+        finalInvoiceId = (typeof inv === 'string') ? inv : (inv?.id || inv?._id);
+      }
+      if (!finalInvoiceId && selectedClaimObj.selectedItems?.length > 0) {
+        finalInvoiceId = selectedClaimObj.selectedItems[0].invoiceId || selectedClaimObj.selectedItems[0].StatementNum;
+      }
+      if (!finalInvoiceId) {
+        finalInvoiceId = selectedClaimObj.id || selectedClaimObj.ClaimNum;
+      }
 
       const totalPay = procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
       
@@ -205,18 +232,29 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         paymentSource: 'insurance_company',
         paymentDate: new Date().toISOString(),
         insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
-        notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`
+        notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`,
+        procedures: procedures.map(p => ({
+          ...p,
+          allowed: Number(p.allowed || 0),
+          wo: Number(p.wo || 0),
+          pay: Number(p.pay || 0),
+          ded: Number(p.ded || 0),
+          claimId: selectedClaimObj.id || selectedClaimObj._id
+        }))
       };
 
       // Call API to create payment
       await paymentService.createPayment(paymentData);
 
-      // Update claim paidAmount and status to paid
-      await claimService.updateClaim(selectedClaimObj.id, {
-        status: 'paid',
-        paidAmount: parseFloat(paymentAmount) || 0,
-        paidDate: new Date().toISOString()
-      });
+      // Only mark claim as paid if there is actual payment money applied
+      if (totalPay > 0) {
+        // Update claim paidAmount and status to paid
+        await claimService.updateClaim(selectedClaimObj.id, {
+          status: 'paid',
+          paidAmount: parseFloat(paymentAmount) || 0,
+          paidDate: new Date().toISOString()
+        });
+      }
 
       if (onSave) {
         onSave(paymentData);

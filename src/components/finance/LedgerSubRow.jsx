@@ -22,7 +22,7 @@ const LedgerSubRow = ({
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
   onAttachClick, attachData, procedures,
-  claimStatus, statusResponse, isApproved, onEOBClick, eobData
+  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasProcedures = procedures && procedures.length > 0;
@@ -31,6 +31,7 @@ const LedgerSubRow = ({
   const insTotal = hasProcedures ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0) : 0;
   
   const isPaidClaim = isClaim && (claimStatus?.toLowerCase() === 'paid');
+  const isClosedClaim = isClaim && (['paid', 'cancelled'].includes(claimStatus?.toLowerCase()));
   const rowBgColor = isVoided ? '#ef4444' : isPaidClaim ? '#619c38' : '#FFFFFF';
   const textPrimaryColor = (isVoided || isPaidClaim) ? '#FFFFFF' : '#1A1A1A';
   const textSecondaryColor = (isVoided || isPaidClaim) ? '#E0E0E0' : '#6B778C';
@@ -104,8 +105,10 @@ const LedgerSubRow = ({
       </Box>
     ) : isClaim ? (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
-          {statusResponse || claimStatus || 'Claim in process'}
+        <Typography variant="caption" sx={{ fontWeight: 600, color: isPaidClaim ? '#fff' : isClosedClaim ? '#6B778C' : '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+          {claimStatus?.toLowerCase() === 'cancelled' ? 'Cancelled' : 
+           claimStatus?.toLowerCase() === 'paid' ? 'Paid' :
+           (statusResponse || claimStatus || 'Claim in process')}
         </Typography>
       </Box>
     ) : (
@@ -118,7 +121,7 @@ const LedgerSubRow = ({
       {initials || 'MAG'}
     </Typography>
     
-    <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', opacity: isPaidClaim ? 0.7 : 1 }}>
+    <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', opacity: isClosedClaim ? 0.7 : 1 }}>
       {isVoided ? null : isPayment ? (
         <>
           <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
@@ -130,17 +133,17 @@ const LedgerSubRow = ({
       ) : isClaim ? (
         <Stack direction="row" spacing={1} alignItems="center">
           {/* Attachment */}
-          {!isPaidClaim && (
+          {!isClosedClaim && (
             <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
               <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
             </Box>
           )}
           {/* Arrows pointing in */}
-          <Box sx={{ width: 22, height: 22, bgcolor: '#86efac', border: '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Box onClick={(e) => { e.stopPropagation(); onReopenClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, bgcolor: isClosedClaim ? '#ffffff' : '#86efac', border: isClosedClaim ? '1px solid #d1d5db' : '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <CompareArrowsOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
           </Box>
           {/* Shield / Send Claim */}
-          {!isPaidClaim && (
+          {!isClosedClaim && (
             <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
               <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
@@ -148,17 +151,17 @@ const LedgerSubRow = ({
             </Box>
           )}
           {/* EOB */}
-          {!isPaidClaim && (
+          {!isClosedClaim && (
             <Box onClick={() => onEOBClick?.(eobData)} sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
             </Box>
           )}
           {/* Print */}
-          <Box sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Box onClick={(e) => { e.stopPropagation(); onPrintClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <PrintOutlined sx={{ fontSize: 20, color: isPaidClaim ? '#fff' : '#38bdf8' }} />
           </Box>
           {/* Edit / Pencil */}
-          {!isPaidClaim && (
+          {!isClosedClaim && (
             <Box sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Edit sx={{ fontSize: 18, color: '#10b981' }} />
             </Box>
@@ -222,7 +225,7 @@ const LedgerSubRow = ({
             ${Number(proc.insPortion || 0).toFixed(2)}
           </Typography>
           <Typography variant="caption" sx={{ width: 140, color: textPrimaryColor, fontSize: '11px', fontWeight: 600, textAlign: 'right', mr: 2 }}>
-            ${Number(proc.total || proc.totalPrice || proc.charge || 0).toFixed(2)}
+            ${Number(proc.fee || proc.ProcFee || proc.total || proc.totalPrice || proc.charge || 0).toFixed(2)}
           </Typography>
           <Box sx={{ minWidth: 120 }} />
         </Box>

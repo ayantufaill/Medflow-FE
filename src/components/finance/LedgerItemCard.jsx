@@ -30,6 +30,8 @@ const LedgerItemCard = ({
   setPrintAnchorEl,
   setPrintItem,
   onEOBClick,
+  onPrintClaimClick,
+  onReopenClaimClick,
   handleAddProcedureClick,
   handleAttachClick
 }) => {
@@ -165,6 +167,8 @@ const LedgerItemCard = ({
                 editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
                 eobData={detail}
+                onPrintClaimClick={onPrintClaimClick}
+                onReopenClaimClick={onReopenClaimClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);

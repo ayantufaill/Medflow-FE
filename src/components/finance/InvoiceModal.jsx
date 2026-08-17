@@ -37,6 +37,12 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
 
+  useEffect(() => {
+    if (invoiceData && invoiceData.procedures && invoiceData.procedures.length > 0) {
+      setProcedures(invoiceData.procedures);
+    }
+  }, [invoiceData]);
+
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);
 

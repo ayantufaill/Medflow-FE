@@ -36,9 +36,9 @@ const InsurancePaymentTable = ({
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Allowed</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Ins WO</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '120px', textAlign: 'left', color: '#555' }}>Ins pay</Typography>
-        <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', color: '#555' }}>Difference</Typography>
-        </Box>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '130px', textAlign: 'center', color: '#555' }}>Update allowed fee</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '150px', textAlign: 'center', color: '#555' }}>Update Ins. Flat Portion</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'center', color: '#555' }}>Move to new claim ⓘ</Typography>
       </Box>
 
       {/* Procedure Rows */}
@@ -79,21 +79,26 @@ const InsurancePaymentTable = ({
               </Box>
             </Box>
           </Box>
-          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1, pl: 2 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#555' }}>
-              {(() => {
-                const allowed = Number(proc.allowed || 0);
-                const pay = Number(proc.pay || 0);
-                const ded = Number(proc.ded || 0);
-                const diff = (allowed - ded) - pay;
-                if (diff > 0.005) {
-                  return <>ins underpay: ${diff.toFixed(2)} <span style={{ fontStyle: 'italic' }}>(applied to pt balance)</span></>;
-                } else if (diff < -0.005) {
-                  return <>ins overpay: ${Math.abs(diff).toFixed(2)} <span style={{ fontStyle: 'italic' }}>(applied to pt balance)</span></>;
-                }
-                return '';
-              })()}
-            </Typography>
+          <Box sx={{ width: '130px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <input 
+              type="checkbox" 
+              checked={proc.updateAllowedFee} 
+              onChange={(e) => handleProcedureChange(i, 'updateAllowedFee', e.target.checked)} 
+            />
+          </Box>
+          <Box sx={{ width: '150px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <input 
+              type="checkbox" 
+              checked={proc.updateInsFlatPortion} 
+              onChange={(e) => handleProcedureChange(i, 'updateInsFlatPortion', e.target.checked)} 
+            />
+          </Box>
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <input 
+              type="checkbox" 
+              checked={proc.moveToNewClaim} 
+              onChange={(e) => handleProcedureChange(i, 'moveToNewClaim', e.target.checked)} 
+            />
           </Box>
         </Box>
       ))}

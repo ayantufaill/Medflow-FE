@@ -81,6 +81,26 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setEOBTarget(data);
     setShowEOBModal(true);
   };
+  const [showAdaDialog,          setShowAdaDialog]          = useState(false);
+  const [adaTarget,              setAdaTarget]              = useState(null);
+
+  const handlePrintClaimClick = (claim) => {
+    setAdaTarget(claim);
+    setShowAdaDialog(true);
+  };
+
+  const handleReopenClaimClick = async (claim) => {
+    if (!claim?.id) return;
+    try {
+      const isClosed = ['paid', 'cancelled'].includes((claim.status || '').toLowerCase());
+      const newStatus = isClosed ? 'draft' : 'cancelled';
+      await claimService.updateClaim(claim.id, { status: newStatus });
+      refreshLedger();
+    } catch (err) {
+      console.error('Failed to toggle claim status', err);
+      alert('Failed to toggle claim status.');
+    }
+  };
   
   // Local deposit edits (not server-persisted in the original code either)
   const [depositOverrides,       setDepositOverrides]       = useState({});
@@ -450,6 +470,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
             setPrintAnchorEl={setPrintAnchorEl}
             setPrintItem={setPrintItem}
             onEOBClick={handleEOBClick}
+            onPrintClaimClick={handlePrintClaimClick}
+            onReopenClaimClick={handleReopenClaimClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />
@@ -475,11 +497,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
         showTransferConfirmation={showTransferConfirmation} setShowTransferConfirmation={setShowTransferConfirmation} handleTransferConfirm={handleTransferConfirm}
         showEditInvoice={showEditInvoice} setShowEditInvoice={setShowEditInvoice} editInvoiceTarget={editInvoiceTarget}
         showAttachDialog={showAttachDialog} setShowAttachDialog={setShowAttachDialog} attachTarget={attachTarget}
+        showAdaDialog={showAdaDialog} setShowAdaDialog={setShowAdaDialog} adaTarget={adaTarget}
       />
       {showEOBModal && (
         <ManageEOBModal
           open={showEOBModal}
-          onClose={() => { setShowEOBModal(false); setEOBTarget(null); }}
+          onClose={(hasChanges) => { 
+            setShowEOBModal(false); 
+            setEOBTarget(null); 
+            if (hasChanges && patientId) {
+              dispatch(fetchLedgerItems(patientId));
+            }
+          }}
           selectedBatchPayment={eobTarget}
         />
       )}
