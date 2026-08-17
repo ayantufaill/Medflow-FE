@@ -25,6 +25,7 @@ import {
   setAdjustmentTypeForItem,
   transferOutstandingToPatient,
 } from '../../store/slices/billingSlice';
+import { fetchMedicalHistoryThunk, fetchDentalHistoryThunk } from '../../store/slices/patientSlice';
 
 import LedgerItemCard from './LedgerItemCard';
 import { invoiceService } from '../../services/invoice.service';
@@ -32,7 +33,7 @@ import LedgerDialogManager from './LedgerDialogManager';
 import { claimService } from '../../services/claim.service';
 import ManageEOBModal from '../claims/batch-actions/modals/ManageEOBModal';
 
-const LedgerList = ({ patient, expanded }) => {
+const LedgerList = ({ patient, expanded, filters }) => {
   const dispatch = useDispatch();
   const location = useLocation();
   const patientId = patient?._id || patient?.id;
@@ -86,7 +87,11 @@ const LedgerList = ({ patient, expanded }) => {
 
   // ── Fetch on mount / patientId change ────────────────────────────────────
   const refreshLedger = useCallback(() => {
-    if (patientId) dispatch(fetchLedgerItems(patientId));
+    if (patientId) {
+      dispatch(fetchLedgerItems(patientId));
+      dispatch(fetchMedicalHistoryThunk(patientId));
+      dispatch(fetchDentalHistoryThunk(patientId));
+    }
   }, [dispatch, patientId]);
 
   useEffect(() => {
@@ -168,13 +173,28 @@ const LedgerList = ({ patient, expanded }) => {
   };
 
   const handleBackdateDone = async (date) => {
+    console.log('handleBackdateDone called with:', date, 'calendarTarget:', calendarTarget);
+    if (!calendarTarget) {
+      console.warn('calendarTarget is null');
+    }
+    if (!date) {
+      console.warn('date is empty or null');
+    }
+    
     if (calendarTarget && date) {
-      dispatch(backdateTransaction({
-        patientId,
-        itemId: calendarTarget.id,
-        date,
-        isAdjustment: calendarTarget.isAdjustment,
-      }));
+      console.log('Dispatching backdateTransaction...', { patientId, itemId: calendarTarget.id, date, isAdjustment: calendarTarget.isAdjustment });
+      try {
+        await dispatch(backdateTransaction({
+          patientId,
+          itemId: calendarTarget.id,
+          date,
+          isAdjustment: calendarTarget.isAdjustment,
+        })).unwrap();
+        console.log('backdateTransaction succeeded');
+      } catch (err) {
+        console.error('backdateTransaction failed', err);
+        alert('Failed to backdate: ' + err);
+      }
     }
     setCalendarTarget(null);
     setAnchorEl(null);
@@ -302,7 +322,7 @@ const LedgerList = ({ patient, expanded }) => {
   };
 
   const handleAttachClick = (data) => {
-    setAttachTarget(data);
+    setAttachTarget({ ...data, patientId: patientId || 1 });
     setShowAttachDialog(true);
   };
 
@@ -317,6 +337,7 @@ const LedgerList = ({ patient, expanded }) => {
 
     const payload = {
       patientId: parseInt(patientId, 10) || 1,
+      notes: savePayload.description,
       items: data.map((row) => {
         let parsedDate = new Date().toISOString();
         if (row.date) { const d = new Date(row.date); if (!isNaN(d.getTime())) parsedDate = d.toISOString(); }
@@ -390,11 +411,23 @@ const LedgerList = ({ patient, expanded }) => {
   return (
     <Box sx={{ p: 1, bgcolor: '#FFFFFF' }}>
       {ledgerItems.map((item, idx) => {
+        // Apply filters
+        if (item.isVoided && !filters?.includeVoided) {
+          return null;
+        }
+
         const isExpanded = expandedItems[idx] || false;
-        // Apply any local deposit overrides (method/provider edits)
-        const displayItem = depositOverrides[item.id]
+        let displayItem = depositOverrides[item.id]
           ? { ...item, method: depositOverrides[item.id].paymentType || item.method }
           : item;
+
+        // Also filter out voided child details if they shouldn't be included
+        if (!filters?.includeVoided && displayItem.details) {
+          displayItem = {
+            ...displayItem,
+            details: displayItem.details.filter(d => !d.isVoided)
+          };
+        }
 
         return (
           <LedgerItemCard
@@ -426,7 +459,7 @@ const LedgerList = ({ patient, expanded }) => {
       <LedgerDialogManager
         anchorEl={anchorEl} setAnchorEl={setAnchorEl} handleBackdateDone={handleBackdateDone}
         printAnchorEl={printAnchorEl} setPrintAnchorEl={setPrintAnchorEl} handlePrintSelect={handlePrintSelect} printItem={printItem}
-        adjAnchorEl={adjAnchorEl} setAdjAnchorEl={setAdjAnchorEl} handleAdjustmentSelect={handleAdjustmentSelect}
+        adjAnchorEl={adjAnchorEl} setAdjAnchorEl={setAdjAnchorEl} handleAdjustmentSelect={handleAdjustmentSelect} adjItem={adjItem}
         showAdjustDialog={showAdjustDialog} setShowAdjustDialog={setShowAdjustDialog}
         showDebitDialog={showDebitDialog} setShowDebitDialog={setShowDebitDialog}
         showMembershipDialog={showMembershipDialog} setShowMembershipDialog={setShowMembershipDialog}

@@ -10,12 +10,20 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 
 const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
   const [date, setDate] = React.useState(null);
+
+  React.useEffect(() => {
+    if (open) {
+      setDate(null);
+    }
+  }, [open]);
 
   const handleToday = () => {
     setDate(dayjs());
@@ -26,9 +34,19 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
   };
 
   const handleDone = () => {
-    if (date) {
-      onDone(date.format('YYYY-MM-DD'));
-    } else {
+    try {
+      if (date && date.isValid && date.isValid()) {
+        onDone(date.format('YYYY-MM-DD'));
+      } else if (date && !date.isValid) {
+        // If it's a native Date or string
+        const formatted = dayjs(date).format('YYYY-MM-DD');
+        onDone(formatted);
+      } else {
+        onDone('');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error formatting date: ' + err.message);
       onDone('');
     }
     onClose();
@@ -51,7 +69,7 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
         sx: {
           width: 320,
           borderRadius: radius.md,
-          overflow: 'hidden',
+          overflow: 'visible',
           boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           mt: 1,
           border: `1px solid ${COLORS.BORDER_LIGHT}`
@@ -70,6 +88,8 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
             gap: '8px',
             borderBottom: `1px solid ${COLORS.BORDER}`,
             backgroundColor: COLORS.SURFACE_TINT,
+            borderTopLeftRadius: radius.md,
+            borderTopRightRadius: radius.md,
             m: 0,
             flexShrink: 0,
           }}
@@ -88,29 +108,31 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
             <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '13px', fontWeight: fontWeight.medium }}>
               Select Date:
             </Typography>
-            <DatePicker
-              value={date}
-              onChange={(newValue) => setDate(newValue)}
-              format="MM/DD/YYYY"
-              slotProps={{ 
-                popper: { sx: { zIndex: 15000 } },
-                textField: { 
-                  size: 'small', 
-                  fullWidth: true,
-                  placeholder: "MM/DD/YYYY",
-                  sx: { 
-                    '& .MuiInputBase-root': { 
-                      fontSize: '13px', 
-                      borderRadius: '4px', 
-                      height: '36px', 
-                      bgcolor: COLORS.SURFACE_TINT, 
-                      color: COLORS.TEXT_PRIMARY 
-                    }, 
-                    '& fieldset': { borderColor: COLORS.BORDER } 
-                  } 
-                }
-              }}
-            />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                value={date}
+                onChange={(newValue) => setDate(newValue)}
+                format="MM/DD/YYYY"
+                slotProps={{ 
+                  popper: { sx: { zIndex: 15000 }, disablePortal: true },
+                  textField: { 
+                    size: 'small', 
+                    fullWidth: true,
+                    placeholder: "MM/DD/YYYY",
+                    sx: { 
+                      '& .MuiInputBase-root': { 
+                        fontSize: '13px', 
+                        borderRadius: '4px', 
+                        height: '36px', 
+                        bgcolor: COLORS.SURFACE_TINT, 
+                        color: COLORS.TEXT_PRIMARY 
+                      }, 
+                      '& fieldset': { borderColor: COLORS.BORDER } 
+                    } 
+                  }
+                }}
+              />
+            </LocalizationProvider>
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

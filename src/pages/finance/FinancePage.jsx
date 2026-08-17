@@ -332,7 +332,7 @@ const FinancePage = () => {
         ) : view === "individual" ? (
           <IndividualLedgerTable patient={currentPatient} />
         ) : (
-          <LedgerList patient={currentPatient} expanded={expanded} />
+          <LedgerList patient={currentPatient} expanded={expanded} filters={filters} />
         )}
       </ErrorBoundary>
 

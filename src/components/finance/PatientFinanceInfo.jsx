@@ -75,6 +75,7 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
     try {
       const payload = {
         patientId: parseInt(patientId, 10) || 1,
+        notes: savePayload.description,
         items: data.map(row => {
           let parsedDate = new Date().toISOString();
           if (row.date) {

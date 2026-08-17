@@ -40,6 +40,42 @@ import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 
+const parseAmount = (val) => {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+  if (!cleaned) return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+};
+
+const getCoverageAmounts = (ins) => {
+  let coverageLimits = ins?.coverageLimits;
+  if (typeof coverageLimits === 'string') {
+    try {
+      coverageLimits = JSON.parse(coverageLimits);
+    } catch (e) {
+      coverageLimits = null;
+    }
+  }
+  const limitsInd = coverageLimits?.individual;
+  
+  const rawUsed = 
+    limitsInd?.usedAmount ?? 
+    ins?.usedAmount ?? 
+    ins?.copayAmount;
+    
+  const rawMax = 
+    limitsInd?.annualMax ?? 
+    ins?.individualAnnualMax ?? 
+    ins?.deductibleAmount;
+
+  const usedAmount = parseAmount(rawUsed) ?? 0;
+  const maxAmount = parseAmount(rawMax) ?? 0;
+
+  return { usedAmount, maxAmount };
+};
+
 const CoverageRow = ({ 
   ins, 
   companies, 
@@ -58,8 +94,7 @@ const CoverageRow = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
-  const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
-  const maxAmount = ins.individualAnnualMax ?? ins.deductibleAmount ?? 1500;
+  const { usedAmount, maxAmount } = getCoverageAmounts(ins);
 
   const getCompany = (insuranceCompanyId) => {
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') return insuranceCompanyId;
