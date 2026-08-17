@@ -14,6 +14,7 @@ import { radius, fontSize, fontWeight } from "../../constants/styles";
 
 const ImportPatientsPage = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [deletedProfiles, setDeletedProfiles] = useState([]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -78,8 +79,8 @@ const ImportPatientsPage = () => {
       {/* Content Area */}
       <Box>
         {tabValue === 0 && <CompletedProfilesTab />}
-        {tabValue === 1 && <IncompleteProfilesTab />}
-        {tabValue === 2 && <DeletedProfilesTab />}
+        {tabValue === 1 && <IncompleteProfilesTab onDeleteProfiles={(profiles) => setDeletedProfiles(prev => [...prev, ...(Array.isArray(profiles) ? profiles : [profiles])])} />}
+        {tabValue === 2 && <DeletedProfilesTab deletedProfiles={deletedProfiles} />}
         {tabValue === 3 && <SignedFormsTab />}
       </Box>
     </Box>

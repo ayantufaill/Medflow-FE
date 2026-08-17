@@ -25,7 +25,7 @@ const actionButtonSx = {
 };
 
 // ── ProfileCard ───────────────────────────────────────────────────────────────
-const ProfileCard = ({ type, data, isLinked, isSelected, onToggleSelect, onToggleCheckbox, isCheckboxChecked }) => {
+const ProfileCard = ({ type, data, isLinked, isSelected, onToggleSelect, onToggleCheckbox, isCheckboxChecked, onDelete }) => {
   const isMyChart = type === "mychart";
 
   return (
@@ -118,6 +118,7 @@ const ProfileCard = ({ type, data, isLinked, isSelected, onToggleSelect, onToggl
                 ))}
               </Box>
               <DeleteIcon
+                onClick={onDelete}
                 sx={{
                   fontSize: 16,
                   color: COLORS.STATUS_ERROR,
@@ -135,7 +136,7 @@ const ProfileCard = ({ type, data, isLinked, isSelected, onToggleSelect, onToggl
 };
 
 // ── IncompleteProfilesTab ─────────────────────────────────────────────────────
-const IncompleteProfilesTab = () => {
+const IncompleteProfilesTab = ({ onDeleteProfiles }) => {
   // State for all data - initialized empty, will be populated from API
   const [mychartPatients, setMychartPatients] = useState([]);
   
@@ -187,10 +188,20 @@ const IncompleteProfilesTab = () => {
     // Call API to delete patients
     deletePatientsAPI(selectedPatients);
     
+    const patientsToDelete = mychartPatients.filter((p) => selectedPatients.includes(p.id));
+    if (onDeleteProfiles) onDeleteProfiles(patientsToDelete);
+
     // Update local state
     setMychartPatients((prev) => prev.filter((p) => !selectedPatients.includes(p.id)));
     setSelectedPatients([]);
     setSelectAll(false);
+  };
+
+  const handleDeleteSinglePatient = (patient) => {
+    deletePatientsAPI([patient.id]);
+    if (onDeleteProfiles) onDeleteProfiles(patient);
+    setMychartPatients((prev) => prev.filter((p) => p.id !== patient.id));
+    setSelectedPatients((prev) => prev.filter((id) => id !== patient.id));
   };
 
   // Update selectAll state when selectedPatients changes
@@ -426,6 +437,7 @@ const IncompleteProfilesTab = () => {
                   onToggleSelect={() => handleTogglePatient(patient.id)}
                   onToggleCheckbox={handleToggleCheckbox}
                   isCheckboxChecked={isCheckboxChecked}
+                  onDelete={() => handleDeleteSinglePatient(patient)}
                 />
               </Box>
             ))}
