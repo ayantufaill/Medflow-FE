@@ -233,6 +233,12 @@ const OperatorySchedulePage = () => {
       .startOf("day")
       .add(minutesFromStart, "minute");
 
+    // Prevent scheduling in the past (past date or past time today)
+    if (start.isBefore(dayjs())) {
+      showSnackbar("Cannot schedule in the past.", "warning");
+      return;
+    }
+
     const duration = isAppt || isShortlist
       ? (itemData.durationMinutes || itemData.DurationMins || 60)
       : 30;

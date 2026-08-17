@@ -7,38 +7,50 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 import { ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../reports/ui';
 
-const LabCasesFilters = () => {
-  const [includeInactive, setIncludeInactive] = useState(false);
-  const [dateRange, setDateRange] = useState('Range');
-  const [startDate, setStartDate] = useState(dayjs());
-  const [endDate, setEndDate] = useState(dayjs());
-
+const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
   const handleDateRangeChange = (e) => {
     const val = e.target.value;
-    setDateRange(val);
+    let newStart = dayjs();
+    let newEnd = dayjs();
+
     if (val === 'Today') {
-      setStartDate(dayjs());
-      setEndDate(dayjs());
+      newStart = dayjs();
+      newEnd = dayjs();
     } else if (val === 'This Week') {
-      setStartDate(dayjs().startOf('week'));
-      setEndDate(dayjs().endOf('week'));
+      newStart = dayjs().startOf('week');
+      newEnd = dayjs().endOf('week');
     } else if (val === 'This Month') {
-      setStartDate(dayjs().startOf('month'));
-      setEndDate(dayjs().endOf('month'));
-    } else if (val === 'Range') {
-      setEndDate(dayjs());
+      newStart = dayjs().startOf('month');
+      newEnd = dayjs().endOf('month');
     }
+
+    onFiltersChange({
+      ...filters,
+      dateRange: val,
+      startDate: newStart,
+      endDate: newEnd
+    });
+  };
+
+  const handleStatusChange = (e) => {
+    onFiltersChange({ ...filters, status: e.target.value });
   };
 
   const topFilters = (
     <>
       <Typography sx={{ fontSize: '0.9rem', color: '#445164', fontWeight: 600, mr: 1 }}>Filter By:</Typography>
-      <ReportSelect defaultValue="Select Status" options={['New', 'Printed', 'Completed']} sx={{ width: 160 }} />
+      <ReportSelect 
+        value={filters.status} 
+        onChange={handleStatusChange} 
+        options={['Select Status', 'New', 'Printed', 'Completed']} 
+        sx={{ width: 160 }} 
+      />
       <Box sx={{ ml: 2 }}>
         <ReportCheckbox 
           label="Include Inactive" 
-          checked={includeInactive} 
-          onChange={(e) => setIncludeInactive(e.target.checked)} 
+          checked={filters.includeInactive} 
+          onChange={(e) => onFiltersChange({ ...filters, includeInactive: e.target.checked })}
+          disabled // Backend support not yet available
         />
       </Box>
     </>
@@ -47,13 +59,13 @@ const LabCasesFilters = () => {
   const bottomFilters = (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Date Range:</Typography>
-      <ReportSelect value={dateRange} onChange={handleDateRangeChange} options={['Range', 'Today', 'This Week', 'This Month']} sx={{ width: 120 }} />
+      <ReportSelect value={filters.dateRange} onChange={handleDateRangeChange} options={['Range', 'Today', 'This Week', 'This Month']} sx={{ width: 120 }} />
       
       <Typography sx={{ fontSize: '0.85rem', color: '#64748b', ml: 1 }}>Start Date:</Typography>
       <DatePicker 
-        value={startDate} 
-        onChange={(newValue) => setStartDate(newValue)}
-        disabled={dateRange !== 'Range'}
+        value={filters.startDate} 
+        onChange={(newValue) => onFiltersChange({ ...filters, startDate: newValue })}
+        disabled={filters.dateRange !== 'Range'}
         views={['year', 'month', 'day']}
         slotProps={{
           textField: {
@@ -66,9 +78,9 @@ const LabCasesFilters = () => {
       
       <Typography sx={{ fontSize: '0.85rem', color: '#64748b', ml: 1 }}>End Date:</Typography>
       <DatePicker 
-        value={endDate} 
-        onChange={(newValue) => setEndDate(newValue)}
-        disabled={dateRange !== 'Range'}
+        value={filters.endDate} 
+        onChange={(newValue) => onFiltersChange({ ...filters, endDate: newValue })}
+        disabled={filters.dateRange !== 'Range'}
         views={['year', 'month', 'day']}
         slotProps={{
           textField: {
@@ -87,7 +99,7 @@ const LabCasesFilters = () => {
     <ReportFilterBar 
       topRowFilters={topFilters}
       bottomRowFilters={bottomFilters}
-      onApplyFilters={() => {}}
+      onApplyFilters={onApplyFilters}
     />
   );
 };

@@ -10,7 +10,7 @@ import {
   Button
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ForwardToInboxIcon from '@mui/icons-material/ForwardToInbox';
 import { COLORS } from '../../../../constants/colors';
 import { radius, fontWeight } from '../../../../constants/styles';
 import { patientService } from '../../../../services/patient.service';
@@ -25,18 +25,21 @@ import api from "../../../../config/api";
 const TEMPLATES = [
   {
     id: 1,
-    title: 'NEW PATIENT TEXT WELCOME',
+    title: 'NEW PATIENT EMAIL WELCOME',
+    subject: 'Welcome to Our Practice!',
     text: "Hello [Patient: Preferred Name], We're excited to meet you. To ensure a smooth and efficient visit, please register your MyChart Account and..."
   },
   {
     id: 2,
-    title: 'EXISTING PATIENT REMINDER',
-    text: "Hello [Patient: Preferred Name], We're looking forward to see you at your appointment again. If you're needing to cancel/change your appointment..."
+    title: 'EXISTING PATIENT EMAIL REMINDER',
+    subject: 'Appointment Reminder',
+    text: "Hello [Patient: Preferred Name], We're looking forward to seeing you at your appointment again. If you're needing to cancel/change your appointment..."
   }
 ];
 
 const SendBulkTextModal = ({ open, onClose }) => {
   const [selectedPatients, setSelectedPatients] = useState([]);
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [patients, setPatients] = useState([]);
   
@@ -121,6 +124,7 @@ const SendBulkTextModal = ({ open, onClose }) => {
     } else {
       setSelectedPatients([]);
       setMessage('');
+      setSubject('');
     }
   }, [open, appointments, providers]);
 
@@ -160,8 +164,9 @@ const SendBulkTextModal = ({ open, onClose }) => {
     );
   };
 
-  const handleTemplateClick = (text) => {
-    setMessage(text);
+  const handleTemplateClick = (tmpl) => {
+    setMessage(tmpl.text);
+    if (tmpl.subject) setSubject(tmpl.subject);
   };
 
   return (
@@ -192,9 +197,9 @@ const SendBulkTextModal = ({ open, onClose }) => {
         backgroundColor: COLORS.SURFACE_TINT,
         m: 0
       }}>
-        <ChatBubbleOutlineIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <ForwardToInboxIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
         <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Send Bulk Text
+          Send Bulk Email
         </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: '18px' }} />
@@ -211,6 +216,8 @@ const SendBulkTextModal = ({ open, onClose }) => {
           onApplyFilters={setFilters}
         />
         <TemplatesAndMessageColumn
+          subject={subject}
+          setSubject={setSubject}
           message={message}
           setMessage={setMessage}
           templates={TEMPLATES}
@@ -240,19 +247,20 @@ const SendBulkTextModal = ({ open, onClose }) => {
           onClick={async () => {
             try {
               setIsSending(true);
-              await api.post('/communication/bulk-text', {
+              await api.post('/communication/bulk-email', {
                 patientIds: selectedPatients,
+                subject,
                 message
               });
               onClose();
             } catch (error) {
-              console.error('Failed to send bulk text:', error);
+              console.error('Failed to send bulk email:', error);
               // Handle error if needed (e.g., toast)
             } finally {
               setIsSending(false);
             }
           }}
-          disabled={!message || selectedPatients.length === 0 || isSending}
+          disabled={!subject || !message || selectedPatients.length === 0 || isSending}
           sx={{
             backgroundColor: COLORS.ACCENT,
             color: COLORS.WHITE,
@@ -264,7 +272,7 @@ const SendBulkTextModal = ({ open, onClose }) => {
             '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
           }}
         >
-          {isSending ? 'Sending...' : 'Send Text'}
+          {isSending ? 'Sending...' : 'Send Email'}
         </Button>
       </DialogActions>
     </Dialog>
