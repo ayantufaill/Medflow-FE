@@ -9,6 +9,8 @@ import CompletedProfilesTab from "../../components/patients/CompletedProfilesTab
 import IncompleteProfilesTab from "../../components/patients/IncompleteProfilesTab";
 import DeletedProfilesTab from "../../components/patients/DeletedProfilesTab";
 import SignedFormsTab from "../../components/patients/SignedFormsTab";
+import { COLORS } from "../../constants/colors";
+import { radius, fontSize, fontWeight } from "../../constants/styles";
 
 const ImportPatientsPage = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -17,48 +19,53 @@ const ImportPatientsPage = () => {
     setTabValue(newValue);
   };
 
-  const headerBlue = "#5c7cba"; // Matching the audit/import header color
-  const sectionTitleColor = "#5c7cba"; // Deep blue for "UPDATE REQUESTS"
-
   return (
-    <Box sx={{ width: "100%", bgcolor: "#fff" }}>
-      {/* Title Header */}
-      <Box 
-        sx={{ 
-          bgcolor: headerBlue, 
-          color: "#fff", 
-          py: 0.7, 
-          textAlign: "center" 
-        }}
-      >
-        <Typography sx={{ fontSize: "0.9rem", fontWeight: 500 }}>
+    <Box sx={{ width: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
+      {/* Page Title */}
+      <Box sx={{ px: '20px', pt: '18px', pb: 1 }}>
+        <Typography
+          sx={{
+            fontFamily: 'Inter',
+            fontWeight: fontWeight.bold,
+            fontSize: fontSize.xl,
+            color: COLORS.TEXT_PRIMARY,
+          }}
+        >
           Import Patients
         </Typography>
       </Box>
 
       {/* Navigation Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
+      <Box sx={{ borderBottom: `1px solid ${COLORS.BORDER}`, px: '20px' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
           aria-label="import patient tabs"
           sx={{
+            minHeight: 40,
             '& .MuiTab-root': {
               textTransform: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 400,
+              fontFamily: 'Inter',
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.medium,
               minWidth: 'auto',
-              px: 3,
-              color: '#666',
+              px: 2,
+              py: 1.2,
+              minHeight: 40,
+              color: COLORS.TEXT_SECONDARY,
+              '&:hover': {
+                color: COLORS.TEXT_PRIMARY,
+              },
             },
             '& .Mui-selected': {
-              color: '#333 !important',
-              fontWeight: 600,
+              color: `${COLORS.ACCENT} !important`,
+              fontWeight: fontWeight.semibold,
             },
             '& .MuiTabs-indicator': {
-              backgroundColor: headerBlue,
-              height: 3,
-            }
+              backgroundColor: COLORS.ACCENT,
+              height: 2.5,
+              borderRadius: radius.pill,
+            },
           }}
         >
           <Tab label="Completed Profiles" />
@@ -69,7 +76,7 @@ const ImportPatientsPage = () => {
       </Box>
 
       {/* Content Area */}
-      <Box sx={{ p: 0 }}>
+      <Box>
         {tabValue === 0 && <CompletedProfilesTab />}
         {tabValue === 1 && <IncompleteProfilesTab />}
         {tabValue === 2 && <DeletedProfilesTab />}
