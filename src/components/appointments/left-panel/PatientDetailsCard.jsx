@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePatient, useDropdownData } from '../../../hooks/redux';
+import { usePatientInsurance } from '../../../hooks/redux/usePatientInsurance';
 import { providerLabel } from '../new-appointment/helpers';
 import { Box, Typography, Tooltip } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt } from '@mui/icons-material';
@@ -105,7 +106,16 @@ export const PatientDetails = () => {
   const [alertsOpen, setAlertsOpen] = useState(true);
   const { currentPatient } = usePatient();
   const { providers = [] } = useDropdownData({ providers: true });
-  
+
+  const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
+  const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
+
+  useEffect(() => {
+    if (patientId && (!insurances || insurances.length === 0)) {
+      fetchInsurances();
+    }
+  }, [patientId, fetchInsurances, insurances]);
+
   if (!currentPatient) return null;
 
   const getProviderName = (providerData) => {
@@ -144,8 +154,51 @@ export const PatientDetails = () => {
   const flags = currentPatient.patientFlags || currentPatient.flags || [];
   const flagsList = Array.isArray(flags) ? flags : (flags ? [flags] : []);
 
+  const parseAmount = (val) => {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'number') return isNaN(val) ? null : val;
+    const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+    if (!cleaned) return null;
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  };
+
+  const getCoverageAmounts = (ins) => {
+    if (!ins) return { usedAmount: 0, maxAmount: 0 };
+    let coverageLimits = ins?.coverageLimits;
+    if (typeof coverageLimits === 'string') {
+      try {
+        coverageLimits = JSON.parse(coverageLimits);
+      } catch (e) {
+        coverageLimits = null;
+      }
+    }
+    const limitsInd = coverageLimits?.individual;
+    
+    const rawUsed = 
+      limitsInd?.usedAmount ?? 
+      ins?.usedAmount ?? 
+      ins?.copayAmount;
+
+    const rawMax = 
+      limitsInd?.annualMax ?? 
+      ins?.individualAnnualMax ?? 
+      ins?.deductibleAmount;
+
+    return {
+      usedAmount: parseAmount(rawUsed) ?? 0,
+      maxAmount: parseAmount(rawMax) ?? 0,
+    };
+  };
+
+  const activeInsurances = (insurances || []).filter(ins => ins.isActive !== false);
+  const targetIns = activeInsurances[0] || insurances?.[0];
+  const { usedAmount: insUsedAmount, maxAmount: insMaxAmount } = getCoverageAmounts(targetIns);
+
   const totalBalance = currentPatient.totalBalance || currentPatient.BalTotal || 0;
-  const usedAmount = currentPatient.usedAmount || currentPatient.PriInsUsed || 0;
+  const usedAmount = insUsedAmount || currentPatient.usedAmount || currentPatient.PriInsUsed || 0;
+  const maxAmount = insMaxAmount || 0;
+  const calculatedBalance = maxAmount > 0 ? (maxAmount - usedAmount) : totalBalance;
 
   return (
     <DetailCard icon={<Assignment sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Patient Details">
@@ -212,14 +265,14 @@ export const PatientDetails = () => {
       {/* Bills */}
       <SubSection label="Bills" open>
         <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, pl: '8px' }}>
-          Balance: ${Number(totalBalance).toFixed(2)}
+          Balance: ${Number(calculatedBalance).toFixed(2)}
         </Typography>
       </SubSection>
 
       {/* Used Amount */}
       <SubSection label="Used Amount:" open>
         <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, pl: '8px' }}>
-          ${Number(usedAmount).toFixed(2)}
+          ${Number(usedAmount).toFixed(2)}{maxAmount > 0 ? ` / $${Number(maxAmount).toFixed(2)}` : ''}
         </Typography>
       </SubSection>
 
