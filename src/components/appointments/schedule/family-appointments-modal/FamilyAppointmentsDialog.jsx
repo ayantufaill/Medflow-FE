@@ -108,8 +108,8 @@ const FamilyAppointmentsDialog = () => {
           width: '940px',
           height: '740px',
           maxWidth: 'none',
-          borderRadius: '14px',
-          border: `1px solid ${COLORS.BORDER}`,
+          borderRadius: '12px',
+          border: '1px solid #e0e5eb',
           boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           m: 2,
           display: 'flex',
@@ -120,23 +120,40 @@ const FamilyAppointmentsDialog = () => {
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <DialogTitle
         sx={{
-          boxSizing: "border-box",
-          px: "25px",
-          py: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: `1px solid ${COLORS.BORDER}`,
-          backgroundColor: COLORS.SURFACE_TINT,
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "10px", py: "10px",
+          borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+          backgroundColor: "#f3f8fd",
           m: 0,
-          flexShrink: 0,
         }}
       >
-        <PeopleAltIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Family Appointments{patient ? ` — ${patient.firstName} ${patient.lastName}` : ""}
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <PeopleAltIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Family Appointments
+          </Typography>
+          
+          <Typography sx={{
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            {patient ? `${patient.firstName} ${patient.lastName}` : "No patient selected"}
+          </Typography>
+        </Box>
+
+        <IconButton onClick={onClose} size="small" sx={{ color: "#6b7280", ml: 1 }}>
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
@@ -221,7 +238,7 @@ const FamilyAppointmentsDialog = () => {
           flex: 1,
           display: "flex",
           overflow: "hidden",
-          backgroundColor: "#f8fafc",
+          backgroundColor: "#fff",
           "@media print": { p: 0, '& .no-print': { display: 'none !important' } },
         }}
       >
@@ -260,8 +277,8 @@ const FamilyAppointmentsDialog = () => {
       <DialogActions
         sx={{
           p: "12px 24px",
-          borderTop: `1px solid ${COLORS.BORDER_LIGHT}`,
-          backgroundColor: COLORS.WHITE,
+          borderTop: '1px solid #e0e5eb',
+          backgroundColor: '#fff',
           flexShrink: 0,
         }}
       >
@@ -270,15 +287,11 @@ const FamilyAppointmentsDialog = () => {
           variant="outlined"
           size="small"
           sx={{
-            borderColor: COLORS.BORDER,
-            color: COLORS.TEXT_SECONDARY,
-            "&:hover": { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: "transparent" },
-            textTransform: "none",
-            borderRadius: "6px",
-            px: "20px",
-            height: 32,
-            fontSize: "13px",
-            fontWeight: fontWeight.medium,
+            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+            textTransform: "none", borderRadius: "8px",
+            border: "1px solid #d0d5dd", color: "#374151",
+            px: "16px", py: "7px",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
           }}
         >
           Close

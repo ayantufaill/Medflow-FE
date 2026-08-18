@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, IconButton, Tooltip, Menu, MenuItem, Typography } from '@mui/material';
 import {
-  NoteAddOutlined,
+  ForwardToInboxOutlined,
   PersonAddOutlined,
   ScienceOutlined,
   DescriptionOutlined,
@@ -45,7 +45,7 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
   };
 
   const ICONS = [
-    { icon: <NoteAddOutlined />, title: 'Bulk Text', onClick: () => setIsBulkTextModalOpen(true) },
+    { icon: <ForwardToInboxOutlined />, title: 'Bulk Email', onClick: () => setIsBulkTextModalOpen(true) },
     { icon: <PersonAddOutlined />, title: 'Huddle', onClick: () => navigate('/day-tasks') },
     { icon: <ScienceOutlined />, title: 'Lab Cases', onClick: () => setIsLabCasesModalOpen(true) },
     { icon: <DescriptionOutlined />, title: 'Progress notes', onClick: () => setIsProgressNotesModalOpen(true) },

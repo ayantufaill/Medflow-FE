@@ -67,7 +67,7 @@ const DateNavigation = ({ date, onPrev, onNext, onDateSelect }) => {
           vertical: 'top',
           horizontal: 'center',
         }}
-        sx={{ mt: 1 }}
+        sx={{ mt: 1, zIndex: 1600 }}
       >
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DateCalendar 

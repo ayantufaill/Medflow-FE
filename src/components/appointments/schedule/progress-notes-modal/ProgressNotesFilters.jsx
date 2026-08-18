@@ -1,11 +1,9 @@
 import React from 'react';
-import { Typography } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 
 import { ReportFilterBar, ReportSelect } from '../../../reports/ui';
+import DateNavigation from '../DateNavigation';
 
 const ProgressNotesFilters = ({
   dateRange,
@@ -37,7 +35,7 @@ const ProgressNotesFilters = ({
       setEndDate(dayjs());
     }
   };
-  
+
   const providerOptions = ['All', ...providers.map(p => {
     let name = p.name;
     if (!name) name = `${p.firstName || ""} ${p.lastName || ""}`.trim();
@@ -61,62 +59,56 @@ const ProgressNotesFilters = ({
   const topFilters = (
     <>
       <Typography sx={{ fontSize: '0.9rem', color: '#445164', fontWeight: 600, mr: 1 }}>Filter By:</Typography>
-      <ReportSelect 
-        value={kind} 
-        onChange={(e) => setKind(e.target.value)} 
-        options={['All', 'Treatment', 'Recare', 'Exam', 'Emergency']} 
-        sx={{ width: 140 }} 
+      <ReportSelect
+        value={kind}
+        onChange={(e) => setKind(e.target.value)}
+        options={['All', 'Treatment', 'Recare', 'Exam', 'Emergency']}
+        sx={{ width: 140 }}
       />
-      
+
       <Typography sx={{ fontSize: '0.9rem', color: '#445164', fontWeight: 600, ml: 2, mr: 1 }}>Provider:</Typography>
-      <ReportSelect 
-        value={currentProviderOption} 
-        onChange={handleProviderChange} 
-        options={providerOptions} 
-        sx={{ width: 160 }} 
+      <ReportSelect
+        value={currentProviderOption}
+        onChange={handleProviderChange}
+        options={providerOptions}
+        sx={{ width: 160 }}
       />
     </>
   );
 
   const bottomFilters = (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <>
       <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Date Range:</Typography>
       <ReportSelect value={dateRange} onChange={handleDateRangeChange} options={['Range', 'Today', 'This Week', 'This Month']} sx={{ width: 120 }} />
-      
-      <Typography sx={{ fontSize: '0.85rem', color: '#64748b', ml: 1 }}>Start Date:</Typography>
-      <DatePicker 
-        value={startDate} 
-        onChange={(newValue) => setStartDate(newValue)}
-        disabled={dateRange !== 'Range'}
-        views={['year', 'month', 'day']}
-        slotProps={{
-          textField: {
-            size: 'small',
-            sx: { width: "165px", '& .MuiInputBase-root': { height: "40px", fontSize: "13px", fontFamily: "Inter", borderRadius: "8px", bgcolor: '#fff' } }
-          },
-          popper: { sx: { zIndex: 1600 } }
-        }}
-      />
-      
-      <Typography sx={{ fontSize: '0.85rem', color: '#64748b', ml: 1 }}>End Date:</Typography>
-      <DatePicker 
-        value={endDate} 
-        onChange={(newValue) => setEndDate(newValue)}
-        disabled={dateRange !== 'Range'}
-        views={['year', 'month', 'day']}
-        slotProps={{
-          textField: {
-            size: 'small',
-            sx: { width: "165px", '& .MuiInputBase-root': { height: "40px", fontSize: "13px", fontFamily: "Inter", borderRadius: "8px", bgcolor: '#fff' } }
-          },
-          popper: { sx: { zIndex: 1600 } }
-        }}
-      />
-    </LocalizationProvider>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+        <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>Start Date:</Typography>
+        <Box sx={{ ml: 1 }}>
+          <DateNavigation 
+            date={startDate} 
+            onPrev={() => { setStartDate(startDate.subtract(1, 'day')); setDateRange('Range'); }}
+            onNext={() => { setStartDate(startDate.add(1, 'day')); setDateRange('Range'); }}
+            onDateSelect={(newValue) => { setStartDate(newValue); setDateRange('Range'); }}
+          />
+        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+        <Typography sx={{ fontSize: '0.85rem', color: '#64748b' }}>End Date:</Typography>
+        <Box sx={{ ml: 1 }}>
+          <DateNavigation 
+            date={endDate} 
+            onPrev={() => { setEndDate(endDate.subtract(1, 'day')); setDateRange('Range'); }}
+            onNext={() => { setEndDate(endDate.add(1, 'day')); setDateRange('Range'); }}
+            onDateSelect={(newValue) => { setEndDate(newValue); setDateRange('Range'); }}
+          />
+        </Box>
+      </Box>
+    </>
   );
 
   return (
-    <ReportFilterBar 
+    <ReportFilterBar
       topRowFilters={topFilters}
       bottomRowFilters={bottomFilters}
       onApplyFilters={onApply}

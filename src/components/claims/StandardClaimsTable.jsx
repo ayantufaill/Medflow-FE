@@ -19,6 +19,8 @@ import {
   Button,
   FormControl,
   Select,
+  TextField,
+  CircularProgress,
 } from "@mui/material";
 import {
   Info as InfoIcon,
@@ -37,7 +39,10 @@ import {
   CheckCircle as CheckCircleIcon,
   Autorenew as AutorenewIcon,
   Sync as SyncIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
+import { claimService } from "../../services/claim.service";
 import notesIcon from "../../assets/claimicons/notesicon.svg";
 import deleteIcon from "../../assets/claimicons/deleteicon.svg";
 
@@ -67,6 +72,34 @@ export const StandardClaimsTable = ({
   handleToggleHide = () => {},
   dateRange = 'none',
 }) => {
+  const [editingDescId, setEditingDescId] = React.useState(null);
+  const [editingDescValue, setEditingDescValue] = React.useState("");
+  const [isSavingDesc, setIsSavingDesc] = React.useState(false);
+
+  const handleDescDoubleClick = (id, currentDesc) => {
+    setEditingDescId(id);
+    setEditingDescValue(currentDesc || "");
+  };
+
+  const handleDescSave = async (id) => {
+    setIsSavingDesc(true);
+    try {
+      await claimService.updateClaim(id, { notes: editingDescValue });
+      window.dispatchEvent(new CustomEvent('refresh-claims'));
+      setEditingDescId(null);
+    } catch (err) {
+      console.error("Failed to update description", err);
+      alert("Failed to update description. Please try again.");
+    } finally {
+      setIsSavingDesc(false);
+    }
+  };
+
+  const handleDescCancel = () => {
+    setEditingDescId(null);
+    setEditingDescValue("");
+  };
+
   let renderList = [];
   if (dateRange === 'dos') {
     const buckets = { "0-30 days": [], "31-60 days": [], "61-90 days": [], ">90 days": [], "Unknown": [] };
@@ -845,11 +878,49 @@ export const StandardClaimsTable = ({
                     {/* Description */}
                     <TableCell
                       sx={{
-                        maxWidth: isExpanded ? "400px" : "110px",
+                        maxWidth: isExpanded || editingDescId === claim.id ? "400px" : "110px",
                         verticalAlign: "top",
                       }}
+                      onDoubleClick={() => {
+                        if (activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) return;
+                        if (editingDescId !== claim.id) {
+                          handleDescDoubleClick(claim.id, claim.description);
+                        }
+                      }}
                     >
-                      {isExpanded ? (
+                      {editingDescId === claim.id ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <TextField
+                            size="small"
+                            value={editingDescValue}
+                            onChange={(e) => setEditingDescValue(e.target.value)}
+                            fullWidth
+                            autoFocus
+                            multiline
+                            maxRows={4}
+                            disabled={isSavingDesc}
+                            sx={{
+                              '& .MuiInputBase-root': {
+                                fontFamily: "Inter, sans-serif",
+                                fontSize: "0.75rem",
+                                p: 1,
+                              }
+                            }}
+                          />
+                          {isSavingDesc ? (
+                            <CircularProgress size={20} sx={{ ml: 1 }} />
+                          ) : (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              <IconButton size="small" onClick={() => handleDescSave(claim.id)} sx={{ p: 0.2 }}>
+                                <SaveIcon fontSize="small" color="success" />
+                              </IconButton>
+                              <IconButton size="small" onClick={handleDescCancel} sx={{ p: 0.2 }}>
+                                <CancelIcon fontSize="small" color="error" />
+                              </IconButton>
+                            </Box>
+                          )}
+                        </Box>
+                      ) : isExpanded ? (
                         (() => {
                           let shortDesc = claim.description || "";
                           let longDesc = "";
@@ -963,15 +1034,7 @@ export const StandardClaimsTable = ({
                                 <AttachFileIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Preview Predetermination">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenPreview(claim)}
-                                sx={{ color: "#7d9cc4", p: 0.2 }}
-                              >
-                                <VisibilityIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
-                            </Tooltip>
+
                             <Tooltip title="Delete Predetermination">
                               <IconButton
                                 size="small"
@@ -986,15 +1049,17 @@ export const StandardClaimsTable = ({
                           </>
                         ) : (
                           <>
-                            <Tooltip title="Edit Claim">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenEdit(claim)}
-                                sx={{ color: "#7d9cc4", p: 0.2 }}
-                              >
-                                <EditIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
-                            </Tooltip>
+                            {!(activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) && (
+                              <Tooltip title="Edit Claim">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenEdit(claim)}
+                                  sx={{ color: "#7d9cc4", p: 0.2 }}
+                                >
+                                  <EditIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Manage Attachments">
                               <IconButton
                                 size="small"
@@ -1008,16 +1073,17 @@ export const StandardClaimsTable = ({
                                 <AttachFileIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Preview Claim">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenPreview(claim)}
-                                sx={{ color: "#7d9cc4", p: 0.2 }}
-                              >
-                                <VisibilityIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
-                            </Tooltip>
-
+                            {activeTab !== 4 && (
+                              <Tooltip title="Preview Claim">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleOpenPreview(claim)}
+                                  sx={{ color: "#7d9cc4", p: 0.2 }}
+                                >
+                                  <VisibilityIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                           </>
                         )}
                       </Box>

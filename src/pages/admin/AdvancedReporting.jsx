@@ -32,6 +32,7 @@ import {
   Refresh as RefreshIcon,
   FilterList as FilterIcon,
   Close as CloseIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { reportingService } from '../../services/reporting.service';
 import { audienceService } from '../../services/audience.service';
@@ -91,6 +92,10 @@ const AdvancedReporting = () => {
   const [reportKind, setReportKind] = useState('Kind');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [selectedMetadata, setSelectedMetadata] = useState('Metadata');
+  const [selectedOperation, setSelectedOperation] = useState('Operations');
+  const [filterValue, setFilterValue] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState([]);
 
   const [selectedColumns, setSelectedColumns] = useState(['Last Name', 'First Name', 'nextTreatmentAppt', 'nextRecareAppt', 'IsSubscriber(NonPatient)', 'Inactive', 'lastAppt']);
   const [showResults, setShowResults] = useState(false);
@@ -167,8 +172,33 @@ const AdvancedReporting = () => {
     if (item.columns && item.columns.length > 0) {
       setSelectedColumns(item.columns);
     }
+    setAppliedFilters(item.filters || []);
     setView('detail');
     setShowResults(false);
+  };
+
+  const handleAddFilter = () => {
+    if (selectedMetadata === 'Metadata' || selectedOperation === 'Operations') return;
+    
+    const noValueOps = ['Empty', 'Not Empty'];
+    if (!noValueOps.includes(selectedOperation) && !filterValue.trim()) return;
+
+    setAppliedFilters(prev => [
+      ...prev, 
+      {
+        field: selectedMetadata,
+        operator: selectedOperation,
+        value: filterValue
+      }
+    ]);
+
+    setSelectedMetadata('Metadata');
+    setSelectedOperation('Operations');
+    setFilterValue('');
+  };
+
+  const handleRemoveFilter = (index) => {
+    setAppliedFilters(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteItem = async (e, category, id) => {
@@ -623,50 +653,105 @@ const AdvancedReporting = () => {
                 </Box>
 
                 {/* Filters */}
+                {/* Filters */}
                 <Box sx={{ mb: 4 }}>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#475569', mb: 1.5 }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#2b5082', mb: 1.5 }}>
                     Filter Report by:
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 150 }}>
-                      <Select MenuProps={{ sx: { zIndex: 100000 } }} defaultValue="Metadata" variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '6px', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
-                        {METADATA_FIELDS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
+                      <Select value={selectedMetadata} onChange={(e) => setSelectedMetadata(e.target.value)} MenuProps={{ sx: { zIndex: 100000 } }} variant="standard" disableUnderline sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderBottom: '1px solid #cbd5e1', borderRadius: 0, '&:hover': { borderBottom: '1px solid #94a3b8' } }}>
+                        <MenuItem value="Metadata">Metadata</MenuItem>
+                        {METADATA_FIELDS.filter(f => f !== 'Metadata').map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                       </Select>
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 120 }}>
-                      <Select MenuProps={{ sx: { zIndex: 100000 } }} defaultValue="Operations" variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '6px', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
+                      <Select value={selectedOperation} onChange={(e) => setSelectedOperation(e.target.value)} MenuProps={{ sx: { zIndex: 100000 } }} variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '4px', backgroundColor: '#fff', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
                         <MenuItem value="Operations">Operations</MenuItem>
                         <MenuItem value="Equal">Equal</MenuItem>
+                        <MenuItem value="Empty">Empty</MenuItem>
+                        <MenuItem value="Not Empty">Not Empty</MenuItem>
+                        <MenuItem value="In set">In set</MenuItem>
+                        <MenuItem value="Greater than">Greater than</MenuItem>
+                        <MenuItem value="Less than">Less than</MenuItem>
+                        <MenuItem value="Greater than or equal">Greater than or equal</MenuItem>
+                        <MenuItem value="Less than or equal">Less than or equal</MenuItem>
                         <MenuItem value="Not Equal">Not Equal</MenuItem>
+                        <MenuItem value="In Range">In Range</MenuItem>
                       </Select>
                     </FormControl>
+                    
+                    {/* Dynamic Date/Value Input */}
+                    {selectedOperation !== 'Operations' && selectedOperation !== 'Empty' && selectedOperation !== 'Not Empty' && (
+                      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <TextField
+                          size="small"
+                          placeholder="Select date or value"
+                          variant="standard"
+                          type={
+                            (selectedMetadata.toLowerCase().includes('date') || selectedMetadata.toLowerCase().includes('appt')) && selectedOperation !== 'In Range' 
+                              ? 'date' 
+                              : 'text'
+                          }
+                          InputProps={{ 
+                            disableUnderline: true,
+                            startAdornment: (
+                              <CalendarIcon sx={{ color: '#94a3b8', fontSize: 16, mr: 1, ...(selectedMetadata.toLowerCase().includes('date') || selectedMetadata.toLowerCase().includes('appt') ? {} : { display: 'none' }) }} />
+                            )
+                          }}
+                          value={filterValue}
+                          onChange={(e) => setFilterValue(e.target.value)}
+                          sx={{ 
+                            width: 200,
+                            borderBottom: '1px solid #cbd5e1',
+                            '& .MuiInputBase-input': { 
+                              height: 32,
+                              padding: '0 8px 0 0',
+                              fontSize: '0.85rem', 
+                              backgroundColor: 'transparent',
+                            }
+                          }}
+                        />
+                        {filterValue && (
+                          <Typography 
+                            onClick={() => setFilterValue('')}
+                            sx={{ position: 'absolute', right: 4, color: '#ef4444', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', '&:hover': { color: '#dc2626' } }}
+                          >
+                            x
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    
                     <Button
-                      variant="outlined"
-                      startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-                      sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#64748b', px: 2, fontSize: '0.8rem', height: 32, borderRadius: '6px', fontWeight: 600, '&:hover': { borderColor: '#cbd5e1', bgcolor: '#f8fafc' } }}
+                      variant="contained"
+                      onClick={handleAddFilter}
+                      sx={{ textTransform: 'none', bgcolor: '#2362EF', color: '#fff', px: 2, fontSize: '0.85rem', height: 32, borderRadius: '4px', fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' } }}
                     >
-                      Add
+                      + Add
                     </Button>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>inactive</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
-                    </Box>
-                    <Box sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', p: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>isSubscriber</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8' }}>Equal</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>false</Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#ef4444', cursor: 'pointer', ml: 1, fontWeight: 700 }}>x</Typography>
-                    </Box>
+
+                  {/* Active Filters List */}
+                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                    {appliedFilters.map((filter, index) => (
+                      <Box key={index} sx={{ border: '1px solid #e2e8f0', bgcolor: '#ffffff', p: 0, borderRadius: '2px', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#000000', fontWeight: 500, px: 1.5, py: 0.5, borderRight: '1px solid #e2e8f0' }}>{filter.field}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#64748b', px: 1.5, py: 0.5, borderRight: filter.value ? '1px solid #e2e8f0' : 'none' }}>{filter.operator}</Typography>
+                        {filter.value && (
+                          <Typography sx={{ fontSize: '0.8rem', color: '#000000', fontWeight: 500, px: 1.5, py: 0.5 }}>{filter.value}</Typography>
+                        )}
+                        <Typography onClick={() => handleRemoveFilter(index)} sx={{ color: '#ef4444', fontSize: '0.75rem', px: 1, fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#dc2626' } }}>
+                          x
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
                 </Box>
 
                 {/* Actions & Count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#dcb265' }}>
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#000000' }}>
                     Filtered Items: {totalResults}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>

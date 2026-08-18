@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 export const SectionHeader = ({ title }) => (
   <Box
     sx={{
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f3f8fd',
       border: '1px solid #e2e8f0',
       padding: '8px 12px',
       textAlign: 'center',
