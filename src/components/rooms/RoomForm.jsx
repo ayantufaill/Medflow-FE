@@ -8,8 +8,13 @@ import {
   CircularProgress,
   FormControlLabel,
   Switch,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useBranch } from '../../hooks/redux';
 
 const RoomForm = ({
   onSubmit,
@@ -19,6 +24,12 @@ const RoomForm = ({
   hideButtons = false,
   formId,
 }) => {
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -29,6 +40,7 @@ const RoomForm = ({
     defaultValues: initialData || {
       name: '',
       isActive: true,
+      branchId: '',
     },
     mode: 'onChange',
   });
@@ -38,6 +50,7 @@ const RoomForm = ({
       reset({
         name: initialData.name || '',
         isActive: initialData.isActive !== false,
+        branchId: initialData.branchId || '',
       });
     }
   }, [initialData, reset]);
@@ -53,6 +66,7 @@ const RoomForm = ({
     const sanitizedData = {
       name: sanitizeValue(formData.name),
       isActive: formData.isActive ?? true,
+      branchId: formData.branchId || undefined,
     };
 
     onSubmit(sanitizedData);
@@ -79,6 +93,28 @@ const RoomForm = ({
             error={!!errors.name}
             helperText={errors.name?.message || 'e.g., Room 101, Exam Room 1, etc.'}
             placeholder="Enter room name or number"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Controller
+            name="branchId"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth>
+                <InputLabel id="room-branch-label">Branch</InputLabel>
+                <Select
+                  labelId="room-branch-label"
+                  label="Branch"
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(e.target.value)}
+                >
+                  <MenuItem value=""><em>Not specified</em></MenuItem>
+                  {branches.map((branch) => (
+                    <MenuItem key={branch.id} value={branch.id}>{branch.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
