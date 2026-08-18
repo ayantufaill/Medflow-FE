@@ -1,7 +1,44 @@
-import React from 'react';
-import { Box, Typography, TextField, MenuItem, IconButton, Button } from "@mui/material";
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, TextField, MenuItem, IconButton, Button, Tooltip } from "@mui/material";
 import { InfoOutlined as InfoIcon, DeleteOutlined as DeleteIcon, RequestQuote as RequestQuoteIcon } from "@mui/icons-material";
 import FormInput from './FormInput';
+import { providerService } from '../../../services/provider.service';
+
+const COVERAGE_TYPE_TOOLTIP_TEXT = "Choosing the option “copay/fixed benefits plan” for any plan will remove the coverage table. This will also add a 'patient co-pay' column in the coverage book";
+
+const CoverageTypeInfoIcon = () => (
+  <Tooltip
+    title={
+      <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+        {COVERAGE_TYPE_TOOLTIP_TEXT}
+      </Typography>
+    }
+    placement="top"
+    arrow
+    componentsProps={{
+      tooltip: {
+        sx: {
+          bgcolor: '#ffffff',
+          color: '#1e3a8a',
+          border: '1px solid #1e3a8a',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+          borderRadius: '6px',
+          maxWidth: 270,
+          p: 1,
+          '& .MuiTooltip-arrow': {
+            color: '#ffffff',
+            '&::before': {
+              border: '1px solid #1e3a8a',
+              backgroundColor: '#ffffff',
+            },
+          },
+        },
+      },
+    }}
+  >
+    <InfoIcon sx={{ fontSize: 14, color: '#9ca3af', cursor: 'pointer', '&:hover': { color: '#2563eb' }, ml: 0.5 }} />
+  </Tooltip>
+);
 
 const PlanFeeGuideSection = ({ 
   formData, 
@@ -13,6 +50,21 @@ const PlanFeeGuideSection = ({
   handleRemoveProviderFeeGuide, 
   handleAddProviderFeeGuide 
 }) => {
+  const [providersList, setProvidersList] = useState([]);
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const data = await providerService.getAllProviders(1, 100);
+        const list = data?.providers || data?.items || (Array.isArray(data) ? data : []);
+        setProvidersList(list);
+      } catch (err) {
+        console.error('Failed to fetch providers:', err);
+      }
+    };
+    loadProviders();
+  }, []);
+
   return (
     <Box sx={{ 
       border: '1px solid #DFE5EC', 
@@ -104,7 +156,7 @@ const PlanFeeGuideSection = ({
           <FormInput
             select
             label="COVERAGE TYPE"
-            labelEndAdornment={<InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />}
+            labelEndAdornment={<CoverageTypeInfoIcon />}
             value={formData.coverageType || ''}
             onChange={(e) => handleInputChange('coverageType', e.target.value)}
             sx={{ 
@@ -128,16 +180,37 @@ const PlanFeeGuideSection = ({
       {formData.providersPlanFeeGuides?.map((guide, index) => (
         <Box key={index} sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center' }}>
           <TextField
-            placeholder="Provider Name/ID"
+            select
             size="small"
-            value={guide.providerId}
+            value={guide.providerId || ''}
             onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
             sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
-          />
+          >
+            <MenuItem value="" disabled sx={{ fontSize: '14px', color: '#aaa' }}>
+              <em>Select Provider</em>
+            </MenuItem>
+            {providersList.map((p) => {
+              const pId = String(p._id || p.id || p.ProvNum || p.providerId || '');
+              const firstName = p.userId?.firstName || p.firstName || '';
+              const lastName = p.userId?.lastName || p.lastName || '';
+              const fullName = `${firstName} ${lastName}`.trim();
+              const code = p.providerCode || p.Abbr || p.abbreviation || '';
+
+              let displayName = fullName;
+              if (!displayName && code) displayName = code;
+              if (!displayName) displayName = p.name || `Provider #${pId}`;
+
+              return (
+                <MenuItem key={pId} value={pId} sx={{ fontSize: '14px' }}>
+                  {displayName}
+                </MenuItem>
+              );
+            })}
+          </TextField>
           <TextField
             select
             size="small"
-            value={guide.feeGuide}
+            value={guide.feeGuide || ''}
             onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
             sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
           >

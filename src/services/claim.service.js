@@ -396,6 +396,11 @@ export const claimService = {
     return response.data.data;
   },
 
+  async deleteEOB(paymentId, eobId) {
+    const response = await apiClient.delete(`/claims/batch-payment/${paymentId}/eob/${eobId}`);
+    return response.data.data;
+  },
+
   /**
    * Upload EOB document for an individual claim
    * @param {string} claimId - Claim ID

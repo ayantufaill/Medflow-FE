@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateAppointmentThunk, fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../store/slices/appointmentSlice";
 import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { usePatientInsurance } from "../../hooks/redux/usePatientInsurance";
 import dayjs from "dayjs";
 import {
   Autocomplete,
@@ -248,6 +249,45 @@ const OperatorySidebar = ({
   const { currentPatient: patientDetails, loading: patientLoading, fetchById, clear: clearPatientDetail } = usePatient();
   const { getBalance, fetchBalance, loading: balanceLoading } = usePatientBalance();
   const patientBalance = getBalance(selectedPatient?.id || selectedPatient?._id);
+  const activeSidebarPatientId = patientDetails?._id || patientDetails?.id || patientDetails?.PatNum || selectedPatient?.id || selectedPatient?._id;
+  const { insurances: sidebarInsurances, fetch: fetchSidebarInsurances } = usePatientInsurance(activeSidebarPatientId);
+
+  useEffect(() => {
+    if (activeSidebarPatientId && (!sidebarInsurances || sidebarInsurances.length === 0)) {
+      fetchSidebarInsurances();
+    }
+  }, [activeSidebarPatientId, fetchSidebarInsurances, sidebarInsurances]);
+
+  const calcCoverageAmounts = (ins) => {
+    if (!ins) return { usedAmount: 0, maxAmount: 0 };
+    let limits = ins?.coverageLimits;
+    if (typeof limits === 'string') {
+      try { limits = JSON.parse(limits); } catch (e) { limits = null; }
+    }
+    const rawUsed = limits?.individual?.usedAmount ?? ins?.usedAmount ?? ins?.copayAmount;
+    const rawMax = limits?.individual?.annualMax ?? ins?.individualAnnualMax ?? ins?.deductibleAmount;
+    
+    const parseAmt = (val) => {
+      if (val === null || val === undefined || val === '') return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    };
+
+    return {
+      usedAmount: parseAmt(rawUsed),
+      maxAmount: parseAmt(rawMax),
+    };
+  };
+
+  const activeSidebarInsurances = (sidebarInsurances || []).filter(ins => ins.isActive !== false);
+  const targetSidebarIns = activeSidebarInsurances[0] || sidebarInsurances?.[0];
+  const { usedAmount: sidebarUsed, maxAmount: sidebarMax } = calcCoverageAmounts(targetSidebarIns);
+
+  const displayUsedAmount = sidebarUsed || patientBalance?.usedAmount || patientDetails?.usedAmount || 0;
+  const displayMaxAmount = sidebarMax || 0;
+
   const loadingDetails = patientLoading || balanceLoading;
   const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [familyExpanded, setFamilyExpanded] = useState(true);
@@ -861,7 +901,7 @@ const OperatorySidebar = ({
                     <Box>
                       <Typography className="detail-label">Used Amount:</Typography>
                       <Typography sx={{ fontSize: '0.72rem', color: '#333', pl: 1, fontWeight: 600 }}>
-                        ${patientBalance?.usedAmount?.toLocaleString() || '0.00'}
+                        ${Number(displayUsedAmount).toFixed(2)}{displayMaxAmount > 0 ? ` / $${Number(displayMaxAmount).toFixed(2)}` : ''}
                       </Typography>
                     </Box>
                   </Box>

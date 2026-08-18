@@ -28,6 +28,7 @@ export const buildCoveragePayload = (formData, coverageBookData, coverageCategor
     coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
     coverageBookData: coverageBookData,
     planFeeGuide: formData.planFeeGuide,
+    providersPlanFeeGuides: formData.providersPlanFeeGuides || [],
     coverageType: formData.coverageType,
     subscriberSsn: formData.subscriber.ssn || undefined,
     renewalMonth: renewalMonthNum,

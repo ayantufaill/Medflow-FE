@@ -97,9 +97,12 @@ export default function BatchActionsPage() {
     setLoading(true);
     try {
       const data = await claimService.getBatchPayments({ search: searchQuery });
-      setBatchPayments(data.payments || []);
+      const fetchedPayments = data.payments || [];
+      setBatchPayments(fetchedPayments);
+      return fetchedPayments;
     } catch (error) {
       console.error('Failed to load batch payments:', error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -344,7 +347,7 @@ export default function BatchActionsPage() {
   // Handle EOB File Upload
   const handleEobUpload = async (event) => {
     const file = event?.target?.files?.[0];
-    if (!file) return;
+    if (!file || !selectedBatchPayment) return;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -353,13 +356,35 @@ export default function BatchActionsPage() {
     setUploadingEob(true);
     try {
       await claimService.uploadEOB(selectedBatchPayment.id, formData);
-      alert('EOB uploaded successfully!');
-      setOpenEOBModal(false);
-      loadBatchPayments();
+      const updatedPayments = await loadBatchPayments();
+      if (updatedPayments && selectedBatchPayment) {
+        const refreshed = updatedPayments.find((p) => p.id === selectedBatchPayment.id);
+        if (refreshed) {
+          setSelectedBatchPayment(refreshed);
+        }
+      }
     } catch (error) {
       alert(`EOB upload failed: ${error.message}`);
     } finally {
       setUploadingEob(false);
+    }
+  };
+
+  // Handle EOB Deletion
+  const handleDeleteEob = async (eobId, filename) => {
+    if (!selectedBatchPayment) return;
+    if (!window.confirm(`Are you sure you want to delete ${filename || 'this EOB'}?`)) return;
+    try {
+      await claimService.deleteEOB(selectedBatchPayment.id, eobId);
+      const updatedPayments = await loadBatchPayments();
+      if (updatedPayments && selectedBatchPayment) {
+        const refreshed = updatedPayments.find((p) => p.id === selectedBatchPayment.id);
+        if (refreshed) {
+          setSelectedBatchPayment(refreshed);
+        }
+      }
+    } catch (error) {
+      alert(`Failed to delete EOB: ${error.message}`);
     }
   };
 
@@ -551,6 +576,7 @@ export default function BatchActionsPage() {
         selectedBatchPayment={selectedBatchPayment}
         uploadingEob={uploadingEob}
         handleEobUpload={handleEobUpload}
+        handleDeleteEob={handleDeleteEob}
       />
 
       <AddPaymentModal
