@@ -153,10 +153,10 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       { header: 'Provider', key: 'provider' }
     ], 'Progress_Notes');
   };
-
   useEffect(() => {
     if (open) fetchData();
-  }, [open, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);

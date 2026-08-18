@@ -20,6 +20,7 @@ import TemplatesAndMessageColumn from './TemplatesAndMessageColumn';
 import { useSelector } from 'react-redux';
 import { selectAppointmentList } from '../../../../store/slices/appointmentSlice';
 import { useDropdownData } from '../../../../hooks/redux';
+import { useSnackbar } from '../../../../contexts/SnackbarContext';
 import api from "../../../../config/api";
 
 const TEMPLATES = [
@@ -48,6 +49,7 @@ const SendBulkTextModal = ({ open, onClose }) => {
   
   const appointments = useSelector(selectAppointmentList) || [];
   const { providers = [] } = useDropdownData({ providers: true });
+  const { showSnackbar } = useSnackbar();
 
   React.useEffect(() => {
     if (open) {
@@ -252,10 +254,12 @@ const SendBulkTextModal = ({ open, onClose }) => {
                 subject,
                 message
               });
+              showSnackbar('Emails queued for sending successfully', 'success');
               onClose();
             } catch (error) {
               console.error('Failed to send bulk email:', error);
-              // Handle error if needed (e.g., toast)
+              const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to send bulk emails.';
+              showSnackbar(errorMsg, 'error');
             } finally {
               setIsSending(false);
             }
