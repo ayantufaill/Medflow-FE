@@ -22,6 +22,7 @@ import PrePostOps from '../pages/admin/PrePostOps';
 import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
 import ClinicAnalyticsPage from '../pages/admin/ClinicAnalyticsPage';
+import PracticeGroupsPage from '../pages/admin/PracticeGroupsPage';
 
 const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin']}>
@@ -90,6 +91,7 @@ const adminRoutes = [
   <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
   <Route key="/admin/analytics" path="/admin/analytics" element={adminOnly(<ClinicAnalyticsPage />)} />,
+  <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOnly(<PracticeGroupsPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 
