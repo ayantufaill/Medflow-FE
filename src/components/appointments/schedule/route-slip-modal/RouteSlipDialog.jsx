@@ -233,29 +233,46 @@ const RouteSlipDialog = () => {
       <DialogTitle
         className="no-print-in-modal"
         sx={{
-          boxSizing: "border-box",
-          px: "25px",
-          py: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: `1px solid ${COLORS.BORDER}`,
-          backgroundColor: COLORS.SURFACE_TINT,
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "10px", py: "10px",
+          borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+          backgroundColor: "#f3f8fd",
           m: 0,
-          flexShrink: 0,
         }}
       >
-        <PrintIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Patient Route Slip{patientName !== 'No patient selected' ? ` — ${patientName}` : ""}
-        </Typography>
-        <IconButton onClick={handleClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <PrintIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Patient Route Slip
+          </Typography>
+          
+          <Typography sx={{
+            fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
+            textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
+          }}>
+            {patientName !== 'No patient selected' ? patientName : 'No patient selected'}
+          </Typography>
+        </Box>
+
+        <IconButton onClick={handleClose} size="small" sx={{ color: "#6b7280", ml: 1 }}>
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
 
       {/* MODAL BODY (Print Target) */}
-      <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+      <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
 
         {/* Print-only Medflow Logo at Top Center */}
         <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>

@@ -14,7 +14,7 @@ const PatientSelectionColumn = ({ displayPatients, selectedPatients, handleSelec
 
   return (
     <Box sx={{ width: '445px', height: '100%', flexShrink: 0, border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: '12px', backgroundColor: COLORS.WHITE, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ p: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+      <Box sx={{ p: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#f3f8fd' }}>
         <Box>
           <Typography sx={{ fontSize: '16px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
             Patients

@@ -181,34 +181,45 @@ const SendBulkTextModal = ({ open, onClose }) => {
           width: '880px',
           height: '726px',
           maxWidth: 'none',
-          borderRadius: '14px',
-          border: `1px solid ${COLORS.BORDER}`,
+          borderRadius: '12px',
+          border: '1px solid #e0e5eb',
           boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           m: 2,
         }
       }}
     >
-      <DialogTitle sx={{ 
-        boxSizing: 'border-box', 
-        px: '25px', 
-        py: '16px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        borderBottom: `1px solid ${COLORS.BORDER}`,
-        backgroundColor: COLORS.SURFACE_TINT,
-        m: 0
+      <DialogTitle sx={{
+        display: "flex", alignItems: "center", gap: "12px",
+        px: "10px", py: "10px",
+        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+        backgroundColor: "#f3f8fd",
+        m: 0,
       }}>
-        <ForwardToInboxIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Send Bulk Email
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
-          <CloseIcon sx={{ fontSize: '18px' }} />
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <ForwardToInboxIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Send Bulk Email
+          </Typography>
+        </Box>
+
+        <IconButton onClick={onClose} size="small" sx={{ color: "#6b7280", ml: 1 }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ px: '25px', pt: '16px !important', pb: '20px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+      <DialogContent sx={{ px: '25px', pt: '16px !important', pb: '20px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#fff', overflow: 'hidden' }}>
         <PatientSelectionColumn
           displayPatients={displayPatients}
           selectedPatients={selectedPatients}
@@ -227,19 +238,20 @@ const SendBulkTextModal = ({ open, onClose }) => {
         />
       </DialogContent>
 
-      <DialogActions sx={{ p: '16px 20px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: '8px' }}>
+      <DialogActions sx={{ p: '16px 20px', borderTop: '1px solid #e0e5eb', backgroundColor: '#fff', gap: '8px' }}>
         <Button
           variant="outlined"
           onClick={onClose}
           sx={{
-            borderColor: COLORS.BORDER,
-            color: COLORS.TEXT_PRIMARY,
+            borderColor: "#d0d5dd",
+            color: "#374151",
+            fontFamily: "Inter",
             textTransform: 'none',
             fontSize: '13px',
-            fontWeight: fontWeight.medium,
-            borderRadius: radius.sm,
+            fontWeight: 500,
+            borderRadius: "8px",
             height: '36px',
-            '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+            '&:hover': { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" }
           }}
         >
           Cancel
@@ -266,14 +278,15 @@ const SendBulkTextModal = ({ open, onClose }) => {
           }}
           disabled={!subject || !message || selectedPatients.length === 0 || isSending}
           sx={{
-            backgroundColor: COLORS.ACCENT,
-            color: COLORS.WHITE,
+            backgroundColor: "#2262ef",
+            color: "#ffffff",
+            fontFamily: "Inter",
             textTransform: 'none',
             fontSize: '13px',
-            fontWeight: fontWeight.medium,
-            borderRadius: radius.sm,
+            fontWeight: 500,
+            borderRadius: "8px",
             height: '36px',
-            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
+            '&:hover': { backgroundColor: "#1e53cc" }
           }}
         >
           {isSending ? 'Sending...' : 'Send Email'}
