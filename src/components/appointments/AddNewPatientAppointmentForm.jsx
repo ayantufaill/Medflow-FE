@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Dialog, Alert, Snackbar } from "@mui/material";
 import dayjs from "dayjs";
 import { shortlistService } from "../../services/shortlist.service";
+import { useBranch } from "../../hooks/redux";
+import { useDropdownData } from "../../hooks/redux/useDropdownData";
 
 import { INITIAL_PROCEDURES, TAG_DEFAULT_PROCEDURES, DEFAULT_PROCEDURE_TAGS } from "./new-appointment/constants";
 import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
@@ -15,7 +17,6 @@ const AddNewPatientAppointmentForm = ({
   loadingPatients = false,
   onPatientSearch,
   providers = [],
-  rooms = [],
   appointments = [],
   scheduleBlocks = [],
   // eslint-disable-next-line no-unused-vars
@@ -66,6 +67,33 @@ const AddNewPatientAppointmentForm = ({
   const [status,             setStatus]             = useState(initialShortlistData?.Status || "unconfirmed");
   const [roomId,             setRoomId]             = useState(initialShortlistData?.RoomId ? String(initialShortlistData.RoomId) : initialRoomId != null ? String(initialRoomId) : "");
   const [durationMins,       setDurationMins]       = useState(initialShortlistData?.DurationMins || 60);
+
+  // Branch — optional, narrows the Operatory/Provider pickers below once picked.
+  // Omitted, the backend derives the appointment's branch from its room.
+  const [branchId, setBranchId] = useState(
+    initialShortlistData?.BranchId ? String(initialShortlistData.BranchId)
+      : initialAppointment?.branchId ? String(initialAppointment.branchId)
+      : ""
+  );
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Same global cache the page-level dropdown data uses (see OperatorySchedulePage) —
+  // resolves to the same unfiltered lists when branchId is empty, or a freshly
+  // fetched branch-filtered list once one is picked. Scoped to this modal only;
+  // doesn't affect the `providers`/`rooms` props used elsewhere in this file.
+  const { providers: branchProviders, rooms: branchRooms } = useDropdownData({
+    providers: true,
+    rooms: true,
+    branchId: branchId || null,
+  });
+  const handleBranchChange = (newBranchId) => {
+    setBranchId(newBranchId);
+    setRoomId("");
+    setProviderRows((rows) => rows.map((row) => ({ ...row, providerId: "" })));
+  };
   
   const initialProviderRows = initialShortlistData?.ProvNum ? 
     [{ id: 1, providerId: String(initialShortlistData.ProvNum), time: initialShortlistData?.DurationMins || 60 }] : 
@@ -628,6 +656,7 @@ const AddNewPatientAppointmentForm = ({
       notes,
       providerId: providerRows[0]?.providerId || undefined,
       roomId:     roomId || undefined,
+      branchId:   branchId || undefined,
       customFields: {
         visitType,
         procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, provider, site, completed }) => ({
@@ -831,11 +860,14 @@ const AddNewPatientAppointmentForm = ({
           />
 
           <AppointmentRightPanel
+            branchId={branchId}
+            onBranchChange={handleBranchChange}
+            branches={branches}
             status={status}
             onStatusChange={setStatus}
             roomId={roomId}
             onRoomChange={setRoomId}
-            rooms={rooms}
+            rooms={branchRooms}
             isRoomOccupied={roomId && occupiedRoomIds.has(String(roomId))}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
@@ -850,7 +882,7 @@ const AddNewPatientAppointmentForm = ({
             onNotesChange={setNotes}
             selectedColorTags={selectedColorTags}
             onColorTagsChange={setSelectedColorTags}
-            providers={providers}
+            providers={branchProviders}
             referredBy={referredBy}
             onReferredByChange={setReferredBy}
             noReminders={noReminders}
