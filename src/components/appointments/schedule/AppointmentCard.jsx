@@ -160,6 +160,28 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
 
   const handleCardDoubleClick = (e) => {
     console.log("AppointmentCard: DOUBLE CLICK FIRED");
+    // Block editing for past appointments (past date OR past time today)
+    const apptDate = appointment.date || appointment.appointmentDate;
+    const apptStartTime = appointment.startTime || appointment.time;
+    if (apptDate) {
+      const apptDateStr = dayjs(apptDate).format('YYYY-MM-DD');
+      const now = dayjs();
+      // Entire day is in the past
+      if (dayjs(apptDateStr).isBefore(now, 'day')) {
+        e.stopPropagation();
+        return;
+      }
+      // Same day but the appointment's start time has already passed
+      if (dayjs(apptDateStr).isSame(now, 'day') && apptStartTime) {
+        // Handle both "h:mm A" (display) and "HH:mm" (raw) formats
+        const parsed = dayjs(`${apptDateStr}T${apptStartTime}`, 'YYYY-MM-DDTHH:mm');
+        const startDateTime = parsed.isValid() ? parsed : dayjs(`${apptDateStr} ${apptStartTime}`, 'YYYY-MM-DD h:mm A');
+        if (startDateTime.isValid() && startDateTime.isBefore(now)) {
+          e.stopPropagation();
+          return;
+        }
+      }
+    }
     if (e.defaultPrevented) return;
     window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
       detail: { ...appointment },
@@ -438,65 +460,73 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                   sx={{ fontSize: "13px", color: COLORS.ACCENT }}
                 />
                 <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR }} />
-                <Description
-                  sx={{
-                    fontSize: "14px",
-                    color: COLORS.ACCENT,
-                    cursor: "pointer",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (appointment.patientId)
-                      navigate(
-                        `/clinical/progress-notes?patientId=${appointment.patientId}`,
-                      );
-                    else navigate("/clinical/progress-notes");
-                  }}
-                />
-                <AttachMoney
-                  sx={{
-                    fontSize: "14px",
-                    color: COLORS.ACCENT,
-                    cursor: "pointer",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (appointment.patientId)
-                      navigate(`/finance?patientId=${appointment.patientId}`);
-                    else navigate("/finance");
-                  }}
-                />
-                <Typography
-                  sx={{
-                    fontSize: "13px",
-                    fontWeight: fontWeight.bold,
-                    color: COLORS.ACCENT,
-                    cursor: "pointer",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (appointment.patientId)
-                      navigate(
-                        `/clinical/treatment-plan?patientId=${appointment.patientId}`,
-                      );
-                    else navigate("/clinical/treatment-plan");
-                  }}
-                >
-                  Tx
-                </Typography>
-                <Typography
-                  sx={{ fontSize: "14px", lineHeight: 1, cursor: "pointer" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (appointment.patientId)
-                      navigate(
-                        `/clinical/exam?patientId=${appointment.patientId}`,
-                      );
-                    else navigate("/clinical/exam");
-                  }}
-                >
-                  🦷
-                </Typography>
+                <Tooltip title="Progress Notes" arrow placement="top">
+                  <Description
+                    sx={{
+                      fontSize: "14px",
+                      color: COLORS.ACCENT,
+                      cursor: "pointer",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(
+                          `/clinical/progress-notes?patientId=${appointment.patientId}`,
+                        );
+                      else navigate("/clinical/progress-notes");
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Ledger / Finance" arrow placement="top">
+                  <AttachMoney
+                    sx={{
+                      fontSize: "14px",
+                      color: COLORS.ACCENT,
+                      cursor: "pointer",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(`/finance?patientId=${appointment.patientId}`);
+                      else navigate("/finance");
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Treatment Plan" arrow placement="top">
+                  <Typography
+                    sx={{
+                      fontSize: "13px",
+                      fontWeight: fontWeight.bold,
+                      color: COLORS.ACCENT,
+                      cursor: "pointer",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(
+                          `/clinical/treatment-plan?patientId=${appointment.patientId}`,
+                        );
+                      else navigate("/clinical/treatment-plan");
+                    }}
+                  >
+                    Tx
+                  </Typography>
+                </Tooltip>
+                <Tooltip title="Clinical Exam" arrow placement="top">
+                  <Typography
+                    sx={{ fontSize: "14px", lineHeight: 1, cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(
+                          `/clinical/exam?patientId=${appointment.patientId}`,
+                        );
+                      else navigate("/clinical/exam");
+                    }}
+                  >
+                    🦷
+                  </Typography>
+                </Tooltip>
               </Box>
             </Box>
 

@@ -19,9 +19,11 @@ import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { createInvoiceAdjustment } from '../../store/slices/billingSlice';
+import { usePatient } from '../../hooks/redux/usePatient';
 
 const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const dispatch = useDispatch();
+  const { currentPatient } = usePatient();
   
   const [adjustmentType, setAdjustmentType] = useState("Write Off");
   const [reason, setReason] = useState("");
@@ -29,12 +31,12 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const [calcValue, setCalcValue] = useState("");
 
   const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
-  const rawDate = editTarget?.invoiceDate || editTarget?.createdAt || editTarget?.dateService;
+  const rawDate = editTarget?.invoiceDate || editTarget?.date || editTarget?.createdAt || editTarget?.dateService;
   const invoiceDate = rawDate ? dayjs(rawDate).format('MM/DD/YYYY') : 'N/A';
   const adjustmentDate = dayjs().format('MM/DD/YYYY');
-  const patientId = editTarget?.patientId || editTarget?.patient?.id || editTarget?.patient?._id;
-  const patientName = editTarget?.patient?.firstName 
-    ? `${editTarget.patient.firstName} ${editTarget.patient.lastName}` 
+  const patientId = currentPatient?._id || currentPatient?.id || editTarget?.patientId || editTarget?.patient?.id;
+  const patientName = currentPatient?.firstName 
+    ? `${currentPatient.firstName} ${currentPatient.lastName}` 
     : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
 
   const procedures = editTarget?.lineItems || 
@@ -43,15 +45,29 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
                      [];
 
   const totalCharges = procedures.reduce((sum, p) => sum + Number(p.totalPrice || p.charge || p.ProcFee || 0), 0);
-  const totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
+  
+  let totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
+  let hasSummary = false;
+  if (editTarget?.summary) {
+    hasSummary = true;
+    const ptP = Number(editTarget.summary.ptPaid?.replace(/[^0-9.-]+/g,"")) || 0;
+    const insP = Number(editTarget.summary.insPaid?.replace(/[^0-9.-]+/g,"")) || 0;
+    totalPayment = ptP + insP;
+  }
   
   const dynamicLineItems = procedures.map(p => {
     const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
-    const ptBalance = Number(p.patientBalance || p.ptBalance || 0);
-    const insBalance = Number(p.insuranceBalance || p.insBalance || 0);
-    const ptPaid = Number(p.patientPaid || 0);
-    const insPaid = Number(p.insurancePaid || 0);
-    const pay = ptPaid + insPaid;
+    const weight = totalCharges > 0 ? charge / totalCharges : 0;
+    
+    let ptBalance = Number(p.patientBalance || p.ptBalance || 0);
+    let insBalance = Number(p.insuranceBalance || p.insBalance || 0);
+    let pay = Number(p.patientPaid || 0) + Number(p.insurancePaid || 0);
+
+    if (hasSummary) {
+      ptBalance = Math.max(0, (Number(editTarget.summary.ptBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
+      insBalance = Math.max(0, (Number(editTarget.summary.insBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
+      pay = totalPayment * weight;
+    }
     
     return {
       code: p.code || p.cptCode || p.ProcCode || 'Item',
@@ -192,7 +208,17 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
             variant="outlined"
             size="small"
             value={calcValue}
-            onChange={(e) => setCalcValue(e.target.value)}
+            onChange={(e) => {
+              let val = e.target.value;
+              if (calcMode === "Percentage") {
+                if (val !== "") {
+                  let num = parseFloat(val);
+                  if (num > 100) val = "100";
+                  if (num < 0) val = "0";
+                }
+              }
+              setCalcValue(val);
+            }}
             type="number"
             sx={{ width: 60, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
           />

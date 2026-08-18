@@ -7,7 +7,8 @@ import BatchTabs from '../../components/claims/batch-actions/BatchTabs';
 import BatchPaymentsTab from '../../components/claims/batch-actions/BatchPaymentsTab';
 import BatchInvoicesTab from '../../components/claims/batch-actions/BatchInvoicesTab';
 import BatchClaimsTab from '../../components/claims/batch-actions/BatchClaimsTab';
-import { headingSecondarySx, fontSize, fontWeight } from '../../constants/styles';
+import { headingSecondarySx, fontSize, fontWeight, radius } from '../../constants/styles';
+import { COLORS } from '../../constants/colors';
 import { ReportFilterBar, ReportSelect, ReportSearchInput } from '../../components/reports/ui';
 import {
   Box,
@@ -96,9 +97,12 @@ export default function BatchActionsPage() {
     setLoading(true);
     try {
       const data = await claimService.getBatchPayments({ search: searchQuery });
-      setBatchPayments(data.payments || []);
+      const fetchedPayments = data.payments || [];
+      setBatchPayments(fetchedPayments);
+      return fetchedPayments;
     } catch (error) {
       console.error('Failed to load batch payments:', error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -343,7 +347,7 @@ export default function BatchActionsPage() {
   // Handle EOB File Upload
   const handleEobUpload = async (event) => {
     const file = event?.target?.files?.[0];
-    if (!file) return;
+    if (!file || !selectedBatchPayment) return;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -352,13 +356,35 @@ export default function BatchActionsPage() {
     setUploadingEob(true);
     try {
       await claimService.uploadEOB(selectedBatchPayment.id, formData);
-      alert('EOB uploaded successfully!');
-      setOpenEOBModal(false);
-      loadBatchPayments();
+      const updatedPayments = await loadBatchPayments();
+      if (updatedPayments && selectedBatchPayment) {
+        const refreshed = updatedPayments.find((p) => p.id === selectedBatchPayment.id);
+        if (refreshed) {
+          setSelectedBatchPayment(refreshed);
+        }
+      }
     } catch (error) {
       alert(`EOB upload failed: ${error.message}`);
     } finally {
       setUploadingEob(false);
+    }
+  };
+
+  // Handle EOB Deletion
+  const handleDeleteEob = async (eobId, filename) => {
+    if (!selectedBatchPayment) return;
+    if (!window.confirm(`Are you sure you want to delete ${filename || 'this EOB'}?`)) return;
+    try {
+      await claimService.deleteEOB(selectedBatchPayment.id, eobId);
+      const updatedPayments = await loadBatchPayments();
+      if (updatedPayments && selectedBatchPayment) {
+        const refreshed = updatedPayments.find((p) => p.id === selectedBatchPayment.id);
+        if (refreshed) {
+          setSelectedBatchPayment(refreshed);
+        }
+      }
+    } catch (error) {
+      alert(`Failed to delete EOB: ${error.message}`);
     }
   };
 
@@ -550,6 +576,7 @@ export default function BatchActionsPage() {
         selectedBatchPayment={selectedBatchPayment}
         uploadingEob={uploadingEob}
         handleEobUpload={handleEobUpload}
+        handleDeleteEob={handleDeleteEob}
       />
 
       <AddPaymentModal
@@ -591,42 +618,113 @@ export default function BatchActionsPage() {
         onClose={() => setFilterAnchorEl(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{ sx: { p: 2, width: 300, mt: 1, borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' } }}
+        PaperProps={{ 
+          sx: { 
+            width: 320, 
+            mt: 1, 
+            borderRadius: radius.md, 
+            border: `1px solid ${COLORS.BORDER}`,
+            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+            backgroundColor: COLORS.SURFACE_CARD,
+            overflow: 'hidden'
+          } 
+        }}
       >
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1e293b' }}>BY STATUS</Typography>
-          <FormGroup>
-            {['PENDING', 'PROCESSING', 'COMPLETED', 'PARTIALLY SUCCESSFUL', 'FAILED'].map(status => (
-              <FormControlLabel
-                key={status}
-                control={<Checkbox size="small" checked={selectedStatuses.includes(status)} onChange={(e) => {
-                  if (e.target.checked) setSelectedStatuses([...selectedStatuses, status]);
-                  else setSelectedStatuses(selectedStatuses.filter(s => s !== status));
-                }} sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }} />}
-                label={<Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{status}</Typography>}
-                sx={{ ml: 0 }}
-              />
-            ))}
-          </FormGroup>
-
-          <Divider sx={{ my: 1.5 }} />
-
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1e293b' }}>BY CARRIER</Typography>
-          <FormGroup>
-            {allCarriers.length > 0 ? allCarriers.map(carrier => (
-              <FormControlLabel
-                key={carrier}
-                control={<Checkbox size="small" checked={selectedCarriers.includes(carrier)} onChange={(e) => {
-                  if (e.target.checked) setSelectedCarriers([...selectedCarriers, carrier]);
-                  else setSelectedCarriers(selectedCarriers.filter(c => c !== carrier));
-                }} sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }} />}
-                label={<Typography sx={{ fontSize: '0.8rem', color: '#4a5568' }}>{carrier}</Typography>}
-                sx={{ ml: 0 }}
-              />
-            )) : (
-              <Typography sx={{ fontSize: '0.8rem', color: '#718096', fontStyle: 'italic', ml: 1 }}>No carriers found</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: `1px solid ${COLORS.BORDER}`, backgroundColor: '#f8fafc' }}>
+            <Typography sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.sm, color: '#0f172a', fontFamily: 'Inter' }}>
+              Filter Payments
+            </Typography>
+            {(selectedStatuses.length > 0 || selectedCarriers.length > 0) && (
+              <Typography 
+                onClick={() => { setSelectedStatuses([]); setSelectedCarriers([]); }}
+                sx={{ 
+                  fontSize: fontSize.xs, 
+                  fontWeight: fontWeight.medium, 
+                  color: COLORS.ACCENT, 
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                Clear All
+              </Typography>
             )}
-          </FormGroup>
+          </Box>
+
+          <Box sx={{ p: 2, maxHeight: '60vh', overflowY: 'auto' }}>
+            {/* Status Section */}
+            <Typography sx={{ fontWeight: fontWeight.medium, mb: 1, color: COLORS.TEXT_MUTED, fontSize: fontSize.xs, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              By Status
+            </Typography>
+            <FormGroup sx={{ mb: 2 }}>
+              {['PENDING', 'PROCESSING', 'COMPLETED', 'PARTIALLY SUCCESSFUL', 'FAILED'].map(status => (
+                <FormControlLabel
+                  key={status}
+                  control={
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedStatuses.includes(status)} 
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedStatuses([...selectedStatuses, status]);
+                        else setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                      }} 
+                      sx={{ 
+                        color: '#cbd5e1', 
+                        py: 0.5,
+                        '&.Mui-checked': { color: COLORS.ACCENT } 
+                      }} 
+                    />
+                  }
+                  label={<Typography sx={{ fontSize: fontSize.sm, color: '#334155', fontFamily: 'Inter', fontWeight: 500 }}>{status}</Typography>}
+                  sx={{ 
+                    ml: 0, 
+                    mr: 0,
+                    borderRadius: '4px',
+                    '&:hover': { backgroundColor: '#f1f5f9' }
+                  }}
+                />
+              ))}
+            </FormGroup>
+
+            <Divider sx={{ my: 2, borderColor: COLORS.BORDER }} />
+
+            {/* Carrier Section */}
+            <Typography sx={{ fontWeight: fontWeight.medium, mb: 1, color: COLORS.TEXT_MUTED, fontSize: fontSize.xs, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              By Carrier
+            </Typography>
+            <FormGroup>
+              {allCarriers.length > 0 ? allCarriers.map(carrier => (
+                <FormControlLabel
+                  key={carrier}
+                  control={
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedCarriers.includes(carrier)} 
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedCarriers([...selectedCarriers, carrier]);
+                        else setSelectedCarriers(selectedCarriers.filter(c => c !== carrier));
+                      }} 
+                      sx={{ 
+                        color: '#cbd5e1', 
+                        py: 0.5,
+                        '&.Mui-checked': { color: COLORS.ACCENT } 
+                      }} 
+                    />
+                  }
+                  label={<Typography sx={{ fontSize: fontSize.sm, color: '#334155', fontFamily: 'Inter', fontWeight: 500 }}>{carrier}</Typography>}
+                  sx={{ 
+                    ml: 0, 
+                    mr: 0,
+                    borderRadius: '4px',
+                    '&:hover': { backgroundColor: '#f1f5f9' }
+                  }}
+                />
+              )) : (
+                <Typography sx={{ fontSize: fontSize.sm, color: '#94a3b8', fontStyle: 'italic', ml: 1, fontFamily: 'Inter' }}>No carriers found</Typography>
+              )}
+            </FormGroup>
+          </Box>
         </Box>
       </Popover>
     </Box>

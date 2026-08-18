@@ -4,11 +4,11 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { COLORS } from '../../../../constants/colors';
 import { radius, fontWeight } from '../../../../constants/styles';
 
-const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTemplateClick }) => {
+const TemplatesAndMessageColumn = ({ subject, setSubject, message, setMessage, templates, handleTemplateClick }) => {
   return (
-    <Box sx={{ width: '367px', height: '100%', flexShrink: 0, borderRadius: '12px', border: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ width: '367px', height: '100%', flexShrink: 0, borderRadius: '12px', border: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Right Header */}
-      <Box sx={{ p: '16px', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE }}>
+      <Box sx={{ p: '16px', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: '#f3f8fd' }}>
         <Typography sx={{ fontSize: '16px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
           Templates & Custom Messages
         </Typography>
@@ -33,7 +33,7 @@ const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTempl
                 </Typography>
               </Box>
               <Box
-                onClick={() => handleTemplateClick(tmpl.text)}
+                onClick={() => handleTemplateClick(tmpl)}
                 sx={{
                   p: '12px',
                   border: `1px solid ${COLORS.BORDER_LIGHT}`,
@@ -44,6 +44,7 @@ const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTempl
                 }}
               >
                 <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY, lineHeight: 1.5 }}>
+                  {tmpl.subject ? <Box component="span" sx={{ display: 'block', mb: 1, fontWeight: 'bold' }}>Subject: {tmpl.subject}</Box> : null}
                   {tmpl.text}
                 </Typography>
               </Box>
@@ -54,8 +55,27 @@ const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTempl
         {/* Message Area */}
         <Box>
           <Typography sx={{ fontSize: '14px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, mb: '8px' }}>
-            Message
+            Email Content
           </Typography>
+          
+          <TextField
+            fullWidth
+            placeholder="Subject..."
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            variant="outlined"
+            size="small"
+            sx={{
+              mb: 1.5,
+              backgroundColor: COLORS.WHITE,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: radius.md,
+                fontSize: '13px',
+                fontFamily: 'Inter',
+              }
+            }}
+          />
+
           <TextField
             multiline
             rows={4}
@@ -81,7 +101,7 @@ const TemplatesAndMessageColumn = ({ message, setMessage, templates, handleTempl
             </Typography>
           </Box>
           <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY, fontStyle: 'italic', lineHeight: 1.4 }}>
-            The system will automatically add the practice name and contact info to the end of your text message
+            The system will automatically add the practice name and contact info to the end of your email message
           </Typography>
         </Box>
       </Box>

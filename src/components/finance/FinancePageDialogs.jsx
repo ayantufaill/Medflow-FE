@@ -29,8 +29,8 @@ const DialogWrapper = ({ children, onClose, maxWidth = '100%', extraSx = {} }) =
         maxWidth: maxWidth, 
         width: '95%',
         bgcolor: '#fff',
-        borderRadius: '8px',
-        overflow: 'visible',
+        borderRadius: '14px',
+        overflow: 'hidden',
         boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
         ...extraSx
       }}
@@ -82,7 +82,7 @@ const FinancePageDialogs = ({
       />
 
       {showDeposit && (
-        <DialogWrapper onClose={() => setShowDeposit(false)} maxWidth="900px" extraSx={{ width: '90%' }}>
+        <DialogWrapper onClose={() => setShowDeposit(false)} maxWidth="1100px" extraSx={{ width: '90%' }}>
           <DepositDialog 
             patient={patient}
             onClose={() => setShowDeposit(false)} 

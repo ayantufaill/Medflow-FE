@@ -17,7 +17,8 @@ import {
   Autocomplete,
   TextField,
   Select,
-  MenuItem
+  MenuItem,
+  Paper
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -26,7 +27,10 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CloseIcon from '@mui/icons-material/Close';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { COLORS } from '../../../constants/colors';
+import { claimService } from '../../../services/claim.service';
+import EOBListDialog from './EOBListDialog';
 
 
 const AttachmentAlertModal = ({ open, title = "Attachment", message, onClose, onAttach }) => {
@@ -104,6 +108,8 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const medicalHistory = useSelector(selectCurrentMedicalHistory);
   const dentalHistory = useSelector(selectCurrentDentalHistory);
   const currentPatient = useSelector(selectCurrentPatient);
+  const [showEobDialog, setShowEobDialog] = useState(false);
+  const eobFileInputRef = useRef(null);
 
   useEffect(() => {
     if (attachingClaim) {
@@ -381,12 +387,15 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
               <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY, fontFamily: 'Inter, sans-serif' }}>Progress Notes</Typography>
             </Box>
-            {/* Upload EOBs */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer' }}>
+            {/* Manage EOBs */}
+            <Box 
+              onClick={() => setShowEobDialog(true)}
+              sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+            >
               <Box sx={{ width: 36, height: 24, bgcolor: COLORS.ACCENT, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography sx={{ color: 'white', fontSize: '0.55rem', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>EOB</Typography>
               </Box>
-              <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY, fontFamily: 'Inter, sans-serif' }}>Upload EOBs</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY, fontFamily: 'Inter, sans-serif' }}>Manage EOBs</Typography>
             </Box>
           </Box>
 
@@ -464,7 +473,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
           <Button 
             onClick={onClose} 
             variant="outlined"
-            sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600 }}
+            sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY, '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' } }}
           >
             Cancel
           </Button>
@@ -504,6 +513,13 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
         message="This patient has no progress notes."
       />
 
+      {/* EOB Management Dialog */}
+      <EOBListDialog
+        open={showEobDialog}
+        onClose={() => setShowEobDialog(false)}
+        claimNumber={attachingClaim?.claimNumber}
+        eobs={attachingClaim?.eobs || []}
+      />
     </>
   );
 }

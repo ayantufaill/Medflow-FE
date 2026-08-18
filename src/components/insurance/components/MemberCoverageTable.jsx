@@ -1,6 +1,6 @@
 import {
   Box, Typography, TextField, Checkbox, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, InputAdornment,
-  Grid, Select, MenuItem, IconButton
+  Grid, Select, MenuItem, IconButton, Tooltip
 } from "@mui/material";
 import { 
   InfoOutlined as InfoIcon, 
@@ -193,11 +193,45 @@ const MemberCoverageTable = ({
         </Table>
       </TableContainer>
 
-      <FormControlLabel 
-        sx={{ mt: 1.5 }}
-        control={<Checkbox size="small" checked={formData.honorWriteOff} onChange={(e) => handleInputChange('honorWriteOff', e.target.checked)} />} 
-        label={<Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem' }}>Honor Write Off (When Limitation Reached for In-Network Providers Only) <InfoIcon sx={{ fontSize: 10 }} /></Typography>} 
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5 }}>
+        <FormControlLabel 
+          sx={{ mr: 0 }}
+          control={<Checkbox size="small" checked={formData.honorWriteOff} onChange={(e) => handleInputChange('honorWriteOff', e.target.checked)} />} 
+          label={<Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem' }}>Honor Write Off (When Limitation Reached for In-Network Providers Only)</Typography>} 
+        />
+        <Tooltip
+          PopperProps={{ sx: { zIndex: 999999 } }}
+          title={
+            <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+              Limits include Delivery pattern, Waiting Period, Age Limit, Tooth Limit and Annual Max Amounts
+            </Typography>
+          }
+          placement="top"
+          arrow
+          componentsProps={{
+            tooltip: {
+              sx: {
+                bgcolor: '#ffffff',
+                color: '#1e3a8a',
+                border: '1px solid #1e3a8a',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                borderRadius: '6px',
+                maxWidth: 270,
+                p: 1,
+                '& .MuiTooltip-arrow': {
+                  color: '#ffffff',
+                  '&::before': {
+                    border: '1px solid #1e3a8a',
+                    backgroundColor: '#ffffff',
+                  },
+                },
+              },
+            },
+          }}
+        >
+          <InfoIcon sx={{ fontSize: 10, color: '#94a3b8', cursor: 'pointer', '&:hover': { color: '#2362EF' } }} />
+        </Tooltip>
+      </Box>
 
       {/* Final Coverage Section with Coverage Tables */}
       <MemberFinalCoverageSection 

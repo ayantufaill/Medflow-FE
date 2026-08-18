@@ -212,6 +212,14 @@ const ShareDropdown = ({ anchorEl, onClose, onSelect }) => {
         maxWidth="sm"
         fullWidth={false}
         sx={{ zIndex: 9999 }}
+        PaperProps={{
+          sx: {
+            borderRadius: '14px',
+            overflow: 'hidden',
+            bgcolor: 'transparent',
+            boxShadow: 'none'
+          }
+        }}
       >
         <ShareByEmail onClose={handleShareStatementClose} />
       </Dialog>

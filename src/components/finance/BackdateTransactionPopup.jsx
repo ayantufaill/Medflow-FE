@@ -68,11 +68,11 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
       PaperProps={{
         sx: {
           width: 320,
-          borderRadius: radius.md,
-          overflow: 'visible',
+          borderRadius: '14px',
+          overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           mt: 1,
-          border: `1px solid ${COLORS.BORDER_LIGHT}`
+          border: `1px solid ${COLORS.BORDER}`
         }
       }}
     >
@@ -88,8 +88,6 @@ const BackdateTransactionPopup = ({ open, anchorEl, onClose, onDone }) => {
             gap: '8px',
             borderBottom: `1px solid ${COLORS.BORDER}`,
             backgroundColor: COLORS.SURFACE_TINT,
-            borderTopLeftRadius: radius.md,
-            borderTopRightRadius: radius.md,
             m: 0,
             flexShrink: 0,
           }}

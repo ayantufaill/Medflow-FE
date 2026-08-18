@@ -113,7 +113,11 @@ const NewPaymentPlan = ({ patient, onBack, onCreatePlan, items = [] }) => {
       try {
         setLoading(true);
         const data = await invoiceService.getInvoicesByPatient(patientId);
-        const list = data.invoices || [];
+        const list = (data.invoices || []).filter(inv => 
+          (inv.balanceDue > 0) && 
+          String(inv.status).toLowerCase() !== 'voided' && 
+          String(inv.status).toLowerCase() !== 'void'
+        );
         setInvoices(list);
         setSelectedInvoiceIds(list.map(inv => inv.id || inv._id));
       } catch (err) {

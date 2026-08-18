@@ -37,6 +37,12 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
 
+  useEffect(() => {
+    if (invoiceData && invoiceData.procedures && invoiceData.procedures.length > 0) {
+      setProcedures(invoiceData.procedures);
+    }
+  }, [invoiceData]);
+
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);
 
@@ -419,7 +425,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         )}
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: COLORS.SURFACE_TINT }}>
+      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: '#fff' }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Button
             variant="contained"
@@ -463,7 +469,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           )}
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -480,7 +486,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             variant="contained"
             size="small"
             onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures, description }); }}
-            sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0" } }}
+            sx={{ bgcolor: COLORS.ACCENT, color: "#fff", textTransform: "none", boxShadow: "none", borderRadius: '8px', fontWeight: 600, "&:hover": { bgcolor: "#1565c0" } }}
           >
             Add New Invoice
           </Button>
@@ -488,7 +494,15 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             variant="outlined"
             size="small"
             onClick={onCancel || onClose}
-            sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, textTransform: "none", bgcolor: "white", "&:hover": { bgcolor: "#f5f5f5" } }}
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600
+            }}
           >
             Cancel
           </Button>

@@ -13,7 +13,7 @@ const ShareByEmail = ({ onClose }) => {
   const [onlyOpen, setOnlyOpen] = useState(true);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', border: `1px solid ${COLORS.BORDER}`, bgcolor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
       <DialogTitle
         sx={{
           boxSizing: 'border-box',
@@ -106,7 +106,7 @@ const ShareByEmail = ({ onClose }) => {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, gap: 1 }}>
         <Button
           variant="outlined"
           onClick={onClose}

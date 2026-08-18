@@ -18,6 +18,7 @@ import {
   FormControlLabel,
   Checkbox,
   InputAdornment,
+  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -672,10 +673,45 @@ export default function ImportedCoverageModal({
                       <FormControlLabel value="non-assignment" control={<Radio size="small" />} label={<Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>Non-assignment <InfoIcon sx={{ fontSize: 14, color: '#9e9e9e' }} /></Box>} sx={{ fontFamily: TYPO.fontFamily }} />
                     </RadioGroup>
                   </Box>
-                  <FormControlLabel
-                    control={<Checkbox size="small" checked={releaseInfo} onChange={(e) => setReleaseInfo(e.target.checked)} />}
-                    label={<Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontFamily: TYPO.fontFamily, fontSize: 14 }}>Release info <InfoIcon sx={{ fontSize: 14, color: '#9e9e9e' }} /></Box>}
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <FormControlLabel
+                      control={<Checkbox size="small" checked={releaseInfo} onChange={(e) => setReleaseInfo(e.target.checked)} />}
+                      label={<Typography sx={{ fontFamily: TYPO.fontFamily, fontSize: 14 }}>Release info</Typography>}
+                      sx={{ mr: 0 }}
+                    />
+                    <Tooltip
+                      PopperProps={{ sx: { zIndex: 999999 } }}
+                      title={
+                        <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                          With this check box selected, the subscriber authorizes the release of information to the practice.“Signature on File” populates box 36 on insurance claims. With this check box blank, box 36 will be empty.
+                        </Typography>
+                      }
+                      placement="top"
+                      arrow
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            bgcolor: '#ffffff',
+                            color: '#1e3a8a',
+                            border: '1px solid #1e3a8a',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                            borderRadius: '6px',
+                            maxWidth: 270,
+                            p: 1,
+                            '& .MuiTooltip-arrow': {
+                              color: '#ffffff',
+                              '&::before': {
+                                border: '1px solid #1e3a8a',
+                                backgroundColor: '#ffffff',
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    >
+                      <InfoIcon sx={{ fontSize: 14, color: '#9e9e9e', cursor: 'pointer', '&:hover': { color: '#2563eb' } }} />
+                    </Tooltip>
+                  </Box>
                 </Grid>
               </Grid>
 

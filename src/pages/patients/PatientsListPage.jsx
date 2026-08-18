@@ -24,7 +24,7 @@ import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar'
 import PatientRow from '../../components/patients/list/PatientRow';
 import PatientActionMenu from '../../components/patients/list/PatientActionMenu';
 import { COLORS } from '../../constants/colors';
-import { radius, fontSize, fontWeight } from '../../constants/styles';
+import { radius, fontSize, fontWeight, roundedSelectMenuProps } from '../../constants/styles';
 import { validatePhoneNumber, validateDateOfBirth } from '../../components/patients/list/patientListUtils';
 
 const EMPTY_PROVIDER_LIST = [];
@@ -476,6 +476,9 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
               onRowsPerPageChange={handleChangeRowsPerPage}
               rowsPerPageOptions={[5, 10, 25, 50]}
               labelRowsPerPage="Rows per page:"
+              SelectProps={{
+                MenuProps: roundedSelectMenuProps,
+              }}
               sx={{
                 borderTop: `1px solid ${COLORS.BORDER}`,
                 '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {

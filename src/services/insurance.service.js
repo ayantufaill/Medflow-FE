@@ -114,3 +114,21 @@ export const insurancePlanService = {
     return response.data.data;
   },
 };
+
+export const coverageGroupService = {
+  async createCoverageGroup(payload) {
+    const response = await apiClient.post('/coverage-groups', payload);
+    return response.data.data;
+  },
+
+  async getCoverageGroups(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const response = await apiClient.get(`/coverage-groups${query ? `?${query}` : ''}`);
+    return response.data.data.groups;
+  },
+
+  async deleteCoverageGroup(groupId) {
+    const response = await apiClient.delete(`/coverage-groups/${groupId}`);
+    return response.data.data;
+  },
+};
