@@ -8,6 +8,7 @@ import ProviderTimesCard from "./ProviderTimesCard";
 import ColorTagPicker from "./ColorTagPicker";
 
 const AppointmentRightPanel = ({
+  branchId, onBranchChange, branches,
   status, onStatusChange,
   roomId, onRoomChange, rooms, isRoomOccupied,
   durationMins, onDurationChange,
@@ -36,6 +37,20 @@ const AppointmentRightPanel = ({
       >
         {STATUS_OPTIONS.map((o) => (
           <MenuItem key={o.value} value={o.value} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{o.label}</MenuItem>
+        ))}
+      </Select>
+    </FieldBox>
+
+    <FieldBox label="Branch">
+      <Select MenuProps={{ sx: { zIndex: 1400 } }}
+        size="small" fullWidth displayEmpty
+        value={branchId || ""}
+        onChange={(e) => onBranchChange(e.target.value)}
+        sx={{ fontFamily: "Inter", fontSize: "13px", borderRadius: "8px", color: branchId ? "#09121f" : "#9aa3ae" }}
+      >
+        <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Not specified</MenuItem>
+        {(branches || []).map((b) => (
+          <MenuItem key={b.id} value={b.id} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{b.name}</MenuItem>
         ))}
       </Select>
     </FieldBox>

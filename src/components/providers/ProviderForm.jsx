@@ -33,6 +33,7 @@ import {
   selectSpecialties,
   selectSpecialtiesLoading,
 } from "../../store/slices/providerSlice";
+import { useBranch } from "../../hooks/redux";
 
 // Only log in development
 const isDevelopment = import.meta.env.DEV;
@@ -54,6 +55,7 @@ const ProviderForm = ({
   const dispatch = useDispatch();
   const specialties = useSelector(selectSpecialties);
   const specialtiesLoading = useSelector(selectSpecialtiesLoading);
+  const { branches, fetchBranches: loadBranches } = useBranch();
 
   const [userSearch, setUserSearch] = useState("");
   const userSearchTimerRef = useRef(null);
@@ -131,6 +133,8 @@ const ProviderForm = ({
 
   useEffect(() => {
     dispatch(fetchSpecialties());
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   const filteredSpecialties = useMemo(() => {
@@ -220,6 +224,7 @@ const ProviderForm = ({
           npiNumber: initialData.npiNumber || "",
           licenseNumber: initialData.licenseNumber || "",
           specialty: normalizeSpecialtyValue(initialData.specialty),
+          branchIds: Array.isArray(initialData.branchIds) ? initialData.branchIds : [],
           title: initialData.title || "MD",
           appointmentBufferMinutes: initialData.appointmentBufferMinutes || 15,
           maxDailyAppointments: initialData.maxDailyAppointments || "",
@@ -236,6 +241,7 @@ const ProviderForm = ({
           npiNumber: "",
           licenseNumber: "",
           specialty: [],
+          branchIds: [],
           title: "MD",
           appointmentBufferMinutes: 15,
           maxDailyAppointments: "",
@@ -283,6 +289,7 @@ const ProviderForm = ({
         npiNumber: initialData.npiNumber || "",
         licenseNumber: initialData.licenseNumber || "",
         specialty: normalizeSpecialtyValue(initialData.specialty),
+        branchIds: Array.isArray(initialData.branchIds) ? initialData.branchIds : [],
         title: initialData.title || "MD",
         appointmentBufferMinutes: initialData.appointmentBufferMinutes || 15,
         maxDailyAppointments: initialData.maxDailyAppointments || "",
@@ -438,6 +445,7 @@ const ProviderForm = ({
       npiNumber: sanitizeValue(formData.npiNumber),
       licenseNumber: sanitizeValue(formData.licenseNumber),
       specialty: sanitizeSpecialty(formData.specialty),
+      branchIds: Array.isArray(formData.branchIds) ? formData.branchIds : [],
       appointmentBufferMinutes: Number(formData.appointmentBufferMinutes),
       maxDailyAppointments: Number(formData.maxDailyAppointments),
       consultationFee: formData.consultationFee
@@ -644,6 +652,42 @@ const ProviderForm = ({
                     specialtiesLoading ? "Searching..." : "No specialties found"
                   }
                   filterOptions={(x) => x}
+                />
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Controller
+              name="branchIds"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  multiple
+                  options={branches}
+                  getOptionLabel={(option) => option.name || ""}
+                  value={branches.filter((b) => (field.value || []).includes(b.id))}
+                  onChange={(event, newValue) => field.onChange(newValue.map((b) => b.id))}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  filterSelectedOptions
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        variant="outlined"
+                        label={option.name}
+                        {...getTagProps({ index })}
+                        key={option.id}
+                        size="small"
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Branches"
+                      placeholder="Which branches does this provider work at?"
+                    />
+                  )}
+                  noOptionsText="No branches found"
                 />
               )}
             />

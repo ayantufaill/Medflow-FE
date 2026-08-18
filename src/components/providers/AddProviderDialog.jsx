@@ -145,6 +145,7 @@ const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onC
           color: data.color,
           openEdgeToken: data.openEdgeToken,
           openDentalProviderId: data.openDentalProviderId,
+          branchIds: data.branchIds,
           address: { country: data.country, street: data.addressLine1, address2: data.addressLine2, city: data.city, state: data.state, zipCode: data.zipCode },
         };
       } else {
