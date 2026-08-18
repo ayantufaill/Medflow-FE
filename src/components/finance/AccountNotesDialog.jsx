@@ -321,7 +321,7 @@ const AccountNotesDialog = ({ patient, onClose }) => {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: "16px", px: "24px", justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE }}>
+      <DialogActions sx={{ p: "16px", px: "24px", justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER}`, backgroundColor: COLORS.WHITE }}>
         <Box 
           sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
           onClick={() => setRemindMeNewNote(!remindMeNewNote)}
@@ -337,9 +337,17 @@ const AccountNotesDialog = ({ patient, onClose }) => {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button 
+            variant="outlined"
             onClick={handleCancel}
-            disableRipple
-            sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semibold, textTransform: 'none', px: 2, '&:hover': { bgcolor: 'transparent' } }}
+            sx={{ 
+              color: '#64748b', 
+              borderColor: '#cbd5e1',
+              textTransform: 'none', 
+              px: 3,
+              borderRadius: '8px',
+              fontWeight: 600,
+              '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' }
+            }}
           >
             Cancel
           </Button>
@@ -351,11 +359,10 @@ const AccountNotesDialog = ({ patient, onClose }) => {
             sx={{ 
               textTransform: 'none', 
               px: 3, 
-              py: 1, 
-              borderRadius: '6px', 
+              borderRadius: '8px', 
               bgcolor: COLORS.ACCENT, 
               color: COLORS.WHITE, 
-              fontWeight: fontWeight.semibold, 
+              fontWeight: 600, 
               '&:hover': { bgcolor: COLORS.ACCENT_HOVER }, 
               '&.Mui-disabled': { bgcolor: COLORS.SURFACE_DISABLED, color: COLORS.TEXT_MUTED } 
             }}

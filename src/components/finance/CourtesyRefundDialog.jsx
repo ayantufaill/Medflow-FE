@@ -27,7 +27,7 @@ const CourtesyRefundDialog = ({ patient, onClose }) => {
   }, [patient]);
   
   return (
-    <Box sx={{ width: '100%', minWidth: '1000px', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'visible', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+    <Box sx={{ width: '100%', minWidth: '1000px', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
       {/* Header */}
       <DialogTitle sx={{
           boxSizing: "border-box",
@@ -40,8 +40,6 @@ const CourtesyRefundDialog = ({ patient, onClose }) => {
           backgroundColor: COLORS.SURFACE_TINT,
           m: 0,
           flexShrink: 0,
-          borderTopLeftRadius: '14px',
-          borderTopRightRadius: '14px',
       }}>
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
           Courtesy Refund #24633

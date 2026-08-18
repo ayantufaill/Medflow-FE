@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { 
   Box, Typography, Button, Checkbox, FormControlLabel, TextField, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Grid, Divider, InputBase,
@@ -13,14 +14,20 @@ import StatementFooter from './StatementFooter';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { usePatient } from '../../hooks/redux';
+import { selectLedgerItemsForPatient } from '../../store/slices/billingSlice';
 
 const SimpleStatementDialog = ({ onClose, printItem }) => {
   const contentRef = useRef(null);
   const [showNotesInput, setShowNotesInput] = useState(false);
   const [notes, setNotes] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState(dayjs().subtract(30, 'day'));
+  const [showOpenInvoicesOnly, setShowOpenInvoicesOnly] = useState(false);
   
   const { currentPatient } = usePatient();
+  const patientId = currentPatient?._id || currentPatient?.id;
   const patientName = currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Unknown Patient';
+  
+  const ledgerItems = useSelector(selectLedgerItemsForPatient(patientId)) || [];
 
   const isPayment = printItem?.isPayment;
   const isAdjustment = printItem?.isAdjustment;
@@ -79,6 +86,106 @@ const SimpleStatementDialog = ({ onClose, printItem }) => {
       if (isPayment) totalPatientPayments = Number(printItem.amount || 0);
       if (isAdjustment) totalAdjustments = Number(printItem.amount || 0);
     }
+  } else {
+    // Populate from ledgerItems when printItem is absent
+    const filteredLedger = ledgerItems.filter(item => {
+      const itemDate = dayjs(item.rawDate || item.date);
+      if (filterStartDate && itemDate.isBefore(filterStartDate, 'day')) return false;
+      if (showOpenInvoicesOnly && item.method === 'Invoice') {
+         const invBal = Number((item.summary?.invBal || '$0').replace(/[^0-9.-]+/g, ''));
+         return invBal > 0;
+      }
+      return true;
+    });
+
+    const parseAmt = (val) => Number((String(val || '$0')).replace(/[^0-9.-]+/g, ''));
+
+    filteredLedger.forEach(item => {
+      if (item.method === 'Invoice' && !item.isVoided) {
+        const procDetail = (item.details || []).find(d => d.procedures);
+        const procedures = procDetail ? procDetail.procedures : [];
+        
+        if (procedures.length > 0) {
+          procedures.forEach(proc => {
+             const charge = Number(proc.total || proc.totalPrice || proc.charge || proc.fee || proc.unitPrice || 0);
+             const insPortion = Number(proc.insPortion || 0);
+             transactions.push({
+               date: dayjs(proc.date || item.rawDate || item.date).format("MM/DD/YYYY"),
+               desc: `Invoice #${item.id || item.invoiceNumber || ''}`,
+               sub: `${proc.code || ''} ${proc.description || ''}`,
+               prov: proc.provider || 'N/A',
+               amt: `$${charge.toFixed(2)}`,
+               ins: `$${insPortion.toFixed(2)}`
+             });
+             totalCharges += charge;
+             insEstimate += insPortion;
+          });
+        } else {
+           const amt = parseAmt(item.amount);
+           transactions.push({
+             date: dayjs(item.rawDate || item.date).format("MM/DD/YYYY"),
+             desc: `Invoice #${item.id || item.invoiceNumber || ''}`,
+             sub: item.title || 'Invoice',
+             prov: item.initials || 'N/A',
+             amt: `$${amt.toFixed(2)}`,
+             ins: `$0.00`
+           });
+           totalCharges += amt;
+        }
+
+        // Also capture payments applied directly to this invoice via details array
+        (item.details || []).forEach(d => {
+          if (d.isPayment && !d.isVoided) {
+             const pAmt = parseAmt(d.amount);
+             transactions.push({
+               date: dayjs(item.rawDate || item.date).format("MM/DD/YYYY"),
+               desc: d.title || 'Payment',
+               sub: '',
+               prov: 'N/A',
+               amt: `-$${Math.abs(pAmt).toFixed(2)}`,
+               ins: '$0.00'
+             });
+             if (d.title && d.title.toLowerCase().includes('insurance')) {
+                totalInsPayments += pAmt;
+             } else if (d.title && d.title.toLowerCase().includes('adjustment')) {
+                totalAdjustments += pAmt;
+             } else {
+                totalPatientPayments += pAmt;
+             }
+          }
+        });
+      } else if (item.method === 'Payment' && !item.isVoided) {
+         const amt = parseAmt(item.amount);
+         transactions.push({
+           date: dayjs(item.rawDate || item.date).format("MM/DD/YYYY"),
+           desc: item.description || item.title || 'Payment',
+           sub: item.method || '',
+           prov: item.initials || 'N/A',
+           amt: `-$${Math.abs(amt).toFixed(2)}`,
+           ins: '$0.00'
+         });
+         
+         if (item.isInsurance || (item.details && item.details[0]?.title.toLowerCase().includes('insurance'))) {
+           totalInsPayments += amt;
+         } else {
+           totalPatientPayments += amt;
+         }
+      } else if (item.method === 'Adjustment' && !item.isVoided) {
+         const amt = parseAmt(item.amount);
+         transactions.push({
+           date: dayjs(item.rawDate || item.date).format("MM/DD/YYYY"),
+           desc: item.description || item.title || 'Adjustment',
+           sub: item.sub || '',
+           prov: item.initials || 'N/A',
+           amt: `-$${Math.abs(amt).toFixed(2)}`,
+           ins: '$0.00'
+         });
+         totalAdjustments += amt;
+      }
+    });
+    
+    // Sort transactions by date descending
+    transactions.sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
   }
 
   let yourPortion = 0;
@@ -199,7 +306,7 @@ const SimpleStatementDialog = ({ onClose, printItem }) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
             <FormControlLabel
-              control={<Checkbox size="small" />}
+              control={<Checkbox size="small" checked={showOpenInvoicesOnly} onChange={(e) => setShowOpenInvoicesOnly(e.target.checked)} />}
               label={<Typography sx={{ fontSize: '13px' }}>Only Open Invoices</Typography>}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -237,7 +344,8 @@ const SimpleStatementDialog = ({ onClose, printItem }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Start Date</Typography>
               <DatePicker
-                defaultValue={dayjs("2026-04-06")}
+                value={filterStartDate}
+                onChange={(newValue) => setFilterStartDate(newValue)}
                 format="MM/DD/YYYY"
                 slotProps={{ 
                   popper: { sx: { zIndex: 999999 } },

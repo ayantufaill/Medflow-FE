@@ -520,66 +520,76 @@ const ManualClaimDialog = ({ patient, onClose }) => {
           ))
         )}
 
-        {/* ── Footer ── */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 3 }}>
-          <Box sx={{ flex: 1 }}>
-            {!showDescription ? (
-              <Typography
-                onClick={() => setShowDescription(true)}
-                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', display: 'inline-block' }}
-              >
-                + Add description
-              </Typography>
-            ) : (
-              <TextField
-                placeholder="Description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                variant="standard"
-                autoFocus
-                sx={{ width: 250, input: { fontSize: '0.8125rem' } }}
-              />
-            )}
-          </Box>
+      </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {!showNote ? (
-              <Typography
-                onClick={() => setShowNote(true)}
-                sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-              >
-                + Add note/narrative
-              </Typography>
-            ) : (
-              <TextField
-                placeholder="Note/Narrative"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                variant="standard"
-                autoFocus
-                sx={{ width: 200, input: { fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif' } }}
-              />
-            )}
-
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}
+      {/* ── Footer ── */}
+      <Box sx={{ display: 'flex', alignItems: 'center', p: '12px 24px', borderTop: `1px solid ${COLORS.BORDER}`, backgroundColor: '#fff' }}>
+        <Box sx={{ flex: 1 }}>
+          {!showDescription ? (
+            <Typography
+              onClick={() => setShowDescription(true)}
+              sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', display: 'inline-block' }}
             >
-              Cancel
-            </Button>
+              + Add description
+            </Typography>
+          ) : (
+            <TextField
+              placeholder="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              variant="standard"
+              autoFocus
+              sx={{ width: 250, input: { fontSize: '0.8125rem' } }}
+            />
+          )}
+        </Box>
 
-            <Button
-              variant="contained"
-              onClick={handleSendToBatch}
-              disabled={isSubmitting}
-              sx={{
-                textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif'
-              }}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {!showNote ? (
+            <Typography
+              onClick={() => setShowNote(true)}
+              sx={{ color: linkBlue, fontSize: '0.8125rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
             >
-              {isSubmitting ? 'Sending...' : 'Send to Batch'}
-            </Button>
-          </Box>
+              + Add note/narrative
+            </Typography>
+          ) : (
+            <TextField
+              placeholder="Note/Narrative"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              variant="standard"
+              autoFocus
+              sx={{ width: 200, input: { fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif' } }}
+            />
+          )}
+
+          <Button
+            variant="contained"
+            onClick={handleSendToBatch}
+            disabled={isSubmitting}
+            sx={{
+              textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            {isSubmitting ? 'Sending...' : 'Send to Batch'}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600,
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Cancel
+          </Button>
         </Box>
       </Box>
     </Box>

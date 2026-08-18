@@ -353,20 +353,28 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             In simple mode, the system will automatically assign a payment amount per procedure. By switching to simple mode, you will have no control over the way the software will split the total payment.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={handleCancelSimpleBilling}
-            variant="outlined"
-            sx={{ textTransform: 'none' }}
-          >
-            Cancel
-          </Button>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, gap: 1 }}>
           <Button 
             onClick={handleConfirmSimpleBilling}
             variant="contained"
-            sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#1565c0' } }}
+            sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
           >
             Confirm and proceed
+          </Button>
+          <Button 
+            onClick={handleCancelSimpleBilling}
+            variant="outlined"
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600
+            }}
+          >
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>
@@ -454,14 +462,22 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             <Button 
               onClick={handleProceedPayment}
               variant="contained"
-              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem', '&:hover': { bgcolor: '#1565c0' } }}
+              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
             >
               Proceed
             </Button>
             <Button 
               onClick={handleCancelPayment}
               variant="outlined"
-              sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, bgcolor: 'white', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.8125rem', '&:hover': { bgcolor: '#f5f5f5' } }}
+              sx={{
+                color: '#64748b',
+                borderColor: '#cbd5e1',
+                borderRadius: '8px',
+                '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+                textTransform: 'none',
+                px: 2,
+                fontWeight: 600
+              }}
             >
               Cancel
             </Button>

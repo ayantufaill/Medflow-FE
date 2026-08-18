@@ -301,11 +301,11 @@ const ManageEOBModal = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: '1px solid #e0e6ed', px: 2.5, py: 2, bgcolor: '#f8fafc', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+      <DialogActions sx={{ borderTop: '1px solid #e0e5eb', px: 2.5, py: 2, bgcolor: '#fff', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
         <Button
           variant="outlined"
           onClick={() => onClose(hasChanges)}
-          sx={{ textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', fontWeight: 600, borderRadius: '8px', px: 3, fontFamily: 'Inter, sans-serif', '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' } }}
+          sx={{ textTransform: 'none', color: '#64748b', borderColor: '#cbd5e1', fontWeight: 600, borderRadius: '8px', px: 3, fontFamily: 'Inter, sans-serif', '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' } }}
         >
           Done
         </Button>

@@ -10,12 +10,12 @@ const InsurancePaymentFooter = ({
   totalPay = 0
 }) => {
   return (
-    <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+    <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Button 
           variant="contained" 
           onClick={handleSwitchToSimpleBilling}
-          sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', '&:hover': { bgcolor: '#1565c0' } }}
+          sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
         >
           Switch to simple billing
         </Button>
@@ -32,20 +32,30 @@ const InsurancePaymentFooter = ({
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#d32f2f' }}>Ins Writeoff: ${totalWo.toFixed(2)}</Typography>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: ${totalPay.toFixed(2)}</Typography>
           
-          <Button 
-            variant="contained" 
-            onClick={handleApplyAndPay}
-            sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', '&:hover': { bgcolor: '#1565c0' } }}
-          >
-            Apply
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={onClose}
-            sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, bgcolor: 'white', textTransform: 'none', boxShadow: 'none', px: 2.25, fontSize: '0.8125rem', '&:hover': { bgcolor: '#f5f5f5' } }}
-          >
-            Cancel
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              variant="contained" 
+              onClick={handleApplyAndPay}
+              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
+            >
+              Apply
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={onClose}
+              sx={{
+                color: '#64748b',
+                borderColor: '#cbd5e1',
+                borderRadius: '8px',
+                '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+                textTransform: 'none',
+                px: 2,
+                fontWeight: 600
+              }}
+            >
+              Cancel
+            </Button>
+          </Box>
         </Box>
       </Box>
     </DialogActions>
