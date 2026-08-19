@@ -26,21 +26,21 @@ const DayTasksHeader = ({
       alignItems: 'center', 
       justifyContent: 'space-between',
       flexWrap: 'wrap',
-      gap: 2,
-      px: 2.5,
-      py: 2,
-      mb: 3,
-      backgroundColor: COLORS.SURFACE_CARD,
-      borderRadius: '24px', // Matches radius.xl standard
-      border: `0.8px solid ${COLORS.BORDER}`
+      gap: 1.5,
+      px: 2,
+      py: 1.5,
+      mb: 2,
+      backgroundColor: '#fff',
+      borderRadius: '8px',
+      border: '1px solid #e2e8f0'
     }}>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: COLORS.TEXT_PRIMARY }}>
-          Day Tasks
+        <Typography sx={{ fontSize: '0.9rem', color: '#445164', fontWeight: 600, mr: 1 }}>
+          Filter Tasks:
         </Typography>
       </Box>
 
-      <Box sx={{ flex: 1 }} /> {/* Spacer pushes everything else to the right */}
+      <Box sx={{ flex: 1 }} />
 
       <Box sx={{ display: 'flex', alignItems: 'center', mr: 20}}>
         {/* Date Navigator - pushed slightly off the right edge */}
@@ -65,6 +65,7 @@ const DayTasksHeader = ({
           onChange={(e, newValue) => onTaskChange(newValue || 'All Tasks')}
           disableClearable
           size="small"
+          componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
           sx={{ 
             width: 150,
             '& .MuiOutlinedInput-root': {
@@ -95,10 +96,12 @@ const DayTasksHeader = ({
         />
 
         <Autocomplete
-          options={uniquePatients}
-          value={selectedPatient}
-          onChange={(e, newValue) => onPatientChange(newValue)}
+          options={['All Patients', ...uniquePatients]}
+          value={selectedPatient || 'All Patients'}
+          onChange={(e, newValue) => onPatientChange(newValue === 'All Patients' ? null : newValue)}
           size="small"
+          disableClearable
+          componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
           sx={{ 
             minWidth: 160,
             '& .MuiOutlinedInput-root': {

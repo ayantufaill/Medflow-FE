@@ -21,6 +21,19 @@ const NavTabs = () => {
         location.pathname === path || location.pathname.startsWith("/clinical")
       );
     }
+    if (path === "/patient-reports") {
+      return (
+        location.pathname === path ||
+        location.pathname.startsWith(path + "/") ||
+        (location.pathname.startsWith("/patients/") && location.pathname.includes("/report"))
+      );
+    }
+    if (path === "/patients") {
+      return (
+        (location.pathname === path || location.pathname.startsWith(path + "/")) &&
+        !location.pathname.includes("/report")
+      );
+    }
     return (
       location.pathname === path || location.pathname.startsWith(path + "/")
     );

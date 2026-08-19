@@ -61,6 +61,21 @@ const LabCasesDialog = ({ open, onClose }) => {
     }
   }, [open, sortConfig, filters.status]); // Only re-fetch on status/sort change or open. Date changes require "Apply".
 
+  // Reset state when the dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setFilters({
+        status: 'Select Status',
+        includeInactive: false,
+        dateRange: 'Range',
+        startDate: dayjs().subtract(30, 'day'),
+        endDate: dayjs()
+      });
+      setSortConfig({ key: 'dueDate', order: 'asc' });
+      setPagination({ page: 1, limit: 25, total: 0 });
+    }
+  }, [open]);
+
   const handleApplyFilters = () => {
     fetchLabCases(1);
   };
@@ -74,7 +89,7 @@ const LabCasesDialog = ({ open, onClose }) => {
   };
 
   const handleExportCSV = () => {
-    
+
     const headers = ['Patient', 'Lab Provider', 'Due Date', 'Appointment Date', 'Shared Date', 'Status', 'Notes'];
     const csvContent = [
       headers.join(','),
@@ -92,7 +107,7 @@ const LabCasesDialog = ({ open, onClose }) => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('url');
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.setAttribute('href', url);
     a.setAttribute('download', `lab-cases-${dayjs().format('YYYY-MM-DD')}.csv`);
@@ -107,10 +122,10 @@ const LabCasesDialog = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="lg" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
       fullWidth
       sx={{ zIndex: 1500 }}
       PaperProps={{
@@ -159,22 +174,22 @@ const LabCasesDialog = ({ open, onClose }) => {
       </DialogTitle>
 
       <DialogContent sx={{ p: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#fff', flexGrow: 1, overflowY: 'auto' }}>
-        <Link 
-          href="#" 
-          underline="always" 
+        <Link
+          href="#"
+          underline="always"
           sx={{ color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem', mt: 1, mb: 2, display: 'inline-block' }}
         >
         </Link>
 
         {/* Filters */}
-        <LabCasesFilters 
-          filters={filters} 
-          onFiltersChange={setFilters} 
-          onApplyFilters={handleApplyFilters} 
+        <LabCasesFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          onApplyFilters={handleApplyFilters}
         />
 
         {/* Actions */}
-        <LabCasesActions 
+        <LabCasesActions
           onExportCSV={handleExportCSV}
           onPrint={handlePrint}
           expandedNotes={expandedNotes}
@@ -184,7 +199,7 @@ const LabCasesDialog = ({ open, onClose }) => {
 
         {/* Table */}
         <Box sx={{ mb: '25px' }}>
-          <LabCasesTable 
+          <LabCasesTable
             labCases={labCases}
             loading={loading}
             onSort={handleSort}
@@ -196,11 +211,11 @@ const LabCasesDialog = ({ open, onClose }) => {
         </Box>
 
         <Box sx={{ p: "12px 24px", borderTop: '1px solid #e0e5eb', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', mt: 'auto', mx: '-25px', mb: '-25px' }}>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             size="small"
             onClick={onClose}
-            sx={{ 
+            sx={{
               borderColor: "#d0d5dd",
               color: "#374151",
               fontFamily: "Inter",
