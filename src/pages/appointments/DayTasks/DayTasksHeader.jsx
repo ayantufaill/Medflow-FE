@@ -7,7 +7,7 @@ import DateNavigation from '../../../components/appointments/schedule/DateNaviga
 
 import { MOCK_DAY_TASKS } from './mockDayTasks';
 
-const DayTasksHeader = ({ 
+const DayTasksHeader = ({
   selectedDate, onPrev, onNext, onToday, onDateSelect,
   selectedTask, onTaskChange,
   selectedPatient, onPatientChange,
@@ -21,9 +21,9 @@ const DayTasksHeader = ({
   ).sort();
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
+    <Box sx={{
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'space-between',
       flexWrap: 'wrap',
       gap: 1.5,
@@ -42,7 +42,7 @@ const DayTasksHeader = ({
 
       <Box sx={{ flex: 1 }} />
 
-      <Box sx={{ display: 'flex', alignItems: 'center', mr: 20}}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mr: 20 }}>
         {/* Date Navigator - pushed slightly off the right edge */}
         <DateNavigation
           date={dayjs(selectedDate)}
@@ -66,7 +66,7 @@ const DayTasksHeader = ({
           disableClearable
           size="small"
           componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
-          sx={{ 
+          sx={{
             width: 150,
             '& .MuiOutlinedInput-root': {
               height: '36px',
@@ -102,7 +102,7 @@ const DayTasksHeader = ({
           size="small"
           disableClearable
           componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
-          sx={{ 
+          sx={{
             minWidth: 160,
             '& .MuiOutlinedInput-root': {
               height: '36px',
@@ -133,11 +133,11 @@ const DayTasksHeader = ({
 
         {/* View Toggle */}
         <ButtonGroup disableElevation sx={{ height: '32px' }}>
-          <Button 
+          <Button
             variant={viewMode === 'task' ? "contained" : "outlined"}
             onClick={() => onViewModeChange('task')}
-            sx={{ 
-              bgcolor: viewMode === 'task' ? COLORS.ACCENT : 'transparent', 
+            sx={{
+              bgcolor: viewMode === 'task' ? COLORS.ACCENT : 'transparent',
               color: viewMode === 'task' ? 'white' : COLORS.ACCENT,
               borderColor: viewMode === 'task' ? COLORS.ACCENT : COLORS.BORDER,
               textTransform: 'none',
@@ -145,7 +145,7 @@ const DayTasksHeader = ({
               fontSize: '13px',
               borderTopLeftRadius: radius.md,
               borderBottomLeftRadius: radius.md,
-              '&:hover': { 
+              '&:hover': {
                 bgcolor: viewMode === 'task' ? COLORS.ACCENT : COLORS.SURFACE_HOVER,
                 borderColor: viewMode === 'task' ? COLORS.ACCENT : COLORS.BORDER,
               },
@@ -153,11 +153,11 @@ const DayTasksHeader = ({
           >
             Task View
           </Button>
-          <Button 
+          <Button
             variant={viewMode === 'patient' ? "contained" : "outlined"}
             onClick={() => onViewModeChange('patient')}
-            sx={{ 
-              bgcolor: viewMode === 'patient' ? COLORS.ACCENT : 'transparent', 
+            sx={{
+              bgcolor: viewMode === 'patient' ? COLORS.ACCENT : 'transparent',
               color: viewMode === 'patient' ? 'white' : COLORS.ACCENT,
               borderColor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.BORDER,
               textTransform: 'none',
@@ -165,7 +165,7 @@ const DayTasksHeader = ({
               fontSize: '13px',
               borderTopRightRadius: radius.md,
               borderBottomRightRadius: radius.md,
-              '&:hover': { 
+              '&:hover': {
                 bgcolor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.SURFACE_HOVER,
                 borderColor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.BORDER,
               }
