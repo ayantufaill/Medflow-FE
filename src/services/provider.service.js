@@ -12,6 +12,7 @@ export const providerService = {
    * @param {number} limit - Items per page
    * @param {string} search - Search query
    * @param {boolean} isActive - Filter by active status
+   * @param {string} [branchId] - Filter to only providers who work at this branch
    * @returns {Promise<Object>} Providers data with pagination
    */
   async getAllProviders(
@@ -20,7 +21,8 @@ export const providerService = {
     search = '',
     isActive = null,
     specialty = '',
-    providerCategory = ''
+    providerCategory = '',
+    branchId = null
   ) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
@@ -31,6 +33,7 @@ export const providerService = {
     if (isActive !== null && isActive !== undefined) {
       params.append('isActive', isActive ? 'true' : 'false');
     }
+    if (branchId) params.append('branchId', branchId);
 
     const response = await apiClient.get(`/providers?${params.toString()}`);
     return response.data.data;
@@ -65,6 +68,18 @@ export const providerService = {
   async updateProvider(providerId, updates) {
     const response = await apiClient.put(`/providers/${providerId}`, updates);
     return response.data.data.provider;
+  },
+
+  /**
+   * Reassign a provider to different branch(es) within their practice group
+   * (same cross-group permission enforcement as userService.updateUserBranches).
+   * @param {string} providerId - Provider ID
+   * @param {string[]} branchIds - Branch IDs to assign
+   * @returns {Promise<{branchIds: string[]}>}
+   */
+  async updateProviderBranches(providerId, branchIds) {
+    const response = await apiClient.patch(`/providers/${providerId}/branches`, { branchIds });
+    return response.data.data;
   },
 
   /**

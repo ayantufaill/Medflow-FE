@@ -87,6 +87,19 @@ export const userService = {
   },
 
   /**
+   * Reassign a user to different branch(es) within their practice group
+   * (Group Admin / Branch Admin / Admin — permission-checked server-side; a
+   * Group Admin can only move users within their own group, in both directions).
+   * @param {string} userId - User ID
+   * @param {string[]} branchIds - Branch IDs to assign
+   * @returns {Promise<{branchIds: string[]}>}
+   */
+  async updateUserBranches(userId, branchIds) {
+    const response = await apiClient.patch(`/users/${userId}/branches`, { branchIds });
+    return response.data.data;
+  },
+
+  /**
    * Assign role to user (Admin only)
    * @param {string} userId - User ID
    * @param {string} roleId - Role ID
