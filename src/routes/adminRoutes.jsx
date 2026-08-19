@@ -23,9 +23,26 @@ import ReportsDashboard from '../pages/admin/ReportsDashboard';
 import AdvancedReporting from '../pages/admin/AdvancedReporting';
 import ClinicAnalyticsPage from '../pages/admin/ClinicAnalyticsPage';
 import PracticeGroupsPage from '../pages/admin/PracticeGroupsPage';
+import MyGroupPage from '../pages/admin/MyGroupPage';
 
 const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute requiredRoles={['Admin']}>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
+// Admin, OR anyone holding the given permission (e.g. Group Admin's real
+// `group:view_analytics` permission) — Group Admin never holds the 'Admin' role
+// name, so a plain requiredRoles check would always exclude them.
+const adminOrPermission = (children, permission, hideSidebar = true) => (
+  <ProtectedRoute requiredRoles={['Admin']} requiredPermissions={[permission]} requireEitherRoleOrPermission>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
+// Group Admin's own branch-reassignment screen — also open to Admin for oversight.
+const groupAdminOnly = (children, hideSidebar = true) => (
+  <ProtectedRoute requiredRoles={['Admin', 'Group Admin']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -90,8 +107,9 @@ const adminRoutes = [
   <Route key="/kpi" path="/kpi" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />, true)} />,
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
-  <Route key="/admin/analytics" path="/admin/analytics" element={adminOnly(<ClinicAnalyticsPage />)} />,
-  <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOnly(<PracticeGroupsPage />)} />,
+  <Route key="/admin/analytics" path="/admin/analytics" element={adminOrPermission(<ClinicAnalyticsPage />, 'group:view_analytics')} />,
+  <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOrPermission(<PracticeGroupsPage />, 'platform:manage_practice_groups')} />,
+  <Route key="/admin/my-group" path="/admin/my-group" element={groupAdminOnly(<MyGroupPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 
