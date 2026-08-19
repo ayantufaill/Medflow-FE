@@ -4,7 +4,6 @@ import {
   Dialog, 
   DialogTitle, 
   DialogContent, 
-  DialogActions, 
   Typography, 
   Button, 
   Box,
@@ -22,7 +21,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, ShoppingCart as ShoppingCartIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
-import { fontSize, fontWeight, radius } from '../../../constants/styles';
+import { fontSize, fontWeight } from '../../../constants/styles';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { patientService } from '../../../services/patient.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
@@ -58,7 +57,7 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
     (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
     (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient);
 
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState([{ id: Date.now(), product: '', provider: '', quantity: '1', isBought: false }]);
   
   useEffect(() => {
     if (open) {
@@ -67,7 +66,7 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
   }, [open, dispatch]);
 
   const handleClose = () => {
-    setRows([]);
+    setRows([{ id: Date.now(), product: '', provider: '', quantity: '1', isBought: false }]);
     onClose();
   };
 
@@ -137,65 +136,78 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
         }
       }}
     >
-      <DialogTitle 
-        sx={{ 
-          boxSizing: "border-box",
-          px: "25px",
-          py: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: `1px solid ${COLORS.BORDER}`,
-          backgroundColor: COLORS.SURFACE_TINT,
+      <DialogTitle
+        sx={{
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "10px", py: "10px",
+          borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+          backgroundColor: "#f3f8fd",
           m: 0,
         }}
       >
-        <ShoppingCartIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Select Products & Quantity
-        </Typography>
-        <IconButton onClick={handleClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <ShoppingCartIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Select Products & Quantity
+          </Typography>
+        </Box>
+
+        <IconButton onClick={handleClose} size="small" sx={{ color: "#6b7280", ml: 1 }}>
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
-      
-      <DialogContent sx={{ p: rows.length === 0 ? '0px' : '24px' }}>
-        {rows.length === 0 ? (
-          <Box sx={{ mt: 3 }}>
-            <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: fontSize.base, mb: 1 }}>
-              No suggested product to patient
-            </Typography>
-            <Link 
-              component="button"
-              variant="body2"
-              onClick={handleAddRow}
-              sx={{ 
-                color: COLORS.ACCENT, 
-                textDecoration: 'none',
-                fontSize: fontSize.base,
-                fontWeight: fontWeight.semibold,
-                '&:hover': { textDecoration: 'underline' }
-              }}
-            >
-              + Add product
-            </Link>
-          </Box>
-        ) : (
-          <TableContainer sx={{ overflowX: 'hidden' }}>
-            <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
-              <TableHead>
+      <DialogContent sx={{ p: '24px', pt: '24px !important' }}>
+        <TableContainer sx={{ overflowX: 'hidden', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: '8px' }}>
+          <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f8fafc' }}>
+                <TableCell sx={{ width: '24%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Product Name</TableCell>
+                <TableCell sx={{ width: '18%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Product Choice</TableCell>
+                <TableCell sx={{ width: '18%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Provider</TableCell>
+                <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Price</TableCell>
+                <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Quantity</TableCell>
+                <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}`, color: '#475569' }}>Total Price</TableCell>
+                <TableCell sx={{ width: '10%', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell sx={{ width: '24%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Product Name</TableCell>
-                  <TableCell sx={{ width: '18%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Product Choice</TableCell>
-                  <TableCell sx={{ width: '18%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Provider</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Price</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Quantity</TableCell>
-                  <TableCell sx={{ width: '10%', fontWeight: 600, borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}>Total Price</TableCell>
-                  <TableCell sx={{ width: '10%', borderBottom: `1px solid ${COLORS.BORDER_LIGHT}` }}></TableCell>
+                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                    <Typography sx={{ color: '#64748b', fontSize: '0.9rem', mb: 2 }}>
+                      No suggested product to patient
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleAddRow}
+                      sx={{ 
+                        color: "#2262ef", 
+                        borderColor: "#2262ef",
+                        textTransform: 'none',
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        borderRadius: "6px",
+                        '&:hover': { backgroundColor: "#eff6ff", borderColor: "#1b52cf" }
+                      }}
+                    >
+                      + Add product
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => {
+              ) : (
+                rows.map((row) => {
                   const unitPrice = getPrice(row.product);
                   const parsedQuantity = parseInt(row.quantity, 10) || 0;
                   const totalPrice = unitPrice * parsedQuantity;
@@ -208,7 +220,29 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
                           displayEmpty
                           value={row.product}
                           onChange={(e) => updateRow(row.id, 'product', e.target.value)}
-                          MenuProps={{ sx: { zIndex: 1600 } }}
+                          MenuProps={{ 
+                            sx: { zIndex: 1600 },
+                            PaperProps: {
+                              sx: {
+                                mt: 1,
+                                borderRadius: '8px',
+                                boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
+                                border: '1px solid #e0e5eb',
+                                p: '4px',
+                                '& .MuiMenuItem-root': {
+                                  fontSize: '13px',
+                                  fontFamily: 'Inter',
+                                  color: '#374151',
+                                  borderRadius: '6px',
+                                  mx: '4px',
+                                  my: '2px',
+                                  '&:hover': { backgroundColor: '#f3f8fd', color: '#2262ef' },
+                                  '&.Mui-selected': { backgroundColor: '#eff6ff', color: '#2262ef', fontWeight: 600 },
+                                  '&.Mui-selected:hover': { backgroundColor: '#e0edff' }
+                                }
+                              }
+                            }
+                          }}
                           sx={{ 
                             width: '100%', 
                             height: 36,
@@ -250,7 +284,29 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
                           displayEmpty
                           value={row.provider}
                           onChange={(e) => updateRow(row.id, 'provider', e.target.value)}
-                          MenuProps={{ sx: { zIndex: 1600 } }}
+                          MenuProps={{ 
+                            sx: { zIndex: 1600 },
+                            PaperProps: {
+                              sx: {
+                                mt: 1,
+                                borderRadius: '8px',
+                                boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
+                                border: '1px solid #e0e5eb',
+                                p: '4px',
+                                '& .MuiMenuItem-root': {
+                                  fontSize: '13px',
+                                  fontFamily: 'Inter',
+                                  color: '#374151',
+                                  borderRadius: '6px',
+                                  mx: '4px',
+                                  my: '2px',
+                                  '&:hover': { backgroundColor: '#f3f8fd', color: '#2262ef' },
+                                  '&.Mui-selected': { backgroundColor: '#eff6ff', color: '#2262ef', fontWeight: 600 },
+                                  '&.Mui-selected:hover': { backgroundColor: '#e0edff' }
+                                }
+                              }
+                            }
+                          }}
                           sx={{ 
                             width: '100%', 
                             height: 36,
@@ -315,12 +371,12 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
                               onClick={() => handleBuy(row)}
                               disabled={buyingRowId === row.id || !row.product || !row.provider || !row.quantity}
                               sx={{ 
-                                backgroundColor: '#cda87c', 
+                                backgroundColor: '#2262ef', 
                                 color: COLORS.WHITE,
                                 textTransform: 'none',
                                 minWidth: '60px',
                                 boxShadow: 'none',
-                                '&:hover': { backgroundColor: '#b89467', boxShadow: 'none' },
+                                '&:hover': { backgroundColor: '#1b52cf', boxShadow: 'none' },
                                 '&:disabled': { backgroundColor: '#e2e8f0', color: '#94a3b8' }
                               }}
                             >
@@ -331,57 +387,50 @@ const PurchaseProductDialog = ({ open, onClose, patientId: propPatientId }) => {
                       </TableCell>
                     </TableRow>
                   );
-                })}
-              </TableBody>
-            </Table>
-            <Box sx={{ mt: 2, ml: 2, pb: 2 }}>
-              <Link 
-                component="button"
-                variant="body2"
-                onClick={handleAddRow}
-                sx={{ 
-                  color: COLORS.ACCENT, 
-                  textDecoration: 'none',
-                  fontSize: fontSize.base,
-                  fontWeight: fontWeight.semibold,
-                  '&:hover': { textDecoration: 'underline' }
-                }}
-              >
-                + Add product
-              </Link>
-            </Box>
-          </TableContainer>
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {rows.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Button 
+              variant="text" 
+              onClick={handleAddRow}
+              sx={{ 
+                color: COLORS.ACCENT, 
+                textTransform: 'none',
+                fontWeight: fontWeight.semibold,
+                '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
+              }}
+            >
+              + Add product
+            </Button>
+          </Box>
         )}
       </DialogContent>
       
-      <DialogActions 
-        sx={{ 
-          p: '16px 24px', 
-          borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, 
-          backgroundColor: COLORS.SURFACE_CARD 
-        }}
-      >
+      <Box sx={{ p: "12px 24px", borderTop: '1px solid #e0e5eb', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', mt: 'auto', flexShrink: 0 }}>
         <Button 
-          onClick={onClose} 
-          variant="contained"
+          variant="outlined" 
+          size="small"
+          onClick={handleClose}
           sx={{ 
-            backgroundColor: COLORS.ACCENT, 
-            color: COLORS.WHITE,
-            textTransform: 'none',
-            fontWeight: fontWeight.semibold,
-            px: 3,
-            py: 0.75,
-            borderRadius: radius.md,
-            boxShadow: 'none',
-            '&:hover': { 
-              backgroundColor: COLORS.ACCENT_HOVER,
-              boxShadow: 'none'
-            }
+            borderColor: "#d0d5dd",
+            color: "#374151",
+            fontFamily: "Inter",
+            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            textTransform: "none",
+            borderRadius: "8px",
+            px: "16px", py: "7px",
+            height: 36,
+            fontSize: "13px",
+            fontWeight: 500,
           }}
         >
           Done
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

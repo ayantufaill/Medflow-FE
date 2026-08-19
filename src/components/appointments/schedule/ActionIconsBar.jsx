@@ -25,6 +25,7 @@ import SendBulkTextModal from './bulk-text/SendBulkTextModal';
 import LabCasesDialog from './lab-cases-modal/LabCasesDialog';
 import ProgressNotesDialog from './progress-notes-modal/ProgressNotesDialog';
 import FilterLabsPopover from './FilterLabsPopover';
+import DayTasksDialog from './day-tasks-modal/DayTasksDialog';
 import { useNavigate } from 'react-router-dom';
 
 const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivacyMode, hideBlocks, onToggleHideBlocks, showGhosted, onToggleShowGhosted, lastViewedDates = [], onDateSelect }) => {
@@ -33,6 +34,7 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
   const [isBulkTextModalOpen, setIsBulkTextModalOpen] = useState(false);
   const [isLabCasesModalOpen, setIsLabCasesModalOpen] = useState(false);
   const [isProgressNotesModalOpen, setIsProgressNotesModalOpen] = useState(false);
+  const [isDayTasksModalOpen, setIsDayTasksModalOpen] = useState(false);
   const [filterLabsAnchorEl, setFilterLabsAnchorEl] = useState(null);
   const [historyMenuAnchorEl, setHistoryMenuAnchorEl] = useState(null);
 
@@ -46,7 +48,7 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
 
   const ICONS = [
     { icon: <ForwardToInboxOutlined />, title: 'Bulk Email', onClick: () => setIsBulkTextModalOpen(true) },
-    { icon: <PersonAddOutlined />, title: 'Huddle', onClick: () => navigate('/day-tasks') },
+    { icon: <PersonAddOutlined />, title: 'Huddle', onClick: () => setIsDayTasksModalOpen(true) },
     { icon: <ScienceOutlined />, title: 'Lab Cases', onClick: () => setIsLabCasesModalOpen(true) },
     { icon: <DescriptionOutlined />, title: 'Progress notes', onClick: () => setIsProgressNotesModalOpen(true) },
     { icon: <FilterAltOutlined />, title: 'Filter Labs', onClick: (e) => setFilterLabsAnchorEl(e.currentTarget) },
@@ -113,6 +115,10 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
       <ProgressNotesDialog
         open={isProgressNotesModalOpen}
         onClose={() => setIsProgressNotesModalOpen(false)}
+      />
+      <DayTasksDialog
+        open={isDayTasksModalOpen}
+        onClose={() => setIsDayTasksModalOpen(false)}
       />
       <FilterLabsPopover
         anchorEl={filterLabsAnchorEl}

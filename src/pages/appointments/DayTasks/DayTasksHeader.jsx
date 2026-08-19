@@ -7,7 +7,7 @@ import DateNavigation from '../../../components/appointments/schedule/DateNaviga
 
 import { MOCK_DAY_TASKS } from './mockDayTasks';
 
-const DayTasksHeader = ({ 
+const DayTasksHeader = ({
   selectedDate, onPrev, onNext, onToday, onDateSelect,
   selectedTask, onTaskChange,
   selectedPatient, onPatientChange,
@@ -21,28 +21,28 @@ const DayTasksHeader = ({
   ).sort();
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
+    <Box sx={{
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'space-between',
       flexWrap: 'wrap',
-      gap: 2,
-      px: 2.5,
-      py: 2,
-      mb: 3,
-      backgroundColor: COLORS.SURFACE_CARD,
-      borderRadius: '24px', // Matches radius.xl standard
-      border: `0.8px solid ${COLORS.BORDER}`
+      gap: 1.5,
+      px: 2,
+      py: 1.5,
+      mb: 2,
+      backgroundColor: '#fff',
+      borderRadius: '8px',
+      border: '1px solid #e2e8f0'
     }}>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: COLORS.TEXT_PRIMARY }}>
-          Day Tasks
+        <Typography sx={{ fontSize: '0.9rem', color: '#445164', fontWeight: 600, mr: 1 }}>
+          Filter Tasks:
         </Typography>
       </Box>
 
-      <Box sx={{ flex: 1 }} /> {/* Spacer pushes everything else to the right */}
+      <Box sx={{ flex: 1 }} />
 
-      <Box sx={{ display: 'flex', alignItems: 'center', mr: 20}}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mr: 20 }}>
         {/* Date Navigator - pushed slightly off the right edge */}
         <DateNavigation
           date={dayjs(selectedDate)}
@@ -65,7 +65,8 @@ const DayTasksHeader = ({
           onChange={(e, newValue) => onTaskChange(newValue || 'All Tasks')}
           disableClearable
           size="small"
-          sx={{ 
+          componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
+          sx={{
             width: 150,
             '& .MuiOutlinedInput-root': {
               height: '36px',
@@ -95,11 +96,13 @@ const DayTasksHeader = ({
         />
 
         <Autocomplete
-          options={uniquePatients}
-          value={selectedPatient}
-          onChange={(e, newValue) => onPatientChange(newValue)}
+          options={['All Patients', ...uniquePatients]}
+          value={selectedPatient || 'All Patients'}
+          onChange={(e, newValue) => onPatientChange(newValue === 'All Patients' ? null : newValue)}
           size="small"
-          sx={{ 
+          disableClearable
+          componentsProps={{ popper: { sx: { zIndex: 1600 } } }}
+          sx={{
             minWidth: 160,
             '& .MuiOutlinedInput-root': {
               height: '36px',
@@ -130,11 +133,11 @@ const DayTasksHeader = ({
 
         {/* View Toggle */}
         <ButtonGroup disableElevation sx={{ height: '32px' }}>
-          <Button 
+          <Button
             variant={viewMode === 'task' ? "contained" : "outlined"}
             onClick={() => onViewModeChange('task')}
-            sx={{ 
-              bgcolor: viewMode === 'task' ? COLORS.ACCENT : 'transparent', 
+            sx={{
+              bgcolor: viewMode === 'task' ? COLORS.ACCENT : 'transparent',
               color: viewMode === 'task' ? 'white' : COLORS.ACCENT,
               borderColor: viewMode === 'task' ? COLORS.ACCENT : COLORS.BORDER,
               textTransform: 'none',
@@ -142,7 +145,7 @@ const DayTasksHeader = ({
               fontSize: '13px',
               borderTopLeftRadius: radius.md,
               borderBottomLeftRadius: radius.md,
-              '&:hover': { 
+              '&:hover': {
                 bgcolor: viewMode === 'task' ? COLORS.ACCENT : COLORS.SURFACE_HOVER,
                 borderColor: viewMode === 'task' ? COLORS.ACCENT : COLORS.BORDER,
               },
@@ -150,11 +153,11 @@ const DayTasksHeader = ({
           >
             Task View
           </Button>
-          <Button 
+          <Button
             variant={viewMode === 'patient' ? "contained" : "outlined"}
             onClick={() => onViewModeChange('patient')}
-            sx={{ 
-              bgcolor: viewMode === 'patient' ? COLORS.ACCENT : 'transparent', 
+            sx={{
+              bgcolor: viewMode === 'patient' ? COLORS.ACCENT : 'transparent',
               color: viewMode === 'patient' ? 'white' : COLORS.ACCENT,
               borderColor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.BORDER,
               textTransform: 'none',
@@ -162,7 +165,7 @@ const DayTasksHeader = ({
               fontSize: '13px',
               borderTopRightRadius: radius.md,
               borderBottomRightRadius: radius.md,
-              '&:hover': { 
+              '&:hover': {
                 bgcolor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.SURFACE_HOVER,
                 borderColor: viewMode === 'patient' ? COLORS.ACCENT : COLORS.BORDER,
               }

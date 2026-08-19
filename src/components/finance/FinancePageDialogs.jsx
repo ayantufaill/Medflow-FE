@@ -7,6 +7,9 @@ import PatientFlagsDialog from '../patient-flags/PatientFlagsDialog';
 import DepositDialog from './DepositDialog';
 import DepositOptionsMenu from './DepositOptionsMenu';
 import CourtesyCreditComponent from './CourtesyCreditComponent';
+import NewPaymentPlan from './NewPaymentPlan';
+import PaymentDetailsForm from './PaymentDetailsForm';
+import { Dialog } from '@mui/material';
 
 const DialogWrapper = ({ children, onClose, maxWidth = '100%', extraSx = {} }) => (
   <Box 
@@ -48,7 +51,9 @@ const FinancePageDialogs = ({
   showEditFlags, setShowEditFlags, handleEditFlagsSave,
   showDeposit, setShowDeposit, handleDepositSave, depositType,
   depositMenuAnchor, setDepositMenuAnchor, handleDepositOptionSelect,
-  showCourtesyCredit, setShowCourtesyCredit, handleCourtesyCreditSave
+  showCourtesyCredit, setShowCourtesyCredit, handleCourtesyCreditSave,
+  showPaymentPlan, setShowPaymentPlan, handleCreatePaymentPlan,
+  showAddCard, setShowAddCard
 }) => {
   return (
     <>
@@ -106,6 +111,28 @@ const FinancePageDialogs = ({
           />
         </DialogWrapper>
       )}
+
+      {showPaymentPlan && (
+        <DialogWrapper onClose={() => setShowPaymentPlan(false)} maxWidth="1200px" extraSx={{ width: '95%' }}>
+          <NewPaymentPlan 
+            patient={patient}
+            onBack={() => setShowPaymentPlan(false)}
+            onCreatePlan={handleCreatePaymentPlan}
+            onAddCard={() => { setShowPaymentPlan(false); setShowAddCard(true); }}
+          />
+        </DialogWrapper>
+      )}
+
+      <Dialog 
+        open={showAddCard} 
+        onClose={() => setShowAddCard(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: '18px', overflow: 'hidden' } }}
+        sx={{ zIndex: 140000 }}
+      >
+        <PaymentDetailsForm onBack={() => setShowAddCard(false)} />
+      </Dialog>
     </>
   );
 };

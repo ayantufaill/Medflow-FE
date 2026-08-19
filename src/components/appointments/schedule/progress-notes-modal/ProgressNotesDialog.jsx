@@ -158,6 +158,22 @@ const ProgressNotesDialog = ({ open, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Reset state when the dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setDateRange('Today');
+      setStartDate(dayjs());
+      setEndDate(dayjs());
+      setKind("All");
+      setProviderId("All");
+      
+      // Also reset expanded and editing states for a clean slate
+      setExpandedNoteIds(new Set());
+      setEditingNoteId(null);
+      setEditingContent("");
+    }
+  }, [open]);
+
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);
     setEditingContent(n.content || "");

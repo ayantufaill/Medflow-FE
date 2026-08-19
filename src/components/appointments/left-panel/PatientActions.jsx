@@ -12,7 +12,7 @@ import {
   fetchPatientHistory,
 } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
-import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
+import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 // Six-dot decorative drag handle shown on action buttons.
 const DotGrid = ({ color = 'rgba(255,255,255,0.6)' }) => (
@@ -52,7 +52,6 @@ const PatientActions = ({ appointment }) => {
 
   // Duration from the current appointment in minutes. Calendar appointments use durationMinutes.
   const apptDuration = activeAppt?.durationMinutes || activeAppt?.duration;
-  const durationLabel = apptDuration ? `${apptDuration} min` : '__ min';
 
   const [appointmentHistoryOpen, setAppointmentHistoryOpen] = useState(false);
 
@@ -81,6 +80,7 @@ const PatientActions = ({ appointment }) => {
     { label: 'Route Slip',           onClick: handleRouteSlip,             showDots: true  },
     { label: 'Family Appointments',  onClick: handleFamilyAppointments,    showDots: true  },
     { label: 'Appointment History',  onClick: handleAppointmentHistory,    showDots: false },
+    { label: 'Purchase Products',    onClick: () => setPurchaseProductOpen(true), showDots: false },
   ];
 
   return (
@@ -115,25 +115,7 @@ const PatientActions = ({ appointment }) => {
         </Box>
       ))}
 
-      {/* ── Purchase Products ───── */}
-      <Box
-        onClick={() => setPurchaseProductOpen(true)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: COLORS.ACCENT, // changed from #c5cad3 to active blue
-          borderRadius: radius.md,
-          px: '16px',
-          py: '12px',
-          cursor: 'pointer', // changed from not-allowed
-          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
-        }}
-      >
-        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
-          Purchase Products
-        </Typography>
-      </Box>
+      {/* Purchase Products is now rendered via ACTION_BUTTONS */}
 
       {/* ── Accordions ──────────────────────────────────────────────────────── */}
       <PatientDetails />
