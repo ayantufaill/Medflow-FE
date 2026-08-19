@@ -3,7 +3,7 @@ export { default as AppointmentCard } from './AppointmentCard';
 export { default as AppointmentDetailsDialog } from './AppointmentDetailsDialog';
 export { default as AppointmentForm } from './AppointmentForm';
 export { default as AppointmentHistoryDialog } from './schedule/appointment-history-modal/AppointmentHistoryDialog';
-export { default as CompleteProceduresDialog } from './CompleteProceduresDialog';
+export { default as CompleteProceduresDialog } from './left-panel/CompleteProceduresDialog';
 export { default as CreateAppointmentDialog } from './CreateAppointmentDialog';
 export { default as FamilyAppointmentsDialog } from './schedule/family-appointments-modal/FamilyAppointmentsDialog';
 export { default as LabCasesDialog } from './schedule/lab-cases-modal/LabCasesDialog';

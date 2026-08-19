@@ -30,7 +30,7 @@ import Messages from "../../components/appointments/right-panel/Messages";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
 import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from "../../constants/styles";
 
 const shareButtonSx = {
   textTransform: "none",
@@ -401,18 +401,20 @@ const PatientAdditionalDocumentsPage = () => {
                     <Select
                       value={customFormSortMode}
                       onChange={(e) => setCustomFormSortMode(e.target.value)}
+                      MenuProps={roundedSelectMenuProps}
                       sx={{
                         height: 32,
                         fontFamily: "Inter",
                         fontSize: fontSize.base,
                         bgcolor: COLORS.SURFACE_CARD,
+                        borderRadius: radius.md,
                         "& fieldset": { borderColor: COLORS.BORDER },
                         "&:hover fieldset": { borderColor: COLORS.ACCENT },
                       }}
                     >
-                      <MenuItem value="category">Category</MenuItem>
-                      <MenuItem value="date">Date</MenuItem>
-                      <MenuItem value="name">Name</MenuItem>
+                      <MenuItem value="category" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Category</MenuItem>
+                      <MenuItem value="date" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Date</MenuItem>
+                      <MenuItem value="name" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Name</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -510,18 +512,20 @@ const PatientAdditionalDocumentsPage = () => {
                     <Select
                       value={sortMode}
                       onChange={(e) => setSortMode(e.target.value)}
+                      MenuProps={roundedSelectMenuProps}
                       sx={{
                         height: 32,
                         fontFamily: "Inter",
                         fontSize: fontSize.base,
                         bgcolor: COLORS.SURFACE_CARD,
+                        borderRadius: radius.md,
                         "& fieldset": { borderColor: COLORS.BORDER },
                         "&:hover fieldset": { borderColor: COLORS.ACCENT },
                       }}
                     >
-                      <MenuItem value="category">Category</MenuItem>
-                      <MenuItem value="date">Date</MenuItem>
-                      <MenuItem value="name">Name</MenuItem>
+                      <MenuItem value="category" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Category</MenuItem>
+                      <MenuItem value="date" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Date</MenuItem>
+                      <MenuItem value="name" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Name</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -612,8 +616,6 @@ const PatientAdditionalDocumentsPage = () => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TaskList />
           <Messages />
-          <PatientSignatureCard value={signature} onChange={setSignature} reviewedWithPatient />
-
         </Box>
       </Box>
 

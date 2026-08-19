@@ -29,7 +29,7 @@ import Messages from "../../components/appointments/right-panel/Messages";
 import { DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
 import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from "../../constants/styles";
 
 const shareButtonSx = {
   textTransform: "none",
@@ -380,18 +380,20 @@ const PatientSignedDocumentsPage = () => {
                     <Select
                       value={sortMode}
                       onChange={(e) => setSortMode(e.target.value)}
+                      MenuProps={roundedSelectMenuProps}
                       sx={{
                         fontFamily: "Inter",
                         fontSize: fontSize.base,
                         borderRadius: radius.md,
                         height: 32,
                         backgroundColor: COLORS.SURFACE_CARD,
-                        borderColor: COLORS.BORDER,
+                        "& fieldset": { borderColor: COLORS.BORDER },
+                        "&:hover fieldset": { borderColor: COLORS.ACCENT },
                       }}
                     >
-                      <MenuItem value="category">Category</MenuItem>
-                      <MenuItem value="name">Name</MenuItem>
-                      <MenuItem value="date">Date</MenuItem>
+                      <MenuItem value="category" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Category</MenuItem>
+                      <MenuItem value="name" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Name</MenuItem>
+                      <MenuItem value="date" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Date</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -489,7 +491,6 @@ const PatientSignedDocumentsPage = () => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TaskList />
           <Messages />
-          <PatientSignatureCard value={signature} onChange={setSignature} reviewedWithPatient />
         </Box>
       </Box>
 

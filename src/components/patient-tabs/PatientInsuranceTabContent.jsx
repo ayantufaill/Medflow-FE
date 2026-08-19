@@ -108,9 +108,12 @@ const CoverageRow = ({
 
   return (
     <Paper variant="outlined" sx={{ borderColor: COLORS.BORDER, borderRadius: radius.xl, overflow: 'hidden' }}>
-      <Box sx={{ py: 1.5, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+      <Box 
+        onClick={() => setExpanded(!expanded)}
+        sx={{ py: 1.5, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap', cursor: 'pointer' }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ p: 0.2, color: COLORS.TEXT_MUTED }}>
+          <IconButton size="small" sx={{ p: 0.2, color: COLORS.TEXT_MUTED }}>
             {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
           <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -125,7 +128,10 @@ const CoverageRow = ({
             <Box component="span" sx={{ color: COLORS.ACCENT, fontWeight: fontWeight.semibold }}>${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}</Box>
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box 
+          onClick={(e) => e.stopPropagation()}
+          sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+        >
           {isInactive ? (
             <Button size="small" variant="contained" onClick={() => handleInsuranceActivate(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 }, boxShadow: 'none' }}>Activate</Button>
           ) : (

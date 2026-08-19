@@ -215,6 +215,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       appt.createdByName ||
       "",
     price: priceStr,
+    rawAppointment: appt,
   };
 };
 

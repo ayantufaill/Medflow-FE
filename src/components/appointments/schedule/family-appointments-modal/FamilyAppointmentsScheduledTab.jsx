@@ -123,7 +123,10 @@ const FamilyAppointmentsScheduledTab = ({ allAppointments, groupedAppointments, 
                   {group.appointments.map((appt, i) => (
                     <Box key={appt._id || i} sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                       <AppointmentSummaryCard appointment={appt} />
-                      <AppointmentChecklist patientId={appt.patientId?._id || appt.patientId?.id || appt.patientId?.PatNum || appt.patientId || appt.patient?._id || appt.patient?.id || appt.patient?.PatNum || appt.patient} />
+                      <AppointmentChecklist 
+                        patientId={appt.patientId?._id || appt.patientId?.id || appt.patientId?.PatNum || appt.patientId || appt.patient?._id || appt.patient?.id || appt.patient?.PatNum || appt.patient} 
+                        appointment={appt}
+                      />
                     </Box>
                   ))}
                 </Box>
