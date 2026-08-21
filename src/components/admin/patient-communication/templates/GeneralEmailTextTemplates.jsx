@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Divider, List, ListItem, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Tabs, Tab } from '@mui/material';
-import { Sync as SyncIcon, SwapVert as SortIcon, Edit as EditIcon, Delete as DeleteIcon, Email as EmailIcon, Sms as SmsIcon, Settings, ChevronRight, InfoOutlined as InfoIcon, FormatBold, FormatItalic, FormatUnderlined, Add as AddIcon, AdsClick as AdsClickIcon, Cake as CakeIcon, CalendarMonth, CreditCard, Warning as WarningIcon, ContentCopy as ContentCopyIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Sync as SyncIcon, SwapVert as SortIcon, Email as EmailIcon, Sms as SmsIcon, Settings, ChevronRight, InfoOutlined as InfoIcon, FormatBold, FormatItalic, FormatUnderlined, Add as AddIcon, AdsClick as AdsClickIcon, Cake as CakeIcon, CalendarMonth, CreditCard, Warning as WarningIcon, ContentCopy as ContentCopyIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 import { VariableAccordion } from './VariableAccordion';
 import { VariableButton } from './VariableButton';
@@ -153,7 +155,7 @@ Please text C to confirm.`;
                         </Box>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <IconButton size="small" sx={{ color: '#3B82F6' }}><SyncIcon sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={(e) => { e.stopPropagation(); handleSelectTemplate(index); setDeleteConfirmOpen(true); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleSelectTemplate(index); setDeleteConfirmOpen(true); }}><img src={DeleteSvg} alt="delete" width="16" height="16" /></IconButton>
                         </Box>
                       </ListItem>
                       {index < templates.length - 1 && <Divider />}
@@ -178,8 +180,8 @@ Please text C to confirm.`;
                 <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
                   {activeTemplate?.description || activeTemplate?.name}
                 </Typography>
-                <IconButton size="small"><EditIcon sx={{ fontSize: 16 }} /></IconButton>
-                <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setDeleteConfirmOpen(true)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+                <IconButton size="small"><img src={EditSvg} alt="edit" width="16" height="16" /></IconButton>
+                <IconButton size="small" onClick={() => setDeleteConfirmOpen(true)}><img src={DeleteSvg} alt="delete" width="16" height="16" /></IconButton>
               </Box>
               <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
             </Box>

@@ -8,7 +8,8 @@ import {
   Button,
   IconButton,
   Divider,
-  DialogTitle
+  DialogTitle,
+  DialogActions
 } from '@mui/material';
 import { Close as CloseIcon, Assignment as ClipboardIcon } from '@mui/icons-material';
 
@@ -36,23 +37,52 @@ const CreateQuestionnaireModal = ({ open, onClose, onCreate }) => {
         } 
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ bgcolor: '#F0F5FF', p: 1, borderRadius: 2, display: 'flex' }}>
-            <ClipboardIcon sx={{ fontSize: '1.5rem', color: '#3B82F6' }} />
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <ClipboardIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
           </Box>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-            Create New Questionnaire
-          </Typography>
+          <Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 600, 
+              fontSize: '16px', 
+              lineHeight: '24px', 
+              letterSpacing: '-0.4px', 
+              color: '#111' 
+            }}>
+              Create New Questionnaire
+            </Typography>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 400, 
+              fontSize: '11.5px', 
+              lineHeight: '17.25px', 
+              color: '#6B7280' 
+            }}>
+              Set up a new questionnaire for your patients
+            </Typography>
+          </Box>
         </Box>
         <IconButton onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
-      
-      <DialogContent sx={{ p: 4, pt: 3 }}>
+      <DialogContent sx={{ p: 4, pt: 3, bgcolor: '#ffffff' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', mb: 1 }}>
           <Box>
             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>Questionnaire Title <span style={{ color: 'red' }}>*</span></Typography>
@@ -78,18 +108,59 @@ const CreateQuestionnaireModal = ({ open, onClose, onCreate }) => {
               sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem', borderRadius: 1.5, '& fieldset': { borderColor: '#E5E9F2' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#3B82F6' } } }} 
             />
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <Button 
-              variant="contained" 
-              onClick={handleCreate}
-              disabled={!title.trim()}
-              sx={{ bgcolor: '#3B82F6', textTransform: 'none', fontWeight: 600, borderRadius: 1.5, px: 4, py: 1, boxShadow: 'none', '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
-            >
-              Create
-            </Button>
-          </Box>
         </Box>
       </DialogContent>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          borderTop: '1px solid #E5E7EB',
+          bgcolor: '#ffffff',
+          gap: 1,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            textTransform: 'none',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            borderColor: '#D1D5DB',
+            color: '#374151',
+            borderRadius: '8px',
+            px: 2.5,
+            '&:hover': {
+              borderColor: '#9CA3AF',
+              backgroundColor: '#F9FAFB',
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={handleCreate}
+          disabled={!title.trim()}
+          sx={{
+            textTransform: 'none',
+            fontFamily: 'Inter',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            backgroundColor: '#2563EB',
+            borderRadius: '8px',
+            px: 2.5,
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#1d4ed8',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          Create
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

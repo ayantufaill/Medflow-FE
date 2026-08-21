@@ -9,6 +9,8 @@ const AddPaymentAmountRow = ({
   setAmountType,
   displayAmount,
   setManualAmount,
+  paymentMethod,
+  accountCredit,
   MENU_PROPS
 }) => {
   return (
@@ -43,7 +45,16 @@ const AddPaymentAmountRow = ({
         <Typography sx={{ fontSize: '0.8125rem', mr: 0.5, ml: 1, fontWeight: 500 }}>$</Typography>
         <TextField
           value={displayAmount}
-          onChange={(e) => setManualAmount(e.target.value)}
+          onChange={(e) => {
+            let val = e.target.value;
+            if (paymentMethod === 'Account Credit') {
+              const numVal = parseFloat(val);
+              if (!isNaN(numVal) && numVal > (accountCredit || 0)) {
+                val = (accountCredit || 0).toString();
+              }
+            }
+            setManualAmount(val);
+          }}
           variant="outlined"
           size="small"
           sx={{ 
@@ -54,6 +65,11 @@ const AddPaymentAmountRow = ({
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
           }}
         />
+        {paymentMethod === 'Account Credit' && (
+          <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_SECONDARY, ml: 1, mt: '1px' }}>
+            Available deposit: ${(accountCredit || 0).toFixed(2)}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

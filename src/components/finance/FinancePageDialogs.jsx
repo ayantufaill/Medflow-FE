@@ -126,7 +126,7 @@ const FinancePageDialogs = ({
       <Dialog 
         open={showAddCard} 
         onClose={() => setShowAddCard(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{ sx: { borderRadius: '18px', overflow: 'hidden' } }}
         sx={{ zIndex: 140000 }}

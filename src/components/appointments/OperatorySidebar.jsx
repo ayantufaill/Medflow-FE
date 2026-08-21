@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateAppointmentThunk, fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../store/slices/appointmentSlice";
-import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { fetchCurrentPracticeInfo, selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { usePatientInsurance } from "../../hooks/redux/usePatientInsurance";
 import dayjs from "dayjs";
 import {
@@ -487,7 +487,17 @@ const OperatorySidebar = ({
   };
 
   const handleChatClick = () => setChatOpen(true);
-  const handleCloseChat = () => setChatOpen(false);
+  const handleDrawerClose = () => {
+    dispatch({ type: "schedule/setSelectedAppointment", payload: null });
+  };
+
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagName = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal || f.name.toLowerCase() === flagVal.toLowerCase());
+    return found ? found.name : flagVal;
+  };
   const handleAppointmentPageClick = () => setAppointmentPageOpen(true);
   const handleCloseAppointmentPage = () => setAppointmentPageOpen(false);
   const handleRouteSlipClick = () => setRouteSlipOpen(true);
@@ -883,9 +893,12 @@ const OperatorySidebar = ({
                     <Box>
                       <Typography className="detail-label">Patient Flags</Typography>
                       {(patientDetails?.flags || []).length > 0 ? (
-                        patientDetails.flags.map((flag, idx) => (
-                          <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, pl: 1 }}>{flag}</Typography>
-                        ))
+                        patientDetails.flags.map((flag, idx) => {
+                          const flagName = resolveFlagName(flag);
+                          return (
+                            <Typography key={idx} sx={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, pl: 1 }}>{flagName}</Typography>
+                          );
+                        })
                       ) : (
                         <Typography sx={{ fontSize: '0.72rem', color: '#999', pl: 1, fontStyle: 'italic' }}>No flags</Typography>
                       )}

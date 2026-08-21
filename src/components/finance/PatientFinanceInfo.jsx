@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { appointmentService } from '../../services/appointment.service';
 import { paymentService } from '../../services/payment.service';
 import { invoiceService } from '../../services/invoice.service';
-import { createInvoice, invalidatePaymentInvoices } from '../../store/slices/billingSlice';
+import { createInvoice, invalidatePaymentInvoices, fetchLedgerItems } from '../../store/slices/billingSlice';
 import { Box, Typography, Stack, IconButton, Radio, RadioGroup, FormControlLabel, Button, Tooltip } from '@mui/material';
 import {
   NoteAdd as NoteAddIcon,
@@ -194,25 +194,20 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
             patientId: parseInt(patientId) || patientId,
             invoiceId: invoice.id,
             amount: invoicePaymentAmount,
+            procedures: invoiceItems.map(item => ({ id: item.itemId, pay: parseFloat(item.amount) })),
             paymentMethod: backendMethod,
             method: paymentData.paymentMethod, // Sends the specific type (e.g. "Visa Card") to be preserved in the backend JSON
             paymentDate: new Date().toISOString(),
             status: 'completed',
-            notes: paymentData.description || 'Patient payment'
+            notes: paymentData.description || 'Patient payment',
+            isAccountCredit: paymentData.paymentMethod === 'Account Credit',
           };
           await paymentService.recordPayment(payload);
-
-          // Mark each individual line item as paid in BillingNote for precise tracking
-          await Promise.all(
-            invoiceItems.map(item =>
-              invoiceService.markItemPaid(invoice.id, item.itemId, parseFloat(item.amount))
-                .catch(err => console.warn('markItemPaid failed for item', item.itemId, err))
-            )
-          );
         }
       }
       
       dispatch(invalidatePaymentInvoices(patientId));
+      dispatch(fetchLedgerItems(patientId));
       window.dispatchEvent(new CustomEvent('add-ledger-item'));
       setShowAddPayment(false);
       if (typeof fetchPatientData === 'function') fetchPatientData();

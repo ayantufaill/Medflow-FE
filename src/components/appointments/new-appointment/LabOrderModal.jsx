@@ -322,11 +322,11 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '12px', border: "1px solid #e0e5eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '12px', border: "1px solid #e0e5eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", maxHeight: '90vh', overflow: 'hidden' } }}>
       
       <LabOrderHeader onClose={onClose} />
       
-      <Box sx={{ p: 4, pt: 3 }}>
+      <Box sx={{ p: 4, pt: 3, overflowY: 'auto', flex: 1 }}>
         <ActiveProceduresTable 
           proceduresList={proceduresList}
           handleProcedureChargeChange={handleProcedureChargeChange}

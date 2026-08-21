@@ -1,0 +1,240 @@
+diff --git a/src/components/finance/AgingTable.jsx b/src/components/finance/AgingTable.jsx
+index acea328..4b81db1 100644
+--- a/src/components/finance/AgingTable.jsx
++++ b/src/components/finance/AgingTable.jsx
+@@ -38,14 +38,19 @@ const headerSx = {
+ 
+ const formatCurrency = (val) => `$${Number(val || 0).toFixed(2)}`;
+ 
+-const AgingTable = ({ view = 'invoices', patientId }) => {
++const AgingTable = ({ view = 'invoices', patientId, patient }) => {
+   const defaultBuckets = { '0_30': 0, '31_60': 0, '61_90': 0, '90_plus': 0, total: 0 };
+   const [agingData, setAgingData] = useState({
+     familyOutstanding: { ...defaultBuckets },
+     familyBalance: { ...defaultBuckets },
+     insuranceBalance: { ...defaultBuckets },
++    patientAccountCredit: 0,
++    insuranceAccountCredit: 0,
+   });
+ 
++  const patientCredit = agingData?.patientAccountCredit || 0;
++  const insuranceCredit = agingData?.insuranceAccountCredit || 0;
++
+   const fetchAgingData = async () => {
+     if (!patientId) return;
+     try {
+@@ -76,13 +81,12 @@ const AgingTable = ({ view = 'invoices', patientId }) => {
+   }, [patientId]);
+ 
+   return (
+-    <Box sx={{ flex: 1, height: '254px', position: 'relative' }}>
++    <Box sx={{ flex: 1, minHeight: '254px', height: '100%', position: 'relative' }}>
+       <TableContainer sx={{ 
+         borderRadius: '22px', 
+         border: '1px solid #DFE5EC', 
+         bgcolor: '#FFFFFF',
+-        height: '100%',
+-        overflow: 'hidden'
++        height: '100%'
+       }}>
+         <Table sx={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }} size="small">
+           <TableHead>
+@@ -154,6 +158,37 @@ const AgingTable = ({ view = 'invoices', patientId }) => {
+               <TableCell align="center" sx={{ ...totalCellSx, bgcolor: '#E5F8F7' }}>{formatCurrency(agingData.insuranceBalance.total)}</TableCell>
+               <TableCell align="center" sx={{ ...commonCellSx, borderLeft: '1px solid #DFE5EC', color: '#6B778C', cursor: 'pointer', fontSize: '10px' }}>&lt;</TableCell>
+             </TableRow>
++            {view === 'invoices' && (
++              <TableRow>
++                <TableCell 
++                  colSpan={7} 
++                  sx={{ 
++                    p: 0, 
++                    borderBottom: 'none'
++                  }}
++                >
++                  <Box 
++                    sx={{ 
++                      bgcolor: '#315ea8', 
++                      color: '#ffffff', 
++                      display: 'flex', 
++                      justifyContent: 'space-between', 
++                      px: 2, 
++                      py: 0.5, 
++                      fontSize: '11px', 
++                      fontWeight: 'bold',
++                    }}
++                  >
++                    <Box>
++                      Insurance Account Credit: {formatCurrency(insuranceCredit)} <span style={{ fontWeight: 'normal', cursor: 'pointer' }}>(details)</span>
++                    </Box>
++                    <Box>
++                      Patient Account Credit: {formatCurrency(patientCredit)}
++                    </Box>
++                  </Box>
++                </TableCell>
++              </TableRow>
++            )}
+           </TableBody>
+         </Table>
+       </TableContainer>
+diff --git a/src/components/finance/FinanceActionIcons.jsx b/src/components/finance/FinanceActionIcons.jsx
+index 0c19858..b4ab52b 100644
+--- a/src/components/finance/FinanceActionIcons.jsx
++++ b/src/components/finance/FinanceActionIcons.jsx
+@@ -150,7 +150,7 @@ export const IconCloudUpload = ({ onShareSelect }) => {
+ 
+ // 9. Cash Plus Icon - Account Adjustment
+ export const IconCashPlus = ({ onClick }) => (
+-  <Tooltip title="Account Adjustment" placement="bottom">
++  <Tooltip title="finance charge" placement="bottom">
+     <IconContainer onClick={onClick} sx={{ cursor: 'pointer' }}>
+       <svg width="30" height="30" viewBox="0 0 24 24">
+         <rect x="2" y="7" width="14" height="10" rx="1" fill="#a5d6a7" stroke="#000" strokeWidth="1" />
+diff --git a/src/components/finance/FinanceActions.jsx b/src/components/finance/FinanceActions.jsx
+index 7c15b92..728326a 100644
+--- a/src/components/finance/FinanceActions.jsx
++++ b/src/components/finance/FinanceActions.jsx
+@@ -122,8 +122,8 @@ const FinanceActions = ({
+         <Tooltip title="Patient Deposit"><IconButton size="small" onClick={onOpenDepositMenu}><Box component="img" src={patientdepositIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+         <Tooltip title="Print"><IconButton size="small" onClick={handlePrintClick}><Box component="img" src={printIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+         <Tooltip title="Share"><IconButton size="small" onClick={handleShareClick}><Box component="img" src={shareIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+-        <Tooltip title="Account Adjustment"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('cashPlus', e)}><Box component="img" src={accountadjustmentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+-        <Tooltip title="Account Adjustment Minus"><IconButton size="small" onClick={onCashMinusClick}><Box component="img" src={accountadjustmentminusIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
++        <Tooltip title="finance charge"><IconButton size="small" onClick={(e) => onTriggerPatientFinanceIcon?.('cashPlus', e)}><Box component="img" src={accountadjustmentIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
++        <Tooltip title="Account Adjustment"><IconButton size="small" onClick={onCashMinusClick}><Box component="img" src={accountadjustmentminusIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+         <Tooltip title="Create Payment Plan"><IconButton size="small" onClick={onCalendarClick}><Box component="img" src={createpaymentplanIcon} sx={{ width: 20, height: 20 }} /></IconButton></Tooltip>
+       </Box>
+ 
+diff --git a/src/components/finance/InvoiceModal.jsx b/src/components/finance/InvoiceModal.jsx
+index a012b2a..36bb2af 100644
+--- a/src/components/finance/InvoiceModal.jsx
++++ b/src/components/finance/InvoiceModal.jsx
+@@ -28,6 +28,7 @@ import AddNewProcedureDialog from "./AddNewProcedureDialog";
+ import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
+ import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
+ import { COLORS } from "../../constants/colors";
++import apiClient from "../../config/api";
+ 
+ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+   const dispatch = useDispatch();
+@@ -92,13 +93,16 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+ 
+     if (patient && patient._id) {
+       try {
+-        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+-          { code: newProcedure.code, charge: fee }
+-        ]);
++        const res = await apiClient.post('/invoices/estimate', {
++          patientId: patient._id,
++          items: [{ code: newProcedure.code, charge: fee }]
++        });
++        const estimates = res.data?.data || res.data;
+         if (estimates && estimates.length > 0) {
+           const est = estimates[0];
+           newProcedure.insPortion = `$${Number(est.insPortion || 0).toFixed(2)}`;
+           newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
++          newProcedure.writeoff = `$${Number(est.estimatedWriteOff || est.writeoff || 0).toFixed(2)}`;
+           newProcedure.balance = `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`;
+         }
+       } catch (err) {
+@@ -167,9 +171,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+     if (["charge", "dbi"].includes(field) && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+       try {
+         const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+-        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
+-          { code: updatedProcedure.code, charge: numCharge }
+-        ]);
++        const res = await apiClient.post('/invoices/estimate', {
++          patientId: patient._id,
++          items: [{ code: updatedProcedure.code, charge: numCharge }]
++        });
++        const estimates = res.data?.data || res.data;
+         if (estimates && estimates.length > 0) {
+           const est = estimates[0];
+           setProcedures((prev) => prev.map((p) => {
+@@ -178,6 +184,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+               ...p,
+               insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
+               ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
++              writeoff: `$${Number(est.estimatedWriteOff || est.writeoff || 0).toFixed(2)}`,
+               balance: `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`
+             };
+           }));
+@@ -188,7 +195,40 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+     }
+   };
+ 
+-  const handleReestimate = () => {
++  const handleReestimate = async () => {
++    if (patient && patient._id) {
++      try {
++        const payload = procedures.map((p) => ({
++          code: p.code,
++          charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0
++        }));
++        const res = await apiClient.post('/invoices/estimate', {
++          patientId: patient._id,
++          items: payload
++        });
++        const estimates = res.data?.data || res.data;
++        
++        if (estimates && estimates.length === procedures.length) {
++          setProcedures((prev) =>
++            prev.map((p, i) => {
++              const est = estimates[i];
++              return {
++                ...p,
++                insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
++                ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
++                writeoff: `$${Number(est.estimatedWriteOff || est.writeoff || 0).toFixed(2)}`,
++                balance: `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`,
++                coveragePct: est.coveragePct || p.coveragePct,
++              };
++            })
++          );
++          return;
++        }
++      } catch (err) {
++        console.warn("Failed to re-estimate via backend:", err);
++      }
++    }
++
+     setProcedures((prev) =>
+       prev.map((p) => {
+         const numCharge =
+diff --git a/src/components/finance/PatientFinanceInfo.jsx b/src/components/finance/PatientFinanceInfo.jsx
+index 6e0a3d1..72219a4 100644
+--- a/src/components/finance/PatientFinanceInfo.jsx
++++ b/src/components/finance/PatientFinanceInfo.jsx
+@@ -33,7 +33,7 @@ const flagColorMap = {
+   'Botox/Filler': '#eef681',
+   'Bioclear Patient': '#cf5dbd',
+   'Ortho Patient': '#4d39c0',
+-'Balance Owed': '#d3562f',
++  'Balance Owed': '#d3562f',
+   'appointment_reminder': '#94bc74'
+ };
+ 
+@@ -323,7 +323,8 @@ const PatientFinanceInfo = forwardRef(({ view, flags = [], patient = null, onVie
+       <Box
+         sx={{
+           flex: 1,
+-          height: '254px',
++          minHeight: '254px',
++          height: '100%',
+           border: '1px solid #DFE5EC',
+           borderRadius: '22px',
+           p: 3,
+diff --git a/src/pages/finance/FinancePage.jsx b/src/pages/finance/FinancePage.jsx
+index 211157b..0790f28 100644
+--- a/src/pages/finance/FinancePage.jsx
++++ b/src/pages/finance/FinancePage.jsx
+@@ -290,7 +290,7 @@ const FinancePage = () => {
+           onAddFlagsClick={() => setShowEditFlags(true)}
+           onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
+         />
+-        <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} />
++        <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} patient={currentPatient} />
+       </Box>
+ 
+       {/* Action Toolbar: Filters and Buttons */}

@@ -11,18 +11,20 @@ import {
   IconButton,
   Divider,
   TextField,
-  CircularProgress
+  CircularProgress,
+  DialogActions
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  DeleteOutline as DeleteIcon,
   RadioButtonChecked as RadioIcon,
   CheckBox as CheckBoxIcon,
   ToggleOn as ToggleIcon,
   ShortText as TextIcon,
   Add as AddIcon,
   Close as CloseIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
 
 import { communicationService } from '../../../../services/communication.service';
 
@@ -242,32 +244,54 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-            {title ? `Edit Questionnaire: ${title}` : 'Questionnaire Editor'}
-          </Typography>
-        </Box>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button 
-            variant="contained" 
-            onClick={handlePublish}
-            disabled={loading || saving || !isDirty}
-            sx={{ bgcolor: '#3B82F6', textTransform: 'none', borderRadius: 1.5, px: 3, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2563EB', boxShadow: 'none' } }}
-          >
-            {saving ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : (isSystem ? 'Publish Again' : 'Publish')}
-          </Button>
-          <Button variant="outlined" sx={{ color: '#64748b', borderColor: '#E5E9F2', textTransform: 'none', borderRadius: 1.5, px: 3, fontWeight: 600, '&:hover': { bgcolor: '#F8FAFC', borderColor: '#cbd5e1' } }}>
-            {isSystem ? 'Hide From Menu' : 'Show In Menu'}
-          </Button>
-          <IconButton onClick={onClose} sx={{ color: '#94a3b8', ml: 1, '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
-            <CloseIcon />
-          </IconButton>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <AssignmentIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 600, 
+              fontSize: '16px', 
+              lineHeight: '24px', 
+              letterSpacing: '-0.4px', 
+              color: '#111' 
+            }}>
+              {title ? `Edit Questionnaire` : 'Questionnaire Editor'}
+            </Typography>
+            {title && (
+              <Typography sx={{ 
+                fontFamily: 'Inter, sans-serif', 
+                fontWeight: 400, 
+                fontSize: '11.5px', 
+                lineHeight: '17.25px', 
+                color: '#6B7280' 
+              }}>
+                {title}
+              </Typography>
+            )}
+          </Box>
         </Box>
+        <IconButton onClick={onClose} sx={{ color: '#94a3b8', ml: 1, '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
 
-      <DialogContent sx={{ p: 0, display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <DialogContent sx={{ p: 0, display: 'flex', flex: 1, overflow: 'hidden', bgcolor: '#ffffff' }}>
         
         {loading ? (
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -276,7 +300,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
         ) : (
           <>
             {/* Left Column (Editor Area) */}
-            <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', bgcolor: '#F8FAFC' }}>
+            <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', bgcolor: '#ffffff' }}>
               <Box sx={{ width: '100%', maxWidth: 700 }}>
             
             {/* Title Block */}
@@ -295,7 +319,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
                   ) : (
                     <>
                       <Typography sx={{ fontWeight: 600 }}>{localTitle}</Typography>
-                      <EditIcon onClick={() => setIsEditingTitle(true)} sx={{ fontSize: '1.1rem', cursor: 'pointer', color: '#3B82F6' }} />
+                      <img src={EditSvg} alt="Edit" width="16" height="16" onClick={() => setIsEditingTitle(true)} style={{ cursor: 'pointer', marginLeft: '8px', opacity: 0.7 }} onMouseOver={e => e.currentTarget.style.opacity = 1} onMouseOut={e => e.currentTarget.style.opacity = 0.7} />
                     </>
                   )}
                 </Box>
@@ -316,7 +340,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
                   ) : (
                     <>
                       <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>{localDesc}</Typography>
-                      <EditIcon onClick={() => setIsEditingDesc(true)} sx={{ fontSize: '1rem', color: '#94a3b8', cursor: 'pointer', mt: 0.5, '&:hover': { color: '#3B82F6' } }} />
+                      <img src={EditSvg} alt="Edit" width="14" height="14" onClick={() => setIsEditingDesc(true)} style={{ cursor: 'pointer', marginTop: '4px', opacity: 0.6 }} onMouseOver={e => e.currentTarget.style.opacity = 1} onMouseOut={e => e.currentTarget.style.opacity = 0.6} />
                     </>
                   )}
                 </Box>
@@ -377,7 +401,7 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
 
                   <Divider sx={{ width: '100%', mt: 2, mb: 1, borderColor: '#F1F5F9' }} />
                   <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-                    <IconButton size="small" onClick={() => deleteQuestion(idx)} sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444', bgcolor: '#fef2f2' } }}><DeleteIcon sx={{ fontSize: '1.2rem' }} /></IconButton>
+                    <IconButton size="small" onClick={() => deleteQuestion(idx)}><img src={DeleteSvg} alt="Delete" width="18" height="18" /></IconButton>
                   </Box>
                 </Box>
               </Box>
@@ -401,8 +425,8 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
         </Box>
 
         {/* Right Sidebar (Properties) */}
-        <Box sx={{ width: 280, bgcolor: '#FBFCFE', borderLeft: '1px solid #E5E9F2', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', bgcolor: '#F8FAFC' }}>
+        <Box sx={{ width: 280, bgcolor: '#ffffff', borderLeft: '1px solid #E5E9F2', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2', bgcolor: '#ffffff' }}>
             <Typography sx={{ fontSize: '0.85rem', color: '#1E293B', fontWeight: 700 }}>Question Elements</Typography>
           </Box>
           <Box sx={{ p: 2, borderBottom: '1px solid #E5E9F2' }}>
@@ -418,6 +442,73 @@ const QuestionnaireEditor = ({ open, mode, title, description, id, onClose }) =>
         </>
         )}
       </DialogContent>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          borderTop: '1px solid #E5E7EB',
+          bgcolor: '#ffffff',
+          gap: 1,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
+            textTransform: 'none',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            borderColor: '#D1D5DB',
+            color: '#374151',
+            borderRadius: '8px',
+            px: 2.5,
+            '&:hover': {
+              borderColor: '#9CA3AF',
+              backgroundColor: '#F9FAFB',
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button variant="outlined" sx={{ 
+            textTransform: 'none',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            borderColor: '#D1D5DB',
+            color: '#374151',
+            borderRadius: '8px',
+            px: 2.5,
+            '&:hover': {
+              borderColor: '#9CA3AF',
+              backgroundColor: '#F9FAFB',
+            },
+          }}>
+          {isSystem ? 'Hide From Menu' : 'Show In Menu'}
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={handlePublish}
+          disabled={loading || saving || !isDirty}
+          sx={{
+            textTransform: 'none',
+            fontFamily: 'Inter',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            backgroundColor: '#2563EB',
+            borderRadius: '8px',
+            px: 2.5,
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#1d4ed8',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          {saving ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : (isSystem ? 'Publish Again' : 'Publish')}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

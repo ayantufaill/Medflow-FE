@@ -32,6 +32,7 @@ import 'react-phone-input-2/lib/material.css';
 import { useDispatch } from 'react-redux';
 import { createProvider } from '../../store/slices/providerSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { COLORS } from '../../constants/colors';
 import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 
 import ActiveProviderForm from './AddProviderForms/ActiveProviderForm';
@@ -200,14 +201,14 @@ const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onC
       >
         <DialogTitle
           sx={{
-            backgroundColor: '#F1F5FD',
+            backgroundColor: COLORS.SURFACE_TINT,
             color: '#111',
             py: 2,
             px: 3,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #E5E7EB'
+            borderBottom: `1px solid ${COLORS.BORDER}`
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -229,7 +230,7 @@ const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onC
           </IconButton>
         </DialogTitle>
 
-      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5 }}>
+      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5, backgroundColor: COLORS.BACKGROUND }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}
@@ -245,8 +246,8 @@ const AddProviderDialog = ({ open, title = 'Add Provider', providerCategory, onC
       <DialogActions sx={{ 
         px: 3, 
         py: 2, 
-        backgroundColor: '#F9FAFB', 
-        borderTop: '1px solid #E5E7EB', 
+        backgroundColor: 'white', 
+        borderTop: `1px solid ${COLORS.BORDER}`, 
         gap: 1.5,
         justifyContent: 'flex-end'
       }}>

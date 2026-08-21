@@ -37,6 +37,7 @@ import {
 import { reportingService } from '../../services/reporting.service';
 import { audienceService } from '../../services/audience.service';
 import { ReportFilterBar, ReportSearchInput } from '../../components/reports/ui';
+import { COLORS } from '../../constants/colors';
 
 const COLUMNS = [
   'ID', 'Middle Name', 'dob', 'email', 'householdHeadUUID', 'isHeadOfHousehold', 'newPatientDate', 'sex',
@@ -492,7 +493,7 @@ const AdvancedReporting = () => {
               sx={{ '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.4)' }, zIndex: 99999 }}
               PaperProps={{ sx: { borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontFamily: 'Inter, sans-serif', maxWidth: '550px' } }}
             >
-              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: '10px 16px', bgcolor: '#F3F8FD', borderBottom: '1px solid #e2e8f0' }}>
+              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: '25px', py: '16px', bgcolor: COLORS.SURFACE_TINT, borderBottom: `1px solid ${COLORS.BORDER}` }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box sx={{ bgcolor: '#ffffff', width: 38, height: 38, borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <AddIcon sx={{ fontSize: '1.25rem', color: '#2362EF' }} />
@@ -546,7 +547,7 @@ const AdvancedReporting = () => {
                 </Box>
               </DialogContent>
               <Divider sx={{ borderColor: '#f1f5f9' }} />
-              <DialogActions sx={{ p: 3, justifyContent: 'flex-end', gap: 1.5, bgcolor: '#ffffff' }}>
+              <DialogActions sx={{ px: '25px', py: '16px', justifyContent: 'flex-end', gap: 1.5, bgcolor: 'white' }}>
                 <Button
                   onClick={() => setOpenModal(false)}
                   variant="outlined"

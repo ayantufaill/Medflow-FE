@@ -18,21 +18,32 @@ import PaymentOutlinedIcon from '@mui/icons-material/PaymentOutlined';
 const PaymentField = ({ label, placeholder, required }) => (
   <Box>
     {label && (
-      <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, color: '#111', fontSize: '13px', mb: 1 }}>
-        {label} {required && '*'}
+      <Typography sx={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '11.5px', lineHeight: '17.25px', letterSpacing: '0px', color: '#4b5563', display: 'block', mb: 0.5 }}>
+        {label}{required && <span style={{ color: '#e53935' }}> *</span>}
       </Typography>
     )}
     <TextField
       fullWidth
       variant="outlined"
-      size="small"
       placeholder={placeholder}
       InputProps={{
-        sx: { 
-          fontSize: '13px',
-          bgcolor: '#FFFFFF',
+        sx: {
           borderRadius: '8px',
-          '& fieldset': { borderColor: '#E5E7EB' }
+          backgroundColor: '#fff',
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#E5E7EB',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#D1D5DB',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#1976d2',
+          },
+          '& .MuiInputBase-input': {
+            padding: '10px 14px',
+            fontSize: '0.875rem',
+            fontFamily: 'Inter',
+          },
         }
       }}
     />
@@ -44,14 +55,14 @@ const SectionContainer = ({ title, icon: Icon, children }) => {
   const headerBg = '#F3F8FD';
 
   return (
-    <Box sx={{ border: `1px solid ${borderColor}`, borderRadius: '12px', mb: 2, backgroundColor: '#FFFFFF', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ border: `1px solid ${borderColor}`, borderRadius: '12px', mb: 2, backgroundColor: '#FFFFFF' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2.5, py: 2, backgroundColor: headerBg, borderBottom: `1px solid ${borderColor}`, borderTopLeftRadius: '11px', borderTopRightRadius: '11px' }}>
         {Icon && <Icon sx={{ fontSize: '20px', color: '#6B7280' }} />}
         <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', lineHeight: '20px', letterSpacing: '0px', color: '#111' }}>
           {title}
         </Typography>
       </Box>
-      <Box sx={{ p: 3, flexGrow: 1 }}>
+      <Box sx={{ p: 3 }}>
         {children}
       </Box>
     </Box>
@@ -67,12 +78,12 @@ const PaymentDetailsForm = ({ onBack }) => {
   ];
 
   const addressFields = [
-    { placeholder: "Address", col: 12 },
+    { placeholder: "Address", col: 4 },
     { placeholder: "City", col: 4 },
     { placeholder: "State", col: 4 },
     { placeholder: "Zip", col: 4 },
-    { placeholder: "Email", col: 6 },
-    { placeholder: "Phone", col: 6 },
+    { placeholder: "Email", col: 4 },
+    { placeholder: "Phone", col: 4 },
   ];
 
   return (
@@ -113,11 +124,11 @@ const PaymentDetailsForm = ({ onBack }) => {
 
       <DialogContent sx={{ px: 3, pt: '24px !important', pb: 2.5 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={12}>
             <SectionContainer title="Credit Card Information" icon={LockIcon}>
               <Grid container spacing={2.5}>
                 {cardFields.map((field, idx) => (
-                  <Grid item xs={6} key={idx}>
+                  <Grid size={6} key={idx}>
                     <PaymentField 
                       label={field.label}
                       placeholder={field.placeholder}
@@ -129,14 +140,14 @@ const PaymentDetailsForm = ({ onBack }) => {
             </SectionContainer>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <SectionContainer title="Address Information" icon={PaymentOutlinedIcon}>
-              <Typography sx={{ color: '#111', fontWeight: 600, fontSize: '13px', mb: 2 }}>
-                Billing Address *
+              <Typography sx={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '11.5px', lineHeight: '17.25px', letterSpacing: '0px', color: '#4b5563', display: 'block', mb: 1.5 }}>
+                Billing Address<span style={{ color: '#e53935' }}> *</span>
               </Typography>
               <Grid container spacing={2.5}>
                 {addressFields.map((field, idx) => (
-                  <Grid item xs={field.col} key={idx}>
+                  <Grid size={field.col} key={idx}>
                     <PaymentField 
                       placeholder={field.placeholder}
                     />
@@ -164,7 +175,7 @@ const PaymentDetailsForm = ({ onBack }) => {
       <DialogActions sx={{ 
         px: 3, 
         py: 2, 
-        backgroundColor: '#F9FAFB', 
+        backgroundColor: '#FFFFFF', 
         borderTop: '1px solid #E5E7EB', 
         gap: 1.5,
         justifyContent: 'flex-end'

@@ -38,6 +38,8 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { providerService } from '../../services/provider.service';
+import { COLORS } from '../../constants/colors';
+import { fontSize, fontWeight } from '../../constants/styles';
 import {
   fetchProviders,
   activateProvider,
@@ -213,10 +215,14 @@ const getCellValue = (provider, col) => {
 
 // ─── Expanded row panel ───────────────────────────────────────────────────────
 
-const DetailField = ({ label, value }) => (
-  <Box>
-    <Typography component="span" variant="body2" fontWeight={700}>{label}: </Typography>
-    <Typography component="span" variant="body2">{value || ''}</Typography>
+const InfoRow = ({ label, value }) => (
+  <Box sx={{ display: 'flex', gap: 1, py: 0.4, alignItems: 'baseline' }}>
+    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {label}:
+    </Typography>
+    <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semibold, wordBreak: 'break-word' }}>
+      {value || '—'}
+    </Typography>
   </Box>
 );
 
@@ -224,77 +230,134 @@ const ExpandedDetails = ({ provider, onDeactivate, onActivate, actionLoading }) 
   const addr = provider.address || {};
   const userId = provider.userId || {};
 
-  const fields = [
-    [
-      { label: 'Title', value: provider.title },
-      { label: 'Middle Name', value: userId.middleName || provider.middleName },
-      { label: 'Home Phone Number', value: provider.homePhone || userId.homePhone },
-    ],
-    [
-      { label: 'Suffix Title', value: provider.suffixTitle || provider.suffix },
-      { label: 'Preferred Name', value: provider.preferredName || userId.preferredName },
-      { label: 'Color', value: null, color: provider.color },
-    ],
-    [
-      { label: 'Organization Name', value: provider.organizationName },
-      { label: 'NPI', value: provider.npiNumber },
-      { label: 'Description', value: provider.description },
-    ],
-    [
-      { label: 'Signature on File', value: provider.signatureOnFile ? 'Yes' : provider.signatureOnFile === false ? 'No' : '' },
-      { label: 'Additional Provider ID', value: provider.additionalProviderId },
-    ],
-    [
-      { label: 'Country', value: addr.country || provider.country },
-      { label: 'Additional Address', value: addr.additionalAddress || addr.address2 },
-      { label: 'State', value: addr.state || provider.state },
-    ],
-    [
-      { label: 'Street Address', value: addr.street || addr.address1 || provider.streetAddress },
-      { label: 'City', value: addr.city || provider.city },
-      { label: 'Zip Code', value: addr.zipCode || addr.zip || provider.zipCode },
-    ],
-  ];
-
   return (
-    <Box sx={{ p: 2.5, backgroundColor: '#eef2f8', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-      <Grid container spacing={1}>
-        {fields.map((col, ci) => (
-          <Grid key={ci} size={2}>
-            {col.map((f) =>
-              f.color !== undefined ? (
-                <Box key={f.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Typography variant="body2" fontWeight={700}>{f.label}: </Typography>
-                  {f.color ? (
-                    <Box sx={{ width: 16, height: 16, borderRadius: '2px', backgroundColor: f.color, border: '1px solid rgba(0,0,0,0.15)' }} />
-                  ) : null}
-                </Box>
+    <Box sx={{ px: 3, pb: 3, pt: 1.5, backgroundColor: COLORS.SURFACE_HOVER }}>
+      <Box sx={{ display: 'flex', width: '100%', gap: 0 }}>
+        {/* Column 1: Personal Info */}
+        <Box sx={{ flex: 1, pr: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <InfoRow label="Title" value={provider.title} />
+            <InfoRow label="Middle Name" value={userId.middleName || provider.middleName} />
+            <InfoRow label="Suffix Title" value={provider.suffixTitle || provider.suffix} />
+            <InfoRow label="Preferred Name" value={provider.preferredName || userId.preferredName} />
+            <Box sx={{ display: 'flex', gap: 1, py: 0.4, alignItems: 'center' }}>
+              <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_MUTED, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                Color:
+              </Typography>
+              {provider.color ? (
+                <Box sx={{ width: 14, height: 14, borderRadius: '2px', backgroundColor: provider.color, border: '1px solid rgba(0,0,0,0.15)' }} />
               ) : (
-                <DetailField key={f.label} label={f.label} value={f.value} />
-              )
-            )}
-          </Grid>
-        ))}
-      </Grid>
+                <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.semibold }}>—</Typography>
+              )}
+            </Box>
+          </Box>
+        </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+        {/* Column 2: Contact Info */}
+        <Box sx={{ flex: 1, px: 3, borderLeft: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <InfoRow label="Email" value={userId.email || provider.email} />
+            <InfoRow label="Mobile Phone" value={provider.phone || userId.phone || provider.mobilePhone} />
+            <InfoRow label="Home Phone" value={provider.homePhone || userId.homePhone} />
+            <InfoRow label="Office Phone" value={provider.officePhone || provider.workPhone} />
+          </Box>
+        </Box>
+
+        {/* Column 3: Professional Info 1 */}
+        <Box sx={{ flex: 1, px: 3, borderLeft: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <InfoRow label="Specialty" value={formatSpecialty(provider.specialty) === '-' ? '' : formatSpecialty(provider.specialty)} />
+            <InfoRow label="Organization Name" value={provider.organizationName} />
+            <InfoRow label="NPI" value={provider.npiNumber} />
+            <InfoRow label="License Number" value={provider.licenseNumber} />
+          </Box>
+        </Box>
+
+        {/* Column 4: Professional Info 2 */}
+        <Box sx={{ flex: 1, px: 3, borderLeft: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <InfoRow label="Tax Number" value={provider.federalTaxId || provider.taxId || provider.federalTaxNumber} />
+            <InfoRow label="Additional Provider ID" value={provider.additionalProviderId} />
+            <InfoRow label="Signature on File" value={provider.signatureOnFile ? 'Yes' : provider.signatureOnFile === false ? 'No' : ''} />
+            <InfoRow label="Description" value={provider.description} />
+          </Box>
+        </Box>
+
+        {/* Column 5: Address Info */}
+        <Box sx={{ flex: 1, pl: 3, borderLeft: `1px solid ${COLORS.BORDER_LIGHT}` }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <InfoRow label="Street Address" value={addr.street || addr.address1 || provider.streetAddress} />
+            <InfoRow label="Additional Address" value={addr.additionalAddress || addr.address2} />
+            <InfoRow label="City" value={addr.city || provider.city} />
+            <InfoRow label="State" value={addr.state || provider.state} />
+            <InfoRow label="Zip Code" value={addr.zipCode || addr.zip || provider.zipCode} />
+            <InfoRow label="Country" value={addr.country || provider.country} />
+          </Box>
+        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
         {provider.isActive ? (
           <Button
-            variant="contained"
             size="small"
-            onClick={onDeactivate}
+            variant="outlined"
+            onClick={(e) => { e.stopPropagation(); onDeactivate(); }}
             disabled={actionLoading}
-            sx={{ backgroundColor: '#e53935', '&:hover': { backgroundColor: '#c62828' } }}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.6,
+              color: '#DC2626',
+              borderColor: '#FECACA',
+              bgcolor: '#FEF2F2',
+              boxShadow: 'none',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: '#FEE2E2',
+                borderColor: '#F87171',
+                boxShadow: 'none',
+              },
+              '&.Mui-disabled': {
+                opacity: 0.45,
+                borderColor: '#FECACA',
+                color: '#DC2626',
+              },
+            }}
           >
             Deactivate
           </Button>
         ) : (
           <Button
-            variant="contained"
             size="small"
-            onClick={onActivate}
+            variant="outlined"
+            onClick={(e) => { e.stopPropagation(); onActivate(); }}
             disabled={actionLoading}
-            color="success"
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.6,
+              color: '#16A34A',
+              borderColor: '#BBF7D0',
+              bgcolor: '#F0FDF4',
+              boxShadow: 'none',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: '#DCFCE7',
+                borderColor: '#4ADE80',
+                boxShadow: 'none',
+              },
+              '&.Mui-disabled': {
+                opacity: 0.45,
+                borderColor: '#BBF7D0',
+                color: '#16A34A',
+              },
+            }}
           >
             Activate
           </Button>
