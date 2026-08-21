@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Collapse } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import ClearIcon from '@mui/icons-material/Clear';
 import ScheduleConfigCard from './ScheduleConfigCard';
 import ApptTypesSettingIcon from '../../../../assets/scheduleconfigurationicon/appointmenttypesetting.svg';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const INITIAL_TYPES = [
   { type: "Crown/bridge prep", providers: 3, time: "90 mins" },
@@ -113,10 +114,7 @@ const AppointmentTypesSetting = ({ apptTypes, setApptTypes }) => {
                         style={{ padding: '4px', fontSize: '12px', width: '100%' }}
                       />
                     ) : (
-                      <Typography 
-                        onClick={() => handleEditClick(i, appt)}
-                        sx={{ color: '#3b82f6', fontSize: '12px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                      >
+                      <Typography sx={{ color: '#111827', fontSize: '12px' }}>
                         {appt.type}
                       </Typography>
                     )}
@@ -158,15 +156,27 @@ const AppointmentTypesSetting = ({ apptTypes, setApptTypes }) => {
                         <Typography onClick={() => handleDeleteType(i)} sx={{ color: '#ef4444', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Cancel</Typography>
                       </Box>
                     ) : (
-                      <Box 
-                        onClick={() => handleDeleteType(i)}
-                        sx={{ 
-                          width: 18, height: 18, bgcolor: '#ef4444', borderRadius: '4px', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          mx: 'auto', cursor: 'pointer', '&:hover': { bgcolor: '#dc2626' }
-                        }}
-                      >
-                        <ClearIcon sx={{ color: '#fff', fontSize: '14px' }} />
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                        <Box 
+                          onClick={() => handleEditClick(i, appt)}
+                          sx={{ 
+                            width: 24, height: 24, borderRadius: '4px', 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' }
+                          }}
+                        >
+                          <img src={EditSvg} alt="edit" width="16" height="16" />
+                        </Box>
+                        <Box 
+                          onClick={() => handleDeleteType(i)}
+                          sx={{ 
+                            width: 24, height: 24, borderRadius: '4px', 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' }
+                          }}
+                        >
+                          <img src={DeleteSvg} alt="delete" width="16" height="16" />
+                        </Box>
                       </Box>
                     )}
                   </TableCell>

@@ -19,6 +19,7 @@ import {
   Popover,
   FormGroup,
   Divider,
+  TablePagination,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -75,6 +76,8 @@ export default function BatchActionsPage() {
 
   // Tab 2 States (Batch Invoices)
   const [invoicePatients, setInvoicePatients] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedPatients, setSelectedPatients] = useState({});
   const [openAddInvoiceModal, setOpenAddInvoiceModal] = useState(false);
   const [newInvoiceDelivery, setNewInvoiceDelivery] = useState('Email & SMS');
@@ -313,6 +316,15 @@ export default function BatchActionsPage() {
     }
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   // Toggle procedures collapse inside claims list
   const toggleClaimProcedures = (claimId) => {
     setExpandedProcedures(prev => ({
@@ -545,17 +557,24 @@ export default function BatchActionsPage() {
       )}
 
       {activeTab === 'BATCH INVOICES' && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2, gap: 1.5 }}>
-          <Button disabled size="small" sx={{ textTransform: 'none', fontSize: fontSize.sm, fontWeight: fontWeight.semibold, '&.Mui-disabled': { color: '#64748b' } }}>
-            ‹ Prev
-          </Button>
-          <Typography sx={{ fontSize: fontSize.base, color: '#475569', fontWeight: fontWeight.medium }}>
-            Page 1 of 1 · <strong style={{ color: '#1e293b' }}>{invoicePatients.length} patients total</strong>
-          </Typography>
-          <Button disabled size="small" sx={{ textTransform: 'none', fontSize: fontSize.sm, fontWeight: fontWeight.semibold, '&.Mui-disabled': { color: '#64748b' } }}>
-            Next ›
-          </Button>
-        </Box>
+        <TablePagination
+          component="div"
+          count={invoicePatients.length}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          labelRowsPerPage="ROWS PER PAGE:"
+          sx={{
+            borderTop: `1px solid ${COLORS.BORDER}`,
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontFamily: 'Inter', fontSize: fontSize.sm, color: COLORS.TEXT_MUTED,
+              textTransform: 'uppercase', letterSpacing: '0.3px',
+            },
+            '& .MuiTablePagination-select': { fontFamily: 'Inter', fontSize: fontSize.sm },
+          }}
+        />
       )}
 
           </Box>{/* close p:3 scroll */}

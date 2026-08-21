@@ -11,7 +11,7 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { Close as CloseIcon, FormatBold, FormatItalic, FormatUnderlined, FormatAlignLeft, FormatAlignCenter, FormatAlignRight } from '@mui/icons-material';
+import { Close as CloseIcon, Email as EmailIcon, FormatBold, FormatItalic, FormatUnderlined, FormatAlignLeft, FormatAlignCenter, FormatAlignRight } from '@mui/icons-material';
 import { VariableAccordion } from '../templates/VariableAccordion';
 import { VariableButton } from '../templates/VariableButton';
 
@@ -57,17 +57,52 @@ const TemplateEditorModal = ({ open, onClose, templateName }) => {
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-          Edit Template: {templateName}
-        </Typography>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <EmailIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 600, 
+              fontSize: '16px', 
+              lineHeight: '24px', 
+              letterSpacing: '-0.4px', 
+              color: '#111' 
+            }}>
+              Edit Template
+            </Typography>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 400, 
+              fontSize: '11.5px', 
+              lineHeight: '17.25px', 
+              color: '#6B7280' 
+            }}>
+              {templateName}
+            </Typography>
+          </Box>
+        </Box>
         <IconButton onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
       
-      <DialogContent sx={{ p: 3 }}>
+      <DialogContent sx={{ p: 3, pt: '32px !important', bgcolor: '#ffffff' }}>
         <Box sx={{ display: 'flex', gap: 4 }}>
           {/* Editor Area */}
           <Box sx={{ flex: 1 }}>

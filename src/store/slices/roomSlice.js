@@ -120,9 +120,11 @@ const roomSlice = createSlice({
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {
         const deletedId = action.payload;
-        state.list = state.list.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
+        const roomToUpdate = state.list.find(r => r._id === deletedId || r.roomNumber === deletedId);
+        if (roomToUpdate) {
+          roomToUpdate.isActive = false;
+        }
         state.dropdownList = state.dropdownList.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
-        state.pagination.total = Math.max(0, state.pagination.total - 1);
       });
   },
 });

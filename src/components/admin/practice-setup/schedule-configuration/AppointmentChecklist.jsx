@@ -3,9 +3,9 @@ import { Box, Typography, Collapse, Grid } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import InfoIcon from '@mui/icons-material/Info';
-import ClearIcon from '@mui/icons-material/Clear';
 import ScheduleConfigCard from './ScheduleConfigCard';
 import ApptChecklistIcon from '../../../../assets/scheduleconfigurationicon/appointmentchecklist.svg';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const AppointmentChecklist = ({ 
   preApptChecklist, 
@@ -51,13 +51,13 @@ const AppointmentChecklist = ({
                   <Box 
                     onClick={() => handleDeleteItem('preAppt', index)}
                     sx={{ 
-                      width: 18, height: 18, bgcolor: '#ef4444', borderRadius: '4px', 
+                      width: 24, height: 24, borderRadius: '4px', 
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', '&:hover': { bgcolor: '#dc2626' },
+                      cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' },
                       flexShrink: 0, ml: 2
                     }}
                   >
-                    <ClearIcon sx={{ color: '#fff', fontSize: '14px' }} />
+                    <img src={DeleteSvg} alt="delete" width="16" height="16" />
                   </Box>
                 </Box>
               ))}
@@ -80,13 +80,13 @@ const AppointmentChecklist = ({
                   <Box 
                     onClick={() => handleDeleteItem('checkIn', index)}
                     sx={{ 
-                      width: 18, height: 18, bgcolor: '#ef4444', borderRadius: '4px', 
+                      width: 24, height: 24, borderRadius: '4px', 
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', '&:hover': { bgcolor: '#dc2626' },
+                      cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' },
                       flexShrink: 0, ml: 2
                     }}
                   >
-                    <ClearIcon sx={{ color: '#fff', fontSize: '14px' }} />
+                    <img src={DeleteSvg} alt="delete" width="16" height="16" />
                   </Box>
                 </Box>
               ))}
@@ -109,13 +109,13 @@ const AppointmentChecklist = ({
                   <Box 
                     onClick={() => handleDeleteItem('checkOut', index)}
                     sx={{ 
-                      width: 18, height: 18, bgcolor: '#ef4444', borderRadius: '4px', 
+                      width: 24, height: 24, borderRadius: '4px', 
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', '&:hover': { bgcolor: '#dc2626' },
+                      cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' },
                       flexShrink: 0, ml: 2
                     }}
                   >
-                    <ClearIcon sx={{ color: '#fff', fontSize: '14px' }} />
+                    <img src={DeleteSvg} alt="delete" width="16" height="16" />
                   </Box>
                 </Box>
               ))}

@@ -1,6 +1,6 @@
 import { Box, Typography, TextField } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import CopySvg from '../../../../assets/practicesetupicon/documents.svg';
 import { ChoiceIcon } from './ChecklistIcons';
 
 const ChecklistItemsTable = ({
@@ -78,11 +78,16 @@ const ChecklistItemsTable = ({
             {item.products && item.products.map((product, pIdx) => (
                <Box key={pIdx} sx={{ display: 'flex', alignItems: 'center', mb: 1, '&:hover .delete-btn': { opacity: 1 } }}>
                  <Typography sx={{ fontSize: '0.85rem', color: '#334155', flex: 1 }}>• {product}</Typography>
-                 <DeleteIcon 
+                 <img 
+                   src={DeleteSvg}
+                   alt="Remove product"
+                   width="16"
+                   height="16"
                    className="delete-btn"
                    onClick={() => handleRemoveProduct(category, checklistIdx, idx, pIdx)}
-                   sx={{ color: '#ef4444', fontSize: '1rem', cursor: 'pointer', opacity: 0, '&:hover': { opacity: 1, transform: 'scale(1.1)' }, transition: 'all 0.2s', ml: 1 }} 
-                   titleAccess="Remove product"
+                   style={{ cursor: 'pointer', opacity: 0.6, marginLeft: '8px' }}
+                   onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                   onMouseOut={(e) => e.currentTarget.style.opacity = 0.6}
                  />
                </Box>
             ))}
@@ -120,13 +125,25 @@ const ChecklistItemsTable = ({
             )}
           </Box>
           <Box sx={{ width: 100, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5 }}>
-            <DeleteIcon 
+            <img 
+              src={DeleteSvg}
+              alt="Delete"
+              width="18"
+              height="18"
               onClick={() => handleDeleteItem(category, checklistIdx, idx)}
-              sx={{ color: '#ef4444', fontSize: '1.2rem', cursor: 'pointer', opacity: 0.7, '&:hover': { opacity: 1, transform: 'scale(1.1)' }, transition: 'all 0.2s' }} 
+              style={{ cursor: 'pointer', opacity: 0.7 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.7}
             />
-            <CopyIcon 
+            <img 
+              src={CopySvg}
+              alt="Copy"
+              width="18"
+              height="18"
               onClick={() => handleCopyItemToClipboard(item)}
-              sx={{ color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', opacity: 0.7, '&:hover': { opacity: 1, color: '#3b82f6', transform: 'scale(1.1)' }, transition: 'all 0.2s' }} 
+              style={{ cursor: 'pointer', opacity: 0.7 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.7}
             />
           </Box>
         </Box>

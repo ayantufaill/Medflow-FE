@@ -17,7 +17,8 @@ import {
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 const ProductionReportTable = ({
   sortedReportData,
   grouping,
@@ -27,6 +28,14 @@ const ProductionReportTable = ({
   handleExportGroupCSV,
   handlePrintGroup
 }) => {
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagColor = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal);
+    if (found) return { color: found.color, name: found.name };
+    return { color: flagVal, name: 'Flag' }; // fallback if it's already a hex color
+  };
   const baseColSpan = 8;
   const leftOffset = baseColSpan - (!showDOB ? 1 : 0) - (!showProvider ? 2 : 0);
   const totalCols = 21 - (!showDOB ? 1 : 0) - (!showProvider ? 2 : 0);
@@ -286,13 +295,18 @@ const ProductionReportTable = ({
                             <TableRow key={row.procedureId || idx} sx={bodyRowSx}>
                               <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
                               <TableCell>
-                                {showFlags && row.flags && row.flags.length > 0 && (
-                                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                    {row.flags.map((color, i) => (
-                                      <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                                    ))}
-                                  </Box>
-                                )}
+                              {showFlags && row.flags && row.flags.length > 0 && (
+                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                  {row.flags.map((flagVal, i) => {
+                                    const { color, name } = resolveFlagColor(flagVal);
+                                    return (
+                                      <Tooltip key={i} title={name} arrow placement="top">
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0, cursor: 'pointer' }} />
+                                      </Tooltip>
+                                    );
+                                  })}
+                                </Box>
+                              )}
                               </TableCell>
                               <TableCell sx={{ color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}>{row.patient || 'Mock Patient'}</TableCell>
                               {showDOB && <TableCell>{row.dob || '-'}</TableCell>}
@@ -392,9 +406,14 @@ const ProductionReportTable = ({
                     <TableCell>
                       {showFlags && row.flags && row.flags.length > 0 && (
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                          {row.flags.map((color, i) => (
-                            <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                          ))}
+                          {row.flags.map((flagVal, i) => {
+                            const { color, name } = resolveFlagColor(flagVal);
+                            return (
+                              <Tooltip key={i} title={name} arrow placement="top">
+                                <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0, cursor: 'pointer' }} />
+                              </Tooltip>
+                            );
+                          })}
                         </Box>
                       )}
                     </TableCell>

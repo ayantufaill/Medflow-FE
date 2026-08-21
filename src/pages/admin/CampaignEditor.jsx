@@ -127,25 +127,59 @@ const CampaignEditor = ({ open, title, campaign, onClose, onPreview }) => {
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-            Edit Campaign: {title}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1.5, py: 0.5, bgcolor: '#F0F5FF', borderRadius: 1.5 }}>
-            <PersonIcon sx={{ fontSize: '1rem', color: '#3B82F6' }} />
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#3B82F6' }}>Audience: Valentines 2025</Typography>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <SubjectIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
+          </Box>
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ 
+                fontFamily: 'Inter, sans-serif', 
+                fontWeight: 600, 
+                fontSize: '16px', 
+                lineHeight: '24px', 
+                letterSpacing: '-0.4px', 
+                color: '#111' 
+              }}>
+                Edit Campaign
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, bgcolor: '#e0e7ff', borderRadius: 1 }}>
+                <PersonIcon sx={{ fontSize: '12px', color: '#3B82F6' }} />
+                <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#3B82F6' }}>Audience: Valentines 2025</Typography>
+              </Box>
+            </Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 400, 
+              fontSize: '11.5px', 
+              lineHeight: '17.25px', 
+              color: '#6B7280' 
+            }}>
+              {title}
+            </Typography>
           </Box>
         </Box>
         <IconButton onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
 
-      <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ display: 'flex', p: 3, gap: 4 }}>
+      <DialogContent sx={{ p: 3, pt: '32px !important', bgcolor: '#ffffff' }}>
+        <Box sx={{ display: 'flex', gap: 4 }}>
           
           {/* Left Column (Editor) */}
           <Box sx={{ flex: 1 }}>

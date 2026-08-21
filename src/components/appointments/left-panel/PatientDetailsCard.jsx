@@ -3,9 +3,10 @@ import { usePatient, useDropdownData } from '../../../hooks/redux';
 import { usePatientInsurance } from '../../../hooks/redux/usePatientInsurance';
 import { providerLabel } from '../new-appointment/helpers';
 import { Box, Typography, Tooltip } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt } from '@mui/icons-material';
+import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt, InfoOutlined } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
-import { getFlagColor } from '../../patient-flags/constants';
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 import { fontSize, fontWeight, radius, spacing, headingPrimarySx, headingSecondarySx, avatarSize } from '../../../constants/styles';
 
 /* ── Reusable sub-section row ────────────────────────────────────── */
@@ -106,6 +107,13 @@ export const PatientDetails = () => {
   const [alertsOpen, setAlertsOpen] = useState(true);
   const { currentPatient } = usePatient();
   const { providers = [] } = useDropdownData({ providers: true });
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagColor = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal || f.name.toLowerCase() === flagVal.toLowerCase());
+    return found ? found.color : '#cbd5e1'; 
+  };
 
   const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
   const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
@@ -248,7 +256,7 @@ export const PatientDetails = () => {
                       width: 12, 
                       height: 12, 
                       borderRadius: '2px', 
-                      bgcolor: getFlagColor(flagName), 
+                      bgcolor: resolveFlagColor(flagName), 
                       flexShrink: 0,
                       cursor: 'pointer'
                     }} 
