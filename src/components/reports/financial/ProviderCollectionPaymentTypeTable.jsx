@@ -9,7 +9,10 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 
 const ProviderCollectionPaymentTypeTable = ({
   loading,
@@ -18,6 +21,15 @@ const ProviderCollectionPaymentTypeTable = ({
   totals,
   summaryStats
 }) => {
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagColor = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal);
+    if (found) return { color: found.color, name: found.name };
+    return { color: flagVal, name: 'Flag' };
+  };
+
   return (
     <>
       <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
@@ -81,10 +93,15 @@ const ProviderCollectionPaymentTypeTable = ({
                     <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
                     <TableCell>
                       {showFlags && row.flags && row.flags.length > 0 && (
-                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                          {row.flags.map((color, i) => (
-                            <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                          ))}
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {row.flags.map((flagVal, i) => {
+                            const { color, name } = resolveFlagColor(flagVal);
+                            return (
+                              <Tooltip key={i} title={name} arrow placement="top">
+                                <Box sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer' }} />
+                              </Tooltip>
+                            );
+                          })}
                         </Box>
                       )}
                     </TableCell>

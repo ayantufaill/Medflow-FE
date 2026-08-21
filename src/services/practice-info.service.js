@@ -24,11 +24,15 @@ export const practiceInfoService = {
   },
 
   /**
-   * Get current practice info (most recent)
+   * Get current practice info. Omit branchId and the backend defaults to the
+   * caller's own branch; pass one to view a specific branch's effective config
+   * (e.g. an Admin/Group Admin checking a branch other than their own).
+   * @param {string} [branchId]
    * @returns {Promise<Object>} Practice info data
    */
-  async getCurrentPracticeInfo() {
-    const response = await apiClient.get('/practice-info/current');
+  async getCurrentPracticeInfo(branchId) {
+    const params = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
+    const response = await apiClient.get(`/practice-info/current${params}`);
     return response.data.data.practiceInfo;
   },
 

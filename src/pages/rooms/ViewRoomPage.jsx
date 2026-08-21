@@ -16,6 +16,7 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { roomService } from '../../services/room.service';
+import { useBranch } from '../../hooks/redux';
 
 const ViewRoomPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,12 @@ const ViewRoomPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [room, setRoom] = useState(null);
+  const { branches, fetchBranches: loadBranches } = useBranch();
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -143,6 +150,14 @@ const ViewRoomPage = () => {
               color={room.isActive ? 'success' : 'default'}
               size="small"
             />
+          </Grid>
+          <Grid size={6}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Branch
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {branches.find((b) => b.id === room.branchId)?.name || 'Not specified'}
+            </Typography>
           </Grid>
         </Grid>
       </Paper>

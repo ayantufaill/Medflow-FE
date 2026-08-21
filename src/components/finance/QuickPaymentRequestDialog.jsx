@@ -103,7 +103,7 @@ const QuickPaymentRequestDialog = ({ onClose }) => {
       </DialogContent>
 
       {/* Footer */}
-      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, gap: 1 }}>
         <Button 
           variant="outlined" 
           onClick={onClose}

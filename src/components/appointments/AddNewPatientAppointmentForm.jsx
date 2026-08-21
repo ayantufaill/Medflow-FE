@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Box, Dialog, Alert, Snackbar } from "@mui/material";
 import dayjs from "dayjs";
 import { shortlistService } from "../../services/shortlist.service";
+import { useBranch } from "../../hooks/redux";
+import { useDropdownData } from "../../hooks/redux/useDropdownData";
 
 import { INITIAL_PROCEDURES, TAG_DEFAULT_PROCEDURES, DEFAULT_PROCEDURE_TAGS } from "./new-appointment/constants";
 import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
@@ -15,7 +17,6 @@ const AddNewPatientAppointmentForm = ({
   loadingPatients = false,
   onPatientSearch,
   providers = [],
-  rooms = [],
   appointments = [],
   scheduleBlocks = [],
   // eslint-disable-next-line no-unused-vars
@@ -66,6 +67,33 @@ const AddNewPatientAppointmentForm = ({
   const [status,             setStatus]             = useState(initialShortlistData?.Status || "unconfirmed");
   const [roomId,             setRoomId]             = useState(initialShortlistData?.RoomId ? String(initialShortlistData.RoomId) : initialRoomId != null ? String(initialRoomId) : "");
   const [durationMins,       setDurationMins]       = useState(initialShortlistData?.DurationMins || 60);
+
+  // Branch — optional, narrows the Operatory/Provider pickers below once picked.
+  // Omitted, the backend derives the appointment's branch from its room.
+  const [branchId, setBranchId] = useState(
+    initialShortlistData?.BranchId ? String(initialShortlistData.BranchId)
+      : initialAppointment?.branchId ? String(initialAppointment.branchId)
+      : ""
+  );
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Same global cache the page-level dropdown data uses (see OperatorySchedulePage) —
+  // resolves to the same unfiltered lists when branchId is empty, or a freshly
+  // fetched branch-filtered list once one is picked. Scoped to this modal only;
+  // doesn't affect the `providers`/`rooms` props used elsewhere in this file.
+  const { providers: branchProviders, rooms: branchRooms } = useDropdownData({
+    providers: true,
+    rooms: true,
+    branchId: branchId || null,
+  });
+  const handleBranchChange = (newBranchId) => {
+    setBranchId(newBranchId);
+    setRoomId("");
+    setProviderRows((rows) => rows.map((row) => ({ ...row, providerId: "" })));
+  };
   
   const initialProviderRows = initialShortlistData?.ProvNum ? 
     [{ id: 1, providerId: String(initialShortlistData.ProvNum), time: initialShortlistData?.DurationMins || 60 }] : 
@@ -85,6 +113,7 @@ const AddNewPatientAppointmentForm = ({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [computedVisitType, setComputedVisitType] = useState("");
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
 
   const occupiedRoomIds = useMemo(() => {
@@ -628,14 +657,16 @@ const AddNewPatientAppointmentForm = ({
       notes,
       providerId: providerRows[0]?.providerId || undefined,
       roomId:     roomId || undefined,
+      branchId:   branchId || undefined,
       customFields: {
         visitType,
-        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, provider, site }) => ({
+        procedures: procedures.filter((p) => p.checked).map(({ code, treatment, charge, provider, site, completed }) => ({
           code,
           treatment,
           charge,
           provider: provider || '',
           site: site || '',
+          completed: Boolean(completed),
         })),
         preferredDentist,
         preferredHygienist,
@@ -643,6 +674,7 @@ const AddNewPatientAppointmentForm = ({
         procedureTags: selectedProcedureTags,
         operatoryId: roomId || undefined,
       },
+      isNewRecall: !!computedVisitType,
     };
   };
 
@@ -752,6 +784,54 @@ const AddNewPatientAppointmentForm = ({
     }
   };
 
+  const handleComputeNextVisit = () => {
+    let addMonths = 0;
+    let addWeeks = 0;
+    let fallback = false;
+
+    // Check procedures
+    const hasPerio = procedures.some(p => p.code === 'D4910');
+    const hasProphy = procedures.some(p => ['D1110', 'D1120', 'D0120'].includes(p.code));
+    
+    if (hasPerio) {
+      addMonths = 3;
+    } else if (hasProphy) {
+      addMonths = 6;
+    } else if (procedures.length > 0) {
+      addWeeks = 2;
+    } else {
+      fallback = true;
+    }
+
+    if (fallback) {
+      setToastMessage("No standard recall procedures found.");
+      return;
+    }
+
+    let newDate = dayjs(apptDate);
+    if (addMonths > 0) {
+      newDate = newDate.add(addMonths, 'month');
+    } else if (addWeeks > 0) {
+      newDate = newDate.add(addWeeks, 'week');
+    }
+
+    setApptDate(newDate);
+    
+    let msgType = "";
+    if (addMonths === 6) msgType = "Recall";
+    else if (addMonths === 3) msgType = "Maintenance";
+    else msgType = "Follow-up";
+    setComputedVisitType(msgType);
+
+    let msg = `Next visit computed: ${newDate.format('MMM D, YYYY')}`;
+    if (addMonths === 6) msg += " (6 month recall)";
+    else if (addMonths === 3) msg += " (3 month perio recall)";
+    else msg += " (2 week follow-up)";
+    
+    setToastMessage(msg);
+    setIsRescheduling(true);
+  };
+
   const fName = patient?.firstName || patient?.FName || "";
   const lName = patient?.lastName || patient?.LName || "";
   const patientDisplayName = patient
@@ -821,6 +901,7 @@ const AddNewPatientAppointmentForm = ({
             setProcedures={setProcedures}
             providers={providers}
             showExtendedOptions={showExtendedOptions}
+            onComputeNextVisit={handleComputeNextVisit}
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling}
             setIsRescheduling={setIsRescheduling}
@@ -830,11 +911,14 @@ const AddNewPatientAppointmentForm = ({
           />
 
           <AppointmentRightPanel
+            branchId={branchId}
+            onBranchChange={handleBranchChange}
+            branches={branches}
             status={status}
             onStatusChange={setStatus}
             roomId={roomId}
             onRoomChange={setRoomId}
-            rooms={rooms}
+            rooms={branchRooms}
             isRoomOccupied={roomId && occupiedRoomIds.has(String(roomId))}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
@@ -849,7 +933,7 @@ const AddNewPatientAppointmentForm = ({
             onNotesChange={setNotes}
             selectedColorTags={selectedColorTags}
             onColorTagsChange={setSelectedColorTags}
-            providers={providers}
+            providers={branchProviders}
             referredBy={referredBy}
             onReferredByChange={setReferredBy}
             noReminders={noReminders}
@@ -873,6 +957,7 @@ const AddNewPatientAppointmentForm = ({
           isEditMode={isEditMode}
           readOnly={isEditMode && !isRescheduling}
           onLabOrderClick={() => setIsLabOrderOpen(true)}
+          computedVisitType={computedVisitType}
         />
       </Box>
 
@@ -890,8 +975,8 @@ const AddNewPatientAppointmentForm = ({
         />
       )}
 
-      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={() => setToastMessage("")} severity="info" sx={{ width: '100%' }}>
+      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <Alert onClose={() => setToastMessage("")} severity="success" sx={{ width: '100%' }}>
           {toastMessage}
         </Alert>
       </Snackbar>

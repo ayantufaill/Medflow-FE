@@ -30,7 +30,7 @@ import Messages from "../../components/appointments/right-panel/Messages";
 import { CustomFormsSection, DocumentThumbnail, DocumentTable, EditDocumentDialog, UploadAdditionalDocumentDialog } from "../../components/patients";
 import { downloadDocumentFile } from "../../utils/downloadUtils";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { fontSize, fontWeight, radius, roundedSelectMenuProps } from "../../constants/styles";
 
 const shareButtonSx = {
   textTransform: "none",
@@ -69,7 +69,7 @@ const PatientAdditionalDocumentsPage = () => {
   const [customFormSortMode, setCustomFormSortMode] = useState("category");
   const [signature, setSignature] = useState(null);
 
-  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [] });
+  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [], source: null });
 
   const claimAttachments = documents.filter(d => d.category.includes('claim') || d.category === 'attachment');
   const consents = documents.filter(d => d.category.includes('consent'));
@@ -142,7 +142,7 @@ const PatientAdditionalDocumentsPage = () => {
     input.onchange = () => {
       const files = input.files;
       if (!files?.length || !patientId) return;
-      setUploadDialog({ open: true, files: Array.from(files) });
+      setUploadDialog({ open: true, files: Array.from(files), source: "additional" });
     };
     input.click();
   };
@@ -155,8 +155,14 @@ const PatientAdditionalDocumentsPage = () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("patientId", patientId);
-        formData.append("documentType", category || "other");
-        formData.append("documentName", name || file.name || `Additional document ${i + 1}`);
+        let docType = category || "other";
+        let docName = name || file.name || `Additional document ${i + 1}`;
+        if (uploadDialog.source === "custom_form") {
+          docType = category || "custom_form";
+          docName = name || file.name || `Custom form ${i + 1}`;
+        }
+        formData.append("documentType", docType);
+        formData.append("documentName", docName);
         await documentService.uploadDocument(formData);
       }
       await refreshDocuments();
@@ -223,32 +229,10 @@ const PatientAdditionalDocumentsPage = () => {
     input.type = "file";
     input.accept = "image/*,.pdf";
     input.multiple = true;
-    input.onchange = async () => {
+    input.onchange = () => {
       const files = input.files;
       if (!files?.length || !patientId) return;
-      try {
-        setUploading(true);
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("patientId", patientId);
-          formData.append("documentType", "custom_form");
-          formData.append("documentName", file.name || `Custom form ${i + 1}`);
-          await documentService.uploadDocument(formData);
-        }
-        await refreshDocuments();
-        showSnackbar(`Uploaded ${files.length} custom form document(s)`, "success");
-      } catch (err) {
-        showSnackbar(
-          err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload custom form document",
-          "error",
-        );
-      } finally {
-        setUploading(false);
-      }
+      setUploadDialog({ open: true, files: Array.from(files), source: "custom_form" });
     };
     input.click();
   };
@@ -401,18 +385,20 @@ const PatientAdditionalDocumentsPage = () => {
                     <Select
                       value={customFormSortMode}
                       onChange={(e) => setCustomFormSortMode(e.target.value)}
+                      MenuProps={roundedSelectMenuProps}
                       sx={{
                         height: 32,
                         fontFamily: "Inter",
                         fontSize: fontSize.base,
                         bgcolor: COLORS.SURFACE_CARD,
+                        borderRadius: radius.md,
                         "& fieldset": { borderColor: COLORS.BORDER },
                         "&:hover fieldset": { borderColor: COLORS.ACCENT },
                       }}
                     >
-                      <MenuItem value="category">Category</MenuItem>
-                      <MenuItem value="date">Date</MenuItem>
-                      <MenuItem value="name">Name</MenuItem>
+                      <MenuItem value="category" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Category</MenuItem>
+                      <MenuItem value="date" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Date</MenuItem>
+                      <MenuItem value="name" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Name</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -510,18 +496,20 @@ const PatientAdditionalDocumentsPage = () => {
                     <Select
                       value={sortMode}
                       onChange={(e) => setSortMode(e.target.value)}
+                      MenuProps={roundedSelectMenuProps}
                       sx={{
                         height: 32,
                         fontFamily: "Inter",
                         fontSize: fontSize.base,
                         bgcolor: COLORS.SURFACE_CARD,
+                        borderRadius: radius.md,
                         "& fieldset": { borderColor: COLORS.BORDER },
                         "&:hover fieldset": { borderColor: COLORS.ACCENT },
                       }}
                     >
-                      <MenuItem value="category">Category</MenuItem>
-                      <MenuItem value="date">Date</MenuItem>
-                      <MenuItem value="name">Name</MenuItem>
+                      <MenuItem value="category" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Category</MenuItem>
+                      <MenuItem value="date" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Date</MenuItem>
+                      <MenuItem value="name" sx={{ fontFamily: "Inter", fontSize: fontSize.base }}>Name</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -612,8 +600,6 @@ const PatientAdditionalDocumentsPage = () => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TaskList />
           <Messages />
-          <PatientSignatureCard value={signature} onChange={setSignature} reviewedWithPatient />
-
         </Box>
       </Box>
 

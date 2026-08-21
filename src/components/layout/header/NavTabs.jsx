@@ -2,11 +2,11 @@ import { Box, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const TABS = [
-  { label: "Dashboard", path: "/dashboard" },
+  // { label: "Dashboard", path: "/dashboard" },
   { label: "Schedule", path: "/appointments/operatory-schedule" },
   { label: "Patients", path: "/patients" },
   { label: "Clinical", path: "/clinical/treatment-plan" },
-  { label: "Insurance", path: "/insurance" },
+  // { label: "Insurance", path: "/insurance" },
   { label: "Billing", path: "/finance" },
   { label: "Reports", path: "/patient-reports" },
 ];
@@ -19,6 +19,19 @@ const NavTabs = () => {
     if (path === "/clinical/treatment-plan") {
       return (
         location.pathname === path || location.pathname.startsWith("/clinical")
+      );
+    }
+    if (path === "/patient-reports") {
+      return (
+        location.pathname === path ||
+        location.pathname.startsWith(path + "/") ||
+        (location.pathname.startsWith("/patients/") && location.pathname.includes("/report"))
+      );
+    }
+    if (path === "/patients") {
+      return (
+        (location.pathname === path || location.pathname.startsWith(path + "/")) &&
+        !location.pathname.includes("/report")
       );
     }
     return (

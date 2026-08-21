@@ -5,9 +5,9 @@ import { roomService } from '../../services/room.service';
 
 export const fetchRooms = createAsyncThunk(
   'room/fetchRooms',
-  async ({ page = 1, limit = 10, search = '', isActive = null } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = '', isActive = null, branchId = null } = {}, { rejectWithValue }) => {
     try {
-      const result = await roomService.getAllRooms(page, limit, search, isActive);
+      const result = await roomService.getAllRooms(page, limit, search, isActive, branchId);
       return result;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch rooms');
@@ -21,18 +21,20 @@ export const fetchRooms = createAsyncThunk(
   }
 );
 
-// Fetch all rooms for dropdowns (cached)
+// Fetch all rooms for dropdowns (cached per branch — a cached "all branches" list
+// must not be reused once a branchId filter is requested, and vice versa).
 export const fetchAllRoomsForDropdown = createAsyncThunk(
   'room/fetchAllForDropdown',
-  async (_, { getState, rejectWithValue }) => {
+  async (branchId = null, { getState, rejectWithValue }) => {
     const { room } = getState();
-    if (room.dropdownList.length > 0 && room.dropdownLastFetched) {
+    const sameBranch = room.dropdownBranchId === (branchId || null);
+    if (sameBranch && room.dropdownList.length > 0 && room.dropdownLastFetched) {
       const elapsed = Date.now() - room.dropdownLastFetched;
       if (elapsed < 10 * 60 * 1000) return null;
     }
     try {
-      const result = await roomService.getAllRooms(1, 100, '', true);
-      return result.rooms || [];
+      const result = await roomService.getAllRooms(1, 100, '', true, branchId);
+      return { rooms: result.rooms || [], branchId: branchId || null };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch rooms');
     }
@@ -69,6 +71,7 @@ const initialState = {
   dropdownList: [],
   dropdownLoading: false,
   dropdownLastFetched: null,
+  dropdownBranchId: null,
 };
 
 const roomSlice = createSlice({
@@ -110,7 +113,8 @@ const roomSlice = createSlice({
       })
       .addCase(fetchAllRoomsForDropdown.fulfilled, (state, action) => {
         if (action.payload !== null) {
-          state.dropdownList = action.payload;
+          state.dropdownList = action.payload.rooms;
+          state.dropdownBranchId = action.payload.branchId;
           state.dropdownLastFetched = Date.now();
         }
         state.dropdownLoading = false;
@@ -120,9 +124,11 @@ const roomSlice = createSlice({
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {
         const deletedId = action.payload;
-        state.list = state.list.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
+        const roomToUpdate = state.list.find(r => r._id === deletedId || r.roomNumber === deletedId);
+        if (roomToUpdate) {
+          roomToUpdate.isActive = false;
+        }
         state.dropdownList = state.dropdownList.filter(r => r._id !== deletedId && r.roomNumber !== deletedId);
-        state.pagination.total = Math.max(0, state.pagination.total - 1);
       });
   },
 });

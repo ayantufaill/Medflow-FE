@@ -1,8 +1,19 @@
 import React from 'react';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip } from '@mui/material';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 
 const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagColor = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal);
+    if (found) return { color: found.color, name: found.name };
+    return { color: flagVal, name: 'Flag' };
+  };
+
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2 }}>
       <TableContainer 
@@ -52,9 +63,14 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
                 >
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {(row.flags || []).map((color, i) => (
-                        <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-                      ))}
+                      {(row.flags || []).map((flagVal, i) => {
+                        const { color, name } = resolveFlagColor(flagVal);
+                        return (
+                          <Tooltip key={i} title={name} arrow placement="top">
+                            <Box sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer' }} />
+                          </Tooltip>
+                        );
+                      })}
                     </Box>
                   </TableCell>
                   <TableCell>{row.id || row.date}</TableCell>

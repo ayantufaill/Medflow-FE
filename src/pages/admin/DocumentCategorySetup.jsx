@@ -34,13 +34,60 @@ import CategoryIcon from '../../assets/practicesetupicon/categoryicon.svg';
 import DocumentsIcon from '../../assets/practicesetupicon/documents.svg';
 
 const defaultDocumentList = [
-  "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)",
-  "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)"
+  "BOB (Breakdown of benefits)",
+  "Insurance Fax Back",
+  "Treatment consent",
+  "N2O Consent",
+  "Signed Treatment Plan",
+  "Pre-D",
+  "Driver License",
+  "Spouse Driver License",
+  "Ins Card",
+  "Ortho Rx",
+  "Lab Certificate",
+  "DFA",
+  "Smile Mock Up",
+  "Implant Info",
+  "Lab Rx",
+  "Lab Invoice",
+  "Financial Agreement",
+  "Confidential Info",
+  "Medical/Dental History",
+  "Referral form",
+  "XRAY",
+  "Demographics",
+  "Invisalign",
+  "Dental History",
+  "BOB (Breakdown of benefits) - Sec",
+  "BOB (Breakdown of benefits) - Pri",
+  "Insurance Fax Back - Pri",
+  "Insurance Fax Back - Sec"
 ];
 
 const defaultCategoryList = [
-  "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)",
-  "BOB(Breakdown of Benefit)", "BOB(Breakdown of Benefit)"
+  "Insurance",
+  "Consent",
+  "Medical/Dental History",
+  "Treatment Plan",
+  "Referral",
+  "Signed Receipt",
+  "Medications",
+  "ID",
+  "Lab",
+  "Injectables",
+  "Consult",
+  "Ortho",
+  "Implant certificate",
+  "Evident Hub",
+  "New Patient Forms",
+  "XRAY",
+  "Demographics",
+  "Eligibility verified (Detailed)",
+  "Diagnosis",
+  "Invisalign",
+  "New Patient",
+  "Eligibility verification",
+  "Outstanding Balance"
 ];
 
 const DocumentCategorySetup = () => {
@@ -74,8 +121,15 @@ const DocumentCategorySetup = () => {
 
   useEffect(() => {
     if (practiceInfo?.documentCategories) {
-      setDocuments(practiceInfo.documentCategories.documents || defaultDocumentList);
-      setCategories(practiceInfo.documentCategories.categories || defaultCategoryList);
+      const dbDocs = practiceInfo.documentCategories.documents || [];
+      const dbCats = practiceInfo.documentCategories.categories || [];
+      
+      // If the DB only has the old dummy BOB(Breakdown of Benefit) repeated, or is empty, use the rich defaults
+      const isDummyDocs = dbDocs.length === 0 || (dbDocs.length === 5 && dbDocs[0] === "BOB(Breakdown of Benefit)");
+      const isDummyCats = dbCats.length === 0 || (dbCats.length === 5 && dbCats[0] === "BOB(Breakdown of Benefit)");
+
+      setDocuments(isDummyDocs ? defaultDocumentList : dbDocs);
+      setCategories(isDummyCats ? defaultCategoryList : dbCats);
     }
   }, [practiceInfo?.documentCategories]);
 

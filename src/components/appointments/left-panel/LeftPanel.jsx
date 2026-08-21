@@ -10,6 +10,7 @@ import PendingReschedules from './PendingReschedules';
 import EmptySlotsSearch from './EmptySlotsSearch';
 import ProductivityPanel from './ProductivityPanel';
 import { usePatient } from '../../../hooks/redux';
+import { useSelector } from 'react-redux';
 import { COLORS } from '../../../constants/colors';
 
 // LeftPanel orchestrates the left-rail of the schedule page.
@@ -57,6 +58,15 @@ const LeftPanel = () => {
     }
   }, [currentPatient, selectedAppointment, loading]);
 
+  // Derive live appointment data from Redux to ensure we have the latest updates (like completed procedures and tags)
+  // after a save action. We fall back to the selectedAppointment snapshot (or its raw version) if not found in Redux.
+  const appointmentsList = useSelector((state) => state.appointment?.list || []);
+  const liveAppt = selectedAppointment 
+    ? (appointmentsList.find(a => String(a._id || a.id) === String(selectedAppointment.id)) 
+       || selectedAppointment.rawAppointment 
+       || selectedAppointment)
+    : null;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' }}>
 
@@ -87,15 +97,20 @@ const LeftPanel = () => {
                 {console.log('computed patientId:', currentPatient?._id || currentPatient?.id || currentPatient?.PatNum || 
                   (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
                   (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient))}
-                <AppointmentSummaryCard appointment={selectedAppointment} />
+                <AppointmentSummaryCard
+                  appointment={liveAppt}
+                  onAction={(action) => console.log('Appointment action:', action)}
+                />
                 <AppointmentChecklist 
                   patientId={
                     currentPatient?._id || 
-                    currentPatient?.id ||
-                    currentPatient?.PatNum ||
-                    (selectedAppointment?.patientId && typeof selectedAppointment.patientId === 'object' ? (selectedAppointment.patientId._id || selectedAppointment.patientId.id || selectedAppointment.patientId.PatNum) : selectedAppointment?.patientId) || 
-                    (selectedAppointment?.patient && typeof selectedAppointment.patient === 'object' ? (selectedAppointment.patient._id || selectedAppointment.patient.id || selectedAppointment.patient.PatNum) : selectedAppointment?.patient)
+                    currentPatient?.id || 
+                    currentPatient?.PatNum || 
+                    (liveAppt?.patientId && typeof liveAppt.patientId === 'object' ? (liveAppt.patientId._id || liveAppt.patientId.id || liveAppt.patientId.PatNum) : liveAppt?.patientId) || 
+                    (liveAppt?.patient && typeof liveAppt.patient === 'object' ? (liveAppt.patient._id || liveAppt.patient.id || liveAppt.patient.PatNum) : liveAppt?.patient)
                   } 
+                  appointment={liveAppt}
+                  onStatusChange={(label, val) => console.log(`Checklist [${label}] -> ${val}`)}
                 />
               </>
             )}

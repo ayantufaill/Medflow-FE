@@ -51,6 +51,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { useNavigate } from 'react-router-dom';
 import AddressSelectFields from '../common/AddressSelectFields';
+import { useBranch } from '../../hooks/redux';
 
 const PatientForm = ({
   onSubmit,
@@ -85,6 +86,8 @@ const PatientForm = ({
   });
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const duplicateCheckTimerRef = useRef(null);
+
+  const { branches, currentBranchId, fetchBranches: loadBranches } = useBranch();
 
   const {
     register,
@@ -121,6 +124,7 @@ const PatientForm = ({
       referralSource: '',
       preferredDentistId: '',
       preferredHygienistId: '',
+      branchId: '',
       isActive: true,
       address: {
         line1: '',
@@ -160,6 +164,18 @@ const PatientForm = ({
 
   // Memoize today's date to prevent creating new dayjs objects on every render
   const today = useMemo(() => dayjs(), []);
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Default a new patient to whichever branch the front desk is currently working
+  // in — matches the create form's default. Never overrides an existing patient's
+  // already-set branch in edit mode.
+  useEffect(() => {
+    if (!isEditMode && currentBranchId) setValue('branchId', currentBranchId);
+  }, [isEditMode, currentBranchId, setValue]);
 
   // Use ref to track previous initialData ID to prevent unnecessary resets
   const previousInitialDataIdRef = useRef(null);
@@ -217,6 +233,7 @@ const PatientForm = ({
         referralSource: initialData.referralSource || '',
         preferredDentistId: initialData.preferredDentistId || '',
         preferredHygienistId: initialData.preferredHygienistId || '',
+        branchId: initialData.branchId || '',
         isActive:
           initialData.isActive !== undefined ? initialData.isActive : true,
         address: {
@@ -598,6 +615,7 @@ const PatientForm = ({
       referralSource: sanitizeValue(formData.referralSource) || '',
       preferredDentistId: formData.preferredDentistId || undefined,
       preferredHygienistId: formData.preferredHygienistId || undefined,
+      branchId: formData.branchId || undefined,
       isActive: formData.isActive !== undefined ? formData.isActive : true,
       address: {
         line1: sanitizeValue(formData.address?.line1) || '',
@@ -1540,6 +1558,25 @@ const PatientForm = ({
               helperText={errors.referralSource?.message}
             />
           </Grid>
+          {branches.length > 0 && (
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Controller
+                name="branchId"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Branch</InputLabel>
+                    <Select {...field} label="Branch">
+                      <MenuItem value="">— None —</MenuItem>
+                      {branches.map((b) => (
+                        <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+          )}
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller
               name="preferredDentistId"

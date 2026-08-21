@@ -7,6 +7,7 @@ import {
   Button,
   Box,
   DialogTitle,
+  DialogActions,
   IconButton
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -55,7 +56,7 @@ const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
           sx={{ 
             color: '#475569', 
             textAlign: 'center', 
-            mb: 4,
+            mb: 2,
             mt: 2,
             fontSize: '15px',
             fontWeight: 400
@@ -63,43 +64,42 @@ const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
         >
           Are you sure you want to transfer the outstanding credit to the patient?
         </Typography>
-
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          <Button 
-            variant="outlined" 
-            onClick={onClose}
-            sx={{ 
-              color: '#64748B', 
-              borderColor: '#CBD5E1',
-              textTransform: 'none', 
-              px: 3,
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-              '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={onConfirm}
-            sx={{ 
-              bgcolor: '#2362EF', 
-              color: '#fff', 
-              textTransform: 'none', 
-              px: 3,
-              boxShadow: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-              '&:hover': { bgcolor: '#1A4FCA', boxShadow: 'none' }
-            }}
-          >
-            Transfer
-          </Button>
-        </Stack>
       </DialogContent>
+      <DialogActions sx={{ p: '16px 25px', borderTop: '1px solid #e0e5eb', gap: 1 }}>
+        <Button 
+          variant="outlined" 
+          onClick={onClose}
+          sx={{ 
+            color: '#64748B', 
+            borderColor: '#CBD5E1',
+            textTransform: 'none', 
+            px: 3,
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={onConfirm}
+          sx={{ 
+            bgcolor: '#2362EF', 
+            color: '#fff', 
+            textTransform: 'none', 
+            px: 3,
+            boxShadow: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 600,
+            '&:hover': { bgcolor: '#1A4FCA', boxShadow: 'none' }
+          }}
+        >
+          Transfer
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

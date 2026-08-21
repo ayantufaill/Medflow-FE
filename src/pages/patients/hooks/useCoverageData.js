@@ -192,6 +192,7 @@ export const useCoverageData = (
               insurancePlanNotes: editTarget.insurancePlanNotes || "",
               healthPlan: editTarget.healthPlan || false,
               paymentPlan: editTarget.paymentPlan || "",
+              patientsCovered: editTarget.patientsCovered || (editTarget.members ? editTarget.members.length : 1),
             }));
 
             if (editTarget.coverageBookData) {

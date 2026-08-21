@@ -215,6 +215,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       appt.createdByName ||
       "",
     price: priceStr,
+    rawAppointment: appt,
   };
 };
 
@@ -239,7 +240,7 @@ const getGridPosition = (gridItem, colIndex) => {
 
 const PORTION_MINUTES = [0, 10, 20, 30, 40, 50];
 
-const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, isWeek, isClosed, isCloseOpenDayMode }) => {
+const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, isWeek, isClosed, isCloseOpenDayMode, isPast }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `slot-${roomId}-${hour}-${mins}`,
   });
@@ -248,7 +249,7 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
     <Box
       ref={setNodeRef}
       onClick={(e) => {
-        if (isCloseOpenDayMode || isClosed) return;
+        if (isCloseOpenDayMode || isClosed || isPast) return;
         e.stopPropagation();
         if (isWeek) {
           if (onSlotClick) onSlotClick(hour, mins, roomId);
@@ -262,21 +263,25 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
         display: 'flex',
         alignItems: 'center',
         boxSizing: 'border-box',
-        backgroundColor: isOver ? 'rgba(34, 98, 239, 0.15)' : 'transparent',
+        cursor: isPast ? 'not-allowed' : 'default',
+        backgroundColor: isOver && !isPast ? 'rgba(34, 98, 239, 0.15)' : 'transparent',
         borderBottom: mins !== 50 ? '1px dashed transparent' : 'none',
         '.droppable-cell-container:hover &': {
           borderBottom: mins !== 50 ? '1px dashed rgba(203, 213, 225, 0.8)' : 'none',
         },
         '&:hover': {
-          backgroundColor: isCloseOpenDayMode || isClosed ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
+          backgroundColor: (isCloseOpenDayMode || isClosed || isPast) ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
         },
       }}
     />
   );
 };
 
-const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek, isPastDate, isToday, selectedDate }) => {
   const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
+
+  // For a past date, the entire cell is past
+  const isCellFullyPast = isPastDate;
 
   return (
     <Box
@@ -287,36 +292,44 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
         flexShrink: 0,
         borderLeft: `1px solid ${COLORS.BORDER}`,
         position: "relative",
-        cursor: isCloseOpenDayMode ? "default" : (isClosed ? "not-allowed" : "pointer"),
+        cursor: isCloseOpenDayMode ? "default" : ((isClosed || isCellFullyPast) ? "not-allowed" : "pointer"),
         display: "flex",
         flexDirection: "column",
-        backgroundColor: isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
+        backgroundColor: (isClosed || isCellFullyPast) ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
         backgroundImage: isClosed ? 'repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.02) 75%, rgba(0,0,0,0.02)), repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.02) 75%, rgba(0,0,0,0.02))' : 'none',
         backgroundPosition: '0 0, 10px 10px',
         backgroundSize: '20px 20px',
         "&:hover": {
           backgroundColor: isCloseOpenDayMode 
             ? (isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent') 
-            : "rgba(34, 98, 239, 0.02)",
+            : (isCellFullyPast ? 'rgba(0, 0, 0, 0.05)' : "rgba(34, 98, 239, 0.02)"),
         },
       }}
     >
-      {PORTION_MINUTES.map((mins) => (
-        <PortionDroppableZone
-          key={mins}
-          hour={hour}
-          mins={mins}
-          roomId={roomId}
-          onSlotClick={onSlotClick}
-          setActiveCell={setActiveCell}
-          isWeek={isWeek}
-          isClosed={isClosed}
-          isCloseOpenDayMode={isCloseOpenDayMode}
-        />
-      ))}
+      {PORTION_MINUTES.map((mins) => {
+        // For today: check if this specific 10-min slot has passed
+        const slotIsPast = isPastDate || (isToday && dayjs().isAfter(
+          dayjs(selectedDate).startOf('day').hour(hour).minute(mins)
+        ));
 
-      {/* Active cell options popup */}
-      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && (
+        return (
+          <PortionDroppableZone
+            key={mins}
+            hour={hour}
+            mins={mins}
+            roomId={roomId}
+            onSlotClick={onSlotClick}
+            setActiveCell={setActiveCell}
+            isWeek={isWeek}
+            isClosed={isClosed}
+            isCloseOpenDayMode={isCloseOpenDayMode}
+            isPast={slotIsPast}
+          />
+        );
+      })}
+
+      {/* Active cell options popup — hidden for past slots */}
+      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && !(isPastDate || (isToday && dayjs().isAfter(dayjs(selectedDate).startOf('day').hour(activeCell.hour).minute(activeCell.mins)))) && (
         <Box
           sx={{
             position: 'absolute',
@@ -583,6 +596,8 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
             const roomId = `op${col._id || col.id}`;
             const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
             const isClosed = closedOperatories[`${dateStr}:${roomId}`];
+            const isPastDate = dayjs(dateStr).isBefore(dayjs(), 'day');
+            const isToday = dayjs(dateStr).isSame(dayjs(), 'day');
 
             return (
               <DroppableCell 
@@ -597,6 +612,9 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 isClosed={isClosed}
                 isCloseOpenDayMode={isCloseOpenDayMode}
                 isWeek={isWeek}
+                isPastDate={isPastDate}
+                isToday={isToday}
+                selectedDate={selectedDate}
               />
             );
           })}

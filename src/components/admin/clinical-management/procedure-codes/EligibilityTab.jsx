@@ -1,5 +1,5 @@
 import { Box, Typography, TextField, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, IconButton } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const EligibilityTab = ({
   eligibilityQuery,
@@ -88,8 +88,8 @@ const EligibilityTab = ({
                     {item.Descript}
                   </TableCell>
                   <TableCell align="right" sx={{ py: 1, borderBottom: '1px solid #f1f5f9' }}>
-                    <IconButton size="small" onClick={() => handleDeleteEligibilityCode(item.ProcCode)} sx={{ color: '#ef4444', '&:hover': { backgroundColor: '#fef2f2' } }}>
-                      <DeleteIcon sx={{ fontSize: '1.2rem' }} />
+                    <IconButton size="small" onClick={() => handleDeleteEligibilityCode(item.ProcCode)} sx={{ p: 0.5 }}>
+                      <img src={DeleteSvg} alt="Delete" width="18" height="18" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

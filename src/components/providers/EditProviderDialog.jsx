@@ -18,6 +18,7 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { COLORS } from '../../constants/colors';
 import EditProviderForm from './EditProviderForm';
 import OnlineProviderForm from './OnlineProviderForm';
 import {
@@ -98,8 +99,8 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       <Box sx={{
         px: '24px', height: '73px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: COLORS.SURFACE_TINT,
+        borderBottom: `1px solid ${COLORS.BORDER}`,
         flexShrink: 0
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -124,7 +125,7 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: '1px solid #e2e8f0', px: '24px', backgroundColor: '#ffffff', flexShrink: 0 }}>
+      <Box sx={{ borderBottom: `1px solid ${COLORS.BORDER}`, px: '24px', backgroundColor: '#ffffff', flexShrink: 0 }}>
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
@@ -149,7 +150,7 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
       </Box>
 
       {/* Content */}
-      <DialogContent sx={{ p: '24px', bgcolor: '#f8fafc', flex: 1, overflowY: 'auto' }}>
+      <DialogContent sx={{ p: '24px', bgcolor: COLORS.BACKGROUND, flex: 1, overflowY: 'auto' }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2.5, borderRadius: '8px', fontFamily: 'Inter, sans-serif' }} onClose={() => setError('')}>
             {error}
@@ -195,7 +196,7 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
         height: '57px', px: '24px', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0'
+        borderTop: `1px solid ${COLORS.BORDER}`
       }}>
         <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: 500, color: '#94a3b8' }}>
           * required field

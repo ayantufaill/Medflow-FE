@@ -96,11 +96,26 @@ export default function EditCoverageModal({ open, onClose, insurance, getInsuran
           <Typography sx={{ fontFamily: TYPO.fontFamily, ...TYPO.sectionTitle, mb: 0.5 }}>
             {policyType}: {planName} by {companyName}
           </Typography>
-          {insurance && (insurance.usedAmount != null || insurance.individualAnnualMax != null) && (
-            <Typography sx={{ fontFamily: TYPO.fontFamily, ...TYPO.value, mt: 0.5 }}>
-              Used up-to-date: ${Number(insurance.usedAmount ?? insurance.copayAmount ?? 0).toFixed(2)} / ${Number(insurance.individualAnnualMax ?? insurance.deductibleAmount ?? 1500).toFixed(2)}
-            </Typography>
-          )}
+          {insurance && (() => {
+            let coverageLimits = insurance?.coverageLimits;
+            if (typeof coverageLimits === 'string') {
+              try { coverageLimits = JSON.parse(coverageLimits); } catch (e) { coverageLimits = null; }
+            }
+            const limitsInd = coverageLimits?.individual;
+            const parseVal = (val) => {
+              if (val === null || val === undefined || val === '') return null;
+              if (typeof val === 'number') return isNaN(val) ? null : val;
+              const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+              return cleaned ? parseFloat(cleaned) : null;
+            };
+            const used = parseVal(limitsInd?.usedAmount ?? insurance?.usedAmount ?? insurance?.copayAmount) ?? 0;
+            const max = parseVal(limitsInd?.annualMax ?? insurance?.individualAnnualMax ?? insurance?.deductibleAmount) ?? 0;
+            return (
+              <Typography sx={{ fontFamily: TYPO.fontFamily, ...TYPO.value, mt: 0.5 }}>
+                Used up-to-date: ${Number(used).toFixed(2)} / ${Number(max).toFixed(2)}
+              </Typography>
+            );
+          })()}
         </Box>
 
         <Grid container spacing={3}>

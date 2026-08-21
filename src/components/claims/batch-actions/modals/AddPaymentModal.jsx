@@ -31,6 +31,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { ReportSelect } from '../../../reports/ui';
+import { COLORS } from '../../../../constants/colors';
 
 const AddPaymentModal = ({
   open,
@@ -56,7 +57,7 @@ const AddPaymentModal = ({
 }) => {
   return (
     <Dialog open={open} onClose={() => { onClose(); setActiveModalStep(0); }} maxWidth="lg" fullWidth sx={{ zIndex: 9999 }} PaperProps={{ sx: { borderRadius: '16px', height: '600px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', fontFamily: 'Inter, sans-serif' } }}>
-      <DialogTitle sx={{ boxSizing: "border-box", px: "25px", py: "16px", display: "flex", alignItems: "center", gap: "8px", borderBottom: '1px solid #e0e5eb', backgroundColor: '#f3f8fd', m: 0, flexShrink: 0 }}>
+      <DialogTitle sx={{ boxSizing: "border-box", px: "25px", py: "16px", display: "flex", alignItems: "center", gap: "8px", borderBottom: `1px solid ${COLORS.BORDER}`, backgroundColor: COLORS.SURFACE_TINT, m: 0, flexShrink: 0 }}>
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: '#0F172A', flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Insurance New Payment <Typography component="span" sx={{ color: '#2362EF', fontWeight: 600, fontSize: '15px' }}>- Step {activeModalStep + 1} of 3</Typography>
         </Typography>
@@ -103,7 +104,7 @@ const AddPaymentModal = ({
           </IconButton>
         </Box>
       </DialogTitle>
-      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'row', bgcolor: '#f4f6f8' }}>
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'row', bgcolor: COLORS.BACKGROUND }}>
         {/* Left Sidebar (Stepper) */}
         <Box sx={{ width: '240px', borderRight: '1px solid #e0e6ed', bgcolor: '#f8fafc', pt: 4, px: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {/* Step 1 */}

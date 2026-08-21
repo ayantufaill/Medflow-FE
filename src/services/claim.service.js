@@ -396,6 +396,48 @@ export const claimService = {
     return response.data.data;
   },
 
+  async deleteEOB(paymentId, eobId) {
+    const response = await apiClient.delete(`/claims/batch-payment/${paymentId}/eob/${eobId}`);
+    return response.data.data;
+  },
+
+  /**
+   * Upload EOB document for an individual claim
+   * @param {string} claimId - Claim ID
+   * @param {FormData} formData - Document file form data
+   * @returns {Promise<Object>} EOB upload response
+   */
+  async uploadClaimEOB(claimId, formData) {
+    const response = await apiClient.post(`/claims/${claimId}/eob`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Delete EOB document from a batch payment
+   * @param {string} paymentId - Payment ID
+   * @param {string} eobId - EOB ID
+   * @returns {Promise<Object>} EOB delete response
+   */
+  async deleteEOB(paymentId, eobId) {
+    const response = await apiClient.delete(`/claims/batch-payment/${paymentId}/eob/${eobId}`);
+    return response.data.data;
+  },
+
+  /**
+   * Delete EOB document from an individual claim
+   * @param {string} claimId - Claim ID
+   * @param {string} eobId - EOB ID
+   * @returns {Promise<Object>} EOB delete response
+   */
+  async deleteClaimEOB(claimId, eobId) {
+    const response = await apiClient.delete(`/claims/${claimId}/eob/${eobId}`);
+    return response.data.data;
+  },
+
   /**
    * Generate batch statements/invoices for patients
    * @param {Array<string>} patientIds - Array of patient IDs

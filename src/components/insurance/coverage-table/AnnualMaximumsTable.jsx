@@ -1,6 +1,10 @@
 import React from 'react';
-import { Box, Typography, Checkbox, Table, TableHead, TableBody, TableRow, TableCell, TextField, InputAdornment, FormControlLabel } from "@mui/material";
-import { InfoOutlined as InfoIcon } from "@mui/icons-material";
+import { Box, Typography, Checkbox, Table, TableHead, TableBody, TableRow, TableCell, TextField, InputAdornment, FormControlLabel, Tooltip } from "@mui/material";
+import { 
+  InfoOutlined as InfoIcon,
+  AddCircleOutline as AddIcon,
+  RemoveCircleOutline as RemoveIcon
+} from "@mui/icons-material";
 import { InsuranceDatePicker } from '../components/DeductiblesTable';
 
 const textInputSx = {
@@ -134,100 +138,131 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
               </TableCell>
             </TableRow>
 
-            {/* Ortho Row */}
-            <TableRow sx={{ borderBottom: '1px solid #f0f0f0' }}>
-              <TableCell sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1e293b', borderBottom: 'none', py: 1.5 }}>Ortho</TableCell>
-              <TableCell align="center" sx={{ borderBottom: 'none', py: 1.5 }}>
-                <Checkbox 
-                  size="small" 
-                  checked={formData.coverage.ortho?.unlimited || false}
-                  onChange={(e) => handleCoverageChange('ortho', 'unlimited', e.target.checked)}
-                  sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }}
-                />
-              </TableCell>
-              <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
-                <TextField 
-                  fullWidth
-                  size="small" 
-                  disabled={formData.coverage.ortho?.unlimited}
-                  value={formData.coverage.ortho?.unlimited ? '' : formData.coverage.ortho?.annualMax}
-                  placeholder={formData.coverage.ortho?.unlimited ? 'Unlimited' : ''}
-                  onChange={(e) => handleCoverageChange('ortho', 'annualMax', e.target.value)}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
-                  }}
-                  sx={textInputSx} 
-                />
-              </TableCell>
-              <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
-                <TextField 
-                  fullWidth
-                  size="small" 
-                  value={formData.coverage.ortho?.usedAmount || ''}
-                  onChange={(e) => handleCoverageChange('ortho', 'usedAmount', e.target.value)}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
-                  }}
-                  sx={textInputSx} 
-                />
-              </TableCell>
-              <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
-                <InsuranceDatePicker
-                  value={formData.coverage.ortho?.usedAmountDate}
-                  onChange={(formatted) => handleCoverageChange('ortho', 'usedAmountDate', formatted)}
-                />
-              </TableCell>
-            </TableRow>
+            {/* Category Rows with Add Max / Remove Max */}
+            {[
+              { key: 'ortho', label: 'Ortho' },
+              { key: 'diagnostic', label: 'Diagnostic' },
+              { key: 'preventative', label: 'Preventative' },
+              { key: 'major', label: 'Major' }
+            ].map(({ key: catKey, label }) => {
+              const catObj = formData.coverage?.[catKey] || {};
+              const hasMax = catObj.hasMax !== undefined 
+                ? catObj.hasMax 
+                : (catKey === 'ortho'
+                    ? Boolean(catObj.annualMax || catObj.usedAmount || catObj.unlimited || catObj.usedAmountDate || true)
+                    : Boolean(catObj.annualMax || catObj.usedAmount || catObj.unlimited || catObj.usedAmountDate));
 
-            {/* Category Rows */}
-            {['Diagnostic', 'Preventative', 'Major'].map((label) => {
-              const catKey = label.toLowerCase();
+              const handleToggleMax = (enable) => {
+                if (enable) {
+                  handleCoverageChange(catKey, 'hasMax', true);
+                } else {
+                  handleCoverageChange(catKey, 'hasMax', false);
+                  handleCoverageChange(catKey, 'annualMax', '');
+                  handleCoverageChange(catKey, 'usedAmount', '');
+                  handleCoverageChange(catKey, 'usedAmountDate', '');
+                  handleCoverageChange(catKey, 'unlimited', false);
+                }
+              };
+
               return (
-                <TableRow key={label} sx={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <TableCell sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1e293b', borderBottom: 'none', py: 1.5 }}>
+                <TableRow key={catKey} sx={{ borderBottom: '1px solid #f0f0f0' }}>
+                  <TableCell sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1e293b', borderBottom: 'none', py: 1.5, width: '20%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600 }}>{label}</Typography>
-                      <Typography sx={{ color: '#00b09b', fontFamily: "'Inter', sans-serif", fontSize: '11px', ml: 1, cursor: 'pointer', fontWeight: 600 }}>
-                        + Add Max
-                      </Typography>
+                      {hasMax ? (
+                        <Box 
+                          onClick={() => handleToggleMax(false)}
+                          sx={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: 0.4, 
+                            color: '#94a3b8', 
+                            fontFamily: "'Inter', sans-serif", 
+                            fontSize: '11px', 
+                            ml: 1.5, 
+                            cursor: 'pointer', 
+                            fontWeight: 500,
+                            textDecoration: 'underline',
+                            '&:hover': { color: '#475569' } 
+                          }}
+                        >
+                          <RemoveIcon sx={{ fontSize: 13 }} /> Remove Max
+                        </Box>
+                      ) : (
+                        <Box 
+                          onClick={() => handleToggleMax(true)}
+                          sx={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: 0.4, 
+                            color: '#00b09b', 
+                            fontFamily: "'Inter', sans-serif", 
+                            fontSize: '11px', 
+                            ml: 1.5, 
+                            cursor: 'pointer', 
+                            fontWeight: 600,
+                            '&:hover': { color: '#008e7d' } 
+                          }}
+                        >
+                          <AddIcon sx={{ fontSize: 13 }} /> Add Max
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
-                  <TableCell align="center" sx={{ borderBottom: 'none', py: 1.5 }}>
-                    <Checkbox 
-                      size="small" 
-                      checked={formData.coverage[catKey]?.unlimited || false}
-                      onChange={(e) => handleCoverageChange(catKey, 'unlimited', e.target.checked)}
-                      sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
-                    <TextField 
-                      fullWidth
-                      size="small" 
-                      disabled={formData.coverage[catKey]?.unlimited}
-                      value={formData.coverage[catKey]?.unlimited ? '' : formData.coverage[catKey]?.annualMax || ''}
-                      onChange={(e) => handleCoverageChange(catKey, 'annualMax', e.target.value)}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start"><Typography sx={{ fontSize: '0.7rem', color: '#555' }}>$</Typography></InputAdornment>,
-                      }}
-                      sx={{ bgcolor: '#f8f9fc', borderRadius: '6px', '& .MuiInputBase-root': { fontSize: '0.7rem', height: '36px', color: '#555' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
-                    />
-                  </TableCell>
-                  <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
-                    <TextField 
-                      fullWidth
-                      size="small" 
-                      value={formData.coverage[catKey]?.usedAmount || ''}
-                      onChange={(e) => handleCoverageChange(catKey, 'usedAmount', e.target.value)}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
-                      }}
-                      sx={textInputSx} 
-                    />
-                  </TableCell>
-                  <TableCell sx={{ borderBottom: 'none', py: 1.5, color: '#94a3b8', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
-                    —
-                  </TableCell>
+
+                  {hasMax ? (
+                    <>
+                      <TableCell align="center" sx={{ borderBottom: 'none', py: 1.5 }}>
+                        <Checkbox 
+                          size="small" 
+                          checked={catObj.unlimited || false}
+                          onChange={(e) => handleCoverageChange(catKey, 'unlimited', e.target.checked)}
+                          sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
+                        <TextField 
+                          fullWidth
+                          size="small" 
+                          disabled={catObj.unlimited}
+                          value={catObj.unlimited ? '' : catObj.annualMax || ''}
+                          placeholder={catObj.unlimited ? 'Unlimited' : ''}
+                          onChange={(e) => handleCoverageChange(catKey, 'annualMax', e.target.value)}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
+                          }}
+                          sx={textInputSx} 
+                        />
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
+                        <TextField 
+                          fullWidth
+                          size="small" 
+                          value={catObj.usedAmount || ''}
+                          onChange={(e) => handleCoverageChange(catKey, 'usedAmount', e.target.value)}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
+                          }}
+                          sx={textInputSx} 
+                        />
+                      </TableCell>
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5 }}>
+                        <InsuranceDatePicker
+                          value={catObj.usedAmountDate}
+                          onChange={(formatted) => handleCoverageChange(catKey, 'usedAmountDate', formatted)}
+                        />
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell align="center" sx={{ borderBottom: 'none', py: 1.5 }} />
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5 }} />
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5 }} />
+                      <TableCell sx={{ borderBottom: 'none', py: 1.5, color: '#94a3b8', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
+                        —
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               );
             })}
@@ -235,16 +270,47 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
         </Table>
       </Box>
 
-      <FormControlLabel 
-        sx={{ mt: 1.5, ml: 0.5 }}
-        control={<Checkbox size="small" checked={formData.honorWriteOff || false} onChange={(e) => handleInputChange('honorWriteOff', e.target.checked)} sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }} />} 
-        label={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, ml: 0.5 }}>
+        <FormControlLabel 
+          sx={{ mr: 0 }}
+          control={<Checkbox size="small" checked={formData.honorWriteOff || false} onChange={(e) => handleInputChange('honorWriteOff', e.target.checked)} sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2362EF' } }} />} 
+          label={
             <Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#475569' }}>Honor Write Off (When Limitation Reached for In-Network Providers Only)</Typography> 
-            <InfoIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
-          </Box>
-        } 
-      />
+          } 
+        />
+        <Tooltip
+          PopperProps={{ sx: { zIndex: 999999 } }}
+          title={
+            <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+              Limits include Delivery pattern, Waiting Period, Age Limit, Tooth Limit and Annual Max Amounts
+            </Typography>
+          }
+          placement="top"
+          arrow
+          componentsProps={{
+            tooltip: {
+              sx: {
+                bgcolor: '#ffffff',
+                color: '#1e3a8a',
+                border: '1px solid #1e3a8a',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                borderRadius: '6px',
+                maxWidth: 270,
+                p: 1,
+                '& .MuiTooltip-arrow': {
+                  color: '#ffffff',
+                  '&::before': {
+                    border: '1px solid #1e3a8a',
+                    backgroundColor: '#ffffff',
+                  },
+                },
+              },
+            },
+          }}
+        >
+          <InfoIcon sx={{ fontSize: 14, color: '#94a3b8', cursor: 'pointer', '&:hover': { color: '#2362EF' } }} />
+        </Tooltip>
+      </Box>
     </Box>
   );
 };

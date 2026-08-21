@@ -153,10 +153,26 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       { header: 'Provider', key: 'provider' }
     ], 'Progress_Notes');
   };
-
   useEffect(() => {
     if (open) fetchData();
-  }, [open, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Reset state when the dialog is closed
+  useEffect(() => {
+    if (!open) {
+      setDateRange('Today');
+      setStartDate(dayjs());
+      setEndDate(dayjs());
+      setKind("All");
+      setProviderId("All");
+      
+      // Also reset expanded and editing states for a clean slate
+      setExpandedNoteIds(new Set());
+      setEditingNoteId(null);
+      setEditingContent("");
+    }
+  }, [open]);
 
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);
@@ -233,8 +249,8 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       sx={{ zIndex: 1500 }}
       PaperProps={{
         sx: { 
-          borderRadius: "14px", 
-          border: `1px solid ${COLORS.BORDER}`,
+          borderRadius: "12px", 
+          border: '1px solid #e0e5eb',
           boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           minHeight: '80vh' 
         }
@@ -243,28 +259,38 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <DialogTitle
         sx={{
-          boxSizing: "border-box",
-          px: "25px",
-          py: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: `1px solid ${COLORS.BORDER}`,
-          backgroundColor: COLORS.SURFACE_TINT,
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "10px", py: "10px",
+          borderBottom: "1px solid #e0e5eb", flexShrink: 0,
+          backgroundColor: "#f3f8fd",
           m: 0,
-          flexShrink: 0,
         }}
       >
-        <DescriptionIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          Progress Notes
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+        <Box sx={{
+          width: "36px", height: "36px", borderRadius: "8px",
+          backgroundColor: "#eff6ff",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+          <Typography sx={{
+            display: "flex", flexDirection: "column", justifyContent: "flex-start",
+            alignItems: "flex-start", height: "24px", padding: "0px",
+            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
+            Progress Notes
+          </Typography>
+        </Box>
+
+        <IconButton onClick={onClose} size="small" sx={{ color: "#6b7280", ml: 1 }}>
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc', overflow: 'hidden', "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
+      <DialogContent sx={{ p: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#fff', overflow: 'hidden', "@media print": { p: 0, '& .no-print': { display: 'none !important' } } }}>
         <style>
           {`
             @media print {
@@ -302,7 +328,7 @@ const ProgressNotesDialog = ({ open, onClose }) => {
         </Box>
 
         {/* TABLES */}
-        <Box className="printable-content" sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <Box className="printable-content" sx={{ flexGrow: 1, overflow: 'auto', mb: "25px" }}>
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}><CircularProgress /></Box>
           ) : (
@@ -324,19 +350,20 @@ const ProgressNotesDialog = ({ open, onClose }) => {
           )}
         </Box>
 
-        <Box sx={{ p: "12px 24px", borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE, display: 'flex', justifyContent: 'flex-end', mt: 'auto', mx: '-25px', mb: '-25px', flexShrink: 0 }}>
+        <Box sx={{ p: "12px 24px", borderTop: '1px solid #e0e5eb', backgroundColor: '#fff', display: 'flex', justifyContent: 'flex-end', mt: 'auto', mx: '-25px', mb: '-25px', flexShrink: 0 }}>
           <Button 
             variant="outlined" 
             size="small"
             onClick={onClose}
             sx={{ 
-              borderColor: COLORS.BORDER,
-              color: COLORS.TEXT_SECONDARY,
-              "&:hover": { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: "transparent" },
+              borderColor: "#d0d5dd",
+              color: "#374151",
+              fontFamily: "Inter",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
               textTransform: "none",
-              borderRadius: "6px",
-              px: "20px",
-              height: 32,
+              borderRadius: "8px",
+              px: "16px", py: "7px",
+              height: 36,
               fontSize: "13px",
               fontWeight: 500,
             }}

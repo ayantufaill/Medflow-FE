@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -128,6 +128,18 @@ const PatientMedicalHistoryPage = () => {
     patientId,
     20,
   );
+  const location = useLocation();
+  const hasPrinted = useRef(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("print") === "true" && !loading && !hasPrinted.current) {
+      hasPrinted.current = true;
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    }
+  }, [location.search, loading]);
 
   const [historyTab, setHistoryTab] = useState(0); // 0 = Summary, 1 = Full Medical History
   const [medications, setMedications] = useState([]);
@@ -660,7 +672,7 @@ const PatientMedicalHistoryPage = () => {
               },
             }}
           >
-            MARK ALL UNANSWERED AS NO
+            Mark All Unanswered As No
           </Button>
           <Button
             variant="contained"
@@ -686,7 +698,7 @@ const PatientMedicalHistoryPage = () => {
               },
             }}
           >
-            MARK AS REVIEWED WITH PATIENT
+            Mark As Reviewed With Patient
           </Button>
           <Button
             variant="outlined"
@@ -699,18 +711,17 @@ const PatientMedicalHistoryPage = () => {
               fontWeight: fontWeight.semibold,
               fontSize: fontSize.base,
               borderRadius: radius.md,
-              borderColor: COLORS.BORDER,
-              color: COLORS.TEXT_BODY,
+              borderColor: COLORS.ACCENT,
+              color: COLORS.ACCENT,
               backgroundColor: COLORS.SURFACE_CARD,
-              boxShadow: "none",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               textAlign: "center",
               lineHeight: 1.2,
               "&:hover": {
-                backgroundColor: COLORS.SURFACE_HOVER,
-                borderColor: COLORS.TEXT_MUTED,
+                backgroundColor: COLORS.ACCENT_BG,
+                borderColor: COLORS.ACCENT_HOVER,
               },
             }}
           >

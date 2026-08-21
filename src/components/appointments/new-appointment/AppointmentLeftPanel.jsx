@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Button, Checkbox, FormControlLabel, RadioGroup, FormControlLabel as MuiFormControlLabel, Radio, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, FormControlLabel, RadioGroup, FormControlLabel as MuiFormControlLabel, Radio, TextField, Typography, Dialog } from "@mui/material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -14,6 +14,10 @@ import PastVisitProceduresSelector from "./PastVisitProceduresSelector";
 import { invoiceService } from '../../../services/invoice.service';
 import { paymentService } from '../../../services/payment.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
+import InvoiceModal from '../../finance/InvoiceModal';
+import { useDispatch } from 'react-redux';
+import { createInvoice } from '../../../store/slices/billingSlice';
+import { claimService } from '../../../services/claim.service';
 
 const AppointmentLeftPanel = ({
   // Patient
@@ -31,6 +35,7 @@ const AppointmentLeftPanel = ({
   // Procedure table
   procedures, setProcedures, providers,
   showExtendedOptions,
+  onComputeNextVisit,
   onDuplicateProcedure,
   readOnly,
   setIsRescheduling,
@@ -38,8 +43,12 @@ const AppointmentLeftPanel = ({
   status,
   onStatusChange,
 }) => {
+  const [previousStatus, setPreviousStatus] = useState("scheduled");
   const [showPastVisits, setShowPastVisits] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceModalData, setInvoiceModalData] = useState(null);
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
 
   const handleCollectPayment = async () => {
     if (!appointmentId) {
@@ -58,38 +67,99 @@ const AppointmentLeftPanel = ({
       return;
     }
 
-    try {
-      let invoice;
-      try {
-        invoice = await invoiceService.generateFromAppointment(appointmentId);
-      } catch (err) {
-        const patId = patient.id || patient._id || patient.PatNum;
-        const result = await invoiceService.getAllInvoices({ patientId: patId, limit: 100 });
-        invoice = (result.invoices || []).find(inv => String(inv.appointmentId) === String(appointmentId));
+    const formattedProcedures = procedures.map((p) => {
+      const chargeStr = String(p.charge || "0").replace(/[$,]/g, '');
+      const numCharge = parseFloat(chargeStr) || 0;
+      
+      let providerName = "";
+      if (p.provider && providers) {
+        const prov = providers.find((pr) => String(pr._id || pr.id) === String(p.provider));
+        if (prov) {
+          const firstName = prov.userId?.firstName || prov.firstName || "";
+          const lastName = prov.userId?.lastName || prov.lastName || "";
+          providerName = `${firstName} ${lastName}`.trim() || prov.name || `Provider ${prov._id || prov.id}`;
+        }
       }
 
-      if (!invoice) {
-        showSnackbar("Could not generate or locate the invoice for this appointment.", "error");
-        return;
-      }
-
-      const payload = {
-        patientId: parseInt(patient.id || patient._id || patient.PatNum),
-        invoiceId: parseInt(invoice.id || invoice._id),
-        amount: totalPortion,
-        paymentMethod: 'cash',
-        method: 'Cash',
-        paymentDate: new Date().toISOString(),
-        status: 'completed',
-        notes: 'Payment collected from appointment checkout'
+      return {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        date: new Date().toISOString().split("T")[0],
+        code: p.code,
+        site: p.tooth || "",
+        treatment: p.desc || "Custom Procedure",
+        provider: providerName,
+        writeoff: "$0.00",
+        coveragePct: 0,
+        ptPortion: `$${numCharge.toFixed(2)}`,
+        insPortion: "$0.00",
+        charge: `$${numCharge.toFixed(2)}`,
+        balance: `$${numCharge.toFixed(2)}`,
+        dbi: false,
+        completed: p.completed || false,
       };
+    });
 
-      await paymentService.recordPayment(payload);
-      showSnackbar(`Successfully collected payment of $${totalPortion.toFixed(2)}!`, "success");
+    // TODO: (Backend integration) Fetch unbilled products here and append to formattedProcedures
+
+    setInvoiceModalData({ procedures: formattedProcedures });
+    setShowInvoiceModal(true);
+  };
+
+  const handleInvoiceModalSave = async (savePayload) => {
+    const data = Array.isArray(savePayload) ? savePayload : savePayload.procedures;
+    const shouldAddClaim = !Array.isArray(savePayload) && savePayload.addClaim;
+    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []) : [];
+
+    const payload = {
+      patientId: parseInt(patient?.id || patient?._id || patient?.PatNum, 10),
+      appointmentId: parseInt(appointmentId, 10) || null,
+      notes: savePayload.description || 'Invoice created from appointment checkout',
+      items: data.map((row) => {
+        let parsedDate = new Date().toISOString();
+        if (row.date) { const d = new Date(row.date); if (!isNaN(d.getTime())) parsedDate = d.toISOString(); }
+        return {
+          code: row.code, description: row.treatment, date: parsedDate, site: row.site,
+          provider: row.provider,
+          writeoff:   parseFloat((String(row.writeoff   || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          ptPortion:  parseFloat((String(row.ptPortion  || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          charge:     parseFloat((String(row.charge     || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          balance:    parseFloat((String(row.balance    || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          dbi:       Boolean(row.dbi), completed: Boolean(row.completed),
+        };
+      }),
+    };
+
+    if (payload.items.length === 0) {
+      showSnackbar('Please add at least one procedure before saving.', 'warning');
+      return;
+    }
+
+    try {
+      const result = await dispatch(createInvoice(payload)).unwrap();
+      const createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
+      
+      setShowInvoiceModal(false);
+      showSnackbar("Invoice saved successfully!", "success");
+      
+      if (shouldAddClaim && claimRows.length > 0 && createdInvoiceId) {
+        try {
+          await claimService.createClaimFromInvoice(createdInvoiceId, {
+            procedures: claimRows.map((row) => ({
+              code: row.code,
+              description: row.treatment,
+              charge: parseFloat((String(row.charge || '')).replace(/[^0-9.-]+/g, '')) || 0,
+              insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+            })),
+          });
+        } catch (claimErr) {
+          console.warn('Invoice created but claim creation failed:', claimErr);
+        }
+      }
+
       window.dispatchEvent(new CustomEvent('add-ledger-item'));
     } catch (err) {
-      console.error("Failed to collect payment:", err);
-      showSnackbar(err.response?.data?.message || err.message || "Failed to collect payment", "error");
+      showSnackbar("Failed to create invoice: " + (err.message || err), "error");
     }
   };
 
@@ -208,6 +278,7 @@ const AppointmentLeftPanel = ({
       <>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px', pointerEvents: 'auto' }}>
           <Button
+            onClick={onComputeNextVisit}
             variant="contained"
             disableElevation
             sx={{
@@ -254,6 +325,17 @@ const AppointmentLeftPanel = ({
             control={
               <Checkbox
                 size="small"
+                checked={status === 'checked_out_complete'}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  if (isChecked) {
+                    setPreviousStatus(status || 'scheduled');
+                    if (onStatusChange) onStatusChange('checked_out_complete');
+                  } else {
+                    if (onStatusChange) onStatusChange(previousStatus);
+                  }
+                  if (setIsRescheduling) setIsRescheduling(true);
+                }}
                 sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#2262ef' } }}
               />
             }
@@ -309,9 +391,43 @@ const AppointmentLeftPanel = ({
       {showPastVisits ? "- hide past visits" : "+ add procedures from another visit"}
     </Typography>
 
-    {showPastVisits && (
-      <PastVisitProceduresSelector patient={patient} onAddProcedure={handleAddPastProcedure} />
-    )}
+    {/* Past Visit Procedures Modal */}
+    <PastVisitProceduresSelector 
+      open={showPastVisits}
+      onClose={() => setShowPastVisits(false)}
+      patientId={patient?.id || patient?._id || patient?.PatNum}
+      onAdd={handleAddPastProcedure}
+    />
+
+    {/* Invoice Modal */}
+    <Dialog 
+      open={showInvoiceModal} 
+      onClose={() => setShowInvoiceModal(false)} 
+      maxWidth={false} 
+      fullWidth
+      sx={{
+        zIndex: 140000,
+        "& .MuiDialog-paper": {
+          width: "calc(100% - 64px)",
+          maxWidth: "1050px",
+          maxHeight: "900px",
+          m: 4,
+          borderRadius: "14px",
+          bgcolor: "#f8f9fa",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+    >
+      <InvoiceModal 
+        patient={patient}
+        invoiceData={invoiceModalData}
+        onSave={handleInvoiceModalSave}
+        onCancel={() => setShowInvoiceModal(false)}
+        onClose={() => setShowInvoiceModal(false)}
+      />
+    </Dialog>
       </Box>
     </Box>
   );

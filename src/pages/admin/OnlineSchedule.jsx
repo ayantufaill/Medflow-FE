@@ -19,6 +19,7 @@ import AppointmentTypesSection from '../../components/admin/online-schedule/Appo
 import ProvidersSetupSection from '../../components/admin/online-schedule/ProvidersSetupSection';
 import OperatorySetupSection from '../../components/admin/online-schedule/OperatorySetupSection';
 import AnalyticsSetupSection from '../../components/admin/online-schedule/AnalyticsSetupSection';
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 const deepMerge = (target, source) => {
   if (typeof target !== 'object' || target === null) return source;
@@ -53,8 +54,10 @@ const defaultSettings = {
 const OnlineScheduleConfiguration = () => {
   const [settings, setSettings] = useState(defaultSettings);
   const [initialSettings, setInitialSettings] = useState(defaultSettings);
+  const [forceDirty, setForceDirty] = useState(false);
   const [providerSearch, setProviderSearch] = useState('');
   const [providerSpecialty, setProviderSpecialty] = useState('');
+  const [deleteOperatoryId, setDeleteOperatoryId] = useState(null);
   const { showSnackbar } = useSnackbar();
   const practiceInfo = useSelector(selectPracticeInfo);
   const loading = useSelector(selectPracticeInfoLoading);
@@ -124,6 +127,7 @@ const OnlineScheduleConfiguration = () => {
         onlineScheduleData: settings
       })).unwrap();
       setInitialSettings(settings);
+      setForceDirty(false);
       showSnackbar('Online Schedule configuration saved successfully', 'success');
     } catch (error) {
       console.error(error);
@@ -131,14 +135,21 @@ const OnlineScheduleConfiguration = () => {
     }
   };
 
-  const handleDeleteOperatory = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this operatory?')) return;
+  const handleDeleteOperatory = (id) => {
+    setDeleteOperatoryId(id);
+  };
+
+  const confirmDeleteOperatory = async () => {
+    if (!deleteOperatoryId) return;
     try {
-      await dispatch(deleteRoom(id)).unwrap();
+      await dispatch(deleteRoom(deleteOperatoryId)).unwrap();
+      setForceDirty(true);
       showSnackbar('Operatory deleted successfully', 'success');
     } catch (error) {
       console.error(error);
       showSnackbar(error || 'Failed to delete operatory', 'error');
+    } finally {
+      setDeleteOperatoryId(null);
     }
   };
 
@@ -150,7 +161,7 @@ const OnlineScheduleConfiguration = () => {
     );
   }
 
-  const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  const hasChanges = forceDirty || JSON.stringify(settings) !== JSON.stringify(initialSettings);
 
   return (
     <Box
@@ -212,18 +223,32 @@ const OnlineScheduleConfiguration = () => {
         providerSpecialty={providerSpecialty}
         onSearchChange={setProviderSearch}
         onSpecialtyChange={setProviderSpecialty}
+        onSectionChange={() => setForceDirty(true)}
       />
 
       {/* Section 4 — Operatory Setup */}
       <OperatorySetupSection
         operatories={operatoriesData}
         onDeleteOperatory={handleDeleteOperatory}
+        onSectionChange={() => setForceDirty(true)}
       />
 
       {/* Section 5 — Analytics Setup */}
       <AnalyticsSetupSection />
 
       </Box>
+
+      {/* Delete Operatory Confirmation Dialog */}
+      <ConfirmationDialog
+        open={!!deleteOperatoryId}
+        onClose={() => setDeleteOperatoryId(null)}
+        onConfirm={confirmDeleteOperatory}
+        title="Delete Operatory"
+        message="Are you sure you want to delete this operatory?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmColor="error"
+      />
     </Box>
   );
 };

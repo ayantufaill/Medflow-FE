@@ -42,7 +42,7 @@ const DepositDialog = ({ patient, onClose, onSave, depositType = 'patient-deposi
     }
   };
   return (
-    <Box sx={{ width: '100%', minWidth: '1000px', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'visible', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+    <Box sx={{ width: '100%', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
       {/* Header */}
       <DialogTitle sx={{
           boxSizing: "border-box",

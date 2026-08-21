@@ -141,14 +141,14 @@ export default function PatientDetailActions({
         ) : (
           /* Icon Toolbar — Edit + small utility icons, all in one compact row */
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
-            <Tooltip title="EDIT">
+            <Tooltip title="Edit">
               <IconButton size="small" sx={iconButtonSx} onClick={onEdit}>
                 <EditIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
             {/* Hx (Communication) Icon — opens the request-updates dialog */}
-            <Tooltip title="SEND UPDATE REQUEST">
+            <Tooltip title="Send Update Request">
               <IconButton
                 size="small"
                 sx={iconButtonSx}
@@ -174,7 +174,7 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Chat Icon */}
-            <Tooltip title="COMMUNICATION ACTIVITY">
+            <Tooltip title="Communication Activity">
               <IconButton
                 size="small"
                 sx={iconButtonSx}
@@ -189,7 +189,7 @@ export default function PatientDetailActions({
                 history already shows email confirmations (the checkmark this icon
                 itself displays), so this opens the same dialog rather than a fake
                 "resend email" action that wouldn't actually send anything. */}
-            <Tooltip title="PATIENT MISSING EMAIL">
+            <Tooltip title="Patient Missing Email">
               <IconButton
                 size="small"
                 sx={iconButtonSx}
@@ -212,7 +212,7 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Print Icon */}
-            <Tooltip title="PRINT">
+            <Tooltip title="Print">
               <IconButton
                 size="small"
                 sx={iconButtonSx}
@@ -223,7 +223,7 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Document/File Icon — opens patient history audit dialog */}
-            <Tooltip title="PATIENT INFO AUDIT">
+            <Tooltip title="Patient Info Audit">
               <IconButton
                 size="small"
                 sx={iconButtonSx}
@@ -234,7 +234,7 @@ export default function PatientDetailActions({
             </Tooltip>
 
             {/* Profile/User Icon */}
-            <Tooltip title="MYCHART FILE">
+            <Tooltip title="MyChart File">
               <IconButton
                 size="small"
                 sx={iconButtonSx}

@@ -24,6 +24,7 @@ const FinancePage = () => {
   const [view, setView] = useState("invoices");
   const [expanded, setExpanded] = useState(false);
   const [showPaymentPlan, setShowPaymentPlan] = useState(false);
+  const [showAddCard, setShowAddCard] = useState(false);
   const [showAccountAdjustment, setShowAccountAdjustment] = useState(false);
   const [showCourtesyRefund, setShowCourtesyRefund] = useState(false);
   const [showEditFlags, setShowEditFlags] = useState(false);
@@ -266,16 +267,6 @@ const FinancePage = () => {
     }
   };
 
-  if (showPaymentPlan) {
-    return (
-      <NewPaymentPlan
-        patient={currentPatient}
-        onBack={() => setShowPaymentPlan(false)}
-        onCreatePlan={handleCreatePaymentPlan}
-      />
-    );
-  }
-
   return (
     <Box
       sx={{
@@ -299,7 +290,7 @@ const FinancePage = () => {
           onAddFlagsClick={() => setShowEditFlags(true)}
           onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
         />
-        <AgingTable view={view} />
+        <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} patient={currentPatient} />
       </Box>
 
       {/* Action Toolbar: Filters and Buttons */}
@@ -332,7 +323,7 @@ const FinancePage = () => {
         ) : view === "individual" ? (
           <IndividualLedgerTable patient={currentPatient} />
         ) : (
-          <LedgerList patient={currentPatient} expanded={expanded} />
+          <LedgerList patient={currentPatient} expanded={expanded} filters={filters} />
         )}
       </ErrorBoundary>
 
@@ -356,6 +347,11 @@ const FinancePage = () => {
         showCourtesyCredit={showCourtesyCredit}
         setShowCourtesyCredit={setShowCourtesyCredit}
         handleCourtesyCreditSave={handleCourtesyCreditSave}
+        showPaymentPlan={showPaymentPlan}
+        setShowPaymentPlan={setShowPaymentPlan}
+        handleCreatePaymentPlan={handleCreatePaymentPlan}
+        showAddCard={showAddCard}
+        setShowAddCard={setShowAddCard}
       />
     </Box>
   );

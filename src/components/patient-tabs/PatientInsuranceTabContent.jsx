@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -37,8 +37,45 @@ import EditCoverageModal from '../insurance/components/EditCoverageModal';
 import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
+import InsuranceTabs from '../insurance/InsuranceTabs';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+
+const parseAmount = (val) => {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+  if (!cleaned) return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+};
+
+const getCoverageAmounts = (ins) => {
+  let coverageLimits = ins?.coverageLimits;
+  if (typeof coverageLimits === 'string') {
+    try {
+      coverageLimits = JSON.parse(coverageLimits);
+    } catch (e) {
+      coverageLimits = null;
+    }
+  }
+  const limitsInd = coverageLimits?.individual;
+  
+  const rawUsed = 
+    limitsInd?.usedAmount ?? 
+    ins?.usedAmount ?? 
+    ins?.copayAmount;
+    
+  const rawMax = 
+    limitsInd?.annualMax ?? 
+    ins?.individualAnnualMax ?? 
+    ins?.deductibleAmount;
+
+  const usedAmount = parseAmount(rawUsed) ?? 0;
+  const maxAmount = parseAmount(rawMax) ?? 0;
+
+  return { usedAmount, maxAmount };
+};
 
 const CoverageRow = ({ 
   ins, 
@@ -58,8 +95,7 @@ const CoverageRow = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
-  const usedAmount = ins.usedAmount ?? ins.copayAmount ?? 0;
-  const maxAmount = ins.individualAnnualMax ?? ins.deductibleAmount ?? 1500;
+  const { usedAmount, maxAmount } = getCoverageAmounts(ins);
 
   const getCompany = (insuranceCompanyId) => {
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') return insuranceCompanyId;
@@ -72,9 +108,12 @@ const CoverageRow = ({
 
   return (
     <Paper variant="outlined" sx={{ borderColor: COLORS.BORDER, borderRadius: radius.xl, overflow: 'hidden' }}>
-      <Box sx={{ py: 1.5, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+      <Box 
+        onClick={() => setExpanded(!expanded)}
+        sx={{ py: 1.5, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap', cursor: 'pointer' }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{ p: 0.2, color: COLORS.TEXT_MUTED }}>
+          <IconButton size="small" sx={{ p: 0.2, color: COLORS.TEXT_MUTED }}>
             {expanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
           </IconButton>
           <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -89,7 +128,10 @@ const CoverageRow = ({
             <Box component="span" sx={{ color: COLORS.ACCENT, fontWeight: fontWeight.semibold }}>${Number(usedAmount).toFixed(2)} / ${Number(maxAmount).toFixed(2)}</Box>
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box 
+          onClick={(e) => e.stopPropagation()}
+          sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+        >
           {isInactive ? (
             <Button size="small" variant="contained" onClick={() => handleInsuranceActivate(ins)} sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, backgroundColor: COLORS.STATUS_SUCCESS, '&:hover': { backgroundColor: COLORS.STATUS_SUCCESS, opacity: 0.9 }, boxShadow: 'none' }}>Activate</Button>
           ) : (
@@ -231,6 +273,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const [localInsurances, setLocalInsurances] = useState([]);
   const [carrierInfoOpen, setCarrierInfoOpen] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
 
   const handleViewCarrierInfo = (company) => {
     setSelectedCarrier(company);
@@ -268,6 +311,32 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   };
 
   const displayInsurances = localInsurances;
+  
+  const isFamily = (i) => Boolean(
+    i.isFamilyPlan || 
+    (i.members && i.members.length > 1) || 
+    (i.relationshipToPatient && i.relationshipToPatient.toLowerCase() !== 'self')
+  );
+
+  const filteredTabInsurances = useMemo(() => {
+    switch (tabValue) {
+      case 0: { // Active Coverages (1st Tab)
+        const activeInd = displayInsurances.filter((i) => i.isActive && !isFamily(i));
+        return activeInd.length > 0 ? activeInd : displayInsurances.filter((i) => i.isActive);
+      }
+      case 1: // Family Coverages (2nd Tab)
+        return displayInsurances.filter((i) => i.isActive && isFamily(i));
+      case 2: { // Archived Coverages (3rd Tab)
+        const archInd = displayInsurances.filter((i) => !i.isActive && !isFamily(i));
+        return archInd.length > 0 ? archInd : displayInsurances.filter((i) => !i.isActive);
+      }
+      case 3: // Archived Family Coverages (4th Tab)
+        return displayInsurances.filter((i) => !i.isActive && isFamily(i));
+      default:
+        return displayInsurances.filter((i) => i.isActive);
+    }
+  }, [displayInsurances, tabValue]);
+
   const hasActiveCoverage = displayInsurances.some((i) => i.isActive);
   const inactiveInsurances = localInsurances.filter((i) => !i.isActive);
 
@@ -289,6 +358,9 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     setInsuranceMenu({ anchorEl: null, insurance: null });
     try {
       await updateInsurance(insurance._id || insurance.id, { isActive: true }).unwrap();
+      setLocalInsurances((prev) =>
+        prev.map((i) => ((i._id || i.id) === (insurance._id || insurance.id) ? { ...i, isActive: true } : i))
+      );
       showSnackbar('Insurance activated successfully', 'success');
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to activate', 'error');
@@ -298,6 +370,9 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     setInsuranceMenu({ anchorEl: null, insurance: null });
     try {
       await updateInsurance(insurance._id || insurance.id, { isActive: false }).unwrap();
+      setLocalInsurances((prev) =>
+        prev.map((i) => ((i._id || i.id) === (insurance._id || insurance.id) ? { ...i, isActive: false } : i))
+      );
       showSnackbar('Insurance deactivated successfully', 'success');
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to deactivate', 'error');
@@ -480,14 +555,16 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
 
       <Box sx={{ pt: 0, display: 'flex', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
-          {!hasActiveCoverage ? (
+          <InsuranceTabs tabValue={tabValue} onTabChange={(e, val) => setTabValue(val)} />
+
+          {filteredTabInsurances.length === 0 ? (
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: 200,
+                minHeight: 180,
                 textAlign: 'center',
                 bgcolor: 'transparent',
               }}
@@ -497,82 +574,34 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                   fontFamily: 'Inter',
                   fontSize: fontSize.md,
                   fontWeight: fontWeight.semibold,
-                  color: COLORS.STATUS_ERROR,
+                  color: COLORS.TEXT_MUTED,
                 }}
               >
-                Patient has no active coverage.
+                No coverages found for this section.
               </Typography>
             </Box>
           ) : (
-            <>
-              <Typography
-                sx={{
-                  fontFamily: 'Inter',
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                  color: COLORS.TEXT_SECONDARY,
-                  mb: 1.5,
-                  textAlign: 'left',
-                }}
-              >
-                Active Insurance Coverages
-              </Typography>
-              <Stack spacing={1.5} sx={{ mb: 3 }}>
-                {displayInsurances.filter((i) => i.isActive).map((ins, index, array) => (
-                  <CoverageRow
-                    key={ins._id || ins.id}
-                    ins={ins}
-                    companies={companies}
-                    getInsuranceCompanyName={getInsuranceCompanyName}
-                    handleViewPlan={handleViewPlan}
-                    handleInsuranceEdit={handleInsuranceEdit}
-                    handleInsuranceDeactivate={handleInsuranceDeactivate}
-                    isFirst={index === 0}
-                    isLast={index === array.length - 1}
-                    onMoveUp={() => handleMoveUp(index, array)}
-                    onMoveDown={() => handleMoveDown(index, array)}
-                    patient={patient}
-                    onViewCarrierInfo={handleViewCarrierInfo}
-                  />
-                ))}
-              </Stack>
-            </>
-          )}
-
-          {inactiveInsurances.length > 0 && (
-            <Box id="imported-coverage-list" sx={{ mt: 4, width: '100%' }}>
-              <Typography
-                sx={{
-                  fontFamily: 'Inter',
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                  color: COLORS.TEXT_SECONDARY,
-                  mb: 1.5,
-                  textAlign: 'left',
-                }}
-              >
-                Inactive coverage (activate to use)
-              </Typography>
-              <Stack spacing={1.5}>
-                {inactiveInsurances.map((ins) => (
-                  <CoverageRow
-                    key={ins._id || ins.id}
-                    ins={ins}
-                    companies={companies}
-                    getInsuranceCompanyName={getInsuranceCompanyName}
-                    handleViewPlan={handleViewPlan}
-                    handleInsuranceEdit={handleInsuranceEdit}
-                    handleInsuranceDeactivate={handleInsuranceDeactivate}
-                    isInactive={true}
-                    handleInsuranceActivate={handleInsuranceActivate}
-                    isFirst={true}
-                    isLast={true}
-                    patient={patient}
-                    onViewCarrierInfo={handleViewCarrierInfo}
-                  />
-                ))}
-              </Stack>
-            </Box>
+            <Stack spacing={1.5} sx={{ mb: 3 }}>
+              {filteredTabInsurances.map((ins, index, array) => (
+                <CoverageRow
+                  key={ins._id || ins.id}
+                  ins={ins}
+                  companies={companies}
+                  getInsuranceCompanyName={getInsuranceCompanyName}
+                  handleViewPlan={handleViewPlan}
+                  handleInsuranceEdit={handleInsuranceEdit}
+                  handleInsuranceDeactivate={handleInsuranceDeactivate}
+                  isInactive={!ins.isActive}
+                  handleInsuranceActivate={handleInsuranceActivate}
+                  isFirst={index === 0}
+                  isLast={index === array.length - 1}
+                  onMoveUp={() => handleMoveUp(index, array)}
+                  onMoveDown={() => handleMoveDown(index, array)}
+                  patient={patient}
+                  onViewCarrierInfo={handleViewCarrierInfo}
+                />
+              ))}
+            </Stack>
           )}
         </Box>
       </Box>

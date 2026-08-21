@@ -204,7 +204,7 @@ const CourtesyCreditComponent = ({
       </DialogContent>
 
       {/* Action Buttons - Always visible */}
-      <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT, borderBottomLeftRadius: '13px', borderBottomRightRadius: '13px' }}>
+      <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff', borderBottomLeftRadius: '13px', borderBottomRightRadius: '13px' }}>
         {showAmountSection ? (
           <Typography 
             sx={{ 
@@ -228,7 +228,8 @@ const CourtesyCreditComponent = ({
               bgcolor: COLORS.ACCENT, 
               color: '#fff',
               textTransform: 'none', 
-              fontWeight: 500,
+              fontWeight: 600,
+              borderRadius: '8px',
               boxShadow: 'none',
               px: 3,
               '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' } 
@@ -239,13 +240,14 @@ const CourtesyCreditComponent = ({
           <Button 
             variant="outlined" 
             onClick={handleCancel}
-            sx={{ 
-              color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, bgcolor: 'white',
-              textTransform: 'none', 
-              fontWeight: 500,
-              boxShadow: 'none',
-              px: 3,
-              '&:hover': { bgcolor: '#f5f5f5', boxShadow: 'none' } 
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600
             }}
           >
             Cancel

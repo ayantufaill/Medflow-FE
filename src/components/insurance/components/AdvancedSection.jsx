@@ -1,6 +1,9 @@
 import React from 'react';
-import { Box, Typography, TextField, Grid } from "@mui/material";
+import { Box, Typography, TextField, Grid, Tooltip } from "@mui/material";
 import { InfoOutlined as InfoIcon, Tune as TuneIcon } from "@mui/icons-material";
+
+const MEMBER_IDENTIFIER_TOOLTIP_TEXT = "Some insurance companies have specific identifiers for their members, or members’ dependents. They are unique IDs different from the normal subscriber IDs and can located on the insurance card. This space can be left blank if the insurance company does not have a Member Identifier. You can add the SSN if the insurance requires it.";
+const CARD_SEQUENCE_TOOLTIP_TEXT = "The Insurance Card Sequence is typically a dependent specific identifier. You can find this number on the insurance card if it exists.";
 
 const AdvancedSection = ({ formData, handleInputChange, inputBg }) => {
   return (
@@ -37,7 +40,38 @@ const AdvancedSection = ({ formData, handleInputChange, inputBg }) => {
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
             <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>Member Identifier</Typography>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
+            <Tooltip
+              PopperProps={{ sx: { zIndex: 999999 } }}
+              title={
+                <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                  {MEMBER_IDENTIFIER_TOOLTIP_TEXT}
+                </Typography>
+              }
+              placement="top"
+              arrow
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    bgcolor: '#ffffff',
+                    color: '#1e3a8a',
+                    border: '1px solid #1e3a8a',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                    borderRadius: '6px',
+                    maxWidth: 280,
+                    p: 1,
+                    '& .MuiTooltip-arrow': {
+                      color: '#ffffff',
+                      '&::before': {
+                        border: '1px solid #1e3a8a',
+                        backgroundColor: '#ffffff',
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', cursor: 'pointer', '&:hover': { color: '#2563eb' } }} />
+            </Tooltip>
           </Box>
           <TextField 
             fullWidth 
@@ -59,7 +93,38 @@ const AdvancedSection = ({ formData, handleInputChange, inputBg }) => {
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
             <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>Card Sequence</Typography>
-            <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd' }} />
+            <Tooltip
+              PopperProps={{ sx: { zIndex: 999999 } }}
+              title={
+                <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                  {CARD_SEQUENCE_TOOLTIP_TEXT}
+                </Typography>
+              }
+              placement="top"
+              arrow
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    bgcolor: '#ffffff',
+                    color: '#1e3a8a',
+                    border: '1px solid #1e3a8a',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                    borderRadius: '6px',
+                    maxWidth: 260,
+                    p: 1,
+                    '& .MuiTooltip-arrow': {
+                      color: '#ffffff',
+                      '&::before': {
+                        border: '1px solid #1e3a8a',
+                        backgroundColor: '#ffffff',
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              <InfoIcon sx={{ fontSize: 14, color: '#bdbdbd', cursor: 'pointer', '&:hover': { color: '#2563eb' } }} />
+            </Tooltip>
           </Box>
           <TextField 
             fullWidth 

@@ -34,6 +34,42 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [addClaim, setAddClaim] = useState(false);
+  const [description, setDescription] = useState("");
+  const [showDescription, setShowDescription] = useState(false);
+
+  useEffect(() => {
+    if (invoiceData && invoiceData.procedures && invoiceData.procedures.length > 0) {
+      // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions 
+      // based on the patient's coverage table and the dbi (Do Not Bill Insurance) flag.
+      const isNewInvoice = !invoiceData._id && !invoiceData.id;
+      
+      if (isNewInvoice) {
+        const recalculated = invoiceData.procedures.map(p => {
+          const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          const numWriteoff = parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          
+          const portions = calculatePortionsForCategory({
+            charge: numCharge,
+            writeoff: numWriteoff,
+            code: p.code,
+            dbi: p.dbi || false,
+            coverageTable: patient?.coverageTable || null,
+          });
+          
+          return {
+            ...p,
+            insPortion: `$${portions.insPortion.toFixed(2)}`,
+            ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+            balance: `$${portions.balance.toFixed(2)}`,
+            coveragePct: portions.coveragePct,
+          };
+        });
+        setProcedures(recalculated);
+      } else {
+        setProcedures(invoiceData.procedures);
+      }
+    }
+  }, [invoiceData, patient]);
 
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);
@@ -156,7 +192,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       });
     });
 
-    if (field === "charge" && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+    if (["charge", "dbi"].includes(field) && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
       try {
         const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
         const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
@@ -417,7 +453,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         )}
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: COLORS.SURFACE_TINT }}>
+      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: '#fff' }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Button
             variant="contained"
@@ -440,16 +476,28 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           >
             Re-estimate
           </Button>
-          <Button
-            variant="text"
-            size="small"
-            sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
-          >
-            + Add description
-          </Button>
+          {!showDescription ? (
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => setShowDescription(true)}
+              sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
+            >
+              + Add description
+            </Button>
+          ) : (
+            <TextField 
+              placeholder="Description" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              variant="standard" 
+              autoFocus 
+              sx={{ width: 250, input: { fontSize: '13px' } }} 
+            />
+          )}
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -465,8 +513,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           <Button
             variant="contained"
             size="small"
-            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures }); }}
-            sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0" } }}
+            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures, description }); }}
+            sx={{ bgcolor: COLORS.ACCENT, color: "#fff", textTransform: "none", boxShadow: "none", borderRadius: '8px', fontWeight: 600, "&:hover": { bgcolor: "#1565c0" } }}
           >
             Add New Invoice
           </Button>
@@ -474,7 +522,15 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             variant="outlined"
             size="small"
             onClick={onCancel || onClose}
-            sx={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER, textTransform: "none", bgcolor: "white", "&:hover": { bgcolor: "#f5f5f5" } }}
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600
+            }}
           >
             Cancel
           </Button>

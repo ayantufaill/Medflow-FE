@@ -126,7 +126,7 @@ const ProcedureCategorySelectDialog = ({ open, onClose, onSelect }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ zIndex: 1500 }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth sx={{ zIndex: 140000 }}>
       <DialogTitle 
         sx={{ 
           m: 0, 

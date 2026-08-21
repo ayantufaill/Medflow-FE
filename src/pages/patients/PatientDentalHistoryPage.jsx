@@ -595,7 +595,7 @@ const PatientDentalHistoryPage = () => {
                   },
                 }}
               >
-                MARK ALL UNANSWERED AS NO
+                Mark All Unanswered As No
               </Button>
               <Button
                 variant="contained"
@@ -622,7 +622,7 @@ const PatientDentalHistoryPage = () => {
                   },
                 }}
               >
-                MARK AS REVIEWED WITH PATIENT
+                Mark As Reviewed With Patient
               </Button>
               <Button
                 variant="outlined"
@@ -635,18 +635,17 @@ const PatientDentalHistoryPage = () => {
                   fontWeight: fontWeight.semibold,
                   fontSize: fontSize.base,
                   borderRadius: radius.md,
-                  borderColor: COLORS.BORDER,
-                  color: COLORS.TEXT_BODY,
+                  borderColor: COLORS.ACCENT,
+                  color: COLORS.ACCENT,
                   backgroundColor: COLORS.SURFACE_CARD,
-                  boxShadow: "none",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
                   textAlign: "center",
                   lineHeight: 1.2,
                   "&:hover": {
-                    backgroundColor: COLORS.SURFACE_HOVER,
-                    borderColor: COLORS.TEXT_MUTED,
+                    backgroundColor: COLORS.ACCENT_BG,
+                    borderColor: COLORS.ACCENT_HOVER,
                   },
                 }}
               >

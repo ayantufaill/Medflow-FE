@@ -17,6 +17,8 @@ import {
   DescriptionOutlined as DescriptionOutlinedIcon,
   FolderOutlined as FolderOutlinedIcon,
 } from "@mui/icons-material";
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
 
 // ─── Design tokens (mirrors RecordVitalsDialog) ───────────────────────────────
 
@@ -101,28 +103,7 @@ const SectionContainer = ({ title, icon: Icon, children }) => (
 
 // ─── Suggestion data ──────────────────────────────────────────────────────────
 
-const DEFAULT_NAME_SUGGESTIONS = [
-  "BOB (Breakdown of benefits)",
-  "Insurance Fax Back",
-  "Treatment consent",
-  "N2O Consent",
-  "Signed Treatment Plan",
-  "Pre-D",
-];
 
-const DEFAULT_CATEGORY_SUGGESTIONS = [
-  "Insurance",
-  "Consent",
-  "Medical/Dental History",
-  "Treatment Plan",
-  "Referral",
-  "Signed Receipt",
-  "Medications",
-  "ID",
-  "Lab",
-  "Invoices",
-  "Consult",
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -141,9 +122,12 @@ export const EditDocumentDialog = ({
     type: type || "",
     category: category || "",
   });
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const presetNames = practiceInfo?.documentCategories?.documents || [];
+  const presetCategories = practiceInfo?.documentCategories?.categories || [];
 
-  const [nameSuggestions, setNameSuggestions] = useState(DEFAULT_NAME_SUGGESTIONS);
-  const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORY_SUGGESTIONS);
+  const [nameSuggestions, setNameSuggestions] = useState(presetNames);
+  const [categorySuggestions, setCategorySuggestions] = useState(presetCategories);
 
   // Sync fields when props change (dialog re-opens for a different doc)
   useEffect(() => {
@@ -177,7 +161,7 @@ export const EditDocumentDialog = ({
   };
 
   const handleResetNameDefaults = () => {
-    setNameSuggestions(DEFAULT_NAME_SUGGESTIONS);
+    setNameSuggestions(presetNames);
     localStorage.removeItem("medflow_doc_names");
   };
 
@@ -191,7 +175,7 @@ export const EditDocumentDialog = ({
   };
 
   const handleResetCategoryDefaults = () => {
-    setCategorySuggestions(DEFAULT_CATEGORY_SUGGESTIONS);
+    setCategorySuggestions(presetCategories);
     localStorage.removeItem("medflow_doc_categories");
   };
 

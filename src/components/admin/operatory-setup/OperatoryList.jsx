@@ -7,8 +7,9 @@ import {
   TableRow,
   IconButton,
   Paper,
+  Chip,
 } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DeleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
 const OperatoryList = ({ operatories, onDeleteOperatory }) => (
   <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e8eaf0', borderRadius: 2 }}>
@@ -23,25 +24,43 @@ const OperatoryList = ({ operatories, onDeleteOperatory }) => (
         </TableRow>
       </TableHead>
       <TableBody>
-        {operatories.map((op, i) => (
-          <TableRow
-            key={op._id || i}
-            sx={{
-              '&:last-child td, &:last-child th': { border: 0 },
-              '& td': { borderBottom: '1px solid #f0f1f4', color: '#5b6068', fontSize: '0.875rem' },
-            }}
-          >
-            <TableCell sx={{ py: 1.5 }}>{op.name || op.roomNumber}</TableCell>
-            <TableCell>{op.status || 'Active'}</TableCell>
-            <TableCell>{op.order || i + 1}</TableCell>
-            <TableCell>{op.note || '—'}</TableCell>
-            <TableCell align="right">
-              <IconButton size="small" onClick={() => onDeleteOperatory(op._id || op.roomNumber)}>
-                <DeleteOutlineIcon fontSize="small" sx={{ color: '#e05252' }} />
-              </IconButton>
-            </TableCell>
-          </TableRow>
-        ))}
+        {operatories.map((op, i) => {
+          const isActive = op.isActive !== false;
+          return (
+            <TableRow
+              key={op._id || i}
+              sx={{
+                '&:last-child td, &:last-child th': { border: 0 },
+                '& td': { borderBottom: '1px solid #f0f1f4', color: '#5b6068', fontSize: '0.875rem' },
+                opacity: isActive ? 1 : 0.6,
+              }}
+            >
+              <TableCell sx={{ py: 1.5 }}>{op.name || op.roomNumber}</TableCell>
+              <TableCell>
+                <Chip
+                  label={isActive ? (op.status || 'Active') : 'Deleted'}
+                  size="small"
+                  sx={{
+                    backgroundColor: isActive ? '#dcfce7' : '#fee2e2',
+                    color: isActive ? '#16a34a' : '#ef4444',
+                    fontWeight: 600,
+                    fontSize: '0.7rem',
+                    height: 22,
+                  }}
+                />
+              </TableCell>
+              <TableCell>{op.order || i + 1}</TableCell>
+              <TableCell>{op.note || '—'}</TableCell>
+              <TableCell align="right">
+                {isActive && (
+                  <IconButton size="small" onClick={() => onDeleteOperatory(op._id || op.roomNumber)} sx={{ p: 0.5 }}>
+                    <img src={DeleteSvg} alt="delete" width="16" height="16" />
+                  </IconButton>
+                )}
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   </TableContainer>

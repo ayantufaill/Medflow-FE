@@ -128,7 +128,7 @@ const LateFeeDialog = ({ onClose, onAddFee, adjustmentType }) => {
       </DialogContent>
 
       {/* Footer */}
-      <DialogActions sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, px: 3, py: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+      <DialogActions sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, px: 3, py: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }}>
         <RadioGroup 
           row 
           value={outstandingType} 

@@ -42,6 +42,7 @@ import { AdapterDayjs }       from '@mui/x-date-pickers/AdapterDayjs';
 import { useSnackbar }        from '../../contexts/SnackbarContext';
 import { useDispatch } from 'react-redux';
 import { createUser } from '../../store/slices/userSlice';
+import { COLORS } from '../../constants/colors';
 
 import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 import personalInfoIcon from '../../assets/usermanagement icons/personalinformation.svg';
@@ -355,10 +356,10 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
         >
           {/* ── Header ── */}
           <Box sx={{
-            px: 3, py: 2, flexShrink: 0,
+            px: '25px', py: '16px', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            backgroundColor: '#F1F5FD',
-            borderBottom: 1, borderColor: 'divider',
+            backgroundColor: COLORS.SURFACE_TINT,
+            borderBottom: `1px solid ${COLORS.BORDER}`,
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ 
@@ -380,7 +381,7 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
           </Box>
 
           {/* ── Scrollable body ── */}
-          <Box ref={scrollBodyRef} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3, backgroundColor: '#f9fafb' }}>
+          <Box ref={scrollBodyRef} sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3, backgroundColor: COLORS.BACKGROUND }}>
 
             {formError && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFormError('')}>
@@ -390,12 +391,12 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
 
             {/* Avatar preview */}
             <CardWrapper>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ width: 56, height: 56, bgcolor: '#2262EF', fontSize: '1.25rem', fontWeight: 700 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 40, height: 40, bgcolor: '#2262EF', fontSize: '1rem', fontWeight: 700 }}>
                   {getInitials(firstName, lastName)}
                 </Avatar>
                 <Box>
-                  <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '15.5px', lineHeight: '23.25px', color: '#111' }}>
+                  <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '14px', lineHeight: '20px', color: '#111' }}>
                     {[firstName, lastName].filter(Boolean).join(' ') || 'New User'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">Preview</Typography>
@@ -463,10 +464,10 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
 
           {/* ── Footer ── */}
           <Box sx={{
-            px: 3, py: 2, flexShrink: 0,
-            borderTop: 1, borderColor: 'divider',
+            px: '25px', py: '16px', flexShrink: 0,
+            borderTop: `1px solid ${COLORS.BORDER}`,
             display: 'flex', justifyContent: 'flex-end', gap: 1.5,
-            backgroundColor: '#F0F4F9',
+            backgroundColor: 'white',
           }}>
             <Button variant="outlined" onClick={handleClose} disabled={saving} sx={{ borderRadius: 2, borderColor: '#d1d5db', color: '#4b5563', '&:hover': { borderColor: '#9ca3af', backgroundColor: 'transparent' } }}>Cancel</Button>
             <Button

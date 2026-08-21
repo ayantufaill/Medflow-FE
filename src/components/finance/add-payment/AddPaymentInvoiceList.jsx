@@ -21,7 +21,7 @@ const AddPaymentInvoiceList = ({
   const activeInvoices = invoices
     .map(inv => ({
       ...inv,
-      lineItems: (inv.lineItems || []).filter(proc => Number(proc.payAmount) > 0 || true) // The original had a filter but then duplicated it. We just map them
+      lineItems: (inv.lineItems || []).filter(proc => Number(proc.patientBalance) > 0)
     }))
     .filter(inv => inv.lineItems.length > 0);
 

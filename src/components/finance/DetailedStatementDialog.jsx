@@ -36,6 +36,7 @@ const DetailedStatementDialog = ({ onClose, printItem }) => {
   let rawTransactions = [];
   const itemsToProcess = printItem ? [printItem] : (ledgerItems || []);
   itemsToProcess.forEach(item => {
+    if (item.isVoided) return;
     const itemDate = dayjs(item.rawDate || item.date);
     
     if (item.method === 'Invoice' || item.method === 'Statement') {
@@ -43,7 +44,7 @@ const DetailedStatementDialog = ({ onClose, printItem }) => {
       const seenProcIds = new Set();
       
       item.details?.forEach(detail => {
-        if (detail.isPayment) {
+        if (detail.isPayment && !detail.isVoided) {
           let paymentAmt = 0;
           const match = (detail.title || '').match(/\$([0-9,.]+)\s*\/\s*\$[0-9,.]+$/);
           if (match) paymentAmt = Number(match[1].replace(/,/g, ''));
@@ -81,19 +82,33 @@ const DetailedStatementDialog = ({ onClose, printItem }) => {
         }
       });
       
-      allProcedures.forEach(proc => {
+      if (allProcedures.length > 0) {
+        allProcedures.forEach(proc => {
+          rawTransactions.push({
+            date: dayjs(proc.date || itemDate),
+            desc: `Invoice #${item.invoiceNumber || item.id}`,
+            sub: `${proc.code || ''} ${proc.description || ''}`,
+            prov: proc.provider || item.initials || 'N/A',
+            amt: Number(proc.total || proc.totalPrice || proc.charge || proc.unitPrice || 0),
+            crd: 0,
+            isCharge: true,
+            insPortion: Number(proc.insPortion || 0),
+            rawItem: item
+          });
+        });
+      } else {
         rawTransactions.push({
-          date: dayjs(proc.date || itemDate),
+          date: itemDate,
           desc: `Invoice #${item.invoiceNumber || item.id}`,
-          sub: `${proc.code || ''} ${proc.description || ''}`,
-          prov: proc.provider || item.initials || 'N/A',
-          amt: Number(proc.total || proc.totalPrice || proc.charge || proc.unitPrice || 0),
+          sub: item.title || 'Invoice',
+          prov: item.initials || 'N/A',
+          amt: Number((String(item.amount) || '$0').replace(/[^0-9.-]+/g, '')),
           crd: 0,
           isCharge: true,
-          insPortion: Number(proc.insPortion || 0),
+          insPortion: 0,
           rawItem: item
         });
-      });
+      }
     } else if (item.isAdjustment || item.method === 'Adjustment') {
       const amt = Number((String(item.amount) || '$0').replace(/[^0-9.-]+/g, ''));
       rawTransactions.push({

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Grid,
@@ -25,9 +26,13 @@ import {
   LocationOnOutlined as LocationOnOutlinedIcon,
   SettingsOutlined as SettingsOutlinedIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
+  Block as BlockIcon,
 } from '@mui/icons-material';
 import ReactPhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
+import { selectProviderList, selectProviderDropdownList, fetchAllProvidersForDropdown } from '../../store/slices/providerSlice';
+import { useBranch } from '../../hooks/redux';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
 import SectionContainer from '../practice-onboarding/practice-info/SectionContainer';
 import FormInputLabel from '../practice-onboarding/practice-info/FormInputLabel';
@@ -223,6 +228,7 @@ const buildDefaultValues = (provider) => {
     color:                provider?.color || '',
     openEdgeToken:        provider?.openEdgeToken || '',
     openDentalProviderId: provider?.openDentalProviderId || '',
+    branchIds:            Array.isArray(provider?.branchIds) ? provider.branchIds : [],
   };
 };
 
@@ -270,10 +276,43 @@ const PhoneInputRow = ({ label, required, name, control }) => (
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
   const [carriers, setCarriers] = useState(
     provider?.carriersOutOfNetwork || []
   );
   const [carrierInput, setCarrierInput] = useState('');
+
+  const providersFromList = useSelector(selectProviderList) || [];
+  const providersFromDropdown = useSelector(selectProviderDropdownList) || [];
+
+  useEffect(() => {
+    if (providersFromDropdown.length === 0 && providersFromList.length === 0) {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+  }, [dispatch, providersFromDropdown.length, providersFromList.length]);
+
+  const allProviders = useMemo(() => {
+    return providersFromDropdown.length > 0 ? providersFromDropdown : providersFromList;
+  }, [providersFromDropdown, providersFromList]);
+
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const currentProviderId = provider?._id || provider?.id;
+  const assignedColorsMap = useMemo(() => {
+    const map = {};
+    allProviders.forEach((p) => {
+      const pId = p._id || p.id;
+      if (pId !== currentProviderId && p.color) {
+        map[p.color.toLowerCase()] = p.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : (p.providerCode || 'another provider');
+      }
+    });
+    return map;
+  }, [allProviders, currentProviderId]);
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({
     defaultValues: buildDefaultValues(provider),
@@ -403,6 +442,29 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
               >
                 <MenuItem value="" sx={{ fontSize: '0.85rem', color: '#9ca3af' }}><em>Select Specialty</em></MenuItem>
                 {SPECIALTIES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: '0.85rem' }}>{s}</MenuItem>)}
+              </TextField>
+            )} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Branches" />
+            <Controller name="branchIds" control={control} defaultValue={[]} render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || []}
+                sx={selectStyles}
+                SelectProps={{
+                  multiple: true,
+                  displayEmpty: true,
+                  IconComponent: KeyboardArrowDownIcon,
+                  MenuProps: dropdownMenuProps,
+                  renderValue: (selected) => selected.length === 0
+                    ? <span style={{ color: '#9ca3af' }}>Not assigned</span>
+                    : selected.map((id) => branches.find((b) => b.id === id)?.name || id).join(', '),
+                }}
+              >
+                {branches.map((b) => <MenuItem key={b.id} value={b.id} sx={{ fontSize: '0.85rem' }}>{b.name}</MenuItem>)}
               </TextField>
             )} />
           </Grid>
@@ -564,21 +626,65 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
             <FormInputLabel label="Calendar Color Accent" />
             <Box sx={{ p: 1.5, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb', height: 'auto' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                {COLOR_SWATCHES.slice(0, 8).map((c) => (
-                  <Box key={c} onClick={() => setValue('color', c)}
-                    sx={{
-                      width: 24, height: 24, borderRadius: '5px', backgroundColor: c, cursor: 'pointer',
-                      border: selectedColor === c ? '2.5px solid #3b82f6' : '1px solid #d1d5db',
-                      transition: 'all 0.15s ease',
-                      '&:hover': { transform: 'scale(1.1)' },
-                    }} />
-                ))}
+                {COLOR_SWATCHES.map((c) => {
+                  const assignedTo = assignedColorsMap[c.toLowerCase()];
+                  const isAssigned = !!assignedTo;
+                  const isSelected = selectedColor?.toLowerCase() === c.toLowerCase();
+
+                  const swatchNode = (
+                    <Box
+                      key={c}
+                      onClick={() => {
+                        if (isAssigned) {
+                          showSnackbar(`Color is already assigned to ${assignedTo}`, 'warning');
+                          return;
+                        }
+                        setValue('color', c);
+                      }}
+                      sx={{
+                        width: 24, height: 24, borderRadius: '5px', backgroundColor: c,
+                        cursor: isAssigned ? 'not-allowed' : 'pointer',
+                        border: isSelected ? '2.5px solid #3b82f6' : '1px solid #d1d5db',
+                        opacity: isAssigned ? 0.35 : 1,
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.15s ease',
+                        '&:hover': { transform: isAssigned ? 'none' : 'scale(1.1)' },
+                      }}
+                    >
+                      {isAssigned && (
+                        <BlockIcon sx={{ fontSize: 14, color: '#374151', opacity: 0.8 }} />
+                      )}
+                    </Box>
+                  );
+
+                  return isAssigned ? (
+                    <Tooltip key={c} title={`Assigned to ${assignedTo}`} arrow>
+                      {swatchNode}
+                    </Tooltip>
+                  ) : (
+                    swatchNode
+                  );
+                })}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
                 <Typography sx={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>Custom:</Typography>
-                <input type="color" value={selectedColor || '#3b82f6'}
-                  onChange={(e) => setValue('color', e.target.value)}
-                  style={{ width: 32, height: 24, padding: 0, border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', backgroundColor: '#fff' }} />
+                <input
+                  type="color"
+                  value={selectedColor || '#3b82f6'}
+                  onChange={(e) => {
+                    const customHex = e.target.value;
+                    const assignedTo = assignedColorsMap[customHex.toLowerCase()];
+                    if (assignedTo) {
+                      showSnackbar(`Color ${customHex} is already assigned to ${assignedTo}`, 'warning');
+                      return;
+                    }
+                    setValue('color', customHex);
+                  }}
+                  style={{ width: 32, height: 24, padding: 0, border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', backgroundColor: '#fff' }}
+                />
               </Box>
             </Box>
           </Grid>

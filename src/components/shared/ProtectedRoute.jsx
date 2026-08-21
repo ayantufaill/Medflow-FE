@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { CircularProgress, Box, Alert } from "@mui/material";
+import { hasRequiredRole, hasRequiredPermission } from "../../config/navMenuItems";
 
 /**
  * ProtectedRoute Component
@@ -11,6 +12,11 @@ import { CircularProgress, Box, Alert } from "@mui/material";
  * @param {string[]} [props.requiredPermissions] - Array of permission strings required to access the route (e.g., ['users.read'])
  * @param {boolean} [props.requireAllRoles=false] - If true, user must have ALL required roles. If false, user needs ANY of the roles.
  * @param {boolean} [props.requireAllPermissions=false] - If true, user must have ALL required permissions. If false, user needs ANY of the permissions.
+ * @param {boolean} [props.requireEitherRoleOrPermission=false] - When both requiredRoles and requiredPermissions
+ *   are given, the default is to require BOTH checks to pass (e.g. "must be Admin AND have X"). Set this to
+ *   true to instead pass if EITHER check passes on its own (e.g. "Admin OR anyone with the group:view_analytics
+ *   permission" — lets a role like Group Admin, which will never hold the 'Admin' role name, in via permission
+ *   alone instead of being blocked by the role check before permissions are even considered).
  * @param {string} [props.accessDeniedMessage] - Custom message to display when access is denied
  */
 const ProtectedRoute = ({
@@ -19,37 +25,10 @@ const ProtectedRoute = ({
   requiredPermissions = [],
   requireAllRoles = false,
   requireAllPermissions = false,
+  requireEitherRoleOrPermission = false,
   accessDeniedMessage = "Access denied. You do not have the required privileges to access this page.",
 }) => {
   const { isAuthenticated, loading, user } = useAuth();
-
-  /**
-   * Checks if a user has all specific required permissions.
-   * @param {Object} user - The user profile object containing roles with permissions.
-   * @param {string[]} requiredPermissions - Array of strings representing needed permissions.
-   * @returns {boolean} - Returns true only if the user has ALL required permissions.
-   */
-  const hasRequiredPermissions = (user, requiredPermissions) => {
-    if (!user || !Array.isArray(user.roles)) {
-      console.warn("Invalid user object or roles array missing.");
-      return false;
-    }
-
-    // Extract permissions from user roles (role objects with permissions)
-    const userPermissions = user.roles.reduce((consolidated, roleObj) => {
-      if (roleObj && roleObj.permissions && typeof roleObj.permissions === 'object') {
-        return { ...consolidated, ...roleObj.permissions };
-      }
-      return consolidated;
-    }, {});
-
-    // Check if user has all required permissions
-    const hasAll = requiredPermissions.every((permissionKey) => {
-      return userPermissions[permissionKey] === true;
-    });
-
-    return hasAll;
-  }
 
   if (loading) {
     return (
@@ -74,52 +53,26 @@ const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Check roles if required
-  if (requiredRoles.length > 0) {
-    const userRoles = user?.roles || [];
+  const roleCheckApplies = requiredRoles.length > 0;
+  const permissionCheckApplies = requiredPermissions.length > 0;
 
-    // Extract role names from user roles (handle both string and object formats)
-    const userRoleNames = userRoles
-      .map((role) => {
-        if (typeof role === "string") {
-          return role;
-        }
-        return role?.name || "";
-      })
-      .filter(Boolean);
+  // hasRequiredRole (navMenuItems.jsx) is ANY-of by design — for ALL-of, check each individually.
+  const passesRoles = !roleCheckApplies || (requireAllRoles
+    ? requiredRoles.every((role) => hasRequiredRole(user, [role]))
+    : hasRequiredRole(user, requiredRoles));
+  const passesPermissions = !permissionCheckApplies
+    || hasRequiredPermission(user, requiredPermissions, requireAllPermissions);
 
-    let hasRequiredRole;
-    if (requireAllRoles) {
-      // User must have ALL required roles
-      hasRequiredRole = requiredRoles.every((requiredRole) =>
-        userRoleNames.includes(requiredRole)
-      );
-    } else {
-      // User needs ANY of the required roles
-      hasRequiredRole = requiredRoles.some((requiredRole) =>
-        userRoleNames.includes(requiredRole)
-      );
-    }
+  const denied = requireEitherRoleOrPermission && roleCheckApplies && permissionCheckApplies
+    ? !passesRoles && !passesPermissions // OR mode: only deny if NEITHER check passes
+    : !passesRoles || !passesPermissions; // default AND mode: deny if either applicable check fails
 
-    if (!hasRequiredRole) {
-      return (
-        <Box sx={{ p: 3 }}>
-          <Alert severity="error">{accessDeniedMessage}</Alert>
-        </Box>
-      );
-    }
-  }
-
-  // Check permissions if required
-  if (requiredPermissions.length > 0) {
-    const hasAllRequiredPermissions = hasRequiredPermissions(user, requiredPermissions);
-    if (!hasAllRequiredPermissions) {
-      return (
-        <Box sx={{ p: 3 }}>
-          <Alert severity="error">{accessDeniedMessage}</Alert>
-        </Box>
-      );
-    }
+  if (denied) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{accessDeniedMessage}</Alert>
+      </Box>
+    );
   }
 
   return children;

@@ -14,6 +14,7 @@ import {
   MenuItem,
   Menu,
   ListItemText,
+  Tooltip,
 } from "@mui/material";
 import { InfoOutlined as InfoIcon } from "@mui/icons-material";
 import PhoneNumberInput from "../../shared/PhoneNumberInput";
@@ -134,7 +135,40 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   Group Number <span style={{ color: "#d32f2f" }}>*</span>
-                  <InfoIcon sx={{ fontSize: 14, color: "#bdbdbd" }} />
+                  <Box component="span" onClick={(e) => e.stopPropagation()} sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <Tooltip
+                      PopperProps={{ sx: { zIndex: 999999 } }}
+                      title={
+                        <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                          If you don't have a group number, enter NA instead.
+                        </Typography>
+                      }
+                      placement="top"
+                      arrow
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            bgcolor: '#ffffff',
+                            color: '#1e3a8a',
+                            border: '1px solid #1e3a8a',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                            borderRadius: '6px',
+                            maxWidth: 260,
+                            p: 1,
+                            '& .MuiTooltip-arrow': {
+                              color: '#ffffff',
+                              '&::before': {
+                                border: '1px solid #1e3a8a',
+                                backgroundColor: '#ffffff',
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    >
+                      <InfoIcon sx={{ fontSize: 14, color: "#bdbdbd", cursor: "pointer", "&:hover": { color: "#2563eb" } }} />
+                    </Tooltip>
+                  </Box>
                 </Box>
               </TableCell>
               <TableCell
@@ -234,22 +268,57 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                   p: "0px 16px",
                 }}
               >
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={formData.healthPlan}
-                      onChange={(e) =>
-                        handleInputChange("healthPlan", e.target.checked)
-                      }
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
-                      Health Plan
-                    </Typography>
-                  }
-                />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={formData.healthPlan}
+                        onChange={(e) =>
+                          handleInputChange("healthPlan", e.target.checked)
+                        }
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+                        Health Plan
+                      </Typography>
+                    }
+                    sx={{ mr: 0 }}
+                  />
+                  <Tooltip
+                    PopperProps={{ sx: { zIndex: 999999 } }}
+                    title={
+                      <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                        Medical Insurance that covers Dental procedures
+                      </Typography>
+                    }
+                    placement="top"
+                    arrow
+                    componentsProps={{
+                      tooltip: {
+                        sx: {
+                          bgcolor: '#ffffff',
+                          color: '#1e3a8a',
+                          border: '1px solid #1e3a8a',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                          borderRadius: '6px',
+                          maxWidth: 260,
+                          p: 1,
+                          '& .MuiTooltip-arrow': {
+                            color: '#ffffff',
+                            '&::before': {
+                              border: '1px solid #1e3a8a',
+                              backgroundColor: '#ffffff',
+                            },
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <InfoIcon sx={{ fontSize: 14, color: "#bdbdbd", cursor: "pointer", "&:hover": { color: "#2563eb" }, ml: 0.2 }} />
+                  </Tooltip>
+                </Box>
               </TableCell>
             </TableRow>
             <TableRow>
@@ -270,7 +339,40 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   Assignment of Benefits{" "}
                   <span style={{ color: "#d32f2f" }}>*</span>
-                  <InfoIcon sx={{ fontSize: 14, color: "#bdbdbd" }} />
+                  <Box component="span" onClick={(e) => e.stopPropagation()} sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <Tooltip
+                      PopperProps={{ sx: { zIndex: 999999 } }}
+                      title={
+                        <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
+                          Assignment of Benefits is an authorization of payment. It indicates that the benefits paid from the insurance company will go directly to the office if pay to dentist is selected. It will also populate the signature of subscriber field on the claim form. If this is marked as non assignment the signature field on the claim form will be blank and payment will go directly to the patient.
+                        </Typography>
+                      }
+                      placement="top"
+                      arrow
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            bgcolor: '#ffffff',
+                            color: '#1e3a8a',
+                            border: '1px solid #1e3a8a',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                            borderRadius: '6px',
+                            maxWidth: 290,
+                            p: 1,
+                            '& .MuiTooltip-arrow': {
+                              color: '#ffffff',
+                              '&::before': {
+                                border: '1px solid #1e3a8a',
+                                backgroundColor: '#ffffff',
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    >
+                      <InfoIcon sx={{ fontSize: 14, color: "#bdbdbd", cursor: "pointer", "&:hover": { color: "#2563eb" } }} />
+                    </Tooltip>
+                  </Box>
                 </Box>
               </TableCell>
               <TableCell

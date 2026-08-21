@@ -30,6 +30,8 @@ const LedgerItemCard = ({
   setPrintAnchorEl,
   setPrintItem,
   onEOBClick,
+  onPrintClaimClick,
+  onReopenClaimClick,
   handleAddProcedureClick,
   handleAttachClick
 }) => {
@@ -122,9 +124,9 @@ const LedgerItemCard = ({
           {displayItem.isVoided ? null : (
             <Stack direction="row" spacing={2} sx={{ ml: 2, alignItems: 'center' }}>
               <Box component="img" src={ButtonScheduleIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleCalendarClick(displayItem, e); }} />
-              <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-              <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-              <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
+              <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); }} />
+              <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }} />
+              <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
             </Stack>
           )}
         </Box>
@@ -163,8 +165,10 @@ const LedgerItemCard = ({
                 onEOBClick={onEOBClick}
                 voidData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment, isGrouped: detail.isGrouped, isPayment: detail.isPayment }}
                 editData={{ id: detail.id, title: detail.title, amount: detail.amount, date: displayItem.date, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
-                refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment }}
+                refreshData={{ idx, id: detail.id, invoiceId: displayItem.id, isAdjustment: displayItem.isAdjustment, isPayment: detail.isPayment }}
                 eobData={detail}
+                onPrintClaimClick={onPrintClaimClick}
+                onReopenClaimClick={onReopenClaimClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);
