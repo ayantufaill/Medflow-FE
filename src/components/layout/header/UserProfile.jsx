@@ -6,14 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import InitialsAvatar from '../../shared/InitialsAvatar';
 import { getRoleNames } from '../../../utils/auth-routing';
-import { navMenuItems, hasRequiredRole, BRANCH_SWITCH_ROLES } from '../../../config/navMenuItems';
+import { navMenuItems, hasRequiredRole, hasRequiredPermission, BRANCH_SWITCH_ROLES } from '../../../config/navMenuItems';
 import { useBranch } from '../../../hooks/redux';
 import {
   fetchClinicAnalytics,
   selectClinicAnalyticsData,
   selectClinicAnalyticsLoading,
 } from '../../../store/slices/clinicAnalyticsSlice';
-// comment added
+
 const UserProfile = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -33,9 +33,11 @@ const UserProfile = () => {
   // same role list/filter Sidebar.jsx uses, via the shared src/config/navMenuItems.js,
   // so this list can't silently drift out of sync with the real sidebar nav.
   const manageItems = navMenuItems.filter((item) => hasRequiredRole(user, item.requiredRoles));
-  // "Analytics" card links to the Admin-only /admin/analytics page, so only show it to
-  // users who could actually open that page.
-  const canViewAnalytics = hasRequiredRole(user, ['Admin']);
+  // "Analytics" card links to /admin/analytics, which now also admits Group Admins via
+  // their real `group:view_analytics` permission (see adminRoutes.jsx's adminOrPermission
+  // helper) — mirror that same Admin-OR-permission check here so this card doesn't show
+  // a link a Group Admin would then get an access-denied page from.
+  const canViewAnalytics = hasRequiredRole(user, ['Admin']) || hasRequiredPermission(user, ['group:view_analytics']);
   // No backend concept of per-employee branch assignment exists, so branch switching is
   // role-based like every other access check here — any staff role, not Patient portal.
   const canSwitchBranch = hasRequiredRole(user, BRANCH_SWITCH_ROLES);

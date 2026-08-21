@@ -55,6 +55,7 @@ import {
   selectProviderDropdownList,
   selectProviderDropdownLoading,
 } from "../../store/slices/providerSlice";
+import { useBranch } from "../../hooks/redux";
 
 const REFERRING_SOURCE_OPTIONS = [
   "Google",
@@ -89,6 +90,7 @@ const DEFAULT_VALUES = {
   ssn: "",
   preferredDentistId: "",
   preferredHygienistId: "",
+  branchId: "",
   mobileNumber: "",
   homePhoneNumber: "",
   patientCountry: "United States",
@@ -410,6 +412,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   const dispatch = useDispatch();
   const providers = useSelector(selectProviderDropdownList);
   const providersLoading = useSelector(selectProviderDropdownLoading);
+  const { branches, currentBranchId, fetchBranches: loadBranches } = useBranch();
 
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
@@ -461,6 +464,18 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
   useEffect(() => {
     dispatch(fetchAllProvidersForDropdown());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Default the new patient to whichever branch the front desk is currently
+  // working in, same as the appointment/room/provider forms — staff can still
+  // change it before submitting.
+  useEffect(() => {
+    if (currentBranchId) setValue("branchId", currentBranchId);
+  }, [currentBranchId, setValue]);
 
   const providerOptions = useMemo(
     () =>
@@ -583,6 +598,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
         values.preferredHygienistId === "null"
           ? ""
           : values.preferredHygienistId,
+      branchId: values.branchId || undefined,
       maritalStatus: values.maritalStatus,
       occupation: trimValue(values.occupation),
       employer: trimValue(values.employer) || trimValue(values.spouseEmployer),
@@ -662,6 +678,33 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
             </Box>
 
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {branches.length > 0 && (
+                <Controller
+                  name="branchId"
+                  control={control}
+                  render={({ field }) => (
+                    <OutlinedSelect
+                      {...field}
+                      SelectProps={{ displayEmpty: true }}
+                      sx={{
+                        width: 180,
+                        "& .MuiOutlinedInput-root": {
+                          height: "36px",
+                          backgroundColor: COLORS.SURFACE_CARD,
+                          borderColor: COLORS.BORDER,
+                        },
+                      }}
+                    >
+                      <MenuItem value="">Branch</MenuItem>
+                      {branches.map((b) => (
+                        <MenuItem key={b.id} value={b.id}>
+                          {b.name}
+                        </MenuItem>
+                      ))}
+                    </OutlinedSelect>
+                  )}
+                />
+              )}
               <Box
                 sx={{
                   display: "flex",

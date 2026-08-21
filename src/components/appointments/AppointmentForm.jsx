@@ -49,6 +49,7 @@ import { appointmentValidations } from '../../validations/appointmentValidations
 import { waitlistService } from '../../services/waitlist.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
+import { useBranch } from '../../hooks/redux';
 import { useDispatch } from 'react-redux';
 import { fetchAppointments, fetchAvailableSlots } from '../../store/slices/appointmentSlice';
 import { fetchPatientInsurances } from '../../store/slices/patientSlice';
@@ -88,12 +89,22 @@ const AppointmentForm = ({
   languages = [],
   onPatientSearch,
 }) => {
-  // ─── Redux cached dropdown data (fetched ONCE, shared across all forms) ───
+  // Branch picker — narrows the provider/room dropdowns below once selected.
+  // Optional: omitted, the backend derives the appointment's branch from its room.
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  const [selectedBranchId, setSelectedBranchId] = useState(initialData?.branchId || '');
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Redux cached dropdown data (fetched ONCE per branch, shared across all forms) ───
   const {
     providers,
     rooms,
     appointmentTypes,
-  } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true });
+  } = useDropdownData({ providers: true, rooms: true, appointmentTypes: true, branchId: selectedBranchId || null });
 
   const dispatch = useDispatch();
 
@@ -118,6 +129,7 @@ const AppointmentForm = ({
     control,
     reset,
     watch,
+    setValue,
     setError,
     clearErrors,
   } = useForm({
@@ -151,6 +163,14 @@ const AppointmentForm = ({
   const startTime = watch('startTime');
   const endTime = watch('endTime');
   const durationMinutes = watch('durationMinutes');
+
+  // Changing branch narrows the provider/room lists (see useDropdownData above) —
+  // clear any provider/room already picked, since it may not belong to the new branch.
+  const handleBranchChange = (newBranchId) => {
+    setSelectedBranchId(newBranchId);
+    setValue('providerId', '');
+    setValue('roomId', '');
+  };
 
   // Check for appointment conflicts and provider availability
   const checkAppointmentConflict = useCallback(
@@ -686,6 +706,7 @@ const AppointmentForm = ({
       chiefComplaint: sanitizeValue(formData.chiefComplaint) || undefined,
       notes: sanitizeValue(formData.notes) || undefined,
       roomId: sanitizeValue(formData.roomId) || undefined,
+      branchId: selectedBranchId || undefined,
       interpreterLanguage: formData.requiresInterpreter
         ? sanitizeValue(formData.interpreterLanguage) || undefined
         : undefined,
@@ -996,6 +1017,26 @@ const AppointmentForm = ({
               </Alert>
             </Grid>
           )}
+
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth>
+              <InputLabel id="branch-select-label">Branch</InputLabel>
+              <Select
+                labelId="branch-select-label"
+                label="Branch"
+                value={selectedBranchId}
+                onChange={(e) => handleBranchChange(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>Not specified</em>
+                </MenuItem>
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.id}>{branch.name}</MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>Narrows the Provider and Room lists below</FormHelperText>
+            </FormControl>
+          </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
             <Controller

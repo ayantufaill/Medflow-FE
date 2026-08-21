@@ -62,6 +62,18 @@ export const updateUser = createAsyncThunk(
   }
 );
 
+export const updateUserBranches = createAsyncThunk(
+  'user/updateUserBranches',
+  async ({ userId, branchIds }, { rejectWithValue }) => {
+    try {
+      const result = await userService.updateUserBranches(userId, branchIds);
+      return { userId, branchIds: result.branchIds || branchIds };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to reassign branch');
+    }
+  }
+);
+
 export const deleteUser = createAsyncThunk(
   'user/deleteUser',
   async (userId, { rejectWithValue }) => {
@@ -129,6 +141,8 @@ const initialState = {
   currentUser: null,
   currentUserLoading: false,
   currentUserError: null,
+  branchMutationLoading: false,
+  branchMutationError: null,
 };
 
 const userSlice = createSlice({
@@ -182,6 +196,24 @@ const userSlice = createSlice({
           state.list[index] = { ...state.list[index], ...user };
         }
       })
+      // updateUserBranches
+      .addCase(updateUserBranches.pending, (state) => {
+        state.branchMutationLoading = true;
+        state.branchMutationError = null;
+      })
+      .addCase(updateUserBranches.fulfilled, (state, action) => {
+        state.branchMutationLoading = false;
+        const { userId, branchIds } = action.payload;
+        const index = state.list.findIndex(u => u._id === userId || u.id === userId);
+        if (index !== -1) state.list[index] = { ...state.list[index], branchIds };
+        if (state.currentUser && (state.currentUser._id === userId || state.currentUser.id === userId)) {
+          state.currentUser = { ...state.currentUser, branchIds };
+        }
+      })
+      .addCase(updateUserBranches.rejected, (state, action) => {
+        state.branchMutationLoading = false;
+        state.branchMutationError = action.payload || 'Failed to reassign branch';
+      })
       // deleteUser
       .addCase(deleteUser.fulfilled, (state, action) => {
         const userId = action.payload;
@@ -229,5 +261,7 @@ export const selectUserList = (state) => state.user.list;
 export const selectUserListLoading = (state) => state.user.listLoading;
 export const selectCurrentUser = (state) => state.user.currentUser;
 export const selectCurrentUserLoading = (state) => state.user.currentUserLoading;
+export const selectUserBranchMutationLoading = (state) => state.user.branchMutationLoading;
+export const selectUserBranchMutationError = (state) => state.user.branchMutationError;
 
 export default userSlice.reducer;

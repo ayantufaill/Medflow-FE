@@ -31,6 +31,7 @@ import {
 import ReactPhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import { selectProviderList, selectProviderDropdownList, fetchAllProvidersForDropdown } from '../../store/slices/providerSlice';
+import { useBranch } from '../../hooks/redux';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
 import SectionContainer from '../practice-onboarding/practice-info/SectionContainer';
@@ -227,6 +228,7 @@ const buildDefaultValues = (provider) => {
     color:                provider?.color || '',
     openEdgeToken:        provider?.openEdgeToken || '',
     openDentalProviderId: provider?.openDentalProviderId || '',
+    branchIds:            Array.isArray(provider?.branchIds) ? provider.branchIds : [],
   };
 };
 
@@ -293,6 +295,12 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
   const allProviders = useMemo(() => {
     return providersFromDropdown.length > 0 ? providersFromDropdown : providersFromList;
   }, [providersFromDropdown, providersFromList]);
+
+  const { branches, fetchBranches: loadBranches } = useBranch();
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const currentProviderId = provider?._id || provider?.id;
   const assignedColorsMap = useMemo(() => {
@@ -434,6 +442,29 @@ const EditProviderForm = ({ formId, provider, onSubmit, loading }) => {
               >
                 <MenuItem value="" sx={{ fontSize: '0.85rem', color: '#9ca3af' }}><em>Select Specialty</em></MenuItem>
                 {SPECIALTIES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: '0.85rem' }}>{s}</MenuItem>)}
+              </TextField>
+            )} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <FormInputLabel label="Branches" />
+            <Controller name="branchIds" control={control} defaultValue={[]} render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || []}
+                sx={selectStyles}
+                SelectProps={{
+                  multiple: true,
+                  displayEmpty: true,
+                  IconComponent: KeyboardArrowDownIcon,
+                  MenuProps: dropdownMenuProps,
+                  renderValue: (selected) => selected.length === 0
+                    ? <span style={{ color: '#9ca3af' }}>Not assigned</span>
+                    : selected.map((id) => branches.find((b) => b.id === id)?.name || id).join(', '),
+                }}
+              >
+                {branches.map((b) => <MenuItem key={b.id} value={b.id} sx={{ fontSize: '0.85rem' }}>{b.name}</MenuItem>)}
               </TextField>
             )} />
           </Grid>

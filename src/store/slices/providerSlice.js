@@ -5,9 +5,9 @@ import { providerService } from '../../services/provider.service';
 
 export const fetchProviders = createAsyncThunk(
   'provider/fetchProviders',
-  async ({ page = 1, limit = 10, search = '', isActive = null, specialty = '' } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = '', isActive = null, specialty = '', branchId = null } = {}, { rejectWithValue }) => {
     try {
-      const result = await providerService.getAllProviders(page, limit, search, isActive, specialty);
+      const result = await providerService.getAllProviders(page, limit, search, isActive, specialty, '', branchId);
       return result;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch providers');
@@ -43,6 +43,18 @@ export const updateProvider = createAsyncThunk(
       return result;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to update provider');
+    }
+  }
+);
+
+export const updateProviderBranches = createAsyncThunk(
+  'provider/updateProviderBranches',
+  async ({ providerId, branchIds }, { rejectWithValue }) => {
+    try {
+      const result = await providerService.updateProviderBranches(providerId, branchIds);
+      return { providerId, branchIds: result.branchIds || branchIds };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to reassign branch');
     }
   }
 );
@@ -95,20 +107,22 @@ export const fetchProviderById = createAsyncThunk(
   }
 );
 
-// Fetch all providers for dropdowns (cached for a long time)
+// Fetch all providers for dropdowns (cached for a long time, per branch — a cached
+// "all branches" list must not be reused once a branchId filter is requested).
 export const fetchAllProvidersForDropdown = createAsyncThunk(
   'provider/fetchAllForDropdown',
-  async (_, { getState, rejectWithValue }) => {
-    // Check if we already have dropdown data cached
+  async (branchId = null, { getState, rejectWithValue }) => {
+    // Check if we already have dropdown data cached for this same branch filter
     const { provider } = getState();
-    if (provider.dropdownList.length > 0 && provider.dropdownLastFetched) {
+    const sameBranch = provider.dropdownBranchId === (branchId || null);
+    if (sameBranch && provider.dropdownList.length > 0 && provider.dropdownLastFetched) {
       const elapsed = Date.now() - provider.dropdownLastFetched;
       if (elapsed < 10 * 60 * 1000) return null; // Still fresh, skip
     }
     try {
       // Removed isActive: true filter to ensure all providers are shown, same as patient search fix
-      const result = await providerService.getAllProviders(1, 100, '', null);
-      return result.providers || [];
+      const result = await providerService.getAllProviders(1, 100, '', null, '', '', branchId);
+      return { providers: result.providers || [], branchId: branchId || null };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch providers');
     }
@@ -166,6 +180,7 @@ const initialState = {
   dropdownList: [],
   dropdownLoading: false,
   dropdownLastFetched: null,
+  dropdownBranchId: null,
 
   // Detail cache (by provider id)
   cache: {},
@@ -180,6 +195,9 @@ const initialState = {
   specialties: [],
   specialtiesLoading: false,
   specialtiesLastFetched: null,
+
+  branchMutationLoading: false,
+  branchMutationError: null,
 };
 
 const providerSlice = createSlice({
@@ -260,6 +278,25 @@ const providerSlice = createSlice({
         }
         state.cache[updated._id] = { data: updated, timestamp: Date.now() };
       })
+      .addCase(updateProviderBranches.pending, (state) => {
+        state.branchMutationLoading = true;
+        state.branchMutationError = null;
+      })
+      .addCase(updateProviderBranches.fulfilled, (state, action) => {
+        state.branchMutationLoading = false;
+        const { providerId, branchIds } = action.payload;
+        const idx = state.list.findIndex(p => p._id === providerId);
+        if (idx !== -1) state.list[idx] = { ...state.list[idx], branchIds };
+        const ddIdx = state.dropdownList.findIndex(p => p._id === providerId);
+        if (ddIdx !== -1) state.dropdownList[ddIdx] = { ...state.dropdownList[ddIdx], branchIds };
+        if (state.currentProvider && state.currentProvider._id === providerId) {
+          state.currentProvider = { ...state.currentProvider, branchIds };
+        }
+      })
+      .addCase(updateProviderBranches.rejected, (state, action) => {
+        state.branchMutationLoading = false;
+        state.branchMutationError = action.payload || 'Failed to reassign branch';
+      })
       .addCase(activateProvider.fulfilled, (state, action) => {
         const updatedId = action.payload._id;
         const idx = state.list.findIndex(p => p._id === updatedId);
@@ -304,7 +341,8 @@ const providerSlice = createSlice({
       })
       .addCase(fetchAllProvidersForDropdown.fulfilled, (state, action) => {
         if (action.payload !== null) {
-          state.dropdownList = action.payload;
+          state.dropdownList = action.payload.providers;
+          state.dropdownBranchId = action.payload.branchId;
           state.dropdownLastFetched = Date.now();
         }
         state.dropdownLoading = false;
@@ -366,5 +404,7 @@ export const selectCachedProviderById = (state, providerId) => {
 
 export const selectSpecialties = (state) => state.provider.specialties;
 export const selectSpecialtiesLoading = (state) => state.provider.specialtiesLoading;
+export const selectProviderBranchMutationLoading = (state) => state.provider.branchMutationLoading;
+export const selectProviderBranchMutationError = (state) => state.provider.branchMutationError;
 
 export default providerSlice.reducer;
