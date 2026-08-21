@@ -69,7 +69,7 @@ const PatientAdditionalDocumentsPage = () => {
   const [customFormSortMode, setCustomFormSortMode] = useState("category");
   const [signature, setSignature] = useState(null);
 
-  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [] });
+  const [uploadDialog, setUploadDialog] = useState({ open: false, files: [], source: null });
 
   const claimAttachments = documents.filter(d => d.category.includes('claim') || d.category === 'attachment');
   const consents = documents.filter(d => d.category.includes('consent'));
@@ -142,7 +142,7 @@ const PatientAdditionalDocumentsPage = () => {
     input.onchange = () => {
       const files = input.files;
       if (!files?.length || !patientId) return;
-      setUploadDialog({ open: true, files: Array.from(files) });
+      setUploadDialog({ open: true, files: Array.from(files), source: "additional" });
     };
     input.click();
   };
@@ -155,8 +155,14 @@ const PatientAdditionalDocumentsPage = () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("patientId", patientId);
-        formData.append("documentType", category || "other");
-        formData.append("documentName", name || file.name || `Additional document ${i + 1}`);
+        let docType = category || "other";
+        let docName = name || file.name || `Additional document ${i + 1}`;
+        if (uploadDialog.source === "custom_form") {
+          docType = category || "custom_form";
+          docName = name || file.name || `Custom form ${i + 1}`;
+        }
+        formData.append("documentType", docType);
+        formData.append("documentName", docName);
         await documentService.uploadDocument(formData);
       }
       await refreshDocuments();
@@ -223,32 +229,10 @@ const PatientAdditionalDocumentsPage = () => {
     input.type = "file";
     input.accept = "image/*,.pdf";
     input.multiple = true;
-    input.onchange = async () => {
+    input.onchange = () => {
       const files = input.files;
       if (!files?.length || !patientId) return;
-      try {
-        setUploading(true);
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("patientId", patientId);
-          formData.append("documentType", "custom_form");
-          formData.append("documentName", file.name || `Custom form ${i + 1}`);
-          await documentService.uploadDocument(formData);
-        }
-        await refreshDocuments();
-        showSnackbar(`Uploaded ${files.length} custom form document(s)`, "success");
-      } catch (err) {
-        showSnackbar(
-          err?.response?.data?.error?.message ||
-            err?.response?.data?.message ||
-            "Failed to upload custom form document",
-          "error",
-        );
-      } finally {
-        setUploading(false);
-      }
+      setUploadDialog({ open: true, files: Array.from(files), source: "custom_form" });
     };
     input.click();
   };

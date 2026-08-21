@@ -1,7 +1,7 @@
 import { Box, Typography, Divider, Button, TextField, IconButton } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 import ChecklistRow from './ChecklistRow';
 
 const ChecklistCategoryList = ({
@@ -64,9 +64,9 @@ const ChecklistCategoryList = ({
                 handleDeleteCategory(category);
               }}
               size="small"
-              sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)' } }}
+              sx={{ p: 0.5 }}
             >
-              <DeleteIcon fontSize="small" />
+              <img src={DeleteSvg} alt="Delete" width="16" height="16" style={{ opacity: 0.7 }} onMouseOver={(e) => e.currentTarget.style.opacity = 1} onMouseOut={(e) => e.currentTarget.style.opacity = 0.7} />
             </IconButton>
           </Box>
           

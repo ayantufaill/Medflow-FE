@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Box, Typography, Checkbox, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TableFooter, Paper
+  TableContainer, TableHead, TableRow, TableFooter, Paper, Tooltip
 } from '@mui/material';
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 import NoteAddOutlinedIcon from '@mui/icons-material/NoteAddOutlined';
 
 const getFlagColors = (idx) => {
@@ -11,6 +13,15 @@ const getFlagColors = (idx) => {
 };
 
 const PatientAgingReportTable = ({ tableId = "patient-aging-table", loading, reportData, agingBuckets, hidePatientNames, totals, showFlags, showPaymentPlan }) => {
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+
+  const resolveFlagColor = (flagVal) => {
+    const found = globalFlags.find(f => f.id === flagVal);
+    if (found) return { color: found.color, name: found.name };
+    return { color: flagVal, name: 'Flag' };
+  };
+
   const firstColSpan = 1 + (showFlags ? 1 : 0) + (hidePatientNames ? 0 : 1); // Checkbox + Flags + Patient Name
   const rightColSpan = 4 + (showPaymentPlan ? 1 : 0); // Owings + PaymentPlan + Credit + Billed + Notes
   return (
@@ -50,9 +61,14 @@ const PatientAgingReportTable = ({ tableId = "patient-aging-table", loading, rep
                 {showFlags && (
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                      {(row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx)).map((color, i) => (
-                         <Box key={i} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0 }} />
-                      ))}
+                      {(row.flags && row.flags.length > 0 ? row.flags : getFlagColors(idx)).map((flagVal, i) => {
+                        const { color, name } = resolveFlagColor(flagVal);
+                        return (
+                          <Tooltip key={i} title={name} arrow placement="top">
+                            <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: color, flexShrink: 0, cursor: 'pointer' }} />
+                          </Tooltip>
+                        );
+                      })}
                     </Box>
                   </TableCell>
                 )}

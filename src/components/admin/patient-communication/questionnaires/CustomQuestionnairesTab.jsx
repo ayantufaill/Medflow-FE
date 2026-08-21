@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, Grid, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
-import { MoreVert as MoreVertIcon, AssignmentOutlined as AssignmentIcon, EditOutlined as EditIcon, DeleteOutline as DeleteIcon } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, AssignmentOutlined as AssignmentIcon } from '@mui/icons-material';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 import EmptyStateIllustration from './EmptyStateIllustration';
 import { communicationService } from '../../../../services/communication.service';
 
@@ -161,13 +163,13 @@ const CustomQuestionnairesTab = ({ questionnaires, onOpenCreateModal, onOpenCust
       >
         <MenuItem onClick={handleEdit} sx={{ py: 1.5, px: 2 }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <EditIcon sx={{ fontSize: '1.1rem', color: '#64748b' }} />
+            <img src={EditSvg} alt="Edit" width="16" height="16" style={{ opacity: 0.7 }} />
           </ListItemIcon>
           <ListItemText primary="Edit" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500, color: '#1E293B' }} />
         </MenuItem>
         <MenuItem onClick={handleDelete} sx={{ py: 1.5, px: 2, '&:hover': { bgcolor: '#fef2f2' } }}>
           <ListItemIcon sx={{ minWidth: 32 }}>
-            <DeleteIcon sx={{ fontSize: '1.1rem', color: '#ef4444' }} />
+            <img src={DeleteSvg} alt="Delete" width="16" height="16" />
           </ListItemIcon>
           <ListItemText primary="Delete" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500, color: '#ef4444' }} />
         </MenuItem>

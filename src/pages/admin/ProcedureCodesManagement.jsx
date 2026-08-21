@@ -42,13 +42,13 @@ import {
   ChevronRight as ChevronRightIcon,
   Check as CheckIcon,
   Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   DescriptionOutlined as DescriptionIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
+import DeleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
+import EditSvg from '../../assets/practicesetupicon/editicon.svg';
 import { feeService } from '../../services/fee.service';
 
 import { radius, fontSize, fontWeight } from '../../constants/styles';
@@ -1222,9 +1222,15 @@ const ProcedureCodesManagement = () => {
             </Select>
           </Box>
           <Box sx={{ width: '7%', display: 'flex', justifyContent: 'center' }}>
-            <DeleteIcon 
+            <img 
+              src={DeleteSvg}
+              alt="Delete"
+              width="16"
+              height="16"
               onClick={() => handleDeleteProcedure(catIdx, itemIdx, pIdx)}
-              sx={{ color: '#d32f2f', fontSize: '1rem', cursor: 'pointer' }} 
+              style={{ cursor: 'pointer', opacity: 0.9 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.9}
             />
           </Box>
         </Box>
@@ -1332,18 +1338,26 @@ const ProcedureCodesManagement = () => {
                 sx={{ color: '#48bb78', fontSize: '1.2rem', cursor: 'pointer' }} 
               />
             ) : (
-              <EditIcon 
+              <img 
+                src={EditSvg}
+                alt="Edit"
+                width="16"
+                height="16"
                 onClick={(e) => { e.stopPropagation(); setEditingPath(`${catIdx}-${itemIdx}`); }} 
-                sx={{ color: '#4a90e2', fontSize: '1rem', cursor: 'pointer' }} 
+                style={{ cursor: 'pointer', opacity: 0.7 }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                onMouseOut={(e) => e.currentTarget.style.opacity = 0.7}
               />
             )}
-            <DeleteIcon 
+            <img 
+              src={DeleteSvg}
+              alt="Delete"
+              width="18"
+              height="18"
               onClick={(e) => { e.stopPropagation(); handleDeletePowerCode(catIdx, itemIdx); }} 
-              sx={{ 
-                color: '#d32f2f', 
-                fontSize: '1rem', 
-                cursor: 'pointer',
-              }} 
+              style={{ cursor: 'pointer', opacity: 0.9 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.9}
             />
           </Box>
         </Box>

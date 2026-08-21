@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Typography, Select, MenuItem } from '@mui/material';
 import ScheduleConfigCard from './ScheduleConfigCard';
 import ApptStatusColorIcon from '../../../../assets/scheduleconfigurationicon/appointmentstatuscolor.svg';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
 
 const INITIAL_STATUS_COLORS = [
   { name: "Unconfirmed", color1: "#f3f4f6", color2: "", anim: "None" },
@@ -148,9 +149,16 @@ const AppointmentStatusColors = ({ statusColors, setStatusColors }) => {
                         <Typography onClick={handleCancelEdit} sx={{ color: '#ef4444', fontSize: '12px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>Cancel</Typography>
                       </Box>
                     ) : (
-                      <Typography onClick={() => handleEditClick(index, row)} sx={{ color: '#3b82f6', fontSize: '12px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
-                        Edit
-                      </Typography>
+                      <Box 
+                        onClick={() => handleEditClick(index, row)}
+                        sx={{ 
+                          width: 24, height: 24, borderRadius: '4px', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          mx: 'auto', cursor: 'pointer', '&:hover': { bgcolor: '#f3f4f6' }
+                        }}
+                      >
+                        <img src={EditSvg} alt="edit" width="16" height="16" />
+                      </Box>
                     )}
                   </TableCell>
                 </TableRow>

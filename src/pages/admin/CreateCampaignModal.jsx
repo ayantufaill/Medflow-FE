@@ -37,23 +37,52 @@ const CreateCampaignModal = ({ open, onClose, onCreate }) => {
         } 
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ bgcolor: '#F0F5FF', p: 1, borderRadius: 2, display: 'flex' }}>
-            <MegaphoneIcon sx={{ fontSize: '1.5rem', color: '#3B82F6' }} />
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <MegaphoneIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
           </Box>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-            Create New Campaign
-          </Typography>
+          <Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 600, 
+              fontSize: '16px', 
+              lineHeight: '24px', 
+              letterSpacing: '-0.4px', 
+              color: '#111' 
+            }}>
+              Create New Campaign
+            </Typography>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 400, 
+              fontSize: '11.5px', 
+              lineHeight: '17.25px', 
+              color: '#6B7280' 
+            }}>
+              Set up a new email campaign for your patients
+            </Typography>
+          </Box>
         </Box>
         <IconButton onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
-      
-      <DialogContent sx={{ p: 4, pt: 3 }}>
+      <DialogContent sx={{ p: 4, pt: '32px !important', bgcolor: '#ffffff' }}>
         <Box sx={{ display: 'flex', gap: 2, width: '100%', mb: 4, alignItems: 'flex-end' }}>
           <Box sx={{ flex: 1 }}>
             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>Campaign Name*</Typography>

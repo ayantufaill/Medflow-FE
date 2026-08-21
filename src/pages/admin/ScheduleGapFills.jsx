@@ -21,6 +21,7 @@ import {
 
 import { radius, fontSize, fontWeight } from '../../constants/styles';
 import { COLORS } from '../../constants/colors';
+import DeleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
 
 import { useNavigate } from 'react-router-dom';
 import { communicationService } from '../../services/communication.service';
@@ -328,7 +329,9 @@ const ScheduleGapFills = () => {
                   <Box sx={{ bgcolor: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', fontWeight: 700, px: 1.5, py: 0.4, borderRadius: 1.5 }}>DEFAULT</Box>
                 </Box>
                 {isEditing && (
-                  <Typography key={`delete-${notif.id}`} sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#EF4444', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }} onClick={() => handleDeleteNotification(notif.id, notif.isNew)}>Delete Notification</Typography>
+                  <IconButton key={`delete-${notif.id}`} onClick={() => handleDeleteNotification(notif.id, notif.isNew)} size="small" sx={{ p: 0.5 }}>
+                    <img src={DeleteSvg} alt="Delete" width="18" height="18" />
+                  </IconButton>
                 )}
               </Box>
 

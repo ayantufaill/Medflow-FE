@@ -12,11 +12,14 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { COLORS } from '../../constants/colors';
-import FlagCommunicationColumn from './FlagCommunicationColumn';
-import FlagBillingPatientColumn from './FlagBillingPatientColumn';
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
+import FlagOption from './FlagOption';
 
 const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
   const [flags, setFlags] = useState({});
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
 
   useEffect(() => {
     if (open) {
@@ -29,13 +32,6 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
       setFlags(initialMap);
     }
   }, [open, initialFlags]);
-
-  const handleFlagToggle = (flagLabel) => {
-    setFlags(prev => ({
-      ...prev,
-      [flagLabel]: !prev[flagLabel]
-    }));
-  };
 
   const activeFlagsCount = Object.values(flags).filter(Boolean).length;
 
@@ -84,9 +80,47 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ px: '20px', pt: '16px !important', pb: '16px', bgcolor: '#f8fafc', display: 'flex', gap: '16px' }}>
-        <FlagCommunicationColumn flags={flags} handleFlagToggle={handleFlagToggle} />
-        <FlagBillingPatientColumn flags={flags} handleFlagToggle={handleFlagToggle} />
+      <DialogContent sx={{ px: '20px', pt: '16px !important', pb: '16px', bgcolor: '#f8fafc', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        {(() => {
+          // Group global flags by category
+          const grouped = globalFlags.reduce((acc, flag) => {
+            const cat = flag.category || 'Uncategorized';
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(flag);
+            return acc;
+          }, {});
+
+          return Object.entries(grouped).map(([category, catFlags]) => (
+            <Box key={category} sx={{ 
+              flex: '1 1 calc(50% - 8px)', 
+              minWidth: '250px',
+              border: `1px solid ${COLORS.BORDER_LIGHT}`, 
+              borderRadius: '12px', 
+              backgroundColor: COLORS.WHITE, 
+              p: '16px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <Typography sx={{ fontWeight: 600, mb: 1.5, color: COLORS.TEXT_PRIMARY, fontSize: '14px' }}>
+                {category}
+              </Typography>
+              {catFlags.map(flag => (
+                <FlagOption
+                  key={flag.id}
+                  label={flag.name}
+                  color={flag.color}
+                  checked={flags[flag.name]}
+                  onChange={() => {
+                    setFlags(prev => ({
+                      ...prev,
+                      [flag.name]: !prev[flag.name]
+                    }));
+                  }}
+                />
+              ))}
+            </Box>
+          ));
+        })()}
       </DialogContent>
 
       <DialogActions sx={{ p: '12px 20px', bgcolor: COLORS.SURFACE_CARD, justifyContent: 'space-between', borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>

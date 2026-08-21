@@ -12,7 +12,7 @@ const AuditHistoryFooter = ({ onClose }) => {
         borderTop: `1px solid ${COLORS.BORDER}`,
         display: "flex",
         justifyContent: "flex-end",
-        backgroundColor: COLORS.SURFACE_FOOTER,
+        backgroundColor: '#fff',
       }}
     >
       <Button

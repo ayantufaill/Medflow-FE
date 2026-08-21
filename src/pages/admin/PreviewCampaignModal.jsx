@@ -14,6 +14,7 @@ import {
   Instagram as InstagramIcon,
   Language as GlobeIcon,
   Close as CloseIcon,
+  Campaign as MegaphoneIcon,
 } from '@mui/icons-material';
 
 const PreviewCampaignModal = ({ open, onClose, campaign }) => {
@@ -31,18 +32,52 @@ const PreviewCampaignModal = ({ open, onClose, campaign }) => {
         } 
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1E293B' }}>
-          Preview Campaign
-        </Typography>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        py: 2, 
+        px: 3,
+        bgcolor: '#F3F8FD',
+        borderBottom: '1px solid #E5E9F2',
+        m: 0
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Icon badge */}
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '10px', backgroundColor: '#e2ebfc',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            <MegaphoneIcon sx={{ fontSize: '20px', color: '#2563EB' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 600, 
+              fontSize: '16px', 
+              lineHeight: '24px', 
+              letterSpacing: '-0.4px', 
+              color: '#111' 
+            }}>
+              Preview Campaign
+            </Typography>
+            <Typography sx={{ 
+              fontFamily: 'Inter, sans-serif', 
+              fontWeight: 400, 
+              fontSize: '11.5px', 
+              lineHeight: '17.25px', 
+              color: '#6B7280' 
+            }}>
+              Preview how the campaign will appear to patients
+            </Typography>
+          </Box>
+        </Box>
         <IconButton onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#1E293B', bgcolor: '#F8FAFC' } }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
-      <Divider sx={{ borderColor: '#E5E9F2' }} />
 
-      <DialogContent sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: '#F8FAFC' }}>
+      <DialogContent sx={{ p: 4, pt: '32px !important', display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: '#ffffff' }}>
         
         {/* Email Preview Container */}
         <Box sx={{ width: '100%', maxWidth: 600, bgcolor: '#FFFFFF', borderRadius: 2, border: '1px solid #E5E9F2', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>

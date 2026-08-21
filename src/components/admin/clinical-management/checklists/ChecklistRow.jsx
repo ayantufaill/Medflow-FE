@@ -1,9 +1,9 @@
 import { Box, Typography, Checkbox, FormControlLabel } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CopyIcon from '@mui/icons-material/ContentCopy';
-import SettingsIcon from '@mui/icons-material/Settings';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import CopySvg from '../../../../assets/practicesetupicon/documents.svg';
+import SettingsSvg from '../../../../assets/clinicalicons/setting icon.svg';
 import { ChecklistIcon } from './ChecklistIcons';
 import ChecklistItemsTable from './ChecklistItemsTable';
 
@@ -100,14 +100,34 @@ const ChecklistRow = ({
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 80 }} onClick={(e) => e.stopPropagation()}>
-            <CopyIcon 
+            <img 
+              src={CopySvg}
+              alt="Copy"
+              width="18"
+              height="18"
               onClick={() => handleCopyChecklistToClipboard(item)}
-              sx={{ color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', '&:hover': { color: '#3b82f6', transform: 'scale(1.1)' }, transition: 'all 0.2s' }} 
+              style={{ cursor: 'pointer', opacity: 0.6 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.6}
             />
-            <SettingsIcon sx={{ color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', '&:hover': { color: '#334155', transform: 'scale(1.1)' }, transition: 'all 0.2s' }} />
-            <DeleteIcon 
+            <img 
+              src={SettingsSvg}
+              alt="Settings"
+              width="18"
+              height="18"
+              style={{ cursor: 'pointer', opacity: 0.6 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.6}
+            />
+            <img 
+              src={DeleteSvg}
+              alt="Delete"
+              width="18"
+              height="18"
               onClick={() => handleDeleteChecklist(category, idx)}
-              sx={{ color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer', '&:hover': { color: '#ef4444', transform: 'scale(1.1)' }, transition: 'all 0.2s' }} 
+              style={{ cursor: 'pointer', opacity: 0.6 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+              onMouseOut={(e) => e.currentTarget.style.opacity = 0.6}
             />
           </Box>
         </Box>

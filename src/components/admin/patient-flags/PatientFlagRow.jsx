@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Stack, IconButton } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import EditSvg from '../../../assets/practicesetupicon/editicon.svg';
+import DeleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
 const PatientFlagRow = ({ flag, onEdit, onDelete }) => (
   <Box
@@ -33,18 +33,18 @@ const PatientFlagRow = ({ flag, onEdit, onDelete }) => (
       <IconButton
         size="small"
         onClick={() => onEdit(flag)}
-        sx={{ color: '#2563eb' }}
-        aria-label={`Edit ${flag.name}`}  // <-- FIXED
+        sx={{ p: 0.5 }}
+        aria-label={`Edit ${flag.name}`}
       >
-        <EditIcon fontSize="small" />
+        <img src={EditSvg} alt="edit" width="16" height="16" />
       </IconButton>
       <IconButton
         size="small"
         onClick={() => onDelete(flag.id)}
-        sx={{ color: '#ef4444' }}
-        aria-label={`Delete ${flag.name}`}  // <-- FIXED
+        sx={{ p: 0.5 }}
+        aria-label={`Delete ${flag.name}`}
       >
-        <DeleteIcon fontSize="small" />
+        <img src={DeleteSvg} alt="delete" width="16" height="16" />
       </IconButton>
     </Stack>
   </Box>
