@@ -85,6 +85,7 @@ const AddNewPatientAppointmentForm = ({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [computedVisitType, setComputedVisitType] = useState("");
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
 
   const occupiedRoomIds = useMemo(() => {
@@ -644,6 +645,7 @@ const AddNewPatientAppointmentForm = ({
         procedureTags: selectedProcedureTags,
         operatoryId: roomId || undefined,
       },
+      isNewRecall: !!computedVisitType,
     };
   };
 
@@ -753,6 +755,54 @@ const AddNewPatientAppointmentForm = ({
     }
   };
 
+  const handleComputeNextVisit = () => {
+    let addMonths = 0;
+    let addWeeks = 0;
+    let fallback = false;
+
+    // Check procedures
+    const hasPerio = procedures.some(p => p.code === 'D4910');
+    const hasProphy = procedures.some(p => ['D1110', 'D1120', 'D0120'].includes(p.code));
+    
+    if (hasPerio) {
+      addMonths = 3;
+    } else if (hasProphy) {
+      addMonths = 6;
+    } else if (procedures.length > 0) {
+      addWeeks = 2;
+    } else {
+      fallback = true;
+    }
+
+    if (fallback) {
+      setToastMessage("No standard recall procedures found.");
+      return;
+    }
+
+    let newDate = dayjs(apptDate);
+    if (addMonths > 0) {
+      newDate = newDate.add(addMonths, 'month');
+    } else if (addWeeks > 0) {
+      newDate = newDate.add(addWeeks, 'week');
+    }
+
+    setApptDate(newDate);
+    
+    let msgType = "";
+    if (addMonths === 6) msgType = "Recall";
+    else if (addMonths === 3) msgType = "Maintenance";
+    else msgType = "Follow-up";
+    setComputedVisitType(msgType);
+
+    let msg = `Next visit computed: ${newDate.format('MMM D, YYYY')}`;
+    if (addMonths === 6) msg += " (6 month recall)";
+    else if (addMonths === 3) msg += " (3 month perio recall)";
+    else msg += " (2 week follow-up)";
+    
+    setToastMessage(msg);
+    setIsRescheduling(true);
+  };
+
   const fName = patient?.firstName || patient?.FName || "";
   const lName = patient?.lastName || patient?.LName || "";
   const patientDisplayName = patient
@@ -822,6 +872,7 @@ const AddNewPatientAppointmentForm = ({
             setProcedures={setProcedures}
             providers={providers}
             showExtendedOptions={showExtendedOptions}
+            onComputeNextVisit={handleComputeNextVisit}
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling}
             setIsRescheduling={setIsRescheduling}
@@ -874,6 +925,7 @@ const AddNewPatientAppointmentForm = ({
           isEditMode={isEditMode}
           readOnly={isEditMode && !isRescheduling}
           onLabOrderClick={() => setIsLabOrderOpen(true)}
+          computedVisitType={computedVisitType}
         />
       </Box>
 
@@ -891,8 +943,8 @@ const AddNewPatientAppointmentForm = ({
         />
       )}
 
-      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={() => setToastMessage("")} severity="info" sx={{ width: '100%' }}>
+      <Snackbar open={!!toastMessage} autoHideDuration={3000} onClose={() => setToastMessage("")} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+        <Alert onClose={() => setToastMessage("")} severity="success" sx={{ width: '100%' }}>
           {toastMessage}
         </Alert>
       </Snackbar>

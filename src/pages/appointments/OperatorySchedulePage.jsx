@@ -921,7 +921,7 @@ const OperatorySchedulePage = () => {
         patientName: formData.patientName,
       };
 
-      if (editingAppointment) {
+      if (editingAppointment && !formData.isNewRecall) {
         let apptId = editingAppointment._id || editingAppointment.id;
         if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
           apptId = apptId.replace('appt-', '');

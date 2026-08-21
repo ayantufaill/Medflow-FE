@@ -13,6 +13,15 @@ import {
 } from '@mui/icons-material';
 import apiClient from '../../../config/api';
 
+import LabOrderHeader from '../schedule/lab-order/LabOrderHeader';
+import ActiveProceduresTable from '../schedule/lab-order/ActiveProceduresTable';
+import LabOrderDropdowns from '../schedule/lab-order/LabOrderDropdowns';
+import RichTextEditor from '../schedule/lab-order/RichTextEditor';
+import DueDateSelector from '../schedule/lab-order/DueDateSelector';
+import NotesAndSignature from '../schedule/lab-order/NotesAndSignature';
+import Enclosures from '../schedule/lab-order/Enclosures';
+import LabOrderFooter from '../schedule/lab-order/LabOrderFooter';
+
 const DEFAULT_LABS = [
   { _id: '1', name: 'Dental Arts Lab' },
   { _id: '2', name: 'Glidewell Laboratories' },
@@ -57,6 +66,14 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastSeverity, setToastSeverity] = useState('info');
+  
+  // Rich Text Editor toolbar state
+  const [activeBlock, setActiveBlock] = useState('P');
+  const [activeSize, setActiveSize] = useState('3');
+  const [activeFamily, setActiveFamily] = useState('Inter');
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [alignMode, setAlignMode] = useState('left');
 
   // Canvas drawing state
   const canvasRef = useRef(null);
@@ -108,12 +125,21 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
     }
   }, [open]);
 
+  const editorRef = useRef(null);
+
   // Handle template change
   const handleTemplateChange = (e) => {
     const selected = e.target.value;
     setTemplate(selected);
     if (TEMPLATES[selected] !== undefined && TEMPLATES[selected] !== '') {
-      setEditorText(prev => prev ? `${prev}\n\n${TEMPLATES[selected]}` : TEMPLATES[selected]);
+      const templateHtml = TEMPLATES[selected].replace(/\n/g, '<br>');
+      setEditorText(prev => {
+        const newText = prev ? `${prev}<br><br>${templateHtml}` : templateHtml;
+        if (editorRef.current) {
+          editorRef.current.innerHTML = newText;
+        }
+        return newText;
+      });
     }
   };
 
@@ -187,9 +213,50 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
     }
   };
 
+  const savedSelection = useRef(null);
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0 && editorRef.current && editorRef.current.contains(selection.anchorNode)) {
+      savedSelection.current = selection.getRangeAt(0);
+      
+      // Update formatting states
+      setIsBold(document.queryCommandState('bold'));
+      setIsItalic(document.queryCommandState('italic'));
+      
+      if (document.queryCommandState('justifyCenter')) setAlignMode('center');
+      else if (document.queryCommandState('justifyRight')) setAlignMode('right');
+      else setAlignMode('left');
+      
+      let block = document.queryCommandValue('formatBlock') || 'P';
+      if (block.toLowerCase().includes('h1')) block = 'H1';
+      else if (block.toLowerCase().includes('h2')) block = 'H2';
+      else if (block.toLowerCase().includes('h3')) block = 'H3';
+      else block = 'P';
+      setActiveBlock(block);
+      
+      const size = document.queryCommandValue('fontSize') || '3';
+      setActiveSize(size.toString());
+      
+      let family = document.queryCommandValue('fontName') || 'Inter';
+      family = family.replace(/['"]/g, '');
+      if (family) setActiveFamily(family);
+    }
+  };
+
   // Rich Text formatting button handler
-  const handleInsertFormat = (formatTag) => {
-    setEditorText(prev => `${prev}\n[${formatTag}]`);
+  const handleInsertFormat = (command, value = null) => {
+    if (savedSelection.current) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedSelection.current);
+    }
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      editorRef.current.focus();
+      setEditorText(editorRef.current.innerHTML);
+      saveSelection(); // update saved selection after format
+    }
   };
 
   // Save / Create Slip Handler
@@ -257,294 +324,64 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '12px', border: "1px solid #e0e5eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" } }}>
       
-      {/* Header matching AppointmentModalHeader */}
-      <Box sx={{
-        display: "flex", alignItems: "center", gap: "12px",
-        px: "20px", py: "14px",
-        borderBottom: "1px solid #e0e5eb", flexShrink: 0,
-        backgroundColor: "#f3f8fd",
-      }}>
-        <Box sx={{
-          width: "36px", height: "36px", borderRadius: "8px",
-          backgroundColor: "#eff6ff",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-          <ScienceOutlined sx={{ fontSize: "20px", color: "#2262ef" }} />
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
-          <Typography sx={{
-            fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f"
-          }}>
-            Lab Order
-          </Typography>
-          <Typography sx={{
-            color: "#5c646f", fontFamily: "Inter", fontSize: "11px", mt: 0.5
-          }}>
-            Create and attach a new lab slip for this appointment.
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small" sx={{ color: "#6b7280" }}>
-          <Close sx={{ fontSize: "18px" }} />
-        </IconButton>
-      </Box>
+      <LabOrderHeader onClose={onClose} />
       
       <Box sx={{ p: 4, pt: 3 }}>
-        {/* Active Procedure Table */}
-        <Box sx={{ mb: 4, width: '100%', maxWidth: '500px' }}>
-          <Box sx={{ display: 'flex', borderBottom: '1px solid #e5e7eb', pb: 1, mb: 1 }}>
-            <Typography sx={{ width: '60%', fontWeight: 600, color: '#6b7280', fontSize: '11px', fontFamily: 'Inter', textTransform: 'uppercase' }}>Active Procedure</Typography>
-            <Typography sx={{ width: '40%', fontWeight: 600, color: '#6b7280', fontSize: '11px', fontFamily: 'Inter', textTransform: 'uppercase' }}>Procedure Cost</Typography>
-          </Box>
-          {proceduresList.length === 0 ? (
-            <Typography sx={{ fontSize: '13px', color: '#6b7280', py: 1, fontFamily: 'Inter' }}>No active procedures.</Typography>
-          ) : (
-            proceduresList.map((proc, idx) => (
-              <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #f3f4f6', pb: 1 }}>
-                <Typography sx={{ width: '60%', color: '#09121f', fontSize: '13px', fontWeight: 500, fontFamily: 'Inter' }}>
-                  {proc.treatment || 'Procedure'} {proc.code && proc.code !== 'TBD' ? `(${proc.code})` : ''}
-                </Typography>
-                <Box sx={{ width: '40%', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <TextField 
-                    size="small" 
-                    value={proc.charge}
-                    onChange={(e) => handleProcedureChargeChange(idx, e.target.value)}
-                    sx={{ width: '90px', '& .MuiOutlinedInput-root': { height: '30px', fontSize: '13px', fontFamily: 'Inter', borderRadius: '6px' } }} 
-                  />
-                  <IconButton size="small" onClick={() => handleDeleteProcedure(idx)} sx={{ color: '#ef4444', p: 0.5 }}>
-                    <DeleteOutline fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-            ))
-          )}
-        </Box>
+        <ActiveProceduresTable 
+          proceduresList={proceduresList}
+          handleProcedureChargeChange={handleProcedureChargeChange}
+          handleDeleteProcedure={handleDeleteProcedure}
+        />
         
-        {/* Dropdowns */}
-        <Box sx={{ mb: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <Box>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, mb: 1, color: '#374151', fontFamily: 'Inter' }}>Choose Lab <span style={{ color: '#ef4444' }}>*</span></Typography>
-            <FormControl size="small" sx={{ width: '250px' }}>
-              <Select value={selectedLab} onChange={(e) => setSelectedLab(e.target.value)} sx={{ fontSize: '13px', height: '36px', fontFamily: 'Inter', borderRadius: '8px' }}>
-                {labs.map(lab => (
-                  <MenuItem key={lab._id} value={lab._id} sx={{ fontSize: '13px', fontFamily: 'Inter' }}>
-                    {lab.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          
-          <Box>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, mb: 1, color: '#374151', fontFamily: 'Inter' }}>Choose Template</Typography>
-            <FormControl size="small" sx={{ width: '250px' }}>
-              <Select value={template} onChange={handleTemplateChange} sx={{ fontSize: '13px', height: '36px', fontFamily: 'Inter', borderRadius: '8px' }}>
-                <MenuItem value="none" sx={{ fontSize: '13px', fontFamily: 'Inter' }}>None</MenuItem>
-                <MenuItem value="crown" sx={{ fontSize: '13px', fontFamily: 'Inter' }}>Crown Template</MenuItem>
-                <MenuItem value="denture" sx={{ fontSize: '13px', fontFamily: 'Inter' }}>Denture Template</MenuItem>
-                <MenuItem value="bridge" sx={{ fontSize: '13px', fontFamily: 'Inter' }}>Bridge Template</MenuItem>
-                <MenuItem value="implant" sx={{ fontSize: '13px', fontFamily: 'Inter' }}>Implant Crown Template</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Box>
+        <LabOrderDropdowns 
+          labs={labs}
+          selectedLab={selectedLab}
+          setSelectedLab={setSelectedLab}
+          template={template}
+          handleTemplateChange={handleTemplateChange}
+        />
         
-        {/* Rich Text Editor */}
-        <Box sx={{ border: '1px solid #d0d5dd', borderRadius: '8px', mb: 4, overflow: 'hidden' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1, borderBottom: '1px solid #d0d5dd', bgcolor: '#f9fafb', flexWrap: 'wrap' }}>
-             <Undo sx={{ fontSize: '18px', color: '#6b7280', cursor: 'pointer' }} onClick={() => handleInsertFormat('Undo')} />
-             <Redo sx={{ fontSize: '18px', color: '#6b7280', cursor: 'pointer' }} onClick={() => handleInsertFormat('Redo')} />
-             <Box sx={{ width: '1px', height: '16px', bgcolor: '#d0d5dd', mx: 0.5 }} />
-             <FormatBold sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Bold')} />
-             <FormatItalic sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Italic')} />
-             <FormatAlignLeft sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Align Left')} />
-             <FormatAlignCenter sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Align Center')} />
-             <FormatAlignRight sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Align Right')} />
-             <Box sx={{ width: '1px', height: '16px', bgcolor: '#d0d5dd', mx: 0.5 }} />
-             
-             <Typography sx={{ fontSize: '13px', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: 'Inter' }}>Paragraph ▾</Typography>
-             <Typography sx={{ fontSize: '13px', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: 'Inter' }}>10pt ▾</Typography>
-             <Typography sx={{ fontSize: '13px', color: '#374151', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: 'Inter' }}>Inter ▾</Typography>
-             <Box sx={{ width: '1px', height: '16px', bgcolor: '#d0d5dd', mx: 0.5 }} />
-             
-             <FormatColorText sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Color')} />
-             <Colorize sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Colorize')} />
-             <EmojiEmotionsOutlined sx={{ fontSize: '18px', color: '#374151', cursor: 'pointer' }} onClick={() => handleInsertFormat('Emoji')} />
-          </Box>
-          <TextField 
-            multiline 
-            minRows={5} 
-            fullWidth 
-            variant="standard" 
-            placeholder="Type lab order slip details or select a template..."
-            value={editorText}
-            onChange={(e) => setEditorText(e.target.value)}
-            InputProps={{ disableUnderline: true, sx: { p: 2, fontSize: '13px', fontFamily: 'Inter' } }}
-          />
-        </Box>
+        <RichTextEditor 
+          editorRef={editorRef}
+          editorText={editorText}
+          setEditorText={setEditorText}
+          saveSelection={saveSelection}
+          handleInsertFormat={handleInsertFormat}
+          activeBlock={activeBlock}
+          setActiveBlock={setActiveBlock}
+          activeSize={activeSize}
+          setActiveSize={setActiveSize}
+          activeFamily={activeFamily}
+          setActiveFamily={setActiveFamily}
+          isBold={isBold}
+          isItalic={isItalic}
+          alignMode={alignMode}
+        />
         
-        {/* Due Date */}
-        <Box sx={{ mb: 4 }}>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker 
-              label={<span style={{ fontFamily: 'Inter' }}>Due Date <span style={{ color: '#ef4444' }}>*</span></span>}
-              value={dueDate}
-              onChange={(newValue) => setDueDate(newValue)}
-              slotProps={{ 
-                textField: { 
-                  size: 'small', 
-                  sx: { width: '250px', '& .MuiOutlinedInput-root': { borderRadius: '8px', fontSize: '13px', fontFamily: 'Inter' } },
-                  InputLabelProps: { shrink: true, sx: { fontFamily: 'Inter' } }
-                } 
-              }}
-            />
-          </LocalizationProvider>
-          <Typography sx={{ color: '#22c55e', fontSize: '12px', mt: 1, fontFamily: 'Inter' }}>
-            Based on the Lab's turn around time the case should arrive on time
-          </Typography>
-        </Box>
+        <DueDateSelector dueDate={dueDate} setDueDate={setDueDate} />
         
-        {/* Instructions/Notes & Signature */}
-        <Box sx={{ display: 'flex', gap: 6, mb: 4, flexWrap: 'wrap' }}>
-          <Box sx={{ flex: 1, minWidth: '280px' }}>
-             <Typography sx={{ fontSize: '12px', fontWeight: 600, mb: 1, color: '#374151', fontFamily: 'Inter' }}>Instructions/Notes</Typography>
-             <TextField 
-                size="small" 
-                placeholder="Add Note..." 
-                fullWidth 
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(); }}
-                sx={{ '& .MuiOutlinedInput-root': { height: '36px', fontSize: '13px', fontFamily: 'Inter', borderRadius: '8px' } }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton size="small" onClick={handleAddNote}>
-                      <Add sx={{ fontSize: '18px', color: '#6b7280' }} />
-                    </IconButton>
-                  )
-                }}
-             />
-             {notesList.length > 0 && (
-               <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                 {notesList.map((note, nIdx) => (
-                   <Typography key={nIdx} sx={{ fontSize: '12px', color: '#4b5563', bgcolor: '#f3f4f6', p: '4px 8px', borderRadius: '4px', fontFamily: 'Inter' }}>
-                     • {note}
-                   </Typography>
-                 ))}
-               </Box>
-             )}
-             
-             <Typography sx={{ fontSize: '12px', fontWeight: 600, mt: 3, mb: 1, color: '#374151', fontFamily: 'Inter' }}>Provider Signature</Typography>
-             <Typography sx={{ fontSize: '12px', color: '#6b7280', mb: 1, fontFamily: 'Inter' }}>Draw your signature</Typography>
-             <Box sx={{ border: '1px solid #d0d5dd', borderRadius: '8px', width: '100%', height: '140px', mb: 1, overflow: 'hidden', bgcolor: '#ffffff' }}>
-                <canvas 
-                  ref={canvasRef} 
-                  width={380} 
-                  height={140} 
-                  style={{ cursor: 'crosshair', width: '100%', height: '100%', touchAction: 'none' }} 
-                  onMouseDown={startDrawing}
-                  onMouseUp={finishDrawing}
-                  onMouseMove={draw}
-                  onMouseLeave={finishDrawing}
-                />
-             </Box>
-             <Button 
-               variant="outlined" 
-               size="small" 
-               sx={{ color: '#374151', borderColor: '#d0d5dd', textTransform: 'none', borderRadius: '6px', fontSize: '12px', fontFamily: 'Inter', '&:hover': { bgcolor: '#f9fafb', borderColor: '#9ca3af' } }} 
-               onClick={handleClearSignature}
-             >
-               Clear signature
-             </Button>
-          </Box>
-          <Box sx={{ flex: 1, minWidth: '280px' }}>
-             <Typography sx={{ fontSize: '12px', fontWeight: 600, mb: 1, color: '#374151', fontFamily: 'Inter' }}>History</Typography>
-             <Box sx={{ p: 2, bgcolor: '#f9fafb', borderRadius: '8px', border: '1px dashed #d0d5dd' }}>
-               <Typography sx={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic', fontFamily: 'Inter' }}>
-                 No previous lab order slip history for this appointment.
-               </Typography>
-             </Box>
-          </Box>
-        </Box>
+        <NotesAndSignature 
+          noteInput={noteInput}
+          setNoteInput={setNoteInput}
+          handleAddNote={handleAddNote}
+          notesList={notesList}
+          canvasRef={canvasRef}
+          startDrawing={startDrawing}
+          finishDrawing={finishDrawing}
+          draw={draw}
+          handleClearSignature={handleClearSignature}
+        />
         
-        {/* Enclosures */}
-        <Box sx={{ mb: 1 }}>
-           <FormControlLabel 
-             control={
-               <Checkbox 
-                 size="small" 
-                 checked={addEnclosures}
-                 onChange={(e) => setAddEnclosures(e.target.checked)}
-                 sx={{ color: '#d0d5dd', '&.Mui-checked': { color: '#2262ef' } }} 
-               />
-             } 
-             label="Add Enclosures" 
-             sx={{ '& .MuiTypography-root': { fontSize: '13px', fontWeight: 500, color: '#374151', fontFamily: 'Inter' } }} 
-           />
-           {addEnclosures && (
-             <Box sx={{ mt: 1, ml: 1 }}>
-               <input 
-                 type="file" 
-                 ref={fileInputRef} 
-                 style={{ display: 'none' }} 
-                 multiple 
-                 onChange={handleFileUpload} 
-               />
-               <Button 
-                 startIcon={<CloudUploadOutlined sx={{ fontSize: '16px' }} />} 
-                 onClick={() => fileInputRef.current?.click()}
-                 sx={{ textTransform: 'none', color: '#2262ef', fontWeight: 500, fontSize: '13px', p: 0, fontFamily: 'Inter', '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}
-               >
-                 Attach Files
-               </Button>
-               {attachedFiles.length > 0 && (
-                 <Box sx={{ mt: 1 }}>
-                   {attachedFiles.map((fname, fIdx) => (
-                     <Typography key={fIdx} sx={{ fontSize: '12px', color: '#2262ef', fontFamily: 'Inter' }}>
-                       📎 {fname}
-                     </Typography>
-                   ))}
-                 </Box>
-               )}
-             </Box>
-           )}
-        </Box>
+        <Enclosures 
+          addEnclosures={addEnclosures}
+          setAddEnclosures={setAddEnclosures}
+          fileInputRef={fileInputRef}
+          handleFileUpload={handleFileUpload}
+          attachedFiles={attachedFiles}
+        />
       </Box>
       
-      {/* Footer matching AppointmentFooter */}
-      <Box sx={{
-        display: "flex", alignItems: "center", justifyContent: "flex-end",
-        px: "20px", py: "12px", borderTop: "1px solid #e0e5eb", gap: "8px"
-      }}>
-        <Button 
-          variant="outlined" 
-          onClick={onClose} 
-          disabled={saving}
-          sx={{
-            fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
-            textTransform: "none", borderRadius: "8px",
-            border: "1px solid #d0d5dd", color: "#374151",
-            px: "16px", py: "7px",
-            "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
-          }}
-        >
-          Close
-        </Button>
-        <Button 
-          variant="contained" 
-          disableElevation
-          onClick={handleCreateSlip}
-          disabled={saving}
-          sx={{
-            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
-            textTransform: "none", borderRadius: "8px",
-            backgroundColor: "#2262ef", color: "#fff",
-            px: "20px", py: "7px",
-            "&:hover": { backgroundColor: "#1a50cc" },
-          }}
-        >
-          {saving ? <CircularProgress size={18} color="inherit" /> : "Create slip"}
-        </Button>
-      </Box>
+      <LabOrderFooter onClose={onClose} handleCreateSlip={handleCreateSlip} saving={saving} />
 
       <Snackbar 
         open={!!toastMessage} 

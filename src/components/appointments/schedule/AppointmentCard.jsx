@@ -160,28 +160,6 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
 
   const handleCardDoubleClick = (e) => {
     console.log("AppointmentCard: DOUBLE CLICK FIRED");
-    // Block editing for past appointments (past date OR past time today)
-    const apptDate = appointment.date || appointment.appointmentDate;
-    const apptStartTime = appointment.startTime || appointment.time;
-    if (apptDate) {
-      const apptDateStr = dayjs(apptDate).format('YYYY-MM-DD');
-      const now = dayjs();
-      // Entire day is in the past
-      if (dayjs(apptDateStr).isBefore(now, 'day')) {
-        e.stopPropagation();
-        return;
-      }
-      // Same day but the appointment's start time has already passed
-      if (dayjs(apptDateStr).isSame(now, 'day') && apptStartTime) {
-        // Handle both "h:mm A" (display) and "HH:mm" (raw) formats
-        const parsed = dayjs(`${apptDateStr}T${apptStartTime}`, 'YYYY-MM-DDTHH:mm');
-        const startDateTime = parsed.isValid() ? parsed : dayjs(`${apptDateStr} ${apptStartTime}`, 'YYYY-MM-DD h:mm A');
-        if (startDateTime.isValid() && startDateTime.isBefore(now)) {
-          e.stopPropagation();
-          return;
-        }
-      }
-    }
     if (e.defaultPrevented) return;
     window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
       detail: { ...appointment },

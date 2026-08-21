@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { PersonOutline, EmailOutlined, MessageOutlined, ScienceOutlined } from "@mui/icons-material";
 
-const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick }) => (
+const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick, computedVisitType }) => (
   <Box sx={{ flexShrink: 0, borderTop: '1px solid #e0e5eb' }}>
 
     {/* Lab Order + Reminder strip — only when opened from PatientCard Book button */}
@@ -81,7 +81,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
               "&.Mui-disabled": { backgroundColor: "#c5d3f8", color: "#fff" },
             }}
           >
-            {loading ? "Saving…" : (isEditMode ? "Save" : "Add appointment")}
+            {loading ? "Saving…" : (!isEditMode ? "Add appointment" : (computedVisitType ? `Add ${computedVisitType} appointment` : "Save"))}
           </Button>
         )}
       </Box>

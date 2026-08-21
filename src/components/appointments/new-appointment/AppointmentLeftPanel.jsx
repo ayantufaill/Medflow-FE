@@ -35,6 +35,7 @@ const AppointmentLeftPanel = ({
   // Procedure table
   procedures, setProcedures, providers,
   showExtendedOptions,
+  onComputeNextVisit,
   onDuplicateProcedure,
   readOnly,
   setIsRescheduling,
@@ -42,6 +43,7 @@ const AppointmentLeftPanel = ({
   status,
   onStatusChange,
 }) => {
+  const [previousStatus, setPreviousStatus] = useState("scheduled");
   const [showPastVisits, setShowPastVisits] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceModalData, setInvoiceModalData] = useState(null);
@@ -276,6 +278,7 @@ const AppointmentLeftPanel = ({
       <>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', mt: '8px', pointerEvents: 'auto' }}>
           <Button
+            onClick={onComputeNextVisit}
             variant="contained"
             disableElevation
             sx={{
@@ -322,6 +325,17 @@ const AppointmentLeftPanel = ({
             control={
               <Checkbox
                 size="small"
+                checked={status === 'checked_out_complete'}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  if (isChecked) {
+                    setPreviousStatus(status || 'scheduled');
+                    if (onStatusChange) onStatusChange('checked_out_complete');
+                  } else {
+                    if (onStatusChange) onStatusChange(previousStatus);
+                  }
+                  if (setIsRescheduling) setIsRescheduling(true);
+                }}
                 sx={{ color: '#d1d5db', '&.Mui-checked': { color: '#2262ef' } }}
               />
             }
