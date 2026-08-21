@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Box, Typography, Grid, TextField, Button, Stack, 
+import {
+  Box, Typography, Grid, TextField, Button, Stack,
   IconButton, Accordion, AccordionSummary, AccordionDetails,
-  Checkbox, Select, MenuItem, Divider, ToggleButton, ToggleButtonGroup, Popover
+  Checkbox, Select, MenuItem, Divider, ToggleButton, ToggleButtonGroup, Popover,
+  Snackbar, Alert
 } from '@mui/material';
+import { referralService } from '../../services/referral.service';
 import {
   ExpandMore as ExpandMoreIcon,
   FormatBold as FormatBoldIcon,
@@ -23,7 +25,7 @@ import {
   LightbulbOutlined as LightbulbIcon
 } from '@mui/icons-material';
 
-const CreateNewReferral = ({ onClose }) => {
+const CreateNewReferral = ({ onClose, patientId }) => {
   // Checkbox states
   const [histories, setHistories] = useState({
     all: false, medical: false, dental: false, medication: false
@@ -31,6 +33,12 @@ const CreateNewReferral = ({ onClose }) => {
   const [diagnosticOpinions, setDiagnosticOpinions] = useState({
     all: false, periodontal: false, biomechanical: false, functional: false, dentofacial: false
   });
+
+  // Referral fields + save state
+  const [subject, setSubject] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastSeverity, setToastSeverity] = useState('info');
 
   // Editor states
   const [instructions, setInstructions] = useState('');
@@ -135,6 +143,31 @@ const CreateNewReferral = ({ onClose }) => {
     window.print();
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const referral = await referralService.createReferral({
+        patientId: patientId || undefined,
+        subject,
+        instructions,
+        histories,
+        diagnosticOpinions,
+        attachedFiles: attachedFiles.map((f) => f.name),
+      });
+      setToastSeverity('success');
+      setToastMessage('Referral saved.');
+      if (onClose) setTimeout(onClose, 600);
+      return referral;
+    } catch {
+      // The backend has no /referrals route yet — surface that honestly
+      // instead of pretending the save succeeded.
+      setToastSeverity('error');
+      setToastMessage('Referrals are not supported by the backend yet — nothing was saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleAttachClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
@@ -218,7 +251,14 @@ const CreateNewReferral = ({ onClose }) => {
         
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ fontSize: '12px', fontWeight: 700, mb: 0.5 }}>Subject</Typography>
-          <TextField fullWidth size="small" variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
         </Box>
 
         {/* Editor Container */}
@@ -304,9 +344,16 @@ const CreateNewReferral = ({ onClose }) => {
 
         {/* Footer Actions */}
         <Box className="no-print" sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 2 }}>
-           <Button variant="contained" sx={{ bgcolor: tanButtonBg, color: '#fff', textTransform: 'none', px: 3, borderRadius: 1 }}>Save</Button>
-           <Button 
-            variant="contained" 
+           <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving}
+            sx={{ bgcolor: tanButtonBg, color: '#fff', textTransform: 'none', px: 3, borderRadius: 1 }}
+           >
+            {saving ? 'Saving...' : 'Save'}
+           </Button>
+           <Button
+            variant="contained"
             onClick={handlePrint}
             sx={{ bgcolor: tanButtonBg, color: '#fff', textTransform: 'none', px: 3, borderRadius: 1 }}
            >
@@ -344,6 +391,17 @@ const CreateNewReferral = ({ onClose }) => {
            </Button>
         </Box>
       </Box>
+
+      <Snackbar
+        open={!!toastMessage}
+        autoHideDuration={4000}
+        onClose={() => setToastMessage('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toastSeverity} onClose={() => setToastMessage('')} sx={{ width: '100%' }}>
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
