@@ -11,13 +11,17 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DownloadIcon from '@mui/icons-material/Download';
-import BaseDialog from '../shared/BaseDialog';
+import { DescriptionOutlined as DescriptionOutlinedIcon } from '@mui/icons-material';
 import { invoiceService } from '../../services/invoice.service';
 import dayjs from 'dayjs';
+import { COLORS } from '../../constants/colors';
+import { fontWeight, radius } from '../../constants/styles';
 
 const PastStatementsDialog = ({ open, onClose, patient }) => {
   const [invoices, setInvoices] = useState([]);
@@ -72,17 +76,40 @@ const PastStatementsDialog = ({ open, onClose, patient }) => {
     window.open(`/invoices/${invoiceId}?download=true`, '_blank');
   };
 
-  const headerBg = '#7788bb';
-
   return (
-    <BaseDialog
-      open={open}
-      onClose={onClose}
-      title="Past Statements"
-      maxWidth="md"
-      contentSx={{ pt: 2, pb: 1, px: 0 }}
-      titleColor={headerBg}
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth 
+      PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}
+      sx={{ zIndex: 9999 }}
     >
+      {/* Header Bar */}
+      <DialogTitle
+        sx={{
+          boxSizing: 'border-box',
+          px: '25px',
+          py: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <DescriptionOutlinedIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+          Past Statements
+        </Typography>
+        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: '25px', py: '20px', pt: '25px !important', display: 'flex', flexDirection: 'column', gap: 2.5, maxHeight: '70vh', overflowY: 'auto', bgcolor: COLORS.BACKGROUND }}>
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress size={32} />
@@ -159,26 +186,30 @@ const PastStatementsDialog = ({ open, onClose, patient }) => {
           </Table>
         </TableContainer>
       )}
+      </DialogContent>
 
-      {/* Close button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 3, py: 1.5 }}>
-        <Button
-          variant="contained"
-          onClick={onClose}
-          sx={{
-            bgcolor: '#a9a9a9',
-            color: '#fff',
-            textTransform: 'none',
-            boxShadow: 'none',
-            px: 3,
-            fontSize: '0.85rem',
-            '&:hover': { bgcolor: '#999' },
-          }}
-        >
-          Close
-        </Button>
-      </Box>
-    </BaseDialog>
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white' }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              borderColor: COLORS.BORDER,
+              color: COLORS.TEXT_PRIMARY,
+              textTransform: 'none',
+              fontSize: '13px',
+              fontWeight: fontWeight.medium,
+              borderRadius: radius.sm,
+              height: '36px',
+              px: 3,
+              '&:hover': { borderColor: COLORS.TEXT_SECONDARY, backgroundColor: 'transparent' }
+            }}
+          >
+            Close
+          </Button>
+        </Box>
+      </DialogActions>
+    </Dialog>
   );
 };
 
