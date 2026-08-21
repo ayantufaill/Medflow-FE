@@ -39,9 +39,37 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   useEffect(() => {
     if (invoiceData && invoiceData.procedures && invoiceData.procedures.length > 0) {
-      setProcedures(invoiceData.procedures);
+      // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions 
+      // based on the patient's coverage table and the dbi (Do Not Bill Insurance) flag.
+      const isNewInvoice = !invoiceData._id && !invoiceData.id;
+      
+      if (isNewInvoice) {
+        const recalculated = invoiceData.procedures.map(p => {
+          const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          const numWriteoff = parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          
+          const portions = calculatePortionsForCategory({
+            charge: numCharge,
+            writeoff: numWriteoff,
+            code: p.code,
+            dbi: p.dbi || false,
+            coverageTable: patient?.coverageTable || null,
+          });
+          
+          return {
+            ...p,
+            insPortion: `$${portions.insPortion.toFixed(2)}`,
+            ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+            balance: `$${portions.balance.toFixed(2)}`,
+            coveragePct: portions.coveragePct,
+          };
+        });
+        setProcedures(recalculated);
+      } else {
+        setProcedures(invoiceData.procedures);
+      }
     }
-  }, [invoiceData]);
+  }, [invoiceData, patient]);
 
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);

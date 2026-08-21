@@ -49,6 +49,7 @@ const DoctorPanel = ({ pt }) => {
   );
   const [historyOpen, setHistoryOpen] = useState(false);
   const { providers = [] } = useDropdownData({ providers: true });
+  console.log('DoctorPanel providers:', typeof providers, Array.isArray(providers), providers);
 
   const patientForHistory = pt.rawId ? { _id: pt.rawId, id: pt.rawId } : null;
 
@@ -63,7 +64,8 @@ const DoctorPanel = ({ pt }) => {
     }
 
     // If it's a string ID or code, find the matching full provider object from Redux data
-    const matchedProvider = providers.find(
+    const safeProviders = Array.isArray(providers) ? providers : [];
+    const matchedProvider = safeProviders.find(
       (p) =>
         getProviderId(p) === String(rawProvider) ||
         p.providerCode === String(rawProvider),
@@ -76,7 +78,8 @@ const DoctorPanel = ({ pt }) => {
   }, [providers, pt.nextTxAppt?.provider]);
 
   const dentistOptions = useMemo(() => {
-    const dentists = providers.filter((provider) => {
+    const safeProviders = Array.isArray(providers) ? providers : [];
+    const dentists = safeProviders.filter((provider) => {
       const type = getProviderTypeString(provider);
       return (
         type.includes("dentist") ||
@@ -85,8 +88,8 @@ const DoctorPanel = ({ pt }) => {
         type.includes("doctor")
       );
     });
-    const options = dentists.length > 0 ? dentists : providers;
-    const selectedProvider = providers.find(
+    const options = dentists.length > 0 ? dentists : safeProviders;
+    const selectedProvider = safeProviders.find(
       (provider) => getProviderId(provider) === selectedDentist,
     );
 

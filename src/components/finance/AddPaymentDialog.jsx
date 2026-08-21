@@ -11,6 +11,8 @@ import AddPaymentTopRow from './add-payment/AddPaymentTopRow';
 import AddPaymentAmountRow from './add-payment/AddPaymentAmountRow';
 import AddPaymentInvoiceList from './add-payment/AddPaymentInvoiceList';
 import AddPaymentFooter from './add-payment/AddPaymentFooter';
+import apiClient from '../../config/api';
+
 // Redux
 import {
   fetchPaymentDraftInvoices,
@@ -52,12 +54,17 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [patientAmountChecked, setPatientAmountChecked] = useState(false);
   const [manualAmount,         setManualAmount]         = useState('');
   const [amountType,           setAmountType]           = useState('patient amount');
+  const [accountCredit,        setAccountCredit]        = useState(0);
 
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
     if (patientId) {
       dispatch(invalidatePaymentInvoices(patientId));
       dispatch(fetchPaymentDraftInvoices(patientId));
+      
+      apiClient.get(`/finance-dashboard/aging/${patientId}`)
+        .then(res => setAccountCredit(res.data?.data?.patientAccountCredit || 0))
+        .catch(err => console.warn("Failed to fetch account credit", err));
     }
   }, [dispatch, patientId]);
 
@@ -156,6 +163,8 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           setAmountType={setAmountType}
           displayAmount={displayAmount}
           setManualAmount={setManualAmount}
+          paymentMethod={paymentMethod}
+          accountCredit={accountCredit}
           MENU_PROPS={MENU_PROPS}
         />
 

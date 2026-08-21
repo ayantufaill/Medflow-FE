@@ -188,7 +188,7 @@ const CompleteProceduresDialog = ({
                         onChange={(e) => handleTreatmentChange(index, e.target.value)}
                         variant="outlined"
                         sx={{ ...DIALOG_FONT_SM, minHeight: "auto", height: 32 }}
-                        MenuProps={{ PaperProps: { sx: { "& .MuiMenuItem-root": DIALOG_FONT_SM } } }}
+                        MenuProps={{ sx: { zIndex: 9999 }, PaperProps: { sx: { "& .MuiMenuItem-root": DIALOG_FONT_SM } } }}
                       >
                         {treatmentOptions.map((option) => (
                           <MenuItem key={option} value={option} sx={{ ...DIALOG_FONT_SM, py: 0.75 }}>
@@ -205,7 +205,7 @@ const CompleteProceduresDialog = ({
                         onChange={(e) => handleProviderChange(index, e.target.value)}
                         variant="outlined"
                         sx={{ ...DIALOG_FONT_SM, minHeight: "auto", height: 32 }}
-                        MenuProps={{ PaperProps: { sx: { "& .MuiMenuItem-root": DIALOG_FONT_SM } } }}
+                        MenuProps={{ sx: { zIndex: 9999 }, PaperProps: { sx: { "& .MuiMenuItem-root": DIALOG_FONT_SM } } }}
                       >
                         {providerOptions.map((option) => (
                           <MenuItem key={option} value={option} sx={{ ...DIALOG_FONT_SM, py: 0.75 }}>

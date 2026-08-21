@@ -38,13 +38,18 @@ const headerSx = {
 
 const formatCurrency = (val) => `$${Number(val || 0).toFixed(2)}`;
 
-const AgingTable = ({ view = 'invoices', patientId }) => {
+const AgingTable = ({ view = 'invoices', patientId, patient }) => {
   const defaultBuckets = { '0_30': 0, '31_60': 0, '61_90': 0, '90_plus': 0, total: 0 };
   const [agingData, setAgingData] = useState({
     familyOutstanding: { ...defaultBuckets },
     familyBalance: { ...defaultBuckets },
     insuranceBalance: { ...defaultBuckets },
+    patientAccountCredit: 0,
+    insuranceAccountCredit: 0,
   });
+
+  const patientCredit = agingData?.patientAccountCredit || 0;
+  const insuranceCredit = agingData?.insuranceAccountCredit || 0;
 
   const fetchAgingData = async () => {
     if (!patientId) return;
@@ -76,13 +81,12 @@ const AgingTable = ({ view = 'invoices', patientId }) => {
   }, [patientId]);
 
   return (
-    <Box sx={{ flex: 1, height: '254px', position: 'relative' }}>
+    <Box sx={{ flex: 1, minHeight: '254px', height: '100%', position: 'relative' }}>
       <TableContainer sx={{ 
         borderRadius: '22px', 
         border: '1px solid #DFE5EC', 
         bgcolor: '#FFFFFF',
-        height: '100%',
-        overflow: 'hidden'
+        height: '100%'
       }}>
         <Table sx={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }} size="small">
           <TableHead>
@@ -154,6 +158,37 @@ const AgingTable = ({ view = 'invoices', patientId }) => {
               <TableCell align="center" sx={{ ...totalCellSx, bgcolor: '#E5F8F7' }}>{formatCurrency(agingData.insuranceBalance.total)}</TableCell>
               <TableCell align="center" sx={{ ...commonCellSx, borderLeft: '1px solid #DFE5EC', color: '#6B778C', cursor: 'pointer', fontSize: '10px' }}>&lt;</TableCell>
             </TableRow>
+            {view === 'invoices' && (
+              <TableRow>
+                <TableCell 
+                  colSpan={7} 
+                  sx={{ 
+                    p: 0, 
+                    borderBottom: 'none'
+                  }}
+                >
+                  <Box 
+                    sx={{ 
+                      bgcolor: '#315ea8', 
+                      color: '#ffffff', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      px: 2, 
+                      py: 0.5, 
+                      fontSize: '11px', 
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    <Box>
+                      Insurance Account Credit: {formatCurrency(insuranceCredit)} <span style={{ fontWeight: 'normal', cursor: 'pointer' }}>(details)</span>
+                    </Box>
+                    <Box>
+                      Patient Account Credit: {formatCurrency(patientCredit)}
+                    </Box>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>

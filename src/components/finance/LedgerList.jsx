@@ -26,6 +26,7 @@ import {
   transferOutstandingToPatient,
 } from '../../store/slices/billingSlice';
 import { fetchMedicalHistoryThunk, fetchDentalHistoryThunk } from '../../store/slices/patientSlice';
+import { paymentService } from '../../services/payment.service';
 
 import LedgerItemCard from './LedgerItemCard';
 import { invoiceService } from '../../services/invoice.service';
@@ -266,19 +267,26 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const handleUndoConfirm = async () => {
     if (undoTarget) {
       try {
-        console.log('Dispatching undoCourtesyCredit with:', undoTarget);
-        await dispatch(undoCourtesyCredit({
-          patientId,
-          procedureId: undoTarget.id,
-          invoiceId:   undoTarget.invoiceId,
-        })).unwrap();
-        console.log('undoCourtesyCredit succeeded');
+        if (undoTarget.isPayment) {
+          console.log('Dispatching voidPayment with:', undoTarget);
+          await paymentService.voidPayment(undoTarget.id, 'Undone by user');
+          console.log('voidPayment succeeded');
+        } else {
+          console.log('Dispatching undoCourtesyCredit with:', undoTarget);
+          await dispatch(undoCourtesyCredit({
+            patientId,
+            procedureId: undoTarget.id,
+            invoiceId:   undoTarget.invoiceId,
+          })).unwrap();
+          console.log('undoCourtesyCredit succeeded');
+        }
       } catch (err) {
-        console.error('undoCourtesyCredit failed:', err);
+        console.error('undo action failed:', err);
       }
     }
     setShowUndoDialog(false);
     setUndoTarget(null);
+    refreshLedger();
   };
 
   const handleTransferConfirm = async () => {
