@@ -26,7 +26,7 @@ export const navMenuItems = [
   // (adminRoutes.jsx's adminOrPermission), but this list only supports role checks, so
   // both concrete role names are listed rather than the permission key.
   { text: 'Practice Groups', icon: <Business />, path: '/admin/practice-groups', requiredRoles: ['Admin', 'Super Admin'] },
-  { text: 'My Group', icon: <Business />, path: '/admin/my-group', requiredRoles: ['Group Admin'] },
+  { text: 'My Group', icon: <Business />, path: '/admin/my-group', requiredRoles: ['Group Admin', 'Branch Admin'] },
 ];
 
 // Roles allowed to switch the active branch context (UserProfile.jsx) — this only
