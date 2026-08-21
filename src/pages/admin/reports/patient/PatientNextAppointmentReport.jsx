@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchPatientNextAppointmentReport, selectNextAppointmentData, selectNextAppointmentDataLoading } from '../../../../store/slices/patientReportSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
@@ -73,6 +74,25 @@ const PatientNextAppointmentReport = () => {
 
   const handleApply = () => {
     fetchReport();
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'ID', key: 'id' },
+      { header: 'Patient', key: 'patient' },
+      { header: 'Flags', key: (row) => (Array.isArray(row.flags) ? row.flags.join(', ') : '') },
+      { header: 'Patient Status', key: 'status' },
+      { header: 'Appt Date', key: 'apptDate' },
+      { header: 'Appt Type', key: 'type' },
+      { header: 'Appt Status', key: 'apptStatus' },
+      { header: 'New Patient Appt', key: 'newPatient' },
+      { header: 'Provider', key: 'provider' },
+      { header: 'Email', key: 'email' },
+      { header: 'Phone Number', key: 'phone' },
+      { header: 'Permission to Text', key: 'text' },
+      { header: 'Permission to Email', key: 'emailPerm' },
+      { header: 'Request Review', key: 'review' },
+    ], 'Patient_Next_Appointment_Report');
   };
 
   const columns = [
@@ -228,7 +248,7 @@ const PatientNextAppointmentReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />

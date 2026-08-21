@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 
 const ReviewReport = () => {
   const dispatch = useDispatch();
@@ -45,6 +46,14 @@ const ReviewReport = () => {
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.date}</TableCell>
     </TableRow>
   );
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient Name', key: 'patientName' },
+      { header: 'Review Status', key: 'reviewStatus' },
+      { header: 'Date', key: 'date' },
+    ], 'Review_Report');
+  };
 
   const columns = [
     { label: 'Patient Name' },
@@ -155,7 +164,7 @@ const ReviewReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />
