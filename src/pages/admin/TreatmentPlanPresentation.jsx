@@ -22,9 +22,11 @@ import {
 } from '@mui/material';
 import {
   Sync as SyncIcon,
-  Delete as DeleteIcon,
   Refresh as RefreshIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon
 } from '@mui/icons-material';
+
+import DeleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
 
 import { radius, fontSize, fontWeight } from '../../constants/styles';
 import { COLORS } from '../../constants/colors';
@@ -33,7 +35,57 @@ import HeaderConfig from '../../components/admin/clinical-management/treatment-p
 import DisplayConfig from '../../components/admin/clinical-management/treatment-plan-presentation/DisplayConfig';
 import PaymentOptionsConfig from '../../components/admin/clinical-management/treatment-plan-presentation/PaymentOptionsConfig';
 import AcknowledgmentsConfig from '../../components/admin/clinical-management/treatment-plan-presentation/AcknowledgmentsConfig';
-import TreatmentPlanSyncDialog from '../../components/admin/clinical-management/treatment-plan-presentation/TreatmentPlanSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
+
+const dropdownMenuProps = {
+  PaperProps: {
+    sx: {
+      mt: 1,
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+      borderRadius: '8px',
+      border: '1px solid #e5e7eb',
+      '& .MuiMenuItem-root': {
+        fontSize: '13px',
+        fontFamily: 'Inter',
+        padding: '8px 16px',
+        '&:hover': {
+          backgroundColor: '#f3f4f6'
+        },
+        '&.Mui-selected': {
+          backgroundColor: '#eff6ff',
+          color: '#1d4ed8',
+          '&:hover': {
+            backgroundColor: '#dbeafe'
+          }
+        }
+      }
+    }
+  },
+  style: { zIndex: 10000 },
+  sx: { zIndex: 10000 },
+};
+
+const selectStyles = {
+  fontFamily: "Inter", 
+  fontSize: "13px", 
+  borderRadius: "8px", 
+  backgroundColor: "#fff",
+  color: "#374151", 
+  height: "38px",
+  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" },
+  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#9ca3af" },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6", borderWidth: "1px" },
+  "& .MuiSelect-select": {
+    display: "flex",
+    alignItems: "center",
+    paddingTop: "0 !important",
+    paddingBottom: "0 !important",
+    height: "100% !important",
+  },
+  "& .MuiSelect-icon": {
+    color: "#9ca3af",
+  }
+};
 
 const TreatmentPlanPresentation = () => {
   const navigate = useNavigate();
@@ -445,13 +497,13 @@ const TreatmentPlanPresentation = () => {
               <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
                 <Box sx={{ flex: 1 }}>
                   <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mb: 0.5, fontWeight: 600, textTransform: 'uppercase' }}>Sort By</Typography>
-                  <Select fullWidth size="small" value="Created Date" sx={{ fontSize: '0.85rem', backgroundColor: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0', borderRadius: 1.5 } }}>
+                  <Select fullWidth size="small" value="Created Date" IconComponent={KeyboardArrowDownIcon} MenuProps={dropdownMenuProps} sx={selectStyles}>
                     <MenuItem value="Created Date">Created Date</MenuItem>
                   </Select>
                 </Box>
                 <Box sx={{ flex: 1 }}>
                   <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mb: 0.5 }}>&nbsp;</Typography>
-                  <Select fullWidth size="small" value="Descending" sx={{ fontSize: '0.85rem', backgroundColor: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0', borderRadius: 1.5 } }}>
+                  <Select fullWidth size="small" value="Descending" IconComponent={KeyboardArrowDownIcon} MenuProps={dropdownMenuProps} sx={selectStyles}>
                     <MenuItem value="Descending">Descending</MenuItem>
                   </Select>
                 </Box>
@@ -506,7 +558,7 @@ const TreatmentPlanPresentation = () => {
                           <SyncIcon sx={{ fontSize: '1rem' }} />
                         </IconButton>
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form.name); }} sx={{ p: 0.5, color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: '#fee2e2' } }}>
-                          <DeleteIcon sx={{ fontSize: '1rem' }} />
+                          <img src={DeleteSvg} alt="Delete" width="16" height="16" style={{ opacity: 0.8 }} />
                         </IconButton>
                       </Box>
                     </Box>
@@ -519,7 +571,7 @@ const TreatmentPlanPresentation = () => {
       )}
 
       {/* Sync Dialog */}
-      <TreatmentPlanSyncDialog isOpen={isSyncDialogOpen} onClose={handleCloseSyncDialog} />
+      <SyncOfficesDialog open={isSyncDialogOpen} onClose={handleCloseSyncDialog} />
     </Box>
   );
 };
