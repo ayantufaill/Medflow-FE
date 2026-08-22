@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 
 
 
@@ -80,6 +81,18 @@ const ProceduresReport = () => {
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.scheduled}</TableCell>
     </TableRow>
   );
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient', key: 'patient' },
+      { header: 'Procedure Code', key: 'code' },
+      { header: 'Procedure Description', key: 'description' },
+      { header: 'Status', key: 'status' },
+      { header: 'Provider', key: 'provider' },
+      { header: 'Created Date', key: 'created' },
+      { header: 'Scheduled Date', key: 'scheduled' },
+    ], 'Procedures_Report');
+  };
 
   const topFilters = (
     <>
@@ -287,7 +300,7 @@ const ProceduresReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />

@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchLabCaseReport, selectLabCaseData, selectLabCaseDataLoading } from '../../../../store/slices/patientReportSlice';
 
 
@@ -45,6 +46,18 @@ const LabCaseReport = () => {
 
   const handleApply = () => {
     fetchReport();
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient', key: 'patient' },
+      { header: 'Lab Provider', key: 'provider' },
+      { header: 'Procedures', key: 'procedures' },
+      { header: 'Due Date', key: 'dueDate' },
+      { header: 'Appointment Date', key: 'apptDate' },
+      { header: 'Shared Date', key: 'sharedDate' },
+      { header: 'Status', key: 'status' },
+    ], 'Lab_Case_Report');
   };
 
   const [statusAnchorEl, setStatusAnchorEl] = useState(null);
@@ -212,7 +225,7 @@ const LabCaseReport = () => {
               </Typography>
               <Box sx={{ transform: 'translateY(-2px)' }}>
                 <ProductionReportActions
-                  onExportCsv={() => alert('Exporting CSV...')}
+                  onExportCsv={handleExportCsv}
                   onPrint={() => window.print()}
                   hasData={reportData.length > 0}
                 />

@@ -14,8 +14,11 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useBranch } from '../../hooks/redux';
 
 import PracticeDetails from '../../components/admin/practice-setup/practice-information/PracticeDetails';
 import AddressLocale from '../../components/admin/practice-setup/practice-information/AddressLocale';
@@ -45,6 +48,13 @@ const DEFAULT_REFERRALS = [
 const PracticeInformation = () => {
   const dispatch = useDispatch();
   const { data: practiceData, loading, error: reduxError, updateError } = useSelector((state) => state.practiceInfo);
+  const { branches, fetchBranches: loadBranches } = useBranch();
+
+  // '' = the caller's own/default context (GET /practice-info/current with no
+  // branchId) — the backend has no separate "practice-wide" record distinct
+  // from a branch's own record, confirmed live: every branchId tested returns
+  // a fully independent record, none of them a fallback/inherited default.
+  const [selectedBranchId, setSelectedBranchId] = useState('');
 
   const [success, setSuccess] = useState('');
   const [logoPreview, setLogoPreview] = useState(null);
@@ -102,10 +112,17 @@ const PracticeInformation = () => {
   });
 
   useEffect(() => {
-    if (!practiceData) {
-      dispatch(fetchCurrentPracticeInfo());
-    }
-  }, [dispatch, practiceData]);
+    loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-fetches whenever the selected branch changes — the thunk's own
+  // condition() skips the request if this exact branch's data is already
+  // cached, so switching back to a previously-viewed branch doesn't re-hit
+  // the network.
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo({ branchId: selectedBranchId || null }));
+  }, [dispatch, selectedBranchId]);
 
   useEffect(() => {
     if (practiceData) {
@@ -320,6 +337,21 @@ const PracticeInformation = () => {
             Practice Information
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {branches.length > 0 && (
+              <Select
+                size="small"
+                displayEmpty
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                disabled={loading}
+                sx={{ minWidth: 180, fontSize: '13px' }}
+              >
+                <MenuItem value="">My Branch (Default)</MenuItem>
+                {branches.map((b) => (
+                  <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+                ))}
+              </Select>
+            )}
             <Button
               type="submit"
               variant="contained"

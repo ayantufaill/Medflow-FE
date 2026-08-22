@@ -7,6 +7,9 @@ const initialState = {
   prescriptionTemplates: [],
   settingsMap: {},
   recareConfig: null,
+  recareRunResult: null,
+  recareRunLoading: false,
+  recareRunError: null,
   treatmentPlanPresentation: null,
   consentTemplates: [],
   instructionTemplates: [],
@@ -357,6 +360,17 @@ export const updateRecareConfig = createAsyncThunk(
   }
 );
 
+export const runRecareGeneration = createAsyncThunk(
+  'clinicalManagement/runRecareGeneration',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await clinicalManagementService.runRecareGeneration();
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to run recare generation');
+    }
+  }
+);
+
 // --- Treatment Plan Presentation Async Thunks ---
 export const fetchTreatmentPlanPresentationConfig = createAsyncThunk(
   'clinicalManagement/fetchTreatmentPlanPresentationConfig',
@@ -682,6 +696,18 @@ const clinicalManagementSlice = createSlice({
       .addCase(updateRecareConfig.fulfilled, (state, action) => {
         state.recareConfig = action.payload;
       })
+      .addCase(runRecareGeneration.pending, (state) => {
+        state.recareRunLoading = true;
+        state.recareRunError = null;
+      })
+      .addCase(runRecareGeneration.fulfilled, (state, action) => {
+        state.recareRunLoading = false;
+        state.recareRunResult = action.payload;
+      })
+      .addCase(runRecareGeneration.rejected, (state, action) => {
+        state.recareRunLoading = false;
+        state.recareRunError = action.payload;
+      })
 
       // Treatment Plan Presentations
       .addCase(fetchTreatmentPlanPresentationConfig.pending, (state) => { state.loadingTP = true; })
@@ -747,6 +773,9 @@ export const selectChecklists = (state) => state.clinicalManagement.checklists;
 export const selectPrescriptionTemplates = (state) => state.clinicalManagement.prescriptionTemplates;
 export const selectSettingsMap = (state) => state.clinicalManagement.settingsMap;
 export const selectRecareConfig = (state) => state.clinicalManagement.recareConfig;
+export const selectRecareRunResult = (state) => state.clinicalManagement.recareRunResult;
+export const selectRecareRunLoading = (state) => state.clinicalManagement.recareRunLoading;
+export const selectRecareRunError = (state) => state.clinicalManagement.recareRunError;
 export const selectTreatmentPlanPresentationConfig = (state) => state.clinicalManagement.treatmentPlanPresentation;
 export const selectConsentTemplates = (state) => state.clinicalManagement.consentTemplates;
 export const selectInstructionTemplates = (state) => state.clinicalManagement.instructionTemplates;

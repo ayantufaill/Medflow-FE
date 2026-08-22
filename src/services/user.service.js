@@ -20,7 +20,8 @@ export const userService = {
     limit = 10,
     search = '',
     roleId = '',
-    status = ''
+    status = '',
+    branchId = ''
   ) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
@@ -28,6 +29,7 @@ export const userService = {
     if (search) params.append('search', search);
     if (roleId) params.append('roleId', roleId);
     if (status) params.append('status', status);
+    if (branchId) params.append('branchId', branchId);
 
     const response = await apiClient.get(`/users?${params.toString()}`);
     return response.data.data;

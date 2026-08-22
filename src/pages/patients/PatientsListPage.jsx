@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
-import { usePatients, useDropdownData } from '../../hooks/redux';
+import { usePatients, useDropdownData, useBranch } from '../../hooks/redux';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSearchActionsBar from '../../components/patients/list/PatientSearchActionsBar';
 import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar';
@@ -45,6 +45,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   } = usePatients();
 
   const { providers: providerList = EMPTY_PROVIDER_LIST } = useDropdownData({ providers: true });
+  const { branches: branchList, fetchBranches: loadBranches } = useBranch();
 
   // ─── Local UI State ──────────────────────────────────────
   const [page, setPage] = useState(0);
@@ -53,6 +54,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [genderFilter, setGenderFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({ open: false, patientId: null, patientName: '' });
   const [actionMenu, setActionMenu] = useState({ anchorEl: null, patientId: null, patientName: '', isActive: null });
@@ -105,6 +107,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       status: statusFilter,
       gender: genderFilter,
       providerId: providerFilter,
+      branchId: branchFilter,
       dobStart: '',
       dobEnd: '',
       sortBy: sortByName ? 'name' : '',
@@ -116,6 +119,11 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
 
   const refetchList = useCallback(() => fetchPatientsRedux(fetchParamsRef.current), [fetchPatientsRedux]);
 
+  useEffect(() => {
+    loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ─── Fetch via Redux (only when params change) ──────────
   useEffect(() => {
     const promise = fetchPatientsRedux(fetchParamsRef.current);
@@ -123,7 +131,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     return () => {
       if (promise && promise.abort) promise.abort();
     };
-  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, sortByName, fetchPatientsRedux]);
+  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, branchFilter, sortByName, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
@@ -298,6 +306,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     setStatusFilter('');
     setGenderFilter('');
     setProviderFilter('');
+    setBranchFilter('');
     setPage(0);
   };
 
@@ -381,6 +390,9 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           providerFilter={providerFilter}
           onProviderFilterChange={(v) => { setProviderFilter(v); setPage(0); }}
           providerList={providerList}
+          branchFilter={branchFilter}
+          onBranchFilterChange={(v) => { setBranchFilter(v); setPage(0); }}
+          branchList={branchList}
           sortByName={sortByName}
           onSortByNameChange={handleSortByNameChange}
           loading={loading}

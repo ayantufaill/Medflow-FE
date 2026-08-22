@@ -21,6 +21,7 @@ import {
 import { SyncAlt } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranch } from '../../hooks/redux';
+import { hasRequiredRole } from '../../config/navMenuItems';
 import {
   fetchGroupUsers,
   selectGroupUsers,
@@ -28,7 +29,10 @@ import {
   selectGroupUsersError,
 } from '../../store/slices/practiceGroupSlice';
 import {
+  fetchUsers,
   updateUserBranches,
+  selectUserList,
+  selectUserListLoading,
   selectUserBranchMutationLoading,
   selectUserBranchMutationError,
 } from '../../store/slices/userSlice';
@@ -65,6 +69,11 @@ const MyGroupPage = () => {
   const dispatch = useDispatch();
   const { user } = useAuth();
   const groupId = user?.groupId;
+  const ownBranchIds = user?.branchIds || [];
+  // Branch Admin is the narrower sibling of Group Admin — same page, but scoped
+  // to their own single branch's roster instead of the whole group's. Admin/Group
+  // Admin keep the existing group-wide view untouched.
+  const isBranchAdminOnly = hasRequiredRole(user, ['Branch Admin']) && !hasRequiredRole(user, ['Group Admin', 'Admin']);
   const { branches, fetchBranches: loadBranches } = useBranch();
 
   const [tab, setTab] = useState('users');
@@ -72,6 +81,18 @@ const MyGroupPage = () => {
   const groupUsers = useSelector(selectGroupUsers) || [];
   const groupUsersLoading = useSelector(selectGroupUsersLoading);
   const groupUsersError = useSelector(selectGroupUsersError);
+
+  const allUsers = useSelector(selectUserList) || [];
+  const allUsersLoading = useSelector(selectUserListLoading);
+
+  // Branch Admin has no access to the group-wide GET /practice-groups/:id/users
+  // endpoint (that's gated on Group Admin's group:manage_users) — fall back to the
+  // plain user list and filter client-side to their own branch.
+  const users = isBranchAdminOnly
+    ? allUsers.filter((u) => (u.branchIds || []).some((bId) => ownBranchIds.includes(bId)))
+    : groupUsers;
+  const usersLoading = isBranchAdminOnly ? allUsersLoading : groupUsersLoading;
+  const usersError = isBranchAdminOnly ? null : groupUsersError;
 
   const providers = useSelector(selectProviderList) || [];
   const providersLoading = useSelector(selectProviderListLoading);
@@ -89,19 +110,28 @@ const MyGroupPage = () => {
   // Branch options come from GET /branches, which is already scoped server-side to
   // this admin's accessible branches (branchAccess middleware) — same source useBranch()
   // uses for the header's branch switcher, so this picker can't offer a branch the
-  // admin (and therefore the entity being reassigned) shouldn't have access to.
+  // admin (and therefore the entity being reassigned) shouldn't have access to. For a
+  // Branch Admin this naturally resolves to just their one branch, so the reassignment
+  // picker below can't be used to move someone outside it.
   useEffect(() => {
     loadBranches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (groupId) dispatch(fetchGroupUsers(groupId));
-  }, [dispatch, groupId]);
+    if (isBranchAdminOnly) {
+      dispatch(fetchUsers({ limit: 100 }));
+    } else if (groupId) {
+      dispatch(fetchGroupUsers(groupId));
+    }
+  }, [dispatch, groupId, isBranchAdminOnly]);
 
   useEffect(() => {
-    if (tab === 'providers') dispatch(fetchProviders({ limit: 100 }));
-  }, [dispatch, tab]);
+    if (tab === 'providers') {
+      dispatch(fetchProviders({ limit: 100, branchId: isBranchAdminOnly ? ownBranchIds[0] : undefined }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, tab, isBranchAdminOnly]);
 
   const mutationLoading = reassignTarget?.type === 'user' ? userBranchMutationLoading : providerBranchMutationLoading;
   const mutationError = reassignTarget?.type === 'user' ? userBranchMutationError : providerBranchMutationError;
@@ -129,7 +159,9 @@ const MyGroupPage = () => {
           My Group
         </Typography>
         <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.9rem' }}>
-          Reassign users and providers to branches within your practice group.
+          {isBranchAdminOnly
+            ? 'Reassign users and providers assigned to your branch.'
+            : 'Reassign users and providers to branches within your practice group.'}
         </Typography>
       </Box>
 
@@ -140,13 +172,13 @@ const MyGroupPage = () => {
 
       {tab === 'users' && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {groupUsersError && <Alert severity="error">Couldn't load group users: {groupUsersError}</Alert>}
-          {groupUsersLoading ? (
+          {usersError && <Alert severity="error">Couldn't load users: {usersError}</Alert>}
+          {usersLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
-          ) : groupUsers.length === 0 ? (
-            <Typography sx={{ py: 4, textAlign: 'center', color: '#6B7280' }}>No users found in this group.</Typography>
+          ) : users.length === 0 ? (
+            <Typography sx={{ py: 4, textAlign: 'center', color: '#6B7280' }}>No users found.</Typography>
           ) : (
-            groupUsers.map((u) => {
+            users.map((u) => {
               const id = u._id || u.id;
               const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email;
               const branchNames = (u.branchIds || []).map((bId) => branches.find((b) => b.id === bId)?.name || bId);
@@ -170,7 +202,7 @@ const MyGroupPage = () => {
           {providersLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
           ) : providers.length === 0 ? (
-            <Typography sx={{ py: 4, textAlign: 'center', color: '#6B7280' }}>No providers found in this group.</Typography>
+            <Typography sx={{ py: 4, textAlign: 'center', color: '#6B7280' }}>No providers found.</Typography>
           ) : (
             providers.map((p) => {
               const id = p._id || p.id;
