@@ -6,10 +6,12 @@ import {
   updateSystemSetting,
   fetchRecareConfig,
   updateRecareConfig,
+  runRecareGeneration,
   selectSettingsMap,
   selectRecareConfig,
   selectLoadingSettings,
-  selectLoadingRecare
+  selectLoadingRecare,
+  selectRecareRunLoading,
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { Box, Typography, Grid } from '@mui/material';
@@ -41,10 +43,12 @@ const RecareConfiguration = () => {
   const recareConfig = useSelector(selectRecareConfig);
   const loadingSettings = useSelector(selectLoadingSettings);
   const loadingRecare = useSelector(selectLoadingRecare);
+  const runLoading = useSelector(selectRecareRunLoading);
   const loading = loadingSettings || loadingRecare;
 
   const [activeTab, setActiveTab] = useState(0);
   const [autoCreate, setAutoCreate] = useState(true);
+  const [intervalMonths, setIntervalMonths] = useState(6);
   const [procedures, setProcedures] = useState([]);
   const [stages, setStages] = useState([]);
 
@@ -56,6 +60,7 @@ const RecareConfiguration = () => {
   useEffect(() => {
     if (recareConfig) {
       setAutoCreate(recareConfig.autoReminder);
+      if (recareConfig.intervalMonths) setIntervalMonths(recareConfig.intervalMonths);
     }
   }, [recareConfig]);
 
@@ -89,11 +94,42 @@ const RecareConfiguration = () => {
   const handleToggleAutoCreate = async (checked) => {
     setAutoCreate(checked);
     try {
-      await dispatch(updateRecareConfig({ autoReminder: checked, intervalMonths: 6 })).unwrap();
+      await dispatch(updateRecareConfig({ autoReminder: checked, intervalMonths })).unwrap();
       showSnackbar('General configuration updated', 'success');
     } catch (e) {
       console.error(e);
       showSnackbar('Failed to update general configuration', 'error');
+    }
+  };
+
+  // Committed on blur, not on every keystroke, so a mid-typing value like "1"
+  // (on the way to "18") never gets sent to the backend as a real interval.
+  const handleIntervalCommit = async (value) => {
+    const months = Number(value);
+    if (!Number.isFinite(months) || months <= 0) {
+      setIntervalMonths(recareConfig?.intervalMonths || 6);
+      return;
+    }
+    setIntervalMonths(months);
+    try {
+      await dispatch(updateRecareConfig({ autoReminder: autoCreate, intervalMonths: months })).unwrap();
+      showSnackbar('Recare interval updated', 'success');
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Failed to update recare interval', 'error');
+    }
+  };
+
+  const handleGenerateNow = async () => {
+    try {
+      const result = await dispatch(runRecareGeneration()).unwrap();
+      showSnackbar(
+        `Checked ${result.patientsChecked} patient(s) — ${result.duePatients} due, ${result.remindersSent} reminder(s) sent.`,
+        'success'
+      );
+    } catch (e) {
+      console.error(e);
+      showSnackbar('Failed to run recare generation', 'error');
     }
   };
 
@@ -196,11 +232,16 @@ const RecareConfiguration = () => {
       ) : (
         <Box sx={{ px: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {/* Top Section: General Recare Configuration */}
-          <GeneralRecareConfig 
-            autoCreate={autoCreate} 
-            handleToggleAutoCreate={handleToggleAutoCreate} 
-            procedures={procedures} 
-            updateProcedure={updateProcedure} 
+          <GeneralRecareConfig
+            autoCreate={autoCreate}
+            handleToggleAutoCreate={handleToggleAutoCreate}
+            intervalMonths={intervalMonths}
+            onIntervalChange={setIntervalMonths}
+            onIntervalCommit={handleIntervalCommit}
+            onGenerateNow={handleGenerateNow}
+            generateLoading={runLoading}
+            procedures={procedures}
+            updateProcedure={updateProcedure}
           />
 
           {/* Bottom Section: Configuring Staging */}
