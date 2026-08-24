@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../../services/auth.service';
 import { API_BASE_URL } from '../../config/api';
+import { decodeTenantClaims } from '../../utils/tokenClaims';
 
 /**
  * Decode JWT token to get expiration time
@@ -15,8 +16,18 @@ const getTokenExpiration = (token) => {
   }
 };
 
+// Seeded synchronously from whatever access token is already in localStorage
+// at store-creation time (page load/refresh) — an optimistic tenant-context
+// snapshot so groupId/branchIds/isGroupAdmin are available immediately,
+// without waiting on the fetchUserProfile round-trip. fetchUserProfile.fulfilled
+// still overwrites this with the authoritative value once it resolves; nothing
+// authorization-sensitive should read this seed instead of waiting for that.
+const initialTenantClaims = decodeTenantClaims(
+  typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+);
+
 const initialState = {
-  user: null,
+  user: initialTenantClaims,
   isAuthenticated: false,
   loading: true, // Start as true so ProtectedRoute waits for initial token check
   error: null,
@@ -48,6 +59,7 @@ export const loginUser = createAsyncThunk(
 
       localStorage.setItem('accessToken', tokens.accessToken);
       localStorage.setItem('refreshToken', tokens.refreshToken);
+      dispatch(authSlice.actions.seedTenantClaims(decodeTenantClaims(tokens.accessToken)));
 
       // Fetch user profile after login
       const resultAction = await dispatch(fetchUserProfile());
@@ -77,6 +89,7 @@ export const verifyEmailAndRegister = createAsyncThunk(
 
       localStorage.setItem('accessToken', tokens.accessToken);
       localStorage.setItem('refreshToken', tokens.refreshToken);
+      dispatch(authSlice.actions.seedTenantClaims(decodeTenantClaims(tokens.accessToken)));
 
       // Fetch user profile after registration
       const resultAction = await dispatch(fetchUserProfile());
@@ -136,6 +149,15 @@ const authSlice = createSlice({
     },
     setLoading: (state, action) => {
       state.loading = action.payload;
+    },
+    // Optimistic tenant-context values decoded straight from the access
+    // token (see decodeTenantClaims) — merged into whatever's already in
+    // state.user so a subsequent fetchUserProfile.fulfilled (the real
+    // source of truth) isn't clobbered by a stale re-seed, and so this is a
+    // no-op merge when the token carries no such claims (payload === null).
+    seedTenantClaims: (state, action) => {
+      if (!action.payload) return;
+      state.user = { ...state.user, ...action.payload };
     },
     // Used when interceptor encounters 401
     clearAuth: (state) => {
@@ -217,6 +239,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setLoading, clearAuth } = authSlice.actions;
+export const { clearError, setLoading, clearAuth, seedTenantClaims } = authSlice.actions;
 
 export default authSlice.reducer;

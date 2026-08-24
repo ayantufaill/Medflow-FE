@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUserProfile, logoutUser, clearAuth, loginUser } from '../store/slices/authSlice';
+import { fetchUserProfile, logoutUser, clearAuth, loginUser, seedTenantClaims } from '../store/slices/authSlice';
 import { authService } from '../services/auth.service';
+import { decodeTenantClaims } from '../utils/tokenClaims';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +35,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
+  }, [dispatch]);
+
+  // Re-seed the optimistic tenant claims whenever api.js silently rotates
+  // the access token (see the 'auth:token-refreshed' dispatch there) — kept
+  // as a DOM event rather than a direct import since api.js is a plain axios
+  // config module with no store access.
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      dispatch(seedTenantClaims(decodeTenantClaims(event.detail?.accessToken)));
+    };
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    return () => window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
   }, [dispatch]);
 
   // Map remaining methods directly to authService since state is in Redux
