@@ -14,7 +14,7 @@ export const OWING_OPTIONS = [
 
 export const BILLING_DATE_OPTIONS = [
   { value: 'any', label: 'Any Balance' },
-  { value: 'pt_last_statement_before', label: 'Ptient last statement befire' },
+  { value: 'pt_last_statement_before', label: 'Patient last statement before' },
   { value: 'day_since_last_statement', label: 'Day since last statement' }
 ];
 
@@ -66,4 +66,19 @@ export const ON_PATIENT_PAYMENT_OPTIONS = [
 export const ON_INSURANCE_PAYMENT_OPTIONS = [
   { value: 'dont_reset', label: "Don't reset invoice age" },
   { value: 'reset', label: 'Reset invoice age' }
+];
+
+export const CARRIER_OPTIONS = [
+  { value: 'all', label: 'All Carriers' },
+  { value: 'delta', label: 'Delta Dental' },
+  { value: 'cigna', label: 'Cigna' },
+  { value: 'metlife', label: 'MetLife' },
+  { value: 'aetna', label: 'Aetna' }
+];
+
+export const BRANCH_OPTIONS = [
+  { value: 'all', label: 'All Branches' },
+  { value: '1', label: 'Default Clinic' },
+  { value: '2', label: 'Westside Branch' },
+  { value: '3', label: 'Riverside Clinic' }
 ];

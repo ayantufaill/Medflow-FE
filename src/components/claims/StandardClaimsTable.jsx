@@ -137,7 +137,7 @@ export const StandardClaimsTable = ({
         overflowX: "auto",
       }}
     >
-      <Table size="small" sx={{ minWidth: 1800 }}>
+      <Table size="small" sx={{ minWidth: "100%" }}>
         <TableHead
           sx={{
             backgroundColor: "#f8f9fa",

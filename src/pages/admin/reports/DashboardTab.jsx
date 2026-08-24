@@ -16,6 +16,7 @@ import RightPanelCollapsed from '../../../components/appointments/right-panel/Ri
 import { reportingService } from '../../../services/reporting.service';
 import dayjs from 'dayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { useBranch } from '../../../hooks/redux/useBranch';
 
 const defaultMetrics = {
   total: { pVal: 0, pGoal: 0, pPercent: 0, cVal: 0, cGoal: 0, cPercent: 0, gpVal: 0, gpGoal: 0, gpPercent: 0, gcVal: 0, gcGoal: 0, gcPercent: 0, perHourStr: '$0 (goal $0)', perVisitStr: '$0 (goal $0)' },
@@ -97,6 +98,8 @@ const DashboardTab = () => {
   const [metrics, setMetrics] = useState(defaultMetrics);
   const [loading, setLoading] = useState(false);
 
+  const { currentBranchId } = useBranch();
+
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
@@ -105,7 +108,8 @@ const DashboardTab = () => {
         const data = await reportingService.getDashboardMetrics({
           date: validDate,
           range: dateRange,
-          providerId: provider
+          providerId: provider,
+          branchId: currentBranchId || 'All',
         });
         if (data) {
           setMetrics(prev => ({
@@ -124,7 +128,7 @@ const DashboardTab = () => {
       }
     };
     fetchMetrics();
-  }, [dateRange, provider, currentDate]);
+  }, [dateRange, provider, currentDate, currentBranchId]);
 
   const colors = {
     navy: '#1a3a6b',

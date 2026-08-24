@@ -60,6 +60,7 @@ export const FINANCIAL_REPORT_SUB_TABS = [
   { label: 'OpenEdge Transactions', path: '/admin/reports/financial/openedge-transactions' },
   { label: 'Procedures By Insurance', path: '/admin/reports/financial/procedures-insurance' },
   { label: 'Family Migrated Balances', path: '/admin/reports/financial/family-migrated-balances' },
+  { label: 'Denial Rate By Payer', path: '/admin/reports/financial/denial-rate' },
 ];
 export const OTHERS_REPORT_SUB_TABS = [
   { label: 'Login Report', path: '/admin/reports/others/login' },

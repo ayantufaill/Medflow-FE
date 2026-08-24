@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../../services/auth.service';
 import { API_BASE_URL } from '../../config/api';
 import { decodeTenantClaims } from '../../utils/tokenClaims';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 /**
  * Decode JWT token to get expiration time
@@ -40,12 +41,7 @@ export const fetchUserProfile = createAsyncThunk(
       const profile = await authService.getProfile();
       return profile;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 
-        error.response?.data?.error?.message || 
-        error.message || 
-        'Failed to fetch user profile'
-      );
+      return rejectWithValue(getErrorMessage(error, 'Failed to fetch user profile'));
     }
   }
 );
@@ -70,12 +66,7 @@ export const loginUser = createAsyncThunk(
       
       return resultAction.payload; // user profile
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 
-        error.response?.data?.error?.message || 
-        error.message || 
-        'Login failed. Please try again.'
-      );
+      return rejectWithValue(getErrorMessage(error, 'Login failed. Please try again.'));
     }
   }
 );
@@ -100,12 +91,7 @@ export const verifyEmailAndRegister = createAsyncThunk(
       
       return resultAction.payload; // user profile
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || 
-        error.response?.data?.error?.message || 
-        error.message || 
-        'Verification failed. Please try again.'
-      );
+      return rejectWithValue(getErrorMessage(error, 'Verification failed. Please try again.'));
     }
   }
 );

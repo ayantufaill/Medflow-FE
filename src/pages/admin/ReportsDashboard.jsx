@@ -53,6 +53,7 @@ import PaymentRequest from './reports/financial/PaymentRequest';
 import OpenEdgeTransactions from './reports/financial/OpenEdgeTransactions';
 import ProceduresInsurance from './reports/financial/ProceduresInsurance';
 import FamilyMigratedBalances from './reports/financial/FamilyMigratedBalances';
+import DenialRateReport from './reports/financial/DenialRateReport';
 import KpiDashboard from './reports/KpiDashboard';
 import { TABS, FINANCIAL_REPORT_SUB_TABS, PATIENT_REPORT_SUB_TABS, CLINICAL_REPORT_SUB_TABS, OTHERS_REPORT_SUB_TABS, SAVING_REPORT_SUB_TABS } from './ReportsConfig';
 import PatientReportsSubNav from '../../components/admin/reports/PatientReportsSubNav';
@@ -243,6 +244,8 @@ const ReportsDashboard = () => {
               <ProceduresInsurance />
             ) : location.pathname === '/admin/reports/financial/family-migrated-balances' ? (
               <FamilyMigratedBalances />
+            ) : location.pathname === '/admin/reports/financial/denial-rate' ? (
+              <DenialRateReport />
             ) : location.pathname === '/admin/reports/saving' ? (
               <SavedReports />
             ) : (
