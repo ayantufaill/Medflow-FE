@@ -54,12 +54,13 @@ import ARAutomation from './ARAutomation';
 import CoverageBookShortcuts from './CoverageBookShortcuts';
 import DashboardGoals from './DashboardGoals';
 import PaymentPresentation from './PaymentPresentation';
+import TimeClockPage from './TimeClockPage';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
   { label: 'Providers', path: '/admin/user-management/providers' },
   { label: 'Roles', path: '/admin/user-management/roles' },
-  { label: 'Time Clock', path: '/admin/user-management/time-clock', disabled: true },
+  { label: 'Time Clock', path: '/admin/user-management/time-clock' },
   { label: 'Task Management', path: '/admin/user-management/task-management' },
 ];
 
@@ -356,8 +357,9 @@ const AdminPage = () => {
             <ProvidersListPage />
           ) : location.pathname === '/admin/user-management/task-management' ? (
             <TaskManagement />
-          ) : location.pathname === '/admin/user-management/roles' ||
-            location.pathname === '/admin/user-management/time-clock' ? (
+          ) : location.pathname === '/admin/user-management/time-clock' ? (
+            <TimeClockPage />
+          ) : location.pathname === '/admin/user-management/roles' ? (
             <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
               <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
                 {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
