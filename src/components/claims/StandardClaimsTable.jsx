@@ -21,6 +21,7 @@ import {
   Select,
   TextField,
   CircularProgress,
+  Popover,
 } from "@mui/material";
 import {
   Info as InfoIcon,
@@ -45,6 +46,8 @@ import {
 import { claimService } from "../../services/claim.service";
 import notesIcon from "../../assets/claimicons/notesicon.svg";
 import deleteIcon from "../../assets/claimicons/deleteicon.svg";
+import { COLORS } from "../../constants/colors";
+import { radius, fontWeight, standardFieldSx } from "../../constants/styles";
 
 export const StandardClaimsTable = ({
   activeTab,
@@ -60,25 +63,29 @@ export const StandardClaimsTable = ({
   handleLoadMoreClaims,
   toggleProcedures,
   expandedProcedures,
-  handleRowStatusChange = () => {},
-  handleRevalidate = () => {},
+  handleRowStatusChange = () => { },
+  handleRevalidate = () => { },
   expandAllMessages,
-  handleNoteOpen = () => {},
-  handleOpenEdit = () => {},
-  handleOpenAttach = () => {},
-  handleOpenPreview = () => {},
-  handleOpenInvalidInfo = () => {},
-  handleDeletePredetermination = () => {},
-  handleToggleHide = () => {},
+  handleNoteOpen = () => { },
+  handleOpenEdit = () => { },
+  handleOpenAttach = () => { },
+  handleOpenPreview = () => { },
+  handleOpenInvalidInfo = () => { },
+  handleDeletePredetermination = () => { },
+  handleToggleHide = () => { },
   dateRange = 'none',
 }) => {
   const [editingDescId, setEditingDescId] = React.useState(null);
   const [editingDescValue, setEditingDescValue] = React.useState("");
   const [isSavingDesc, setIsSavingDesc] = React.useState(false);
+  const [descPopoverAnchor, setDescPopoverAnchor] = React.useState(null);
 
-  const handleDescDoubleClick = (id, currentDesc) => {
+  const handleDescDoubleClick = (id, currentDesc, event) => {
     setEditingDescId(id);
     setEditingDescValue(currentDesc || "");
+    if (event) {
+      setDescPopoverAnchor(event.currentTarget);
+    }
   };
 
   const handleDescSave = async (id) => {
@@ -87,6 +94,7 @@ export const StandardClaimsTable = ({
       await claimService.updateClaim(id, { notes: editingDescValue });
       window.dispatchEvent(new CustomEvent('refresh-claims'));
       setEditingDescId(null);
+      setDescPopoverAnchor(null);
     } catch (err) {
       console.error("Failed to update description", err);
       alert("Failed to update description. Please try again.");
@@ -98,6 +106,7 @@ export const StandardClaimsTable = ({
   const handleDescCancel = () => {
     setEditingDescId(null);
     setEditingDescValue("");
+    setDescPopoverAnchor(null);
   };
 
   let renderList = [];
@@ -137,7 +146,7 @@ export const StandardClaimsTable = ({
         overflowX: "auto",
       }}
     >
-      <Table size="small" sx={{ minWidth: 1800 }}>
+      <Table size="small" sx={{ minWidth: "100%" }}>
         <TableHead
           sx={{
             backgroundColor: "#f8f9fa",
@@ -290,10 +299,10 @@ export const StandardClaimsTable = ({
               activeTab === 3 ||
               activeTab === 4 ||
               activeTab === 5) && (
-              <TableCell>
-                Clearing House Status Message
-              </TableCell>
-            )}
+                <TableCell>
+                  Clearing House Status Message
+                </TableCell>
+              )}
             {activeTab === 4 && (
               <TableCell>
                 Submitted Value
@@ -352,7 +361,7 @@ export const StandardClaimsTable = ({
                 >
                   <Typography
                     variant="body2"
-                    sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}
+                    sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#64748b", fontStyle: "italic" }}
                   >
                     No claims found matching the selection criteria.
                   </Typography>
@@ -466,7 +475,8 @@ export const StandardClaimsTable = ({
                     {/* Patient Name (+ Code & DOB) */}
                     <TableCell>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif", 
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
                           fontWeight: 600,
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#3b82f6",
@@ -477,7 +487,8 @@ export const StandardClaimsTable = ({
                         {claim.patientName}
                       </Typography>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif", 
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
                           color: "#64748b",
                           fontWeight: 400,
                           fontSize: "0.75rem",
@@ -488,7 +499,8 @@ export const StandardClaimsTable = ({
                       {(activeTab === 4 || activeTab === 5) &&
                         claim.patientDob && (
                           <Typography
-                            sx={{ fontFamily: "Inter, sans-serif", 
+                            sx={{
+                              fontFamily: "Inter, sans-serif",
                               color: "#64748b",
                               mt: 0.2,
                               fontSize: "0.75rem",
@@ -502,7 +514,8 @@ export const StandardClaimsTable = ({
                     {/* Claim # (+ Created Date) */}
                     <TableCell>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif", 
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
                           fontWeight: 600,
                           color: isError && activeTab === 0 ? "#e53e3e" : "#1e293b",
                           fontSize: "0.75rem",
@@ -515,7 +528,8 @@ export const StandardClaimsTable = ({
                       </Typography>
                       {activeTab === 4 && claim.createdDate && (
                         <Typography
-                          sx={{ fontFamily: "Inter, sans-serif", 
+                          sx={{
+                            fontFamily: "Inter, sans-serif",
                             color: "#64748b",
                             fontStyle: "normal",
                             fontSize: "0.75rem",
@@ -529,7 +543,8 @@ export const StandardClaimsTable = ({
                     {/* Claim Type */}
                     <TableCell>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif", 
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#64748b",
                           display: "flex",
@@ -549,7 +564,8 @@ export const StandardClaimsTable = ({
                     {/* Created Date / Sent Date */}
                     <TableCell>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
+                        sx={{
+                          fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#475569",
                         }}
@@ -562,17 +578,17 @@ export const StandardClaimsTable = ({
                     {(activeTab === 2 ||
                       activeTab === 3 ||
                       activeTab === 4) && (
-                      <TableCell>
-                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569" }}>
-                          {claim.printedDate || "—"}
-                        </Typography>
-                      </TableCell>
-                    )}
+                        <TableCell>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#475569" }}>
+                            {claim.printedDate || "—"}
+                          </Typography>
+                        </TableCell>
+                      )}
 
                     {/* Subscriber */}
                     {activeTab === 4 && (
                       <TableCell>
-                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
                           {claim.subscriber || "—"}
                         </Typography>
                       </TableCell>
@@ -581,7 +597,8 @@ export const StandardClaimsTable = ({
                     {/* Carrier */}
                     <TableCell>
                       <Typography
-                        sx={{ fontFamily: "Inter, sans-serif", 
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
                           color:
                             isError && activeTab === 0 ? "#e53e3e" : "#475569",
                           fontWeight: 500,
@@ -596,7 +613,8 @@ export const StandardClaimsTable = ({
                     {activeTab === 4 && (
                       <TableCell>
                         <Typography
-                          sx={{ fontFamily: "Inter, sans-serif", 
+                          sx={{
+                            fontFamily: "Inter, sans-serif",
                             color: "#475569",
                             fontStyle: "normal",
                             fontSize: "0.75rem",
@@ -642,7 +660,7 @@ export const StandardClaimsTable = ({
                     {/* Treating Provider */}
                     {activeTab === 5 && (
                       <TableCell>
-                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#475569", fontWeight: 500 }}>
                           {claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() || '—' : "—"}
                         </Typography>
                       </TableCell>
@@ -652,10 +670,10 @@ export const StandardClaimsTable = ({
                     {activeTab !== 0 && (
                       <TableCell>
                         {activeTab === 1 ||
-                        activeTab === 2 ||
-                        activeTab === 3 ||
-                        activeTab === 4 ||
-                        activeTab === 5 ? (
+                          activeTab === 2 ||
+                          activeTab === 3 ||
+                          activeTab === 4 ||
+                          activeTab === 5 ? (
                           // Interactive Dropdown
                           <FormControl
                             size="small"
@@ -672,7 +690,7 @@ export const StandardClaimsTable = ({
                                 fontWeight: 500,
                                 color:
                                   claim.status === "denied" ||
-                                  claim.status === "rejected"
+                                    claim.status === "rejected"
                                     ? "#d93838"
                                     : "#1e293b",
                                 "& .MuiSelect-select": { py: 0.5, pr: 2 },
@@ -739,7 +757,8 @@ export const StandardClaimsTable = ({
                           </FormControl>
                         ) : (
                           <Typography
-                            sx={{ fontFamily: "Inter, sans-serif", 
+                            sx={{
+                              fontFamily: "Inter, sans-serif",
                               fontWeight: 500,
                               color: "#1e293b",
                               fontSize: "0.75rem",
@@ -796,7 +815,7 @@ export const StandardClaimsTable = ({
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#64748b" }}>—</Typography>
+                          <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#64748b" }}>—</Typography>
                         )}
                       </TableCell>
                     )}
@@ -805,18 +824,19 @@ export const StandardClaimsTable = ({
                     {(activeTab === 2 ||
                       activeTab === 3 ||
                       activeTab === 4) && (
-                      <TableCell>
-                        <Typography
-                          sx={{ fontFamily: "Inter, sans-serif", 
-                            color: claim.eraStatus ? "#d93838" : "#64748b",
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                          }}
-                        >
-                          {claim.eraStatus || "—"}
-                        </Typography>
-                      </TableCell>
-                    )}
+                        <TableCell>
+                          <Typography
+                            sx={{
+                              fontFamily: "Inter, sans-serif",
+                              color: claim.eraStatus ? "#d93838" : "#64748b",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {claim.eraStatus || "—"}
+                          </Typography>
+                        </TableCell>
+                      )}
 
                     {/* Clearing House Status Message */}
                     {(activeTab === 1 ||
@@ -824,30 +844,31 @@ export const StandardClaimsTable = ({
                       activeTab === 3 ||
                       activeTab === 4 ||
                       activeTab === 5) && (
-                      <TableCell
-                        sx={{ maxWidth: "120px", verticalAlign: "top" }}
-                      >
-                        <Typography
-                          noWrap={!isExpanded && !expandAllMessages}
-                          sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
-                            color: "#1e293b",
-                            fontWeight: 500,
-                            whiteSpace:
-                              isExpanded || expandAllMessages
-                                ? "normal"
-                                : "nowrap",
-                            wordBreak: "break-word",
-                          }}
+                        <TableCell
+                          sx={{ maxWidth: "120px", verticalAlign: "top" }}
                         >
-                          {claim.clearingHouseMessage || "—"}
-                        </Typography>
-                      </TableCell>
-                    )}
+                          <Typography
+                            noWrap={!isExpanded && !expandAllMessages}
+                            sx={{
+                              fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
+                              color: "#1e293b",
+                              fontWeight: 500,
+                              whiteSpace:
+                                isExpanded || expandAllMessages
+                                  ? "normal"
+                                  : "nowrap",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {claim.clearingHouseMessage || "—"}
+                          </Typography>
+                        </TableCell>
+                      )}
 
                     {/* Submitted Value */}
                     {activeTab === 4 && (
                       <TableCell sx={{ verticalAlign: "top" }}>
-                        <Typography sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem", color: "#1a3a6b", fontWeight: 700 }}>
+                        <Typography sx={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#1a3a6b", fontWeight: 700 }}>
                           $
                           {(claim.submittedValue || 0).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
@@ -878,49 +899,17 @@ export const StandardClaimsTable = ({
                     {/* Description */}
                     <TableCell
                       sx={{
-                        maxWidth: isExpanded || editingDescId === claim.id ? "400px" : "110px",
+                        maxWidth: isExpanded ? "400px" : "110px",
                         verticalAlign: "top",
                       }}
-                      onDoubleClick={() => {
+                      onDoubleClick={(e) => {
                         if (activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) return;
                         if (editingDescId !== claim.id) {
-                          handleDescDoubleClick(claim.id, claim.description);
+                          handleDescDoubleClick(claim.id, claim.description, e);
                         }
                       }}
                     >
-                      {editingDescId === claim.id ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <TextField
-                            size="small"
-                            value={editingDescValue}
-                            onChange={(e) => setEditingDescValue(e.target.value)}
-                            fullWidth
-                            autoFocus
-                            multiline
-                            maxRows={4}
-                            disabled={isSavingDesc}
-                            sx={{
-                              '& .MuiInputBase-root': {
-                                fontFamily: "Inter, sans-serif",
-                                fontSize: "0.75rem",
-                                p: 1,
-                              }
-                            }}
-                          />
-                          {isSavingDesc ? (
-                            <CircularProgress size={20} sx={{ ml: 1 }} />
-                          ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                              <IconButton size="small" onClick={() => handleDescSave(claim.id)} sx={{ p: 0.2 }}>
-                                <SaveIcon fontSize="small" color="success" />
-                              </IconButton>
-                              <IconButton size="small" onClick={handleDescCancel} sx={{ p: 0.2 }}>
-                                <CancelIcon fontSize="small" color="error" />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </Box>
-                      ) : isExpanded ? (
+                      {isExpanded ? (
                         (() => {
                           let shortDesc = claim.description || "";
                           let longDesc = "";
@@ -944,18 +933,20 @@ export const StandardClaimsTable = ({
                               }}
                             >
                               <Typography
-                                sx={{ fontFamily: "Inter, sans-serif", 
+                                sx={{
+                                  fontFamily: "Inter, sans-serif",
                                   color: "#475569",
                                   fontStyle: "italic",
                                   fontSize: "0.75rem",
-                                  
+
                                 }}
                               >
                                 {shortDesc}
                               </Typography>
                               {longDesc && (
                                 <Typography
-                                  sx={{ fontFamily: "Inter, sans-serif", 
+                                  sx={{
+                                    fontFamily: "Inter, sans-serif",
                                     color: "#1e293b",
                                     whiteSpace: "normal",
                                     wordBreak: "break-word",
@@ -965,7 +956,7 @@ export const StandardClaimsTable = ({
                                     border: "1px solid #e2e8f0",
                                     borderRadius: "4px",
                                     fontSize: "0.75rem",
-                                    
+
                                   }}
                                 >
                                   {longDesc}
@@ -982,7 +973,8 @@ export const StandardClaimsTable = ({
                         >
                           <Typography
                             noWrap
-                            sx={{ fontFamily: "Inter, sans-serif",  fontSize: "0.75rem",
+                            sx={{
+                              fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
                               color: "#475569",
                               fontStyle: "italic",
                               cursor: "pointer",
@@ -1050,10 +1042,16 @@ export const StandardClaimsTable = ({
                         ) : (
                           <>
                             {!(activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) && (
-                              <Tooltip title="Edit Claim">
+                              <Tooltip title="Edit Narrative">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleOpenEdit(claim)}
+                                  onClick={(e) => {
+                                    if (activeTab === 0) {
+                                      handleDescDoubleClick(claim.id, claim.description || claim.notes, e);
+                                    } else {
+                                      handleOpenEdit(claim);
+                                    }
+                                  }}
                                   sx={{ color: "#7d9cc4", p: 0.2 }}
                                 >
                                   <EditIcon sx={{ fontSize: 14 }} />
@@ -1179,6 +1177,92 @@ export const StandardClaimsTable = ({
           )}
         </TableBody>
       </Table>
+
+      {/* Popover Editor */}
+      <Popover
+        open={Boolean(descPopoverAnchor) && editingDescId !== null}
+        anchorEl={descPopoverAnchor}
+        onClose={handleDescCancel}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            p: 1.5,
+            width: 320,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            borderRadius: radius.md,
+            border: `1px solid ${COLORS.BORDER}`
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <TextField
+            size="small"
+            value={editingDescValue}
+            onChange={(e) => setEditingDescValue(e.target.value)}
+            fullWidth
+            autoFocus
+            multiline
+            minRows={3}
+            maxRows={6}
+            disabled={isSavingDesc}
+            placeholder="Enter narrative description..."
+            sx={{
+              ...standardFieldSx,
+              '& .MuiOutlinedInput-root': {
+                ...standardFieldSx['& .MuiOutlinedInput-root'],
+                height: 'auto',
+                minHeight: '80px',
+                padding: 0,
+              },
+              '& .MuiOutlinedInput-input': {
+                ...standardFieldSx['& .MuiOutlinedInput-input'],
+                padding: '12px',
+              }
+            }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
+              size="small"
+              onClick={handleDescCancel}
+              variant="outlined"
+              sx={{
+                textTransform: 'none',
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER,
+                borderRadius: radius.sm,
+                fontWeight: fontWeight.medium,
+                '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="small"
+              onClick={() => handleDescSave(editingDescId)}
+              variant="contained"
+              disabled={isSavingDesc}
+              sx={{
+                textTransform: 'none',
+                backgroundColor: COLORS.ACCENT,
+                boxShadow: 'none',
+                borderRadius: radius.sm,
+                fontWeight: fontWeight.medium,
+                '&:hover': { backgroundColor: '#1b52cf' } // ACCENT_HOVER
+              }}
+              startIcon={isSavingDesc ? <CircularProgress size={14} color="inherit" /> : null}
+            >
+              {isSavingDesc ? 'Saving...' : 'Save'}
+            </Button>
+          </Box>
+        </Box>
+      </Popover>
     </TableContainer>
   );
 };

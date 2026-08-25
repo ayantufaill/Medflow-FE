@@ -31,15 +31,15 @@ const PrePostOpsForm = ({
 }) => {
   return (
     <Box sx={{ p: 0, backgroundColor: '#FBFCFE', minHeight: '80vh' }}>
-      
+
       {/* Heading */}
-      <Typography 
-        variant="h5" 
-        sx={{ 
-          color: '#1e293b', 
-          fontWeight: 700, 
-          fontSize: '1.25rem', 
-          mb: 4 
+      <Typography
+        variant="h5"
+        sx={{
+          color: '#1e293b',
+          fontWeight: 700,
+          fontSize: '1.25rem',
+          mb: 4
         }}
       >
         {editingId ? 'Edit Pre/Post Operation Document' : 'Add New Pre/Post Operation Document'}
@@ -47,7 +47,7 @@ const PrePostOpsForm = ({
 
       {/* Form Inputs Container */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5, maxWidth: 800 }}>
-        
+
         {/* Type Selection */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', minWidth: 60 }}>
@@ -58,15 +58,15 @@ const PrePostOpsForm = ({
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
-            <FormControlLabel 
-              value="Post Operation" 
-              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Post Operation</Typography>} 
+            <FormControlLabel
+              value="Post Operation"
+              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Post Operation</Typography>}
             />
-            <FormControlLabel 
-              value="Pre Operation" 
-              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Pre Operation</Typography>} 
+            <FormControlLabel
+              value="Pre Operation"
+              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Pre Operation</Typography>}
             />
           </RadioGroup>
         </Box>
@@ -76,24 +76,24 @@ const PrePostOpsForm = ({
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
             Send form to patient
           </Typography>
-          <TextField 
+          <TextField
             size="small"
             value={sendHours}
             onChange={(e) => setSendHours(e.target.value)}
-            sx={{ 
+            sx={{
               width: 60,
               '& .MuiInputBase-input': { textAlign: 'center', py: 0.6, fontSize: '0.9rem' },
               '& .MuiOutlinedInput-root': { borderRadius: 1.5, borderColor: '#ef4444' },
               '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ef4444' }
-            }} 
+            }}
           />
-          <TextField 
+          <TextField
             select
             size="small"
             SelectProps={{ native: true }}
-            value={sendUnit} 
+            value={sendUnit}
             onChange={(e) => setSendUnit(e.target.value)}
-            sx={{ 
+            sx={{
               width: 90,
               '& .MuiInputBase-input': { py: 0.6, fontSize: '0.9rem' },
               '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
@@ -117,15 +117,15 @@ const PrePostOpsForm = ({
             value={fileOption}
             onChange={(e) => setFileOption(e.target.value)}
           >
-            <FormControlLabel 
-              value="Upload PDF" 
-              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Upload PDF</Typography>} 
+            <FormControlLabel
+              value="Upload PDF"
+              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Upload PDF</Typography>}
             />
-            <FormControlLabel 
-              value="Create Form" 
-              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />} 
-              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Create Form</Typography>} 
+            <FormControlLabel
+              value="Create Form"
+              control={<Radio size="small" sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#3b82f6' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#475569', fontWeight: 500 }}>Create Form</Typography>}
             />
           </RadioGroup>
         </Box>
@@ -177,7 +177,7 @@ const PrePostOpsForm = ({
             placeholder="Enter Name"
             value={docName}
             onChange={(e) => setDocName(e.target.value)}
-            sx={{ 
+            sx={{
               width: 300,
               '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
               '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }
@@ -195,7 +195,7 @@ const PrePostOpsForm = ({
             placeholder="Enter code or procedure"
             value={procedures}
             onChange={(e) => setProcedures(e.target.value)}
-            sx={{ 
+            sx={{
               width: 300,
               '& .MuiInputBase-input': { fontSize: '0.9rem', py: 0.8 },
               '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' }

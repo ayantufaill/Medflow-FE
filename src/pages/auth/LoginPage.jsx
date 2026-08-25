@@ -64,13 +64,17 @@ const LoginPage = () => {
 
     try {
       const resultAction = await dispatch(loginUser(data));
+      console.log("[LOGIN_PAGE_DEBUG] resultAction:", resultAction);
+      
       if (loginUser.fulfilled.match(resultAction)) {
         navigate(getPostLoginRoute(resultAction.payload), { replace: true });
       } else {
         // rejected
+        console.log("[LOGIN_PAGE_DEBUG] Rejected payload:", resultAction.payload);
         setError(resultAction.payload || "Login failed. Please try again.");
       }
     } catch (err) {
+      console.error("[LOGIN_PAGE_DEBUG] Catch block err:", err);
       // Catch any unexpected errors during dispatch
       const errorMessage = extractErrorMessage(err);
       setError(errorMessage);

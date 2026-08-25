@@ -18,7 +18,8 @@ import {
   TextField,
   Select,
   MenuItem,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -110,15 +111,39 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const currentPatient = useSelector(selectCurrentPatient);
   const [showEobDialog, setShowEobDialog] = useState(false);
   const eobFileInputRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [localClaimEobs, setLocalClaimEobs] = useState(attachingClaim?.eobs || []);
 
   useEffect(() => {
     if (attachingClaim) {
       setExistingAttachments(attachingClaim.attachments || []);
       setUploadedFiles([]);
+      setLocalClaimEobs(attachingClaim.eobs || []);
     }
   }, [attachingClaim]);
 
   const hasAnyAttachments = existingAttachments.length > 0 || uploadedFiles.length > 0;
+
+  const handleSave = async () => {
+    const newFiles = uploadedFiles.map(u => u.file).filter(Boolean);
+    const claimId = attachingClaim?._id || attachingClaim?.id;
+
+    if (newFiles.length > 0 && claimId) {
+      setSaving(true);
+      try {
+        await claimService.uploadAttachments(claimId, newFiles);
+      } catch (err) {
+        console.error('Failed to upload attachments', err);
+        alert('Failed to upload attachments. Please try again.');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+
+    // Notify parent (refresh data, close dialog, etc.)
+    onSave({ newFiles, retainedFiles: existingAttachments });
+  };
 
   if (!attachingClaim) return null;
 
@@ -472,24 +497,29 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
           />
           <Button 
             onClick={onClose} 
+            disabled={saving}
             variant="outlined"
             sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY, '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' } }}
           >
             Cancel
           </Button>
           <Button
-            onClick={() => onSave({ newFiles: uploadedFiles.map(u => u.file).filter(Boolean), retainedFiles: existingAttachments })}
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
             variant="contained"
             sx={{ textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif' }}
           >
-            Submit Attachments
+            {saving ? 'Submitting...' : 'Submit Attachments'}
           </Button>
           <Button
-            onClick={() => onSave({ newFiles: uploadedFiles.map(u => u.file).filter(Boolean), retainedFiles: existingAttachments })}
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
             variant="contained"
             sx={{ textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif' }}
           >
-            Save
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -518,7 +548,16 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
         open={showEobDialog}
         onClose={() => setShowEobDialog(false)}
         claimNumber={attachingClaim?.claimNumber}
-        eobs={attachingClaim?.eobs || []}
+        claimId={attachingClaim?._id || attachingClaim?.id}
+        eobs={localClaimEobs}
+        onEobsChange={(updatedEobs) => {
+          setLocalClaimEobs(updatedEobs);
+          if (attachingClaim) {
+            try { attachingClaim.eobs = updatedEobs; } catch(e) {}
+          }
+          window.dispatchEvent(new CustomEvent('refresh-claims'));
+          window.dispatchEvent(new CustomEvent('refresh-ledger'));
+        }}
       />
     </>
   );

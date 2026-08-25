@@ -118,7 +118,7 @@ const FinancePageDialogs = ({
             patient={patient}
             onBack={() => setShowPaymentPlan(false)}
             onCreatePlan={handleCreatePaymentPlan}
-            onAddCard={() => { setShowPaymentPlan(false); setShowAddCard(true); }}
+            onAddCard={() => setShowAddCard(true)}
           />
         </DialogWrapper>
       )}

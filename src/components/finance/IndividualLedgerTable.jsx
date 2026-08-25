@@ -54,65 +54,33 @@ const IndividualLedgerTable = ({ patient }) => {
   ];
 
   const handlePrint = () => {
+    const tableEl = document.getElementById('individual-ledger-table');
+    if (!tableEl) {
+      alert("Ledger table not found to print.");
+      return;
+    }
+    const htmlToPrint = tableEl.outerHTML;
+
     const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'Patient';
     const printWindow = window.open('', '_blank');
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Individual Ledger - ${patientName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { color: #333; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f5f5f5; font-weight: bold; color: #555; }
-            tr:hover { background-color: #f9f9f9; }
-          </style>
-        </head>
-        <body>
-          <h2>Individual Ledger Report - ${patientName}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Patient</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Balance</th>
-                <th>User</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ledgerItems.map(row => {
-                const dateStr = row.date ? dayjs(row.date).format('MM/DD/YYYY') : 'N/A';
-                const amtStr = row.charges > 0 ? `$${row.charges.toFixed(2)}` : row.credits > 0 ? `-$${row.credits.toFixed(2)}` : '$0.00';
-                const balStr = `$${row.balance.toFixed(2)}`;
-                return `
-                  <tr>
-                    <td>${dateStr}</td>
-                    <td>${patientName}</td>
-                    <td>${row.description || ''}</td>
-                    <td>${amtStr}</td>
-                    <td>${balStr}</td>
-                    <td>STAFF</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.close();
-            };
-          </script>
-        </body>
-      </html>
-    `;
-    
-    printWindow.document.write(printContent);
+    printWindow.document.write('<html><head><title>Individual Ledger - ' + patientName + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }');
+    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
+    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
+    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print { display: none !important; }');
+    printWindow.document.write('h6, h5, h2 { font-family: sans-serif; color: #333; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write(`<h2>Individual Ledger Report - ${patientName}</h2>`);
+    printWindow.document.write(htmlToPrint);
+    printWindow.document.write('</body></html>');
     printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   return (
@@ -124,7 +92,7 @@ const IndividualLedgerTable = ({ patient }) => {
           variant="outlined" 
           onClick={handlePrint}
           disabled={loading || ledgerItems.length === 0}
-          sx={{ color: '#5c6bc0', borderColor: '#5c6bc0', textTransform: 'none' }}
+          sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600 }}
         >
           Print
         </Button>
@@ -144,18 +112,19 @@ const IndividualLedgerTable = ({ patient }) => {
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                {columns.map((column) => (
-                  <TableCell key={column.key} sx={{ fontWeight: 'bold', color: '#555', fontSize: '12px' }}>
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <TableContainer component={Paper} elevation={0} id="individual-ledger-table">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
+                  {columns.map((column) => (
+                    <TableCell key={column.key}>
+                      {column.label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
               {ledgerItems.map((row) => {
                 const dateStr = row.date ? dayjs(row.date).format('MM/DD/YYYY') : 'N/A';
                 const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'N/A';
@@ -163,21 +132,22 @@ const IndividualLedgerTable = ({ patient }) => {
                 const balStr = `$${row.balance.toFixed(2)}`;
                 
                 return (
-                  <TableRow key={row.id} hover>
-                    <TableCell sx={{ fontSize: '11px' }}>{dateStr}</TableCell>
-                    <TableCell sx={{ fontSize: '11px' }}>{patientName}</TableCell>
-                    <TableCell sx={{ fontSize: '11px' }}>{row.description}</TableCell>
-                    <TableCell sx={{ fontSize: '11px', color: row.credits > 0 ? '#2e7d32' : 'inherit', fontWeight: row.credits > 0 ? '500' : 'normal' }}>
+                  <TableRow key={row.id} hover sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
+                    <TableCell>{dateStr}</TableCell>
+                    <TableCell>{patientName}</TableCell>
+                    <TableCell>{row.description}</TableCell>
+                    <TableCell sx={{ color: row.credits > 0 ? '#2e7d32' : 'inherit', fontWeight: row.credits > 0 ? '500' : 'normal' }}>
                       {amtStr}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '11px', fontWeight: 'bold' }}>{balStr}</TableCell>
-                    <TableCell sx={{ fontSize: '11px' }}>STAFF</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{balStr}</TableCell>
+                    <TableCell>STAFF</TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </TableContainer>
+        </Box>
       )}
     </Box>
   );

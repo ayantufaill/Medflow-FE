@@ -23,7 +23,7 @@ import SaveConfigIcon from '../../assets/scheduleconfigurationicon/saveconfigura
 
 const scheduleConfigTheme = createTheme({
   typography: {
-    fontFamily: '"Segoe UI", sans-serif',
+    fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
     body1: {
       fontSize: '12px',
       fontWeight: 400,
@@ -37,20 +37,20 @@ const scheduleConfigTheme = createTheme({
       letterSpacing: '0px',
     },
     subtitle1: {
-      fontFamily: '"Segoe UI", sans-serif',
+      fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
     },
     subtitle2: {
-      fontFamily: '"Segoe UI", sans-serif',
+      fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
     },
     button: {
-      fontFamily: '"Segoe UI", sans-serif',
+      fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
     }
   },
   components: {
     MuiTableCell: {
       styleOverrides: {
         root: {
-          fontFamily: '"Segoe UI", sans-serif',
+          fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
           fontSize: '12px',
           fontWeight: 400,
         }
@@ -59,7 +59,7 @@ const scheduleConfigTheme = createTheme({
     MuiInputBase: {
       styleOverrides: {
         root: {
-          fontFamily: '"Segoe UI", sans-serif',
+          fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
           fontSize: '12px',
         }
       }
@@ -67,7 +67,7 @@ const scheduleConfigTheme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          fontFamily: '"Segoe UI", sans-serif',
+          fontFamily: '"Inter", "Manrope", "Segoe UI", sans-serif',
           fontSize: '12px',
         }
       }
