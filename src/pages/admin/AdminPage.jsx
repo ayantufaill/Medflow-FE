@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { Box, Tabs, Tab, useTheme, Button, Typography, Paper, Breadcrumbs } from '@mui/material';
 import { Add as AddIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import UserManagementView from './UserManagementView';
+import TaskManagement from './TaskManagement';
 import OfficeTimings from './OfficeTimings';
 import OnlineScheduleConfiguration from './OnlineSchedule';
 import ProvidersListPage from '../providers/ProvidersListPage';
@@ -59,7 +60,7 @@ const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Providers', path: '/admin/user-management/providers' },
   { label: 'Roles', path: '/admin/user-management/roles' },
   { label: 'Time Clock', path: '/admin/user-management/time-clock', disabled: true },
-  { label: 'Task Management', path: '/admin/user-management/task-management', disabled: true },
+  { label: 'Task Management', path: '/admin/user-management/task-management' },
 ];
 
 const TABS = [
@@ -353,9 +354,10 @@ const AdminPage = () => {
         {activeTab === 0 && (
           location.pathname === '/admin/user-management/providers' ? (
             <ProvidersListPage />
+          ) : location.pathname === '/admin/user-management/task-management' ? (
+            <TaskManagement />
           ) : location.pathname === '/admin/user-management/roles' ||
-            location.pathname === '/admin/user-management/time-clock' ||
-            location.pathname === '/admin/user-management/task-management' ? (
+            location.pathname === '/admin/user-management/time-clock' ? (
             <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
               <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
                 {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
