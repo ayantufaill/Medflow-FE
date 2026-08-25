@@ -94,7 +94,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
             borderRadius: '16px',
             boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden',
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             margin: '16px',
             width: '100%',
             maxWidth: '500px'
@@ -108,7 +108,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
             px: '25px', py: '18px', flexShrink: 0,
             borderBottom: `1px solid ${COLORS.BORDER}`,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            backgroundColor: 'white',
+            backgroundColor: '#f8fafc',
           }}>
             <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '18px', fontWeight: 700, color: '#111' }}>
               Add Time Clock Record
@@ -132,7 +132,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                 <Grid container spacing={2}>
                   
                   {/* User Selection */}
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <FieldLabel>User</FieldLabel>
                     <Controller
                       name="user"
@@ -173,7 +173,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                   </Grid>
 
                   {/* Date Selection */}
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <FieldLabel>Date</FieldLabel>
                     <Controller
                       name="date"
@@ -197,7 +197,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                   </Grid>
 
                   {/* Record Type */}
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <FieldLabel>Record Type</FieldLabel>
                     <Controller
                       name="recordType"
@@ -224,7 +224,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                   </Grid>
 
                   {/* Time Selection */}
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <FieldLabel>Time</FieldLabel>
                     <Controller
                       name="time"
