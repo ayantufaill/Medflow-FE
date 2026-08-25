@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
+import { usePatients } from '../../hooks/queries/usePatients';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -26,6 +27,7 @@ import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 import personalInfoIcon from '../../assets/usermanagement icons/personalinformation.svg';
 
 const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
+  const { data: patients = [] } = usePatients({ limit: 1000, status: 'active' });
   const createTaskMutation = useCreateTask();
   const [saving, setSaving] = useState(false);
 
@@ -222,13 +224,13 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
                         <Select {...field} fullWidth size="small" displayEmpty MenuProps={modalMenuProps} sx={{ bgcolor: 'white', borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } }}
                           renderValue={(selected) => {
                             if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '14px' }}>None</Typography>;
-                            const match = users.find(u => (u.id || u.UserNum) === selected);
+                            const match = users.find(u => String(u._id || u.id || u.UserNum) === String(selected));
                             return <Typography sx={{ fontSize: '14px', color: '#1E293B' }}>{match ? (`${match.firstName || ''} ${match.lastName || ''}`.trim() || match.email) : selected}</Typography>;
                           }}
                         >
                           <MenuItem value="">None</MenuItem>
                           {users.map(u => (
-                            <MenuItem key={u.id || u.UserNum} value={u.id || u.UserNum}>
+                            <MenuItem key={u._id || u.id || u.UserNum} value={u._id || u.id || u.UserNum}>
                               {`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email}
                             </MenuItem>
                           ))}
@@ -246,7 +248,7 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
                         <Select {...field} fullWidth size="small" displayEmpty MenuProps={modalMenuProps} sx={{ bgcolor: 'white', borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } }}
                           renderValue={(selected) => {
                             if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '14px' }}>None</Typography>;
-                            const match = roles?.find(g => (g._id || g.id) === selected);
+                            const match = roles?.find(g => String(g._id || g.id) === String(selected));
                             return <Typography sx={{ fontSize: '14px', color: '#1E293B' }}>{match ? match.name : selected}</Typography>;
                           }}
                         >
@@ -265,13 +267,20 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
                       name="KeyNum"
                       control={control}
                       render={({ field }) => (
-                        <TextField 
-                          {...field} 
-                          fullWidth 
-                          size="small" 
-                          placeholder="Search Patient..." 
-                          sx={{ bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } } }}
-                        />
+                        <Select {...field} fullWidth size="small" displayEmpty MenuProps={modalMenuProps} sx={{ bgcolor: 'white', borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } }}
+                          renderValue={(selected) => {
+                            if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '14px' }}>None</Typography>;
+                            const match = patients.find(p => String(p._id || p.id || p.PatNum) === String(selected));
+                            return <Typography sx={{ fontSize: '14px', color: '#1E293B' }}>{match ? (`${match.firstName || ''} ${match.lastName || ''}`.trim() || match.email) : selected}</Typography>;
+                          }}
+                        >
+                          <MenuItem value="">None</MenuItem>
+                          {patients.map(p => (
+                            <MenuItem key={p._id || p.id || p.PatNum} value={p._id || p.id || p.PatNum}>
+                              {`${p.firstName || ''} ${p.lastName || ''}`.trim() || p.email}
+                            </MenuItem>
+                          ))}
+                        </Select>
                       )}
                     />
                   </Grid>

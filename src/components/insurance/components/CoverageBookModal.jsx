@@ -38,6 +38,7 @@ const CoverageBookModal = ({
   coverageData = [],
   setCoverageData,
   feeGuideId,
+  onSave,
 }) => {
   const [localCoverageData, setLocalCoverageData] = React.useState([]);
   const hasLoadedRef = React.useRef(false);

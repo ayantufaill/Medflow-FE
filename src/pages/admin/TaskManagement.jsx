@@ -207,7 +207,7 @@ const TaskManagement = () => {
               MenuProps={roundedSelectMenuProps}
               renderValue={(selected) => {
                 if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '13px' }}>Select...</Typography>;
-                const match = roles?.find(g => (g._id || g.id) === selected);
+                const match = roles?.find(g => String(g._id || g.id) === String(selected));
                 return <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 500 }}>{match ? match.name : selected}</Typography>;
               }}
               sx={{ 
@@ -238,7 +238,7 @@ const TaskManagement = () => {
               MenuProps={roundedSelectMenuProps}
               renderValue={(selected) => {
                 if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '13px' }}>Select...</Typography>;
-                const match = users.find(u => (u.id || u.UserNum) === selected);
+                const match = users.find(u => String(u._id || u.id || u.UserNum) === String(selected));
                 return <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 500 }}>{match ? (`${match.firstName || ''} ${match.lastName || ''}`.trim() || match.email) : selected}</Typography>;
               }}
               sx={{ 
@@ -252,7 +252,7 @@ const TaskManagement = () => {
             >
               <MenuItem value=""><em>None</em></MenuItem>
               {users.map(user => (
-                <MenuItem key={user.id || user.UserNum} value={user.id || user.UserNum}>
+                <MenuItem key={user._id || user.id || user.UserNum} value={user._id || user.id || user.UserNum}>
                   {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}
                 </MenuItem>
               ))}
