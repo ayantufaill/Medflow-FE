@@ -59,13 +59,19 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
     const weight = totalCharges > 0 ? charge / totalCharges : 0;
     
-    let ptBalance = Number(p.patientBalance || p.ptBalance || 0);
-    let insBalance = Number(p.insuranceBalance || p.insBalance || 0);
+    let ptBalance = Number(p.patientBalance || p.ptBalance || parseFloat(String(p.ptPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
+    let insBalance = Number(p.insuranceBalance || p.insBalance || parseFloat(String(p.insPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
     let pay = Number(p.patientPaid || 0) + Number(p.insurancePaid || 0);
 
-    if (hasSummary) {
+    // Only override with summary pro-ration if line items don't have their own balances defined
+    // and there is an actual summary
+    if (hasSummary && ptBalance === 0 && insBalance === 0) {
       ptBalance = Math.max(0, (Number(editTarget.summary.ptBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
       insBalance = Math.max(0, (Number(editTarget.summary.insBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
+    }
+    
+    // Always pro-rate pay if it's 0 on line items but exists in summary
+    if (hasSummary && pay === 0 && totalPayment > 0) {
       pay = totalPayment * weight;
     }
     
@@ -83,10 +89,21 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     };
   });
 
+  const totalPtBalance = dynamicLineItems.reduce((sum, item) => sum + parseFloat(item.values[1].val.replace(/[^0-9.-]+/g,"")), 0);
+
   const parsedValue = parseFloat(calcValue) || 0;
-  const adjustmentAmount = calcMode === "Percentage" 
-    ? totalCharges * (parsedValue / 100) 
+  let baseAmount = totalCharges;
+  if (adjustmentType === "Curtsey W/O") {
+    baseAmount = totalPtBalance;
+  }
+  
+  let adjustmentAmount = calcMode === "Percentage" 
+    ? baseAmount * (parsedValue / 100) 
     : parsedValue;
+
+  if (adjustmentType === "Curtsey W/O" && adjustmentAmount > totalPtBalance) {
+    adjustmentAmount = totalPtBalance;
+  }
 
   const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems.map(item => {
     // Pro-rate adjustment for line items if it's a percentage or just show 0 if flat
@@ -161,13 +178,13 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               sx={{ width: 150, height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
               MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
             >
-              <MenuItem value="Write Off">Write Off</MenuItem>
-              <MenuItem value="Un-Collected">Un-Collected</MenuItem>
-              <MenuItem value="pre payment">pre payment</MenuItem>
-              <MenuItem value="wellness">wellness</MenuItem>
-              <MenuItem value="Small Balance W/O">Small Balance W/O</MenuItem>
-              <MenuItem value="Curtsey W/O">Curtsey W/O</MenuItem>
-              <MenuItem value="NON PAYMENT">NON PAYMENT</MenuItem>
+              <MenuItem value="Write Off" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Write Off</MenuItem>
+              <MenuItem value="Un-Collected" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Un-Collected</MenuItem>
+              <MenuItem value="pre payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Pre Payment</MenuItem>
+              <MenuItem value="wellness" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Wellness</MenuItem>
+              <MenuItem value="Small Balance W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Small Balance W/O</MenuItem>
+              <MenuItem value="Curtsey W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Curtsey W/O</MenuItem>
+              <MenuItem value="NON PAYMENT" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Non Payment</MenuItem>
             </Select>
           </Box>
 
@@ -198,8 +215,8 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
             sx={{ height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
             MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
           >
-            <MenuItem value="Percentage">Percentage</MenuItem>
-            <MenuItem value="Flat rate">Flat rate</MenuItem>
+            <MenuItem value="Percentage" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Percentage</MenuItem>
+            <MenuItem value="Flat rate" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Flat rate</MenuItem>
           </Select>
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
             {calcMode === "Percentage" ? "%" : "$"}
@@ -216,11 +233,17 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
                   if (num > 100) val = "100";
                   if (num < 0) val = "0";
                 }
+              } else if (adjustmentType === "Curtsey W/O" && calcMode === "Flat rate") {
+                if (val !== "") {
+                  let num = parseFloat(val);
+                  if (num > totalPtBalance) val = totalPtBalance.toString();
+                  if (num < 0) val = "0";
+                }
               }
               setCalcValue(val);
             }}
             type="number"
-            sx={{ width: 60, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
+            sx={{ width: 120, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
           />
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
             = ${adjustmentAmount.toFixed(2)}

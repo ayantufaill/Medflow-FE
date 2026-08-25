@@ -267,7 +267,16 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const handleUndoConfirm = async () => {
     if (undoTarget) {
       try {
-        if (undoTarget.isPayment) {
+        if (undoTarget.isAdjustment) {
+          console.log('Dispatching voidTransaction for adjustment with:', undoTarget);
+          await dispatch(voidTransaction({
+            patientId,
+            invoiceId: undoTarget.invoiceId,
+            itemId: undoTarget.id,
+            isAdjustment: true
+          })).unwrap();
+          console.log('voidTransaction succeeded');
+        } else if (undoTarget.isPayment) {
           console.log('Dispatching voidPayment with:', undoTarget);
           await paymentService.voidPayment(undoTarget.id, 'Undone by user');
           console.log('voidPayment succeeded');
