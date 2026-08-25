@@ -45,7 +45,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
   // Merge rounded menu props with high zIndex for modal overlay
   const modalMenuProps = {
     ...roundedSelectMenuProps,
-    sx: { zIndex: 10000 },
+    sx: { zIndex: 15000 },
     PaperProps: {
       ...roundedSelectMenuProps.PaperProps,
       sx: {
@@ -88,6 +88,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
+        sx={{ zIndex: 14000 }}
         PaperProps={{
           sx: {
             borderRadius: '16px',
@@ -188,7 +189,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                               error: !!errors.date,
                               sx: { bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } } } 
                             },
-                            popper: { sx: { zIndex: 10000 } }
+                            popper: { sx: { zIndex: 15000 } }
                           }} 
                         />
                       )}
@@ -239,7 +240,7 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                               error: !!errors.time,
                               sx: { bgcolor: 'white', '& .MuiOutlinedInput-root': { borderRadius: '6px', '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } } } 
                             },
-                            popper: { sx: { zIndex: 10000 } }
+                            popper: { sx: { zIndex: 15000 } }
                           }} 
                         />
                       )}
