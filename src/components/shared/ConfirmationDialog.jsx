@@ -25,6 +25,7 @@ const ConfirmationDialog = ({
   confirmColor = 'error',
   loading = false,
   customContent,
+  dialogSx,
 }) => {
   const handleClose = () => {
     if (onCancel) {
@@ -40,7 +41,7 @@ const ConfirmationDialog = ({
       onClose={loading ? undefined : handleClose}
       aria-labelledby="confirmation-dialog-title"
       aria-describedby="confirmation-dialog-description"
-      sx={{ zIndex: 9999 }}
+      sx={{ zIndex: 9999, ...dialogSx }}
       PaperProps={{
         sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
       }}

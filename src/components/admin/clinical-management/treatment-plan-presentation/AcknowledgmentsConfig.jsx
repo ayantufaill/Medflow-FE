@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, TextField, IconButton } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const AcknowledgmentsConfig = ({ acknowledgments, setAcknowledgments, handleDeleteParagraph, handleAddParagraph }) => {
   return (
@@ -45,14 +46,13 @@ const AcknowledgmentsConfig = ({ acknowledgments, setAcknowledgments, handleDele
               size="small"
               onClick={() => handleDeleteParagraph(idx)}
               sx={{ 
-                color: '#ef4444', 
                 backgroundColor: '#fef2f2', 
                 border: '1px solid #fecaca', 
                 borderRadius: 1.5,
-                '&:hover': { color: '#dc2626', backgroundColor: '#fee2e2' } 
+                '&:hover': { backgroundColor: '#fee2e2' } 
               }}
             >
-              <DeleteIcon sx={{ fontSize: '1.2rem' }} />
+              <img src={DeleteSvg} alt="Delete" width="16" height="16" style={{ opacity: 0.8 }} />
             </IconButton>
           </Box>
         </Box>
