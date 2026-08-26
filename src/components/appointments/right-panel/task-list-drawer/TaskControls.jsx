@@ -51,6 +51,7 @@ const TaskControls = ({
           sx={{ minWidth: 160, "& .MuiSvgIcon-root": { fontSize: "16px", color: "#9aa3ae", right: "8px", position: "absolute", pointerEvents: "none" }, pr: "24px" }}
           MenuProps={{ sx: { zIndex: 2000 }, PaperProps: { sx: { borderRadius: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" } } }}
         >
+          <MenuItem value="all_tasks" sx={{ fontFamily: "Inter", fontSize: "13px" }}>All tasks</MenuItem>
           <MenuItem value="assigned_to_me" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Tasks assigned to me</MenuItem>
           <MenuItem value="assigned_by_me" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Tasks assigned by me</MenuItem>
         </Select>

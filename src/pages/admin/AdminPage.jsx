@@ -55,6 +55,7 @@ import CoverageBookShortcuts from './CoverageBookShortcuts';
 import DashboardGoals from './DashboardGoals';
 import PaymentPresentation from './PaymentPresentation';
 import TimeClockPage from './TimeClockPage';
+import RolesManagement from './RolesManagement';
 
 const USER_MANAGEMENT_SUB_TABS = [
   { label: 'Users', path: '/admin/user-management' },
@@ -360,12 +361,7 @@ const AdminPage = () => {
           ) : location.pathname === '/admin/user-management/time-clock' ? (
             <TimeClockPage />
           ) : location.pathname === '/admin/user-management/roles' ? (
-            <Box sx={{ p: 3, textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: 2 }}>
-              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                {USER_MANAGEMENT_SUB_TABS.find((t) => t.path === location.pathname)?.label}
-              </Typography>
-              <Typography color="text.secondary">Content for this section is coming soon.</Typography>
-            </Box>
+            <RolesManagement />
           ) : (
             <UserManagementView />
           )
