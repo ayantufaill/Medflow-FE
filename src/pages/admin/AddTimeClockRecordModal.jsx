@@ -8,7 +8,7 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Grid,
+  FormControl,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -129,17 +129,17 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
               </Typography>
               
               <CardWrapper>
-                <Grid container spacing={2}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                   
                   {/* User Selection */}
-                  <Grid item xs={12} sm={6}>
+                  <Box>
                     <FieldLabel>User</FieldLabel>
                     <Controller
                       name="user"
                       control={control}
                       rules={{ required: 'User is required' }}
                       render={({ field }) => (
-                        <>
+                        <FormControl fullWidth size="small" error={!!errors.user}>
                           <Select 
                             {...field} 
                             fullWidth 
@@ -167,13 +167,13 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                               {errors.user.message}
                             </Typography>
                           )}
-                        </>
+                        </FormControl>
                       )}
                     />
-                  </Grid>
+                  </Box>
 
                   {/* Date Selection */}
-                  <Grid item xs={12} sm={6}>
+                  <Box>
                     <FieldLabel>Date</FieldLabel>
                     <Controller
                       name="date"
@@ -194,37 +194,39 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                         />
                       )}
                     />
-                  </Grid>
+                  </Box>
 
                   {/* Record Type */}
-                  <Grid item xs={12} sm={6}>
+                  <Box>
                     <FieldLabel>Record Type</FieldLabel>
                     <Controller
                       name="recordType"
                       control={control}
                       rules={{ required: 'Record Type is required' }}
                       render={({ field }) => (
-                        <Select 
-                          {...field} 
-                          fullWidth 
-                          size="small" 
-                          MenuProps={modalMenuProps} 
-                          sx={{ 
-                            bgcolor: 'white', borderRadius: '6px', 
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, 
-                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, 
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } 
-                          }}
-                        >
-                          <MenuItem value="Clock In">Clock In</MenuItem>
-                          <MenuItem value="Clock Out">Clock Out</MenuItem>
-                        </Select>
+                        <FormControl fullWidth size="small">
+                          <Select 
+                            {...field} 
+                            fullWidth 
+                            size="small" 
+                            MenuProps={modalMenuProps} 
+                            sx={{ 
+                              bgcolor: 'white', borderRadius: '6px', 
+                              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' }, 
+                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' }, 
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' } 
+                            }}
+                          >
+                            <MenuItem value="Clock In">Clock In</MenuItem>
+                            <MenuItem value="Clock Out">Clock Out</MenuItem>
+                          </Select>
+                        </FormControl>
                       )}
                     />
-                  </Grid>
+                  </Box>
 
                   {/* Time Selection */}
-                  <Grid item xs={12} sm={6}>
+                  <Box>
                     <FieldLabel>Time</FieldLabel>
                     <Controller
                       name="time"
@@ -245,9 +247,9 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
                         />
                       )}
                     />
-                  </Grid>
+                  </Box>
 
-                </Grid>
+                </Box>
               </CardWrapper>
             </Box>
           </Box>

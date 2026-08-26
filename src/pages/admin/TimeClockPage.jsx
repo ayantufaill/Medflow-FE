@@ -17,12 +17,11 @@ import {
   TableRow,
   TablePagination,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Print as PrintIcon,
-  ContentCopy as CopyIcon,
-  AccessTime as HistoryIcon,
-} from '@mui/icons-material';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+
+import addIcon from '../../assets/timeclock/add.svg';
+import printIcon from '../../assets/timeclock/print.svg';
+import validateIcon from '../../assets/timeclock/validate.svg';
 
 import { roundedSelectMenuProps } from '../../constants/styles';
 import AddTimeClockRecordModal from './AddTimeClockRecordModal';
@@ -93,12 +92,23 @@ const TimeClockPage = () => {
         <>
           {/* Controls */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, gap: 2 }}>
-            <Typography
-              component="span"
-              sx={{ color: '#2262EF', fontWeight: 600, fontSize: '13px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+            <Button 
+              variant="contained" 
+              size="small" 
+              startIcon={<FileDownloadIcon />} 
+              sx={{ 
+                textTransform: 'none', 
+                bgcolor: '#3CA2E0', 
+                borderRadius: '8px', 
+                px: 2, 
+                boxShadow: 'none', 
+                fontWeight: 600, 
+                whiteSpace: 'nowrap', 
+                '&:hover': { bgcolor: '#2E8CCC', boxShadow: 'none' } 
+              }}
             >
-              Export as CSV
-            </Typography>
+              Export CSV
+            </Button>
             
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#475569' }}>
@@ -129,16 +139,13 @@ const TimeClockPage = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <IconButton size="small" sx={{ color: '#64748B' }} onClick={() => setIsAddModalOpen(true)}>
-                <AddIcon fontSize="small" />
+                <img src={addIcon} alt="Add" style={{ width: 16, height: 16 }} />
               </IconButton>
               <IconButton size="small" sx={{ color: '#64748B' }}>
-                <PrintIcon fontSize="small" />
+                <img src={printIcon} alt="Print" style={{ width: 16, height: 16 }} />
               </IconButton>
               <IconButton size="small" sx={{ color: '#64748B' }}>
-                <CopyIcon fontSize="small" />
-              </IconButton>
-              <IconButton size="small" sx={{ color: '#64748B' }}>
-                <HistoryIcon fontSize="small" />
+                <img src={validateIcon} alt="Validate" style={{ width: 16, height: 16 }} />
               </IconButton>
             </Box>
           </Box>
@@ -245,9 +252,19 @@ const TimeClockPage = () => {
 
       {/* Pending Approvals Tab Content */}
       {activeTab === 1 && (
-        <Box sx={{ py: 4, textAlign: 'center' }}>
-          <Typography sx={{ color: '#64748B' }}>No pending approvals found.</Typography>
-        </Box>
+        <>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3, gap: 0.5 }}>
+            <IconButton size="small" sx={{ color: '#64748B' }}>
+              <img src={printIcon} alt="Print" style={{ width: 16, height: 16 }} />
+            </IconButton>
+            <IconButton size="small" sx={{ color: '#64748B' }}>
+              <img src={validateIcon} alt="Validate" style={{ width: 16, height: 16 }} />
+            </IconButton>
+          </Box>
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <Typography sx={{ color: '#64748B' }}>No pending approvals found.</Typography>
+          </Box>
+        </>
       )}
 
       <AddTimeClockRecordModal 

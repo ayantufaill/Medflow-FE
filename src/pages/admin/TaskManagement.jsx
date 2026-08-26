@@ -511,29 +511,29 @@ const TaskManagement = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        component="div"
-        count={tasksData?.pagination?.total || 0}
-        page={page - 1}
-        onPageChange={(e, newPage) => setPage(newPage + 1)}
-        rowsPerPage={limit}
-        onRowsPerPageChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        labelRowsPerPage="Rows per page:"
-        SelectProps={{
-          MenuProps: roundedSelectMenuProps,
-        }}
-        sx={{
-          borderTop: '1px solid #E2E8F0',
-          '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748B',
-          },
-          '& .MuiTablePagination-select': { fontFamily: 'Inter, sans-serif', fontSize: '13px' },
-        }}
-      />
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={tasksData?.pagination?.total || 0}
+          page={page - 1}
+          onPageChange={(e, newPage) => setPage(newPage + 1)}
+          rowsPerPage={limit}
+          onRowsPerPageChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          labelRowsPerPage="Rows per page:"
+          SelectProps={{
+            MenuProps: roundedSelectMenuProps,
+          }}
+          sx={{
+            borderTop: '1px solid #E2E8F0',
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748B',
+            },
+            '& .MuiTablePagination-select': { fontFamily: 'Inter, sans-serif', fontSize: '13px' },
+          }}
+        />
+      </TableContainer>
 
       {/* Create Task Modal */}
       <CreateTaskModal 
