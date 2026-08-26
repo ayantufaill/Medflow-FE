@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import dayjs from "dayjs";
+import { useSelector } from "react-redux";
 import SliderHeader from "./SliderHeader";
 import DemographicsPanel from "./DemographicsPanel";
 import ContactPanel from "./ContactPanel";
@@ -12,6 +13,7 @@ import HygienistPanel from "./HygienistPanel";
 import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
 import { appointmentService } from "../../services/appointment.service";
+import { selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
 
 const EMPTY_APPT = { date: "", time: "", provider: "" };
 
@@ -126,7 +128,7 @@ const deriveNextAppointments = (appointments = []) => {
   };
 };
 
-const toSliderShape = (patient) => {
+const toSliderShape = (patient, globalFlags = []) => {
   if (!patient) return null;
 
   const name =
@@ -197,6 +199,16 @@ const toSliderShape = (patient) => {
     [];
   const derivedAppointments = deriveNextAppointments(appointments);
 
+  const dynamicTags = (patient.patientFlags || [])
+    .map(flagId => {
+      const found = globalFlags.find(f => f.id === flagId);
+      if (found) {
+        return { label: found.name, bg: found.color + '20', color: found.color, border: found.color };
+      }
+      return null;
+    })
+    .filter(Boolean);
+
   return {
     name,
     id,
@@ -224,10 +236,10 @@ const toSliderShape = (patient) => {
     nextHygAppt: patient.nextHygAppt || derivedAppointments.nextHygAppt,
     hygQueDate: patient.hygQueDate || "",
     badges: patient.badges || ["P", "H", "T", "F", "D"],
-    tags: patient.tags || [
+    tags: dynamicTags.length > 0 ? dynamicTags : (patient.tags || [
       { label: "Hyg", bg: "#dcfce7", color: "#15803d", border: "#86efac" },
       { label: "Tx", bg: "#eff6ff", color: "#2262ef", border: "#bfdbfe" },
-    ],
+    ]),
     _raw: patient,
   };
 };
@@ -235,7 +247,9 @@ const toSliderShape = (patient) => {
 const PatientSlider = ({ open, onClose, patient }) => {
   const { currentPatient } = usePatient();
   const sourcePatient = patient || currentPatient;
-  const basePt = useMemo(() => toSliderShape(sourcePatient), [sourcePatient]);
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
+  const basePt = useMemo(() => toSliderShape(sourcePatient, globalFlags), [sourcePatient, globalFlags]);
   const [fetchedAppointments, setFetchedAppointments] = useState({
     patientId: null,
     appointments: [],

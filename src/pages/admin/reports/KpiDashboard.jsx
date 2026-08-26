@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import KpiTopCards from '../../../components/admin/reports/KpiTopCards';
 import KpiActionToolbar from '../../../components/admin/reports/KpiActionToolbar';
 import KpiDataTable from '../../../components/admin/reports/KpiDataTable';
 import { kpiService } from '../../../services/kpi.service';
 import LogoImg from '../../../assets/medflow-logo.png';
+import { useBranch } from '../../../hooks/redux';
 
 const KpiDashboard = () => {
   const [subTab, setSubTab] = useState(0);
@@ -14,6 +15,27 @@ const KpiDashboard = () => {
   const [groups, setGroups] = useState([]);
   const [providerList, setProviderList] = useState([]);
   const [summaryData, setSummaryData] = useState(null);
+
+  const { currentBranchId } = useBranch();
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const branchParam = currentBranchId || 'All';
+      const [mainRes, providerRes, summaryRes] = await Promise.all([
+        kpiService.getMainKpis({ branchId: branchParam }),
+        kpiService.getProviderKpis({ branchId: branchParam }),
+        kpiService.getKpiSummary({ branchId: branchParam })
+      ]);
+      setGroups(mainRes || []);
+      setProviderList(providerRes || []);
+      setSummaryData(summaryRes || null);
+    } catch (error) {
+      console.error('Error fetching KPI data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentBranchId]);
 
   useEffect(() => {
     // Generate the same 12 rolling month buckets as the backend
@@ -28,25 +50,7 @@ const KpiDashboard = () => {
     setMonths(generatedMonths);
 
     fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [mainRes, providerRes, summaryRes] = await Promise.all([
-        kpiService.getMainKpis(),
-        kpiService.getProviderKpis(),
-        kpiService.getKpiSummary()
-      ]);
-      setGroups(mainRes || []);
-      setProviderList(providerRes || []);
-      setSummaryData(summaryRes || null);
-    } catch (error) {
-      console.error('Error fetching KPI data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchData]);
 
   const handlePrint = () => {
     window.print();

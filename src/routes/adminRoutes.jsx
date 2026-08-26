@@ -40,9 +40,11 @@ const adminOrPermission = (children, permission, hideSidebar = true) => (
   </ProtectedRoute>
 );
 
-// Group Admin's own branch-reassignment screen — also open to Admin for oversight.
-const groupAdminOnly = (children, hideSidebar = true) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Group Admin']}>
+// Group Admin's own branch-reassignment screen — also open to Branch Admin (its
+// narrower single-branch sibling, scoped down client-side in MyGroupPage.jsx) and
+// to Admin for oversight.
+const groupOrBranchAdminOnly = (children, hideSidebar = true) => (
+  <ProtectedRoute requiredRoles={['Admin', 'Group Admin', 'Branch Admin']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -109,7 +111,7 @@ const adminRoutes = [
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
   <Route key="/admin/analytics" path="/admin/analytics" element={adminOrPermission(<ClinicAnalyticsPage />, 'group:view_analytics')} />,
   <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOrPermission(<PracticeGroupsPage />, 'platform:manage_practice_groups')} />,
-  <Route key="/admin/my-group" path="/admin/my-group" element={groupAdminOnly(<MyGroupPage />)} />,
+  <Route key="/admin/my-group" path="/admin/my-group" element={groupOrBranchAdminOnly(<MyGroupPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 

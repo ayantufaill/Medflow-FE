@@ -13,63 +13,10 @@ import {
 import { Close as CloseIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
 
-const PRESET_NAMES = [
-  "BOB (Breakdown of benefits)",
-  "Insurance Fax Back",
-  "Treatment consent",
-  "N2O Consent",
-  "Signed Treatment Plan",
-  "Pre-D",
-  "Driver License",
-  "Spouse Driver License",
-  "Ins Card",
-  "Ortho Rx",
-  "Lab Certificate",
-  "DFA",
-  "Smile Mock Up",
-  "Implant Info",
-  "Lab Rx",
-  "Lab Invoice",
-  "Financial Agreement",
-  "Confidential Info",
-  "Medical/Dental History",
-  "Referral form",
-  "XRAY",
-  "Demographics",
-  "Invisalign",
-  "Dental History",
-  "BOB (Breakdown of benefits) - Sec",
-  "BOB (Breakdown of benefits) - Pri",
-  "Insurance Fax Back - Pri",
-  "Insurance Fax Back - Sec"
-];
 
-const PRESET_CATEGORIES = [
-  "Insurance",
-  "Consent",
-  "Medical/Dental History",
-  "Treatment Plan",
-  "Referral",
-  "Signed Receipt",
-  "Medications",
-  "ID",
-  "Lab",
-  "Injectables",
-  "Consult",
-  "Ortho",
-  "Implant certificate",
-  "Evident Hub",
-  "New Patient Forms",
-  "XRAY",
-  "Demographics",
-  "Eligibility verified (Detailed)",
-  "Diagnosis",
-  "Invisalign",
-  "New Patient",
-  "Eligibility verification",
-  "Outstanding Balance"
-];
 
 const UploadAdditionalDocumentDialog = ({
   open,
@@ -79,6 +26,9 @@ const UploadAdditionalDocumentDialog = ({
 }) => {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const presetNames = practiceInfo?.documentCategories?.documents || [];
+  const presetCategories = practiceInfo?.documentCategories?.categories || [];
 
   useEffect(() => {
     if (open) {
@@ -152,11 +102,11 @@ const UploadAdditionalDocumentDialog = ({
             />
           </Box>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {PRESET_NAMES.map((suggestion) => (
+            {presetNames.map((preset) => (
               <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={() => setName(suggestion)}
+                key={preset}
+                label={preset}
+                onClick={() => setName(preset)}
                 sx={{
                   backgroundColor: COLORS.BORDER,
                   color: "#000",
@@ -185,11 +135,11 @@ const UploadAdditionalDocumentDialog = ({
             />
           </Box>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {PRESET_CATEGORIES.map((suggestion) => (
+            {presetCategories.map((preset) => (
               <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={() => setCategory(suggestion)}
+                key={preset}
+                label={preset}
+                onClick={() => setCategory(preset)}
                 sx={{
                   backgroundColor: COLORS.BORDER,
                   color: "#000",

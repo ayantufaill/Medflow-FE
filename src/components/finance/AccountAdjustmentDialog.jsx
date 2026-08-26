@@ -305,7 +305,7 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
       </DialogContent>
 
       {/* Footer */}
-      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'space-between' }}>
+      <DialogActions sx={{ p: '16px 25px', borderTop: `1px solid ${COLORS.BORDER}`, display: 'flex', justifyContent: 'space-between', bgcolor: '#fff' }}>
         <Typography
           sx={{
             color: '#dc2626',

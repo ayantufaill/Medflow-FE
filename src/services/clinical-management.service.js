@@ -140,6 +140,15 @@ export const clinicalManagementService = {
     return response.data.data;
   },
 
+  // On-demand generation trigger — checks every patient against the configured
+  // interval and sends recare reminders to whoever's due. Returns a summary
+  // ({ patientsChecked, duePatients, remindersSent, skipped }), not a list of
+  // created records.
+  async runRecareGeneration() {
+    const response = await apiClient.post('/clinical-management/recare-config/run');
+    return response.data.data;
+  },
+
   // --- TREATMENT PLAN PRESENTATION ---
   async getTreatmentPlanPresentationConfig() {
     const response = await apiClient.get('/clinical-management/treatment-plan-presentations');

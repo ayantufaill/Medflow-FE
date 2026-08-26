@@ -7,6 +7,7 @@ import { Edit as EditIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable, ReportDivider } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchPatientFlagsReport, selectPatientFlagsReportData, selectPatientFlagsReportDataLoading } from '../../../../store/slices/patientReportSlice';
 import { fetchCurrentPracticeInfo, selectPracticeInfo } from '../../../../store/slices/practiceInfoSlice';
 
@@ -38,6 +39,15 @@ const PatientFlagsReport = () => {
       excludeFlags: excludeFlags.map(f => f.name).join(',') 
     }));
     setShowData(true);
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient Number', key: 'number' },
+      { header: 'Patient', key: 'patient' },
+      { header: 'Flags', key: 'flags' },
+      { header: 'Last Appointment', key: 'lastAppointment' },
+    ], 'Patient_Flags_Report');
   };
 
   const columns = [
@@ -165,7 +175,7 @@ const PatientFlagsReport = () => {
           </Typography>
           <Box sx={{ transform: 'translateY(-4px)' }}>
             <ProductionReportActions
-              onExportCsv={() => alert('Exporting CSV...')}
+              onExportCsv={handleExportCsv}
               onPrint={() => window.print()}
               hasData={showData && reportData.length > 0}
             />

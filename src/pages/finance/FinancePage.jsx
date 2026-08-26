@@ -290,7 +290,7 @@ const FinancePage = () => {
           onAddFlagsClick={() => setShowEditFlags(true)}
           onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
         />
-        <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} />
+        <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} patient={currentPatient} />
       </Box>
 
       {/* Action Toolbar: Filters and Buttons */}

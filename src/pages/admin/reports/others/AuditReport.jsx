@@ -7,6 +7,7 @@ import { fetchAuditReport } from '../../../../store/slices/othersReportSlice';
 import { ReportLayout } from '../../../../components/reports/ui';
 import AuditReportFilters from '../../../../components/reports/others/AuditReportFilters';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import dayjs from 'dayjs';
 
 const AuditReport = () => {
@@ -58,6 +59,22 @@ const AuditReport = () => {
     }, 0);
   };
 
+  const handleExportCsv = () => {
+    exportToCSV(filteredData, [
+      { header: 'Patient', key: 'patient' },
+      { header: 'User', key: 'user' },
+      { header: 'Category', key: 'category' },
+      { header: 'Subcategory', key: 'subcategory' },
+      { header: 'Action', key: 'action' },
+      { header: 'Object', key: 'object' },
+      { header: 'Date', key: (row) => row.date || (row.createdAt ? dayjs(row.createdAt).format('MM/DD/YYYY h:mm A') : '') },
+      { header: 'Message', key: 'message' },
+      { header: 'Diff Key', key: (row) => row.diff?.key || '' },
+      { header: 'Diff Old', key: (row) => row.diff?.old || '' },
+      { header: 'Diff New', key: (row) => row.diff?.new || '' },
+    ], 'Audit_Report');
+  };
+
   const filteredData = (auditData || []).filter(row => {
     if (searchUser && !row.user?.toLowerCase().includes(searchUser.toLowerCase())) return false;
     if (searchPatient && !row.patient?.toLowerCase().includes(searchPatient.toLowerCase())) return false;
@@ -88,7 +105,7 @@ const AuditReport = () => {
       />
 
       <ProductionReportActions 
-        onExportCsv={() => alert('Exporting CSV...')} 
+        onExportCsv={handleExportCsv}
         onPrint={() => window.print()} 
       />
 

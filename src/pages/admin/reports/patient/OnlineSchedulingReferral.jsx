@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchOnlineSchedulingReferralReport, selectOnlineSchedulingReferralData, selectOnlineSchedulingReferralDataLoading } from '../../../../store/slices/patientReportSlice';
 
 
@@ -36,6 +37,16 @@ const OnlineSchedulingReferral = () => {
 
   const handleApply = () => {
     fetchReport();
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Referral', key: 'referral' },
+      { header: 'UTM Source', key: 'utmSource' },
+      { header: 'UTM Medium', key: 'utmMedium' },
+      { header: 'UTM Campaign', key: 'utmCampaign' },
+      { header: 'Number of Clicks', key: 'clicks' },
+    ], 'Online_Scheduling_Referral_Report');
   };
 
   const columns = [
@@ -149,7 +160,7 @@ const OnlineSchedulingReferral = () => {
           </Typography>
           <Box sx={{ transform: 'translateY(-4px)' }}>
             <ProductionReportActions
-              onExportCsv={() => alert('Exporting CSV...')}
+              onExportCsv={handleExportCsv}
               onPrint={() => window.print()}
               hasData={reportData.length > 0}
             />

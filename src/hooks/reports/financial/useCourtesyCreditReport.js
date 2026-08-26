@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { reportingService } from '../../../services/reporting.service';
+import { exportToCSV } from '../../../utils/exportUtils';
 
 export const useCourtesyCreditReport = () => {
   const [outstandingFilter, setOutstandingFilter] = useState('all');
@@ -65,7 +66,11 @@ export const useCourtesyCreditReport = () => {
   };
 
   const handleExportCSV = () => {
-    alert('Exporting CSV...');
+    exportToCSV(reportData, [
+      { header: 'Patient ID', key: (row) => row.id || row.date },
+      { header: 'Patient Name', key: (row) => row.name || row.patient },
+      { header: 'Amount', key: (row) => (row.amount || row.creditAmount || 0).toFixed(2) },
+    ], 'Courtesy_Credit_Report');
   };
 
   const totalAmount = reportData.reduce((sum, row) => sum + (row.amount || row.creditAmount || 0), 0);

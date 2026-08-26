@@ -5,7 +5,8 @@ const LabOrderFooter = ({ onClose, handleCreateSlip, saving }) => {
   return (
     <Box sx={{
       display: "flex", alignItems: "center", justifyContent: "flex-end",
-      px: "20px", py: "12px", borderTop: "1px solid #e0e5eb", gap: "8px"
+      px: "20px", py: "12px", borderTop: "1px solid #e0e5eb", gap: "8px",
+      backgroundColor: '#fff', flexShrink: 0
     }}>
       <Button 
         variant="outlined" 

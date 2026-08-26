@@ -261,8 +261,14 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
 
   // Save / Create Slip Handler
   const handleCreateSlip = async () => {
+    if (!patientId) {
+      setToastSeverity('error');
+      setToastMessage('Cannot create a lab order without a patient — no patientId was provided.');
+      return;
+    }
+
     setSaving(true);
-    
+
     // Calculate total fee from procedures
     let calculatedFee = 0;
     proceduresList.forEach(proc => {
@@ -278,7 +284,7 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
     ].filter(Boolean).join('\n\n');
 
     const labCasePayload = {
-      patientId: String(patientId || '1'),
+      patientId: String(patientId),
       laboratoryId: String(selectedLab && selectedLab !== 'none' ? selectedLab : (labs[0]?._id || '1')),
       appointmentId: appointmentId ? String(appointmentId) : undefined,
       dueDate: dueDate ? dayjs(dueDate).format('YYYY-MM-DD') : dayjs().add(7, 'day').format('YYYY-MM-DD'),
@@ -322,11 +328,11 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '12px', border: "1px solid #e0e5eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }} PaperProps={{ sx: { borderRadius: '12px', border: "1px solid #e0e5eb", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", maxHeight: '90vh', overflow: 'hidden' } }}>
       
       <LabOrderHeader onClose={onClose} />
       
-      <Box sx={{ p: 4, pt: 3 }}>
+      <Box sx={{ p: 4, pt: 3, overflowY: 'auto', flex: 1 }}>
         <ActiveProceduresTable 
           proceduresList={proceduresList}
           handleProcedureChargeChange={handleProcedureChargeChange}

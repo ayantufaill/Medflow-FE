@@ -14,26 +14,32 @@ import {
 // items from Sidebar's original menuItems are included here.
 export const navMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/admin/reports', requiredRoles: ['Admin'] },
-  { text: 'Patients', icon: <People />, path: '/patients', requiredRoles: ['Admin', 'Receptionist', 'Doctor'] },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments/operatory-schedule', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Doctor'] },
-  { text: 'Vital Signs', icon: <MonitorHeart />, path: '/vital-signs', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
-  { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Doctor', 'Receptionist'] },
-  { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
-  { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing', 'Receptionist'] },
-  { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Doctor'] },
+  { text: 'Patients', icon: <People />, path: '/patients', requiredRoles: ['Admin', 'Receptionist', 'Provider'] },
+  // Clinical Staff included alongside Provider: this page (OperatorySchedulePage.jsx)
+  // renders LeftPanel -> PatientActions/AppointmentChecklist -> PurchaseProductDialog,
+  // which calls the purchase-products/unbilled-products routes Clinical Staff is
+  // gated on server-side. Check-in/check-out (the role's other gated action) is NOT
+  // reachable from this page — it's only wired up on /appointments and
+  // /appointments/:appointmentId, neither of which has its own nav entry.
+  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments/operatory-schedule', requiredRoles: ['Admin', 'Receptionist', 'Provider', 'Clinical Staff'] },
+  { text: 'Vital Signs', icon: <MonitorHeart />, path: '/vital-signs', requiredRoles: ['Admin', 'Provider', 'Receptionist'] },
+  { text: 'Patient Reports', icon: <Description />, path: '/patient-reports', requiredRoles: ['Admin', 'Provider', 'Receptionist'] },
+  { text: 'Insurance', icon: <AccountBalance />, path: '/insurance', requiredRoles: ['Admin', 'Billing Staff', 'Receptionist'] },
+  { text: 'Finance', icon: <AttachMoney />, path: '/finance', requiredRoles: ['Admin', 'Billing Staff', 'Receptionist'] },
+  { text: 'Clinical', icon: <Description />, path: '/clinical', requiredRoles: ['Admin', 'Provider'] },
   // 'Admin' covers today's single-tenant Admin; 'Super Admin' covers the cross-group
   // platform tier — route itself also admits anyone holding platform:manage_practice_groups
   // (adminRoutes.jsx's adminOrPermission), but this list only supports role checks, so
   // both concrete role names are listed rather than the permission key.
   { text: 'Practice Groups', icon: <Business />, path: '/admin/practice-groups', requiredRoles: ['Admin', 'Super Admin'] },
-  { text: 'My Group', icon: <Business />, path: '/admin/my-group', requiredRoles: ['Group Admin'] },
+  { text: 'My Group', icon: <Business />, path: '/admin/my-group', requiredRoles: ['Group Admin', 'Branch Admin'] },
 ];
 
 // Roles allowed to switch the active branch context (UserProfile.jsx) — this only
 // gates whether the switcher UI shows up at all. WHICH branches show up inside it is
 // decided server-side by GET /branches (branchAccess middleware), not by this list.
 // Includes the three tenant-admin tiers since branch context is core to all of them.
-export const BRANCH_SWITCH_ROLES = ['Admin', 'Doctor', 'Provider', 'Receptionist', 'Billing', 'Super Admin', 'Group Admin', 'Branch Admin'];
+export const BRANCH_SWITCH_ROLES = ['Admin', 'Provider', 'Receptionist', 'Billing Staff', 'Super Admin', 'Group Admin', 'Branch Admin'];
 
 // Returns true if `user` holds at least one role in `requiredRoles` (or if the item
 // has no role restriction at all).

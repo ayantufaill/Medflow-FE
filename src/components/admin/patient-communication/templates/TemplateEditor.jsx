@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Email as EmailIcon, Sms as SmsIcon } from '@mui/icons-material';
+import { Email as EmailIcon, Sms as SmsIcon } from '@mui/icons-material';
+import EditSvg from '../../../../assets/practicesetupicon/editicon.svg';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelete }) => {
   const [description, setDescription] = useState('');
@@ -71,8 +73,8 @@ export const TemplateEditor = ({ selectedTemplate, templateInfo, onSave, onDelet
             <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1E293B' }}>
               {description}
             </Typography>
-            <IconButton size="small"><EditIcon sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={() => setDeleteConfirmOpen(true)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+            <IconButton size="small"><img src={EditSvg} alt="edit" width="16" height="16" /></IconButton>
+            <IconButton size="small" onClick={() => setDeleteConfirmOpen(true)}><img src={DeleteSvg} alt="delete" width="16" height="16" /></IconButton>
           </Box>
         <Button size="small" variant="contained" onClick={handleSave} disabled={!isDirty} sx={{ textTransform: 'none', backgroundColor: '#22C55E', '&:hover': { backgroundColor: '#16A34A' } }}>Save</Button>
       </Box>

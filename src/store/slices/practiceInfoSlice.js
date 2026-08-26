@@ -3,6 +3,11 @@ import { practiceInfoService } from '../../services/practice-info.service';
 
 const initialState = {
   data: null,
+  // Which branch `data` currently reflects (null = the caller's own/default
+  // context, matching the backend's own "omit branchId" behavior) — lets the
+  // fetch thunk tell "already have this branch cached" apart from "need to
+  // refetch because the user switched branches."
+  branchId: null,
   paymentTerminals: {
     openEdge: [],
     prosperiPay: [],
@@ -16,12 +21,17 @@ const initialState = {
 
 // --- Thunks ---
 
+// Accepts either the legacy call shape (no args, or a bare `true` to force a
+// refetch) or { branchId, force } — kept backward-compatible since this thunk
+// is dispatched from a dozen+ other admin screens that only ever cared about
+// the caller's own branch and never passed an object.
 export const fetchCurrentPracticeInfo = createAsyncThunk(
   'practiceInfo/fetchCurrent',
-  async (_, { rejectWithValue }) => {
+  async (arg, { rejectWithValue }) => {
+    const { branchId = null } = typeof arg === 'object' && arg !== null ? arg : {};
     try {
-      const response = await practiceInfoService.getCurrentPracticeInfo();
-      return response;
+      const response = await practiceInfoService.getCurrentPracticeInfo(branchId || undefined);
+      return { data: response, branchId };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch practice info'
@@ -29,9 +39,12 @@ export const fetchCurrentPracticeInfo = createAsyncThunk(
     }
   },
   {
-    condition: (force, { getState }) => {
+    condition: (arg, { getState }) => {
+      const { branchId = null, force = arg === true } =
+        typeof arg === 'object' && arg !== null ? arg : {};
       const { practiceInfo } = getState();
-      if (!force && (practiceInfo.loading || practiceInfo.data)) {
+      const sameBranchAlreadyLoaded = practiceInfo.data && practiceInfo.branchId === branchId;
+      if (!force && (practiceInfo.loading || sameBranchAlreadyLoaded)) {
         return false;
       }
     }
@@ -225,7 +238,8 @@ const practiceInfoSlice = createSlice({
       })
       .addCase(fetchCurrentPracticeInfo.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = action.payload;
+        state.data = action.payload.data;
+        state.branchId = action.payload.branchId;
       })
       .addCase(fetchCurrentPracticeInfo.rejected, (state, action) => {
         state.loading = false;

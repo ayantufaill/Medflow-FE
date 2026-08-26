@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Tooltip, IconButton, Checkbox, Menu, MenuItem
+  Paper, Tooltip, IconButton, Checkbox, Menu, MenuItem, CircularProgress, Alert
 } from '@mui/material';
 import {
   Info as InfoIcon,
@@ -15,9 +15,28 @@ import {
   DeleteOutline as DeleteOutlineIcon,
   AttachFile as AttachFileIcon
 } from '@mui/icons-material';
+import apiClient from '../../config/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 export const EraReportsTable = ({ filteredEraReports }) => {
+  const { selectedBranchId } = useAuth();
+  const [generatingId, setGeneratingId] = useState(null);
+  const [generateError, setGenerateError] = useState(null);
+
+  const handleGenerateSecondary = async (eraId) => {
+    setGeneratingId(eraId);
+    setGenerateError(null);
+    try {
+      await apiClient.post(`/claims/${eraId}/generate-secondary`, {});
+      alert('Secondary claim generated successfully!');
+    } catch (err) {
+      setGenerateError(err.response?.data?.message || 'Failed to generate secondary claim');
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
   return (
             // ERA REPORTS Table Layout (1:1 with Screenshot)
         <TableContainer component={Paper} elevation={0} sx={{ boxShadow: "none", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", overflowX: "auto" }}>
@@ -35,12 +54,13 @@ export const EraReportsTable = ({ filteredEraReports }) => {
                 <TableCell>WRITE OFF</TableCell>
                 <TableCell>DATE RECEIVED</TableCell>
                 <TableCell>PAYMENT TYPE</TableCell>
+                <TableCell align="right">ACTIONS</TableCell>
               </TableRow>
             </TableHead>
             <TableBody sx={{ "& .MuiTableCell-root": { py: 1.5, px: 1, fontSize: "0.75rem", verticalAlign: "middle", borderBottom: "1px solid #e2e8f0", color: "#1e293b", whiteSpace: "nowrap" } }}>
               {filteredEraReports.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" sx={{ color: '#718096', fontStyle: 'italic' }}>
                       No ERA reports found matching the selection criteria.
                     </Typography>
@@ -137,12 +157,30 @@ export const EraReportsTable = ({ filteredEraReports }) => {
                           {era.paymentType}
                         </Typography>
                       </TableCell>
+
+                      {/* Actions */}
+                      <TableCell align="right" sx={{ py: 1.5 }}>
+                        {era.status === 'Paid' ? (
+                          <IconButton 
+                            size="small" 
+                            sx={{ color: '#3b82f6', '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.08)' } }} 
+                            title="Generate Secondary Claim"
+                            onClick={() => handleGenerateSecondary(era.id)}
+                            disabled={generatingId === era.id}
+                          >
+                            {generatingId === era.id ? <CircularProgress size={20} /> : <DescriptionIcon fontSize="small" />}
+                          </IconButton>
+                        ) : (
+                          <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>—</Typography>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })
               )}
             </TableBody>
           </Table>
+          {generateError && <Alert severity="error" sx={{ m: 2 }}>{generateError}</Alert>}
         </TableContainer>
   );
 };

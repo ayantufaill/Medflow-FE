@@ -118,7 +118,7 @@ const FinancePageDialogs = ({
             patient={patient}
             onBack={() => setShowPaymentPlan(false)}
             onCreatePlan={handleCreatePaymentPlan}
-            onAddCard={() => { setShowPaymentPlan(false); setShowAddCard(true); }}
+            onAddCard={() => setShowAddCard(true)}
           />
         </DialogWrapper>
       )}
@@ -126,7 +126,7 @@ const FinancePageDialogs = ({
       <Dialog 
         open={showAddCard} 
         onClose={() => setShowAddCard(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{ sx: { borderRadius: '18px', overflow: 'hidden' } }}
         sx={{ zIndex: 140000 }}

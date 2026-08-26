@@ -50,9 +50,11 @@ const mockGoals = {
 
 export const fetchDashboardGoals = createAsyncThunk(
   'dashboardGoals/fetch',
-  async (_, { signal, rejectWithValue }) => {
+  async (_, { signal, getState, rejectWithValue }) => {
     try {
-      const response = await apiClient.get('/admin-finance/settings/dashboard_goals', { signal });
+      const { branch } = getState();
+      const branchId = branch?.currentBranchId || 'All';
+      const response = await apiClient.get(`/admin-finance/settings/dashboard_goals?branchId=${branchId}`, { signal });
       // If the backend returns empty or null, fallback to the default mockGoals structure
       return response.data?.data && Object.keys(response.data.data).length > 0 
         ? response.data.data 
@@ -74,7 +76,7 @@ export const updateDashboardGoalField = createAsyncThunk(
   'dashboardGoals/updateField',
   async ({ fieldPath, value }, { getState, rejectWithValue }) => {
     try {
-      const { dashboardGoals } = getState();
+      const { dashboardGoals, branch } = getState();
       
       // Deep clone the existing data to mutate
       const newData = JSON.parse(JSON.stringify(dashboardGoals.data));
@@ -87,8 +89,9 @@ export const updateDashboardGoalField = createAsyncThunk(
       }
       current[keys[keys.length - 1]] = value;
 
+      const branchId = branch?.currentBranchId || 'All';
       // Save the entire updated object to the backend
-      const response = await apiClient.put('/admin-finance/settings/dashboard_goals', newData);
+      const response = await apiClient.put(`/admin-finance/settings/dashboard_goals?branchId=${branchId}`, newData);
       return response.data.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

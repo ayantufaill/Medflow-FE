@@ -5,8 +5,9 @@ import {
   Box, Typography, TextField, Button, IconButton, Divider, List, ListItem, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
-  Sync as SyncIcon, SwapVert as SortIcon, Edit as EditIcon, Delete as DeleteIcon
+  Sync as SyncIcon, SwapVert as SortIcon
 } from '@mui/icons-material';
+import DeleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 import { VariablesSidebar } from './VariablesSidebar';
 import { communicationService } from '../../../../services/communication.service';
@@ -130,7 +131,7 @@ export const CustomLetterTemplates = () => {
                         <Typography sx={{ fontSize: '0.8rem', color: '#1E293B', flexGrow: 1 }}>{template.description}</Typography>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <IconButton size="small" sx={{ color: '#3B82F6' }}><SyncIcon sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" sx={{ color: '#94a3b8' }} onClick={(e) => { e.stopPropagation(); handleSelectTemplate(index); setDeleteConfirmOpen(true); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleSelectTemplate(index); setDeleteConfirmOpen(true); }}><img src={DeleteSvg} alt="delete" width="16" height="16" /></IconButton>
                         </Box>
                       </ListItem>
                       {index < templates.length - 1 && <Divider />}

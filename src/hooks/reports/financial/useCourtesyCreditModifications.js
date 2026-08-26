@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchAdjustmentTypes, selectAdjustmentTypes } from '../../../store/slices/billingSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { reportingService } from '../../../services/reporting.service';
+import { exportToCSV } from '../../../utils/exportUtils';
 
 export const useCourtesyCreditModifications = () => {
   const dispatch = useDispatch();
@@ -96,7 +97,14 @@ export const useCourtesyCreditModifications = () => {
   };
 
   const handleExportCSV = () => {
-    alert('Exporting CSV...');
+    exportToCSV(reportData, [
+      { header: 'Date modified', key: 'date' },
+      { header: 'Modified by User', key: (row) => row.authorizedBy || row.user || '' },
+      { header: 'Action', key: (row) => row.action || row.type || '' },
+      { header: 'Type', key: 'type' },
+      { header: 'Patient', key: 'patient' },
+      { header: 'Amount', key: (row) => (row.creditAmount || row.amount || 0).toFixed(2) },
+    ], 'Courtesy_Credit_Modifications');
   };
 
   return {

@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUserProfile, logoutUser, clearAuth, loginUser } from '../store/slices/authSlice';
+import { fetchUserProfile, logoutUser, clearAuth, loginUser, seedTenantClaims } from '../store/slices/authSlice';
 import { authService } from '../services/auth.service';
+import { decodeTenantClaims } from '../utils/tokenClaims';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const AuthContext = createContext(null);
 
@@ -36,14 +38,25 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, [dispatch]);
 
+  // Re-seed the optimistic tenant claims whenever api.js silently rotates
+  // the access token (see the 'auth:token-refreshed' dispatch there) — kept
+  // as a DOM event rather than a direct import since api.js is a plain axios
+  // config module with no store access.
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      dispatch(seedTenantClaims(decodeTenantClaims(event.detail?.accessToken)));
+    };
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    return () => window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
+  }, [dispatch]);
+
   // Map remaining methods directly to authService since state is in Redux
   const initiateRegistration = async (userData) => {
     try {
       const data = await authService.initiateRegistration(userData);
       return { success: true, email: data.email };
     } catch (error) {
-      const message = error.response?.data?.message || error.message;
-      return { success: false, error: message };
+      return { success: false, error: getErrorMessage(error, 'Registration failed') };
     }
   };
 
@@ -52,7 +65,7 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.resendVerificationCode(email);
       return { success: true, email: data.email };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.message };
+      return { success: false, error: getErrorMessage(error, 'Failed to resend code') };
     }
   };
 
@@ -61,7 +74,7 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.requestPasswordReset(email);
       return { success: true, email: data.email };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.message };
+      return { success: false, error: getErrorMessage(error, 'Password reset failed') };
     }
   };
 
@@ -70,7 +83,7 @@ export const AuthProvider = ({ children }) => {
       await authService.verifyPasswordResetCode(email, code);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.message };
+      return { success: false, error: getErrorMessage(error, 'Invalid reset code') };
     }
   };
 
@@ -79,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.resetPassword(email, code, newPassword);
       return { success: true, message: data.message };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.message };
+      return { success: false, error: getErrorMessage(error, 'Failed to reset password') };
     }
   };
 
@@ -88,7 +101,7 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.resendPasswordResetCode(email);
       return { success: true, email: data.email };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || error.message };
+      return { success: false, error: getErrorMessage(error, 'Failed to resend code') };
     }
   };
 
@@ -125,8 +138,7 @@ export const AuthProvider = ({ children }) => {
       await dispatch(fetchUserProfile());
       return { success: true, user: user };
     } catch (error) {
-      const message = error.response?.data?.message || error.message;
-      return { success: false, error: message };
+      return { success: false, error: getErrorMessage(error, 'Verification failed') };
     }
   };
 

@@ -29,7 +29,7 @@ const appointmentRoutes = [
     key="/appointments"
     path="/appointments"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider']}>
         <Layout><AppointmentsListPage /></Layout>
       </ProtectedRoute>
     }
@@ -37,11 +37,14 @@ const appointmentRoutes = [
   <Route key="/appointments/new" path="/appointments/new" element={adminReception(<CreateAppointmentPage />)} />,
   <Route key="/appointments/schedule" path="/appointments/schedule" element={adminReception(<SchedulePage />)} />,
   <Route key="/appointments/calendar" path="/appointments/calendar" element={adminReception(<AppointmentCalendarPage />)} />,
+  // Clinical Staff included: this page's LeftPanel renders PurchaseProductDialog,
+  // which calls the purchase-products/unbilled-products routes Clinical Staff is
+  // gated on server-side — see navMenuItems.jsx's Appointments item comment.
   <Route
     key="/appointments/operatory-schedule"
     path="/appointments/operatory-schedule"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Clinical Staff']}>
         <ScheduleLayout>
           <OperatorySchedulePage />
         </ScheduleLayout>
@@ -52,7 +55,7 @@ const appointmentRoutes = [
     key="/appointments/:appointmentId"
     path="/appointments/:appointmentId"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider']}>
         <Layout><ViewAppointmentPage /></Layout>
       </ProtectedRoute>
     }

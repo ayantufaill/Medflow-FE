@@ -121,8 +121,14 @@ export const fetchLedgerItems = createAsyncThunk(
         
         const paymentsMapped = [...invoicePms].reverse().map((payment) => {
           const isVoided = String(payment.status || '').toLowerCase() === 'void' || String(payment.status || '').toLowerCase() === 'voided';
-          const paymentAmt = isVoided ? 0 : Number(payment.amount || 0);
-          const originalAmt = Number(payment.amount || 0);
+          
+          const rawAmount = payment.isAccountCredit && payment.appliedCreditAmount !== undefined 
+            ? Number(payment.appliedCreditAmount) 
+            : Number(payment.amount || 0);
+
+          const paymentAmt = isVoided ? 0 : rawAmount;
+          const originalAmt = rawAmount;
+          
           const isIns = payment.paymentSource === 'insurance_company' || payment.method === 'insurance';
           if (isIns) {
             totalInsPaidAmt += paymentAmt;
@@ -152,7 +158,7 @@ export const fetchLedgerItems = createAsyncThunk(
             id: adj._id || adj.id,
             title: `Adjustment #${adj._id || adj.id}: ${adj.type || 'Write-off'} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? ' (VOIDED)' : ''}`,
             amount: isVoided ? '(Voided)' : `$${Math.max(0, runningBalance).toFixed(2)}`,
-            isPayment: true, // Render similarly to payment
+            isPayment: true, isAdjustment: true, // Render similarly to payment
             isVoided
           };
         }).reverse();

@@ -9,7 +9,9 @@ import {
   FLAGS_OPTIONS,
   SORT_REPORT_OPTIONS,
   ON_PATIENT_PAYMENT_OPTIONS,
-  ON_INSURANCE_PAYMENT_OPTIONS
+  ON_INSURANCE_PAYMENT_OPTIONS,
+  CARRIER_OPTIONS,
+  BRANCH_OPTIONS
 } from '../constants/reportFilters';
 import AgingReportTable from '../../../../components/reports/financial/AgingReportTable';
 import AgingReportFilters from '../../../../components/reports/financial/AgingReportFilters';
@@ -36,6 +38,8 @@ const PatientAgingReport = () => {
     arRange: AR_RANGE_OPTIONS[0].value,
     flags: FLAGS_OPTIONS[0].value,
     sortReport: SORT_REPORT_OPTIONS[0].value,
+    carrier: CARRIER_OPTIONS[0].value,
+    branch: BRANCH_OPTIONS[0].value,
     showFlags: true,
     paymentPlanOwing: true,
     resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
@@ -61,6 +65,8 @@ const PatientAgingReport = () => {
       arRange: AR_RANGE_OPTIONS[0].value,
       flags: FLAGS_OPTIONS[0].value,
       sortReport: SORT_REPORT_OPTIONS[0].value,
+      carrier: CARRIER_OPTIONS[0].value,
+      branch: BRANCH_OPTIONS[0].value,
       showFlags: true,
       paymentPlanOwing: true,
       resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
@@ -213,6 +219,8 @@ const PatientAgingReport = () => {
       <ReportSelect label="AR RANGE" value={draftFilters.arRange} onChange={(e) => handleFilterChange('arRange', e.target.value)} options={AR_RANGE_OPTIONS} width="140px" />
       <ReportSelect label="PTS FLAGS" value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} options={FLAGS_OPTIONS} width="180px" />
       <ReportSelect label="SORT REPORT BY" value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} options={SORT_REPORT_OPTIONS} width="180px" />
+      <ReportSelect label="CARRIER" value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} options={CARRIER_OPTIONS} width="180px" />
+      <ReportSelect label="BRANCH" value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} options={BRANCH_OPTIONS} width="180px" />
     </>
   );
 
