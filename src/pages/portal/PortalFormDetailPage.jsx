@@ -6,28 +6,37 @@ import {
   Checkbox,
   FormControlLabel,
   Box,
+  MenuItem,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import { formTemplateService } from '../../services/formTemplate.service';
+import SignaturePad from '../../components/shared/SignaturePad';
 import {
-  getTemplateDefinition,
+  isSignatureBearingTemplate,
+  mapBackendTemplate,
   normalizeFormDataForTemplate,
-} from './portalFormTemplates';
+} from './formTemplateHelpers';
 import { PortalPageHeader, PortalSectionTitle, portalSurfaceSx } from './PortalUi';
 
 const PortalFormDetailPage = () => {
   const { formId } = useParams();
   const [form, setForm] = useState(null);
   const [templateId, setTemplateId] = useState('');
+  const [template, setTemplate] = useState(null);
   const [formData, setFormData] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const template = useMemo(() => getTemplateDefinition(templateId), [templateId]);
+  // A signature field means this submission is a signed legal record — once submitted it's
+  // locked from further patient edits (matches the backend's 423 on PUT for these forms).
+  const locked = useMemo(() => isSignatureBearingTemplate(template), [template]);
 
   useEffect(() => {
     (async () => {
@@ -36,7 +45,20 @@ const PortalFormDetailPage = () => {
         const row = await portalService.getFormById(formId);
         setForm(row);
         setTemplateId(row.templateId || '');
-        setFormData(normalizeFormDataForTemplate(row.templateId, row.formData));
+
+        let templateDef = null;
+        if (row.templateId) {
+          try {
+            const backendTemplate = await formTemplateService.getByTemplateId(row.templateId);
+            templateDef = mapBackendTemplate(backendTemplate);
+          } catch {
+            templateDef = null;
+          }
+        }
+        setTemplate(templateDef);
+
+        const templatesById = templateDef ? { [row.templateId]: templateDef } : {};
+        setFormData(normalizeFormDataForTemplate(templatesById, row.templateId, row.formData));
       } catch (err) {
         setError(
           err.response?.data?.error?.message ||
@@ -67,7 +89,7 @@ const PortalFormDetailPage = () => {
   };
 
   const handleSave = async () => {
-    if (!formId) return;
+    if (!formId || locked) return;
     const validationError = validateRequiredFields();
     if (validationError) {
       setError(validationError);
@@ -97,6 +119,7 @@ const PortalFormDetailPage = () => {
 
   const renderField = (field) => {
     const value = formData[field.key];
+
     if (field.type === 'boolean') {
       return (
         <FormControlLabel
@@ -104,6 +127,7 @@ const PortalFormDetailPage = () => {
           control={
             <Checkbox
               checked={Boolean(value)}
+              disabled={locked}
               onChange={(event) => updateValue(field.key, event.target.checked)}
             />
           }
@@ -123,7 +147,71 @@ const PortalFormDetailPage = () => {
           minRows={3}
           fullWidth
           required={Boolean(field.required)}
+          disabled={locked}
         />
+      );
+    }
+
+    if (field.type === 'select') {
+      return (
+        <TextField
+          key={field.key}
+          select
+          label={field.label}
+          value={value || ''}
+          onChange={(event) => updateValue(field.key, event.target.value)}
+          fullWidth
+          required={Boolean(field.required)}
+          disabled={locked}
+        >
+          {(field.options || []).map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </TextField>
+      );
+    }
+
+    if (field.type === 'radio') {
+      return (
+        <Box key={field.key}>
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </Typography>
+          <RadioGroup
+            row
+            value={value || ''}
+            onChange={(event) => updateValue(field.key, event.target.value)}
+          >
+            {(field.options || []).map((option) => (
+              <FormControlLabel
+                key={option.value}
+                value={option.value}
+                disabled={locked}
+                control={<Radio />}
+                label={option.label}
+              />
+            ))}
+          </RadioGroup>
+        </Box>
+      );
+    }
+
+    if (field.type === 'signature') {
+      return (
+        <Box key={field.key}>
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </Typography>
+          <SignaturePad
+            value={value || null}
+            showClearButton={!locked}
+            onChange={(dataUrl) => updateValue(field.key, dataUrl)}
+          />
+        </Box>
       );
     }
 
@@ -131,12 +219,23 @@ const PortalFormDetailPage = () => {
       <TextField
         key={field.key}
         label={field.label}
-        type={field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
+        type={
+          field.type === 'date'
+            ? 'date'
+            : field.type === 'email'
+              ? 'email'
+              : field.type === 'number'
+                ? 'number'
+                : field.type === 'phone'
+                  ? 'tel'
+                  : 'text'
+        }
         value={value || ''}
         onChange={(event) => updateValue(field.key, event.target.value)}
         fullWidth
         InputLabelProps={field.type === 'date' ? { shrink: true } : undefined}
         required={Boolean(field.required)}
+        disabled={locked}
       />
     );
   };
@@ -159,6 +258,12 @@ const PortalFormDetailPage = () => {
 
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">{success}</Alert>}
+      {locked && (
+        <Alert severity="info">
+          This form includes a signature and is locked from further edits once submitted.
+          Contact the office if this record needs to be corrected.
+        </Alert>
+      )}
 
       <Box sx={portalSurfaceSx}>
         <PortalSectionTitle title={template?.title || templateId || 'General Form'} />
@@ -193,9 +298,11 @@ const PortalFormDetailPage = () => {
               )}
           </Stack>
 
-          <Button variant="contained" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          {!locked && (
+            <Button variant="contained" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
         </Stack>
       </Box>
     </Stack>
