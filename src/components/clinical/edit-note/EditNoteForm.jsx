@@ -278,7 +278,7 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY, mb: 0.5 }}>Note Status</Typography>
-               <Chip label={view === 'create' ? "Draft" : "Saved"} size="small" sx={{ fontWeight: fontWeight.medium, bgcolor: '#ffedd5', color: '#c2410c' }} />
+               <Chip label={watch('isComplete') ? "Completed" : (view === 'create' ? "Draft" : "Saved")} size="small" sx={{ fontWeight: fontWeight.medium, bgcolor: watch('isComplete') ? '#dcfce7' : '#ffedd5', color: watch('isComplete') ? '#15803d' : '#c2410c' }} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
                <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY, mb: 0.5 }}>Tags</Typography>

@@ -105,7 +105,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
   };
 
   const getStatusDisplay = (note) => {
-    if (note.isSigned || note.status === 'Signed') {
+    if (note.isSigned || note.status === 'Signed' || note.structuredData?.isComplete) {
       return { text: 'Completed', color: '#dcfce7', textColor: '#15803d' };
     }
     return { text: 'Saved', color: '#ffedd5', textColor: '#c2410c' }; // Draft
