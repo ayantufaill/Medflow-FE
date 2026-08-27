@@ -33,26 +33,26 @@ import AuthorizationsListPage from '../pages/authorizations/AuthorizationsListPa
 import CreateAuthorizationPage from '../pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from '../pages/authorizations/ViewAuthorizationPage';
 
+// 'Billing' and 'Doctor'/'Front Desk' are not real backend roles (see
+// seedRoles.ts) — 'Billing Staff'/'Provider'/'Receptionist' are their actual
+// seeded equivalents. 'Front Desk' resolved to the same real role
+// ('Receptionist') already used below, so the separate wrapper that used to
+// exist for it was consolidated into adminBillingReception rather than kept
+// as a duplicate.
 const adminBilling = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing']}>
+  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const adminBillingReception = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Receptionist']}>
+  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff', 'Receptionist']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
-const adminBillingDoctor = (children) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Doctor']}>
-    <Layout>{children}</Layout>
-  </ProtectedRoute>
-);
-
-const adminBillingFrontDesk = (children) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing', 'Front Desk']}>
+const adminBillingProvider = (children) => (
+  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff', 'Provider']}>
     <Layout>{children}</Layout>
   </ProtectedRoute>
 );
@@ -76,10 +76,10 @@ const billingRoutes = [
   <Route key="/payments/new" path="/payments/new" element={adminBillingReception(<RecordPaymentPage />)} />,
   <Route key="/payments/:paymentId" path="/payments/:paymentId" element={adminBillingReception(<ViewPaymentPage />)} />,
 
-  <Route key="/estimates" path="/estimates" element={adminBillingDoctor(<EstimatesListPage />)} />,
-  <Route key="/estimates/new" path="/estimates/new" element={adminBillingDoctor(<CreateEstimatePage />)} />,
-  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={adminBillingDoctor(<EditEstimatePage />)} />,
-  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingDoctor(<ViewEstimatePage />)} />,
+  <Route key="/estimates" path="/estimates" element={adminBillingProvider(<EstimatesListPage />)} />,
+  <Route key="/estimates/new" path="/estimates/new" element={adminBillingProvider(<CreateEstimatePage />)} />,
+  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={adminBillingProvider(<EditEstimatePage />)} />,
+  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingProvider(<ViewEstimatePage />)} />,
 
   <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />, true)} />,
   <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />, true)} />,
@@ -93,9 +93,9 @@ const billingRoutes = [
   <Route key="/era/unmatched" path="/era/unmatched" element={adminBilling(<UnmatchedERAItemsPage />)} />,
   <Route key="/era/:eraId" path="/era/:eraId" element={adminBilling(<ViewERAPage />)} />,
 
-  <Route key="/authorizations" path="/authorizations" element={adminBillingFrontDesk(<AuthorizationsListPage />)} />,
-  <Route key="/authorizations/new" path="/authorizations/new" element={adminBillingFrontDesk(<CreateAuthorizationPage />)} />,
-  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={adminBillingFrontDesk(<ViewAuthorizationPage />)} />,
+  <Route key="/authorizations" path="/authorizations" element={adminBillingReception(<AuthorizationsListPage />)} />,
+  <Route key="/authorizations/new" path="/authorizations/new" element={adminBillingReception(<CreateAuthorizationPage />)} />,
+  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={adminBillingReception(<ViewAuthorizationPage />)} />,
 ];
 
 export default billingRoutes;

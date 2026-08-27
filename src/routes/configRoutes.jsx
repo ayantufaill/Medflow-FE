@@ -27,8 +27,10 @@ const adminOnly = (children) => (
   </ProtectedRoute>
 );
 
-const adminDoctor = (children) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
+// actual seeded equivalent.
+const adminProvider = (children) => (
+  <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
     <Layout>{children}</Layout>
   </ProtectedRoute>
 );
@@ -53,10 +55,10 @@ const configRoutes = [
   <Route key="/insurance-companies/new" path="/insurance-companies/new" element={adminOnly(<CreateInsuranceCompanyPage />)} />,
   <Route key="/insurance-companies/:insuranceCompanyId/edit" path="/insurance-companies/:insuranceCompanyId/edit" element={adminOnly(<EditInsuranceCompanyPage />)} />,
 
-  <Route key="/note-templates" path="/note-templates" element={adminDoctor(<NoteTemplatesListPage />)} />,
-  <Route key="/note-templates/create" path="/note-templates/create" element={adminDoctor(<CreateNoteTemplatePage />)} />,
-  <Route key="/note-templates/:noteTemplateId/edit" path="/note-templates/:noteTemplateId/edit" element={adminDoctor(<EditNoteTemplatePage />)} />,
-  <Route key="/note-templates/:noteTemplateId" path="/note-templates/:noteTemplateId" element={adminDoctor(<ViewNoteTemplatePage />)} />,
+  <Route key="/note-templates" path="/note-templates" element={adminProvider(<NoteTemplatesListPage />)} />,
+  <Route key="/note-templates/create" path="/note-templates/create" element={adminProvider(<CreateNoteTemplatePage />)} />,
+  <Route key="/note-templates/:noteTemplateId/edit" path="/note-templates/:noteTemplateId/edit" element={adminProvider(<EditNoteTemplatePage />)} />,
+  <Route key="/note-templates/:noteTemplateId" path="/note-templates/:noteTemplateId" element={adminProvider(<ViewNoteTemplatePage />)} />,
 ];
 
 export default configRoutes;
