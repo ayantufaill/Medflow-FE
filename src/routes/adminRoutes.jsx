@@ -75,6 +75,7 @@ const adminRoutes = [
   <Route key="/admin/patient-communication/templates" path="/admin/patient-communication/templates" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/email-campaign" path="/admin/patient-communication/email-campaign" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/questionnaires" path="/admin/patient-communication/questionnaires" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/patient-communication/digital-forms" path="/admin/patient-communication/digital-forms" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/gap-fills" path="/admin/patient-communication/gap-fills" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/review-settings" path="/admin/patient-communication/review-settings" element={adminOnly(<AdminPage />)} />,
 

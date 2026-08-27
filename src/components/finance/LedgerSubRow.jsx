@@ -22,7 +22,7 @@ const LedgerSubRow = ({
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
   onAttachClick, attachData, procedures,
-  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick
+  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick, onEditClaimClick
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasProcedures = procedures && procedures.length > 0;
@@ -108,6 +108,7 @@ const LedgerSubRow = ({
         <Typography variant="caption" sx={{ fontWeight: 600, color: isPaidClaim ? '#fff' : isClosedClaim ? '#6B778C' : '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
           {claimStatus?.toLowerCase() === 'cancelled' ? 'Cancelled' : 
            claimStatus?.toLowerCase() === 'paid' ? 'Paid' :
+           claimStatus?.toLowerCase() === 'draft' || claimStatus?.toLowerCase() === 'readyforsubmission' ? 'Ready for submission' :
            (statusResponse || claimStatus || 'Claim in process')}
         </Typography>
       </Box>
@@ -133,39 +134,31 @@ const LedgerSubRow = ({
       ) : isClaim ? (
         <Stack direction="row" spacing={1} alignItems="center">
           {/* Attachment */}
-          {!isClosedClaim && (
-            <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
-              <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
-            </Box>
-          )}
+          <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
+            <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
+          </Box>
           {/* Arrows pointing in */}
           <Box onClick={(e) => { e.stopPropagation(); onReopenClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, bgcolor: isClosedClaim ? '#ffffff' : '#86efac', border: isClosedClaim ? '1px solid #d1d5db' : '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <CompareArrowsOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
           </Box>
           {/* Shield / Send Claim */}
-          {!isClosedClaim && (
-            <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
-              <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
-              <ArrowUpward sx={{ fontSize: 12, color: '#22c55e', position: 'absolute', right: -6, top: -2 }} />
-            </Box>
-          )}
+          <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
+            <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
+            <ArrowUpward sx={{ fontSize: 12, color: '#22c55e', position: 'absolute', right: -6, top: -2 }} />
+          </Box>
           {/* EOB */}
-          {!isClosedClaim && (
-            <Box onClick={() => onEOBClick?.(eobData)} sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
-            </Box>
-          )}
+          <Box onClick={() => onEOBClick?.(eobData)} sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
+          </Box>
           {/* Print */}
           <Box onClick={(e) => { e.stopPropagation(); onPrintClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <PrintOutlined sx={{ fontSize: 20, color: isPaidClaim ? '#fff' : '#38bdf8' }} />
           </Box>
           {/* Edit / Pencil */}
-          {!isClosedClaim && (
-            <Box sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <Edit sx={{ fontSize: 18, color: '#10b981' }} />
-            </Box>
-          )}
+          <Box onClick={(e) => { e.stopPropagation(); onEditClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <Edit sx={{ fontSize: 18, color: '#10b981' }} />
+          </Box>
         </Stack>
       ) : showExtendedTools ? (
         <>

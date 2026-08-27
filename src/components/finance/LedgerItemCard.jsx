@@ -33,7 +33,8 @@ const LedgerItemCard = ({
   onPrintClaimClick,
   onReopenClaimClick,
   handleAddProcedureClick,
-  handleAttachClick
+  handleAttachClick,
+  onEditClaimClick
 }) => {
   const title = displayItem.method === 'Invoice'
     ? `Invoice #${displayItem.invoiceNumber || displayItem.id} (${displayItem.date})`
@@ -112,7 +113,13 @@ const LedgerItemCard = ({
               <>
                 <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Claim:</Typography>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
-                  {displayItem.details.find(d => d.isClaim).status || 'Claim in process'}
+                  {(() => {
+                    const st = displayItem.details.find(d => d.isClaim)?.status;
+                    if (st?.toLowerCase() === 'draft' || st?.toLowerCase() === 'readyforsubmission') return 'Ready for submission';
+                    if (st?.toLowerCase() === 'cancelled') return 'Cancelled';
+                    if (st?.toLowerCase() === 'paid') return 'Paid';
+                    return st || 'Claim in process';
+                  })()}
                 </Typography>
               </>
             )}
@@ -169,6 +176,7 @@ const LedgerItemCard = ({
                 eobData={detail}
                 onPrintClaimClick={onPrintClaimClick}
                 onReopenClaimClick={onReopenClaimClick}
+                onEditClaimClick={onEditClaimClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);

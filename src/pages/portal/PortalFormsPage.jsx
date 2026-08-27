@@ -6,17 +6,24 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Select,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { portalService } from '../../services/portal.service';
+import { formTemplateService } from '../../services/formTemplate.service';
+import SignaturePad from '../../components/shared/SignaturePad';
 import {
+  buildTemplatesById,
   getDefaultFormData,
   getTemplateDefinition,
   normalizeFormDataForTemplate,
-} from './portalFormTemplates';
+} from './formTemplateHelpers';
 import {
   PortalEmptyState,
   PortalPageHeader,
@@ -27,17 +34,24 @@ import {
 const PortalFormsPage = () => {
   const [pendingForms, setPendingForms] = useState([]);
   const [submittedForms, setSubmittedForms] = useState([]);
+  const [templatesById, setTemplatesById] = useState({});
   const [formDrafts, setFormDrafts] = useState({});
   const [error, setError] = useState('');
   const [savingTemplateId, setSavingTemplateId] = useState('');
 
   const refresh = async () => {
     try {
-      const [pending, formsRes] = await Promise.all([
+      // Template definitions (fields/labels/types) come from the live /form-templates API —
+      // fetched once here rather than per-form, since /portal/forms/pending only returns
+      // {templateId, name, description}, not the field list needed to render a form.
+      const [pending, formsRes, templates] = await Promise.all([
         portalService.getPendingForms(),
         portalService.getForms({ page: 1, limit: 20 }),
+        formTemplateService.getAll(),
       ]);
       const pendingRows = pending || [];
+      const templatesMap = buildTemplatesById(templates);
+      setTemplatesById(templatesMap);
       setPendingForms(pendingRows);
       setSubmittedForms(formsRes.forms || []);
 
@@ -45,7 +59,7 @@ const PortalFormsPage = () => {
         const next = { ...prev };
         for (const form of pendingRows) {
           if (!next[form.templateId]) {
-            next[form.templateId] = getDefaultFormData(form.templateId);
+            next[form.templateId] = getDefaultFormData(templatesMap, form.templateId);
           }
         }
         return next;
@@ -76,14 +90,14 @@ const PortalFormsPage = () => {
     setFormDrafts((prev) => ({
       ...prev,
       [templateId]: {
-        ...normalizeFormDataForTemplate(templateId, prev[templateId]),
+        ...normalizeFormDataForTemplate(templatesById, templateId, prev[templateId]),
         [key]: value,
       },
     }));
   };
 
   const validateRequiredFields = (templateId, draft) => {
-    const template = getTemplateDefinition(templateId);
+    const template = getTemplateDefinition(templatesById, templateId);
     if (!template) return '';
 
     for (const field of template.fields) {
@@ -104,7 +118,7 @@ const PortalFormsPage = () => {
     try {
       setError('');
       setSavingTemplateId(templateId);
-      const draft = normalizeFormDataForTemplate(templateId, formDrafts[templateId]);
+      const draft = normalizeFormDataForTemplate(templatesById, templateId, formDrafts[templateId]);
       const validationError = validateRequiredFields(templateId, draft);
       if (validationError) {
         setError(validationError);
@@ -118,7 +132,7 @@ const PortalFormsPage = () => {
 
       setFormDrafts((prev) => ({
         ...prev,
-        [templateId]: getDefaultFormData(templateId),
+        [templateId]: getDefaultFormData(templatesById, templateId),
       }));
       await refresh();
     } catch (err) {
@@ -133,7 +147,7 @@ const PortalFormsPage = () => {
   };
 
   const renderField = (templateId, field) => {
-    const draft = normalizeFormDataForTemplate(templateId, formDrafts[templateId]);
+    const draft = normalizeFormDataForTemplate(templatesById, templateId, formDrafts[templateId]);
     const value = draft[field.key];
 
     if (field.type === 'boolean') {
@@ -166,11 +180,81 @@ const PortalFormsPage = () => {
       );
     }
 
+    if (field.type === 'select') {
+      return (
+        <TextField
+          key={field.key}
+          select
+          label={field.label}
+          value={value || ''}
+          onChange={(event) => updateDraftValue(templateId, field.key, event.target.value)}
+          fullWidth
+          required={Boolean(field.required)}
+        >
+          {(field.options || []).map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </TextField>
+      );
+    }
+
+    if (field.type === 'radio') {
+      return (
+        <Box key={field.key}>
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </Typography>
+          <RadioGroup
+            row
+            value={value || ''}
+            onChange={(event) => updateDraftValue(templateId, field.key, event.target.value)}
+          >
+            {(field.options || []).map((option) => (
+              <FormControlLabel
+                key={option.value}
+                value={option.value}
+                control={<Radio />}
+                label={option.label}
+              />
+            ))}
+          </RadioGroup>
+        </Box>
+      );
+    }
+
+    if (field.type === 'signature') {
+      return (
+        <Box key={field.key}>
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </Typography>
+          <SignaturePad
+            value={value || null}
+            onChange={(dataUrl) => updateDraftValue(templateId, field.key, dataUrl)}
+          />
+        </Box>
+      );
+    }
+
     return (
       <TextField
         key={field.key}
         label={field.label}
-        type={field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
+        type={
+          field.type === 'date'
+            ? 'date'
+            : field.type === 'email'
+              ? 'email'
+              : field.type === 'number'
+                ? 'number'
+                : field.type === 'phone'
+                  ? 'tel'
+                  : 'text'
+        }
         value={value || ''}
         onChange={(event) => updateDraftValue(templateId, field.key, event.target.value)}
         fullWidth
@@ -181,15 +265,15 @@ const PortalFormsPage = () => {
   };
 
   const renderSummary = (form) => {
-    const data = normalizeFormDataForTemplate(form.templateId, form.formData);
-    const template = getTemplateDefinition(form.templateId);
+    const data = normalizeFormDataForTemplate(templatesById, form.templateId, form.formData);
+    const template = getTemplateDefinition(templatesById, form.templateId);
     if (!template) {
       return String(data.response || '').trim() || 'Submitted';
     }
 
     const summaryField = template.fields.find((field) => {
       const value = data[field.key];
-      return field.type !== 'boolean' && String(value || '').trim();
+      return field.type !== 'boolean' && field.type !== 'signature' && String(value || '').trim();
     });
 
     if (!summaryField) return 'Submitted';
@@ -217,7 +301,7 @@ const PortalFormsPage = () => {
             />
           )}
           {pendingForms.map((form) => {
-            const template = getTemplateDefinition(form.templateId);
+            const template = getTemplateDefinition(templatesById, form.templateId);
             const latestSubmitted = submittedByTemplate.get(form.templateId);
             return (
               <Box
@@ -235,7 +319,7 @@ const PortalFormsPage = () => {
                     : (
                       <TextField
                         label="Response"
-                        value={normalizeFormDataForTemplate(form.templateId, formDrafts[form.templateId]).response || ''}
+                        value={normalizeFormDataForTemplate(templatesById, form.templateId, formDrafts[form.templateId]).response || ''}
                         onChange={(event) =>
                           updateDraftValue(form.templateId, 'response', event.target.value)
                         }
@@ -281,7 +365,7 @@ const PortalFormsPage = () => {
           {submittedForms.map((form) => (
             <Box key={form._id} sx={{ border: '1px solid #e8edf3', borderRadius: 2, p: 1.5, backgroundColor: '#fff' }}>
               <Typography variant="body2" fontWeight={600}>
-                {getTemplateDefinition(form.templateId)?.title || form.templateId || 'General form'}
+                {getTemplateDefinition(templatesById, form.templateId)?.title || form.templateId || 'General form'}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                 {renderSummary(form)}

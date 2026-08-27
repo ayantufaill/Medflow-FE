@@ -20,6 +20,8 @@ import {
   OpenInNew as OpenIcon,
 } from '@mui/icons-material';
 import { claimService } from '../../../../services/claim.service';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 
 const ManageEOBModal = ({
   open,
@@ -38,6 +40,10 @@ const ManageEOBModal = ({
   const [hasChanges, setHasChanges] = useState(false);
 
   const [isClaimMode, setIsClaimMode] = useState(false);
+
+  const [pendingFile, setPendingFile] = useState(null);
+  const [customName, setCustomName] = useState('');
+  const [remittanceDate, setRemittanceDate] = useState('');
 
   useEffect(() => {
     if (!open || !selectedBatchPayment) return;
@@ -65,18 +71,22 @@ const ManageEOBModal = ({
   const handleFileChange = async (e) => {
     const file = e?.target?.files?.[0];
     if (!file) return;
-    await uploadFile(file);
+    setPendingFile(file);
+    setCustomName(file.name);
+    setRemittanceDate('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const uploadFile = async (file) => {
+  const confirmUpload = async () => {
     if (!resolvedPayment?.id) {
       alert('No payment ID found. Cannot upload.');
       return;
     }
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', pendingFile);
     formData.append('description', `EOB for Payment ${resolvedPayment.paymentRef || resolvedPayment.id}`);
+    if (customName) formData.append('filename', customName);
+    if (remittanceDate) formData.append('remittanceDate', remittanceDate);
 
     setUploading(true);
     try {
@@ -93,14 +103,16 @@ const ManageEOBModal = ({
       } else {
         const newEob = result?.eob || {
           id: `temp-${Date.now()}`,
-          filename: file.name,
+          filename: customName || pendingFile.name,
           uploadDate: new Date().toISOString(),
-          size: formatFileSize(file.size),
+          remittanceDate: remittanceDate || null,
+          size: formatFileSize(pendingFile.size),
           url: null,
         };
         setEobs(prev => [...prev, newEob]);
       }
       setHasChanges(true);
+      setPendingFile(null);
     } catch (error) {
       alert(`Upload failed: ${error?.response?.data?.error?.message || error?.response?.data?.message || error.message}`);
     } finally {
@@ -130,7 +142,11 @@ const ManageEOBModal = ({
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) await uploadFile(file);
+    if (file) {
+      setPendingFile(file);
+      setCustomName(file.name);
+      setRemittanceDate('');
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -202,7 +218,7 @@ const ManageEOBModal = ({
                           {name}
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#718096', display: 'block', fontFamily: 'Inter, sans-serif' }}>
-                          {[date, eob.size].filter(Boolean).join(' · ')}
+                          {[date, eob.remittanceDate ? `Remittance: ${eob.remittanceDate}` : null, eob.size].filter(Boolean).join(' · ')}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 0.5, ml: 1, flexShrink: 0 }}>
@@ -247,7 +263,74 @@ const ManageEOBModal = ({
             )}
 
             {/* Upload Section */}
-            <Box
+            {pendingFile ? (
+              <Box sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '8px', bgcolor: '#f8fafc' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: '#1e293b' }}>
+                  Upload EOB Document
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: '#64748b', mb: 0.5, display: 'block' }}>File selected</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{pendingFile.name} ({formatFileSize(pendingFile.size)})</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: '#64748b', mb: 0.5, display: 'block' }}>Rename File</Typography>
+                    <input 
+                      type="text" 
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '14px', fontFamily: 'Inter' }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: '#64748b', mb: 0.5, display: 'block' }}>Remittance Date</Typography>
+                    <DatePicker 
+                      value={remittanceDate ? dayjs(remittanceDate) : null}
+                      onChange={(newValue) => setRemittanceDate(newValue ? newValue.format('YYYY-MM-DD') : '')}
+                      slotProps={{
+                        textField: {
+                          size: 'small',
+                          sx: {
+                            width: '100%',
+                            bgcolor: '#fff',
+                            '& .MuiInputBase-root': {
+                              fontSize: '14px',
+                              fontFamily: 'Inter',
+                              borderRadius: '4px',
+                            }
+                          }
+                        },
+                        popper: {
+                          placement: 'right-start',
+                          sx: {
+                            zIndex: 10000
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                    <Button 
+                      variant="outlined" 
+                      onClick={() => setPendingFile(null)}
+                      disabled={uploading}
+                      sx={{ textTransform: 'none', borderColor: '#cbd5e1', color: '#475569' }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      onClick={confirmUpload}
+                      disabled={uploading}
+                      sx={{ textTransform: 'none', bgcolor: '#2362EF', boxShadow: 'none' }}
+                    >
+                      {uploading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Confirm Upload'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Box
               onDrop={handleDrop}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -289,6 +372,7 @@ const ManageEOBModal = ({
                 </>
               )}
             </Box>
+            )}
 
             <input
               type="file"

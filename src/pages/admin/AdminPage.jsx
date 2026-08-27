@@ -43,6 +43,7 @@ import PatientCommunicationSettings from './PatientCommunicationSettings';
 import PatientCommunicationTemplates from './PatientCommunicationTemplates';
 import EmailCampaigns from './EmailCampaigns';
 import Questionnaires from './Questionnaires';
+import DigitalForms from './DigitalForms';
 import ScheduleGapFills from './ScheduleGapFills';
 import ReviewSettings from './ReviewSettings';
 import AdjustmentTypes from './AdjustmentTypes';
@@ -95,6 +96,7 @@ const PATIENT_COMMUNICATION_SUB_TABS = [
   { label: 'Templates (Emails/Texts/Letters)', path: '/admin/patient-communication/templates' },
   { label: 'Email Campaign', path: '/admin/patient-communication/email-campaign' },
   { label: 'Questionnaires', path: '/admin/patient-communication/questionnaires' },
+  { label: 'Digital Forms', path: '/admin/patient-communication/digital-forms' },
   { label: 'Schedule Gap Fills', path: '/admin/patient-communication/gap-fills' },
   { label: 'Review Settings', path: '/admin/patient-communication/review-settings' },
 ];
@@ -416,6 +418,8 @@ const AdminPage = () => {
             <EmailCampaigns />
           ) : location.pathname === '/admin/patient-communication/questionnaires' ? (
             <Questionnaires />
+          ) : location.pathname === '/admin/patient-communication/digital-forms' ? (
+            <DigitalForms />
           ) : location.pathname === '/admin/patient-communication/gap-fills' ? (
             <ScheduleGapFills />
           ) : location.pathname === '/admin/patient-communication/review-settings' ? (

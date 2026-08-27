@@ -165,7 +165,6 @@ export const fetchLedgerItems = createAsyncThunk(
 
         const claimsMapped = invoiceClaims.map((claim) => {
           let claimStatus = claim.statusDisplay || claim.status || 'Unsent';
-          if (claimStatus.toLowerCase() === 'draft') claimStatus = 'Claim in process';
           
           const isApproved = claimStatus.toLowerCase().includes('approved') || claimStatus.toLowerCase().includes('paid');
           
