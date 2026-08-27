@@ -160,6 +160,9 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     } catch (err) {
       console.error('Failed to attach progress notes', err);
       alert('Failed to attach progress notes. Please try again.');
+    }
+  };
+
   const handleAttachEobs = async (selectedEobs) => {
     setShowEobDialog(false);
     
