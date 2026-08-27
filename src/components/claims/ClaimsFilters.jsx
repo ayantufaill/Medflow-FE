@@ -165,7 +165,7 @@ export const ClaimsFilters = ({
               <Box sx={{ minWidth: 140, flex: '1 1 auto' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Sort Report by:</Typography>
                 <FormControl fullWidth size="small">
-                  <Select value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                  <Select value={sortReportBy} onChange={(e) => setSortReportBy(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                     <MenuItem value="none">None</MenuItem>
                     <MenuItem value="patient_name">Patient Name</MenuItem>
                     <MenuItem value="claim_number">Claim #</MenuItem>
@@ -181,7 +181,7 @@ export const ClaimsFilters = ({
             <Box sx={{ minWidth: 140, flex: '1 1 auto' }}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Filter by Claim Type:</Typography>
               <FormControl fullWidth size="small">
-                <Select value={claimType} onChange={(e) => setClaimType(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                <Select value={claimType} onChange={(e) => setClaimType(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                   {CLAIM_TYPES.map((t) => (
                     <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
                   ))}
@@ -193,7 +193,7 @@ export const ClaimsFilters = ({
             <Box sx={{ minWidth: 140, flex: '1 1 auto' }}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Filter by Carrier:</Typography>
               <FormControl fullWidth size="small">
-                <Select value={carrier} onChange={(e) => setCarrier(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                <Select value={carrier} onChange={(e) => setCarrier(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                   {CARRIERS.map((c) => (
                     <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>
                   ))}
@@ -205,10 +205,13 @@ export const ClaimsFilters = ({
             <Box sx={{ minWidth: 150, flex: '1 1 auto' }}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Filter by Claim Attachment:</Typography>
               <FormControl fullWidth size="small">
-                <Select value={claimAttachment} onChange={(e) => setClaimAttachment(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                <Select value={claimAttachment} onChange={(e) => setClaimAttachment(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                   <MenuItem value="all">All</MenuItem>
                   <MenuItem value="with_attachments">With Attachments</MenuItem>
                   <MenuItem value="without_attachments">Without Attachments</MenuItem>
+                  <MenuItem value="unsent_attachments">Unsent Attachments</MenuItem>
+                  <MenuItem value="sent_attachments">Sent Attachments</MenuItem>
+                  <MenuItem value="errored_attachments">Errored Attachments</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -218,7 +221,7 @@ export const ClaimsFilters = ({
               <Box sx={{ minWidth: 140, flex: '1 1 auto' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Filter by Claim Status:</Typography>
                 <FormControl fullWidth size="small">
-                  <Select value={claimStatus} onChange={(e) => setClaimStatus(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                  <Select value={claimStatus} onChange={(e) => setClaimStatus(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                     {CLAIM_STATUSES.map((s) => (
                       <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
                     ))}
@@ -282,7 +285,7 @@ export const ClaimsFilters = ({
               <Box sx={{ minWidth: 160, flex: '1 1 auto' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Group Date By Range:</Typography>
                 <FormControl fullWidth size="small">
-                  <Select value={groupDateRange} onChange={(e) => setGroupDateRange(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                  <Select value={groupDateRange} onChange={(e) => setGroupDateRange(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                     <MenuItem value="DOS">Claim Date of Service</MenuItem>
                   </Select>
                 </FormControl>
@@ -294,7 +297,7 @@ export const ClaimsFilters = ({
               <Box sx={{ minWidth: 140, flex: '1 1 auto' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block' }}>Group By:</Typography>
                 <FormControl fullWidth size="small">
-                  <Select value={groupByOption} onChange={(e) => setGroupByOption(e.target.value)} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
+                  <Select value={groupByOption} onChange={(e) => setGroupByOption(e.target.value)} MenuProps={{ sx: { zIndex: 1600 }, PaperProps: { style: { maxHeight: 250 } }, anchorOrigin: { vertical: 'bottom', horizontal: 'left' }, transformOrigin: { vertical: 'top', horizontal: 'left' } }} sx={{ backgroundColor: '#fafbfe', borderRadius: '4px', fontSize: '0.85rem' }}>
                     {GROUP_BY_OPTIONS.map((g) => (
                       <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>
                     ))}

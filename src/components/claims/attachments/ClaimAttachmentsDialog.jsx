@@ -145,6 +145,34 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     onSave({ newFiles, retainedFiles: existingAttachments });
   };
 
+  const handleAttachEobs = async (selectedEobs) => {
+    setShowEobDialog(false);
+    
+    setSaving(true);
+    try {
+      const fetchedFiles = await Promise.all(selectedEobs.map(async (eob) => {
+        const url = eob.url || eob.storagePath || eob.fileUrl || eob.documentUrl;
+        if (!url) throw new Error("No URL found for EOB");
+        
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return {
+          file: new File([blob], eob.filename || 'EOB Document', { type: blob.type }),
+          name: eob.filename || 'EOB Document',
+          size: blob.size,
+          type: 'EOB or COB'
+        };
+      }));
+      
+      setUploadedFiles(prev => [...prev, ...fetchedFiles]);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to retrieve EOBs for attaching. Check network or CORS settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!attachingClaim) return null;
 
   return (
@@ -547,6 +575,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
       <EOBListDialog
         open={showEobDialog}
         onClose={() => setShowEobDialog(false)}
+        onAttachSelected={handleAttachEobs}
         claimNumber={attachingClaim?.claimNumber}
         claimId={attachingClaim?._id || attachingClaim?.id}
         eobs={localClaimEobs}

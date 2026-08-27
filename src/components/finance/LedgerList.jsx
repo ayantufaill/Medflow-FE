@@ -33,6 +33,7 @@ import { invoiceService } from '../../services/invoice.service';
 import LedgerDialogManager from './LedgerDialogManager';
 import { claimService } from '../../services/claim.service';
 import ManageEOBModal from '../claims/batch-actions/modals/ManageEOBModal';
+import EditClaimDialog from '../claims/EditClaimDialog';
 
 const LedgerList = ({ patient, expanded, filters }) => {
   const dispatch = useDispatch();
@@ -82,6 +83,14 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setEOBTarget(data);
     setShowEOBModal(true);
   };
+  const [showEditClaimDialog,    setShowEditClaimDialog]    = useState(false);
+  const [editClaimTarget,        setEditClaimTarget]        = useState(null);
+
+  const handleEditClaimClick = (claimData) => {
+    setEditClaimTarget(claimData);
+    setShowEditClaimDialog(true);
+  };
+  
   const [showAdaDialog,          setShowAdaDialog]          = useState(false);
   const [adaTarget,              setAdaTarget]              = useState(null);
 
@@ -489,6 +498,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             onEOBClick={handleEOBClick}
             onPrintClaimClick={handlePrintClaimClick}
             onReopenClaimClick={handleReopenClaimClick}
+            onEditClaimClick={handleEditClaimClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />
@@ -527,6 +537,25 @@ const LedgerList = ({ patient, expanded, filters }) => {
             }
           }}
           selectedBatchPayment={eobTarget}
+        />
+      )}
+      {showEditClaimDialog && (
+        <EditClaimDialog
+          open={showEditClaimDialog}
+          claim={editClaimTarget}
+          onClose={() => { setShowEditClaimDialog(false); setEditClaimTarget(null); }}
+          onSave={async (data) => {
+            try {
+              if (editClaimTarget?._id || editClaimTarget?.id) {
+                const claimId = editClaimTarget._id || editClaimTarget.id;
+                console.log("Saving claim edits:", claimId, data);
+                await claimService.updateClaim(claimId, data);
+                refreshLedger();
+              }
+            } catch (err) {
+              console.error("Failed to update claim:", err);
+            }
+          }}
         />
       )}
     </Box>

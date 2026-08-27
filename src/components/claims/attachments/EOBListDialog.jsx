@@ -10,9 +10,7 @@ import { COLORS } from '../../../constants/colors';
 import { radius, fontWeight } from '../../../constants/styles';
 import { claimService } from '../../../services/claim.service';
 
-const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange }) => {
-  const eobFileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
+const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange, onAttachSelected }) => {
   const [localEobs, setLocalEobs] = useState(eobs || []);
   const [selectedEobs, setSelectedEobs] = useState([]);
   const [deletingEob, setDeletingEob] = useState(null); // { eob, idx }
@@ -24,46 +22,12 @@ const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange
   }, [eobs]);
 
   const handleAttachClick = () => {
-    if (eobFileInputRef.current) {
-      eobFileInputRef.current.click();
-    }
-  };
-
-  const handleFileSelected = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Reset the input so the same file can be re-selected if needed
-    event.target.value = null;
-
-    if (!claimId) {
-      alert('Cannot upload: claim ID is missing.');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const result = await claimService.uploadClaimEOB(claimId, formData);
-
-      // Append the newly uploaded EOB to the local list for immediate display
-      if (result?.eob) {
-        setLocalEobs(prev => {
-          const updated = [...prev, result.eob];
-          onEobsChange?.(updated);
-          return updated;
-        });
-      } else if (result?.eobs) {
-        setLocalEobs(result.eobs);
-        onEobsChange?.(result.eobs);
-      }
-    } catch (error) {
-      console.error('Failed to upload EOB:', error);
-      alert('Failed to upload EOB. Please try again.');
-    } finally {
-      setUploading(false);
+    const selected = localEobs.filter(eob => {
+      const eobId = eob._id || eob.id || localEobs.indexOf(eob);
+      return selectedEobs.includes(eobId);
+    });
+    if (onAttachSelected) {
+      onAttachSelected(selected);
     }
   };
 
@@ -105,15 +69,6 @@ const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange
 
   return (
     <>
-      {/* Hidden file input for OS file picker */}
-      <input
-        type="file"
-        accept="image/*, application/pdf, .doc, .docx"
-        style={{ display: 'none' }}
-        ref={eobFileInputRef}
-        onChange={handleFileSelected}
-      />
-
       <BaseDialog
         open={open}
         onClose={onClose}
@@ -125,8 +80,7 @@ const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange
             <Button
               variant="outlined"
               onClick={handleAttachClick}
-              disabled={uploading}
-              startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : null}
+              disabled={selectedEobs.length === 0}
               sx={{
                 textTransform: 'none',
                 borderColor: COLORS.BORDER,
@@ -139,7 +93,7 @@ const EOBListDialog = ({ open, onClose, claimNumber, claimId, eobs, onEobsChange
                 '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' }
               }}
             >
-              {uploading ? 'Uploading...' : 'Attach'}
+              {selectedEobs.length > 0 ? `Attach (${selectedEobs.length})` : 'Attach'}
             </Button>
             <Button
               variant="contained"
