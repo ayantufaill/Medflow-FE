@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Box, Typography, IconButton, Divider, Chip, Button, Paper, CircularProgress, Menu, MenuItem, Checkbox } from '@mui/material';
+import { Drawer, Box, Typography, IconButton, Divider, Chip, Button, Paper, CircularProgress, Menu, MenuItem, Checkbox, Popover, FormControl, Select } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -14,7 +14,7 @@ import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { COLORS } from '../../../constants/colors';
-import { fontSize, fontWeight } from '../../../constants/styles';
+import { fontSize, fontWeight, roundedSelectMenuProps } from '../../../constants/styles';
 import { MOCK_NOTES, MOCK_NOTE_HISTORY, MOCK_FILTER_TAGS } from './notes.constants';
 import dayjs from 'dayjs';
 import EditNoteForm from '../edit-note/EditNoteForm';
@@ -26,8 +26,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
   const [activeFilters, setActiveFilters] = useState(['Clinical']);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [activeNoteId, setActiveNoteId] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'history' | 'filter' | 'edit' | 'create'
-  const [pendingFilters, setPendingFilters] = useState(['Clinical']);
+  const [view, setView] = useState('list'); // 'list' | 'history' | 'edit' | 'create'
 
   const loadRealNotes = async () => {
     if (!patientId) return;
@@ -112,14 +111,9 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
     return { text: 'Saved', color: '#ffedd5', textColor: '#c2410c' }; // Draft
   };
 
-  const handleOpenFilters = () => {
-    setPendingFilters([...activeFilters]);
-    setView('filter');
-  };
-
-  const handleApplyFilters = () => {
-    setActiveFilters([...pendingFilters]);
-    setView('list');
+  const handleFilterChange = (event) => {
+    const value = event.target.value;
+    setActiveFilters(typeof value === 'string' ? value.split(',') : value);
   };
 
   const displayNotes = activeFilters.length === 0 
@@ -180,9 +174,67 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
             )}
           </Box>
         </Box>
-        <IconButton size="small" onClick={handleOpenFilters} sx={{ border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-          <TuneIcon sx={{ color: '#475569', fontSize: '1.2rem' }} />
-        </IconButton>
+        <FormControl sx={{ minWidth: 32, width: 32, height: 32 }}>
+          <Select
+            multiple
+            displayEmpty
+            value={activeFilters}
+            onChange={handleFilterChange}
+            renderValue={() => <TuneIcon sx={{ color: '#475569', fontSize: '1.2rem' }} />}
+            IconComponent={() => null}
+            MenuProps={{
+              sx: { zIndex: 1500 },
+              PaperProps: {
+                ...roundedSelectMenuProps.PaperProps,
+                sx: {
+                  ...roundedSelectMenuProps.PaperProps.sx,
+                  maxHeight: 400
+                }
+              }
+            }}
+            sx={{
+              bgcolor: 'white',
+              borderRadius: '4px',
+              height: '32px',
+              width: '32px',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1', borderWidth: '1px' },
+              '& .MuiSelect-select': { 
+                p: '0 !important', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                height: '100%',
+                minHeight: 'unset !important'
+              }
+            }}
+          >
+            {MOCK_FILTER_TAGS.map((tag) => (
+              <MenuItem key={tag.label} value={tag.label} sx={{ display: 'flex', gap: 1 }}>
+                <Checkbox size="small" checked={activeFilters.indexOf(tag.label) > -1} sx={{ p: 0 }} />
+                <Chip 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>{tag.icon}</Box>
+                      <Typography sx={{ fontSize: fontSize.md }}>{tag.label}</Typography>
+                    </Box>
+                  }
+                  size="small" 
+                  sx={{ 
+                    bgcolor: tag.bg, 
+                    color: tag.color, 
+                    fontWeight: fontWeight.medium, 
+                    borderRadius: '4px',
+                    height: '24px',
+                    border: 'none',
+                    '& .MuiChip-label': { px: 1, py: 0 }
+                  }} 
+                />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
       {/* Notes List */}
@@ -281,84 +333,6 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
         )}
       </Box>
         </>
-      ) : view === 'filter' ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Filter Header */}
-          <Box sx={{
-              boxSizing: "border-box",
-              px: "25px",
-              py: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              borderBottom: `1px solid ${COLORS.BORDER}`,
-              backgroundColor: COLORS.SURFACE_TINT,
-              m: 0,
-              flexShrink: 0,
-          }}>
-            <IconButton onClick={() => setView('list')} size="small" sx={{ color: '#2563eb', p: 0.5, ml: -1 }}>
-              <ArrowBackIcon sx={{ fontSize: "20px" }} />
-            </IconButton>
-            <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-              Filter Notes
-            </Typography>
-          </Box>
-          
-          {/* Filter Content */}
-          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
-            <Typography sx={{ fontWeight: 600, color: '#0f172a', mb: 2, fontSize: fontSize.md }}>Tags</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 4 }}>
-              {MOCK_FILTER_TAGS.map((tag) => (
-                <Box key={tag.label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Checkbox 
-                    size="small" 
-                    checked={pendingFilters.includes(tag.label)} 
-                    onChange={(e) => {
-                       if (e.target.checked) setPendingFilters(prev => [...prev, tag.label]);
-                       else setPendingFilters(prev => prev.filter(f => f !== tag.label));
-                    }}
-                    sx={{ p: 0, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
-                  />
-                  <Chip 
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>{tag.icon}</Box>
-                        <Typography sx={{ fontSize: fontSize.md }}>{tag.label}</Typography>
-                      </Box>
-                    }
-                    size="small" 
-                    sx={{ 
-                      bgcolor: tag.bg, 
-                      color: tag.color, 
-                      fontWeight: fontWeight.medium, 
-                      borderRadius: '4px',
-                      height: '24px',
-                      border: 'none',
-                      '& .MuiChip-label': { px: 1, py: 0 }
-                    }} 
-                  />
-                </Box>
-              ))}
-            </Box>
-
-            <Typography sx={{ fontWeight: 600, color: '#0f172a', mb: 2, fontSize: fontSize.md }}>Archived</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-               <Checkbox size="small" sx={{ p: 0, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} />
-               <Typography sx={{ color: '#334155', fontSize: fontSize.md }}>Show Archived</Typography>
-            </Box>
-          </Box>
-          
-          {/* Footer */}
-          <Divider />
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', flexShrink: 0 }}>
-            <Button variant="outlined" onClick={() => setView('list')} sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#2563eb', fontWeight: 600, px: 3, py: 0.75 }}>
-              Cancel
-            </Button>
-            <Button variant="contained" onClick={handleApplyFilters} sx={{ textTransform: 'none', bgcolor: '#2563eb', boxShadow: 'none', fontWeight: 600, px: 3, py: 0.75, '&:hover': { bgcolor: '#1a50c7' } }}>
-              Apply
-            </Button>
-          </Box>
-        </Box>
       ) : (view === 'edit' || view === 'create') ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Header */}
