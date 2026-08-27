@@ -41,16 +41,16 @@ export const useTask = (taskId) => {
  */
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSnackbar } = useSnackbar();
 
   return useMutation({
     mutationFn: (taskData) => taskService.createTask(taskData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      showSuccess('Task created successfully');
+      showSnackbar('Task created successfully', 'success');
     },
     onError: (error) => {
-      showError(error?.response?.data?.error?.message || 'Failed to create task');
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to create task', 'error');
     },
   });
 };
@@ -60,17 +60,17 @@ export const useCreateTask = () => {
  */
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSnackbar } = useSnackbar();
 
   return useMutation({
     mutationFn: ({ taskId, updates }) => taskService.updateTask(taskId, updates),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
-      showSuccess('Task updated successfully');
+      showSnackbar('Task updated successfully', 'success');
     },
     onError: (error) => {
-      showError(error?.response?.data?.error?.message || 'Failed to update task');
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to update task', 'error');
     },
   });
 };
@@ -80,17 +80,17 @@ export const useUpdateTask = () => {
  */
 export const useUpdateTaskStatus = () => {
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSnackbar } = useSnackbar();
 
   return useMutation({
     mutationFn: ({ taskId, status }) => taskService.updateTaskStatus(taskId, status),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
-      showSuccess('Task status updated');
+      showSnackbar('Task status updated', 'success');
     },
     onError: (error) => {
-      showError(error?.response?.data?.error?.message || 'Failed to update task status');
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to update task status', 'error');
     },
   });
 };
@@ -100,16 +100,16 @@ export const useUpdateTaskStatus = () => {
  */
 export const useDeleteTask = () => {
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSnackbar } = useSnackbar();
 
   return useMutation({
     mutationFn: (taskId) => taskService.deleteTask(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      showSuccess('Task deleted successfully');
+      showSnackbar('Task deleted successfully', 'success');
     },
     onError: (error) => {
-      showError(error?.response?.data?.error?.message || 'Failed to delete task');
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to delete task', 'error');
     },
   });
 };
@@ -119,17 +119,17 @@ export const useDeleteTask = () => {
  */
 export const useAddComment = () => {
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSnackbar } = useSnackbar();
 
   return useMutation({
     mutationFn: ({ taskId, text }) => taskService.addComment(taskId, text),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(variables.taskId) });
       // We might want to invalidate the list too, if the latest comment is displayed there
-      showSuccess('Comment added');
+      showSnackbar('Comment added', 'success');
     },
     onError: (error) => {
-      showError(error?.response?.data?.error?.message || 'Failed to add comment');
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to add comment', 'error');
     },
   });
 };

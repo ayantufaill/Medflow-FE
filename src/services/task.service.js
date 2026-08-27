@@ -21,6 +21,7 @@ export const taskService = {
     sortBy = 'DateTimeEntry',
     sortOrder = 'desc',
     search = '',
+    isRepeating,
   } = {}) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
@@ -33,6 +34,7 @@ export const taskService = {
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('sortOrder', sortOrder);
     if (search) params.append('search', search);
+    if (isRepeating !== undefined) params.append('isRepeating', isRepeating);
 
     const response = await apiClient.get(`/tasks?${params.toString()}`);
     return response.data.data;

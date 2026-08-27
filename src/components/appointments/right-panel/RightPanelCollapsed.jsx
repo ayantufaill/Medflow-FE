@@ -10,11 +10,13 @@ import {
 import { COLORS } from '../../../constants/colors';
 import { radius } from '../../../constants/styles';
 import { shortlistService } from '../../../services/shortlist.service';
-import { TASKS } from './TaskList';
 import { MESSAGE_ROWS } from './Messages';
+import { useTasks } from '../../../hooks/queries/useTasks';
 
 const RightPanelCollapsed = ({ onExpand, hideAppointmentShortlist = false }) => {
   const [shortlistCount, setShortlistCount] = useState(0);
+  const { data: tasksData } = useTasks({ limit: 100 });
+  const totalActiveTasks = (tasksData?.tasks || []).filter(t => t.TaskStatus !== 1 && t.TaskStatus !== 3).length;
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -88,7 +90,7 @@ const RightPanelCollapsed = ({ onExpand, hideAppointmentShortlist = false }) => 
         {/* Checklist */}
         <Tooltip title="Tasks" placement="left" arrow>
           <Badge 
-            badgeContent={TASKS.length} 
+            badgeContent={totalActiveTasks} 
             color="error"
             sx={{ '& .MuiBadge-badge': { fontWeight: 600, fontSize: '10px', minWidth: '16px', height: '16px', px: '4px' } }}
           >

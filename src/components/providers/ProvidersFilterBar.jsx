@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, TextField, InputAdornment, FormControl, Select, MenuItem, FormControlLabel, Checkbox, Typography, Button } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import adduserIcon from '../../assets/usermanagement icons/adduser.svg';
+import { roundedSelectMenuProps } from '../../constants/styles';
 
 const ProvidersFilterBar = ({ 
   tabConfig, 
@@ -41,7 +42,16 @@ const ProvidersFilterBar = ({
             value={specialtyFilter}
             onChange={(e) => { setSpecialtyFilter(e.target.value); setPage(0); }}
             renderValue={(v) => v || 'Filter by Speciality'}
-            sx={{ borderRadius: '6px', height: '36px' }}
+            MenuProps={roundedSelectMenuProps}
+            sx={{
+              bgcolor: 'white',
+              borderRadius: '6px',
+              height: '36px',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' },
+              '& .MuiSelect-select': { py: 0, display: 'flex', alignItems: 'center', fontSize: '13px', color: '#334155', fontWeight: 500 }
+            }}
           >
             <MenuItem value=""><em>All Specialties</em></MenuItem>
             {SPECIALTIES.map((s) => (

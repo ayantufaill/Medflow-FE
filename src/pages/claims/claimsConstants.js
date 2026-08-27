@@ -1,8 +1,18 @@
 // Claim type options
 export const CLAIM_TYPES = [
-  { value: 'all', label: 'Both' },
-  { value: 'E-claim', label: 'Electronic claims' },
-  { value: 'Manual', label: 'Manual claim' },
+  { value: 'all', label: 'All' },
+  { value: 'Manual Primary', label: 'Manual Primary' },
+  { value: 'Manual Secondary', label: 'Manual Secondary' },
+  { value: 'Manual Other', label: 'Manual Other' },
+  { value: 'All E-claim Primary', label: 'All E-claim Primary' },
+  { value: 'E-claim Other', label: 'E-claim Other' },
+  { value: 'E-claim Secondary', label: 'E-claim Secondary' },
+  { value: 'Manual Preauth Primary', label: 'Manual Preauth Primary' },
+  { value: 'Manual Preauth Secondary', label: 'Manual Preauth Secondary' },
+  { value: 'Manual Preauth Other', label: 'Manual Preauth Other' },
+  { value: 'E-preauth Primary', label: 'E-preauth Primary' },
+  { value: 'E-preauth Secondary', label: 'E-preauth Secondary' },
+  { value: 'E-preauth Other', label: 'E-preauth Other' },
 ];
 
 // Carrier options
@@ -24,15 +34,24 @@ export const CARRIERS = [
 // Claim Status Options (aligned with backend ClaimStatus values)
 export const CLAIM_STATUSES = [
   { value: 'all', label: 'All' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'partial', label: 'Partial' },
-  { value: 'denied', label: 'Denied' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'Accepted', label: 'Accepted' },
+  { value: 'Accepted and Paid', label: 'Accepted and Paid' },
+  { value: 'Accepted for processing', label: 'Accepted for processing' },
+  { value: 'Accepted, but a final payment was denied', label: 'Accepted, but a final payment was denied' },
+  { value: 'Additional Info Requested', label: 'Additional Info Requested' },
+  { value: 'An error occurred when submitting the claim attachments', label: 'An error occurred when submitting the claim attachments' },
+  { value: 'COB Submitted', label: 'COB Submitted' },
+  { value: 'Claim in process', label: 'Claim in process' },
+  { value: 'Contact Oryx Support', label: 'Contact Oryx Support' },
+  { value: 'Created', label: 'Created' },
+  { value: 'Deleted', label: 'Deleted' },
+  { value: 'EOB Received', label: 'EOB Received' },
+  { value: 'EOB Uploaded', label: 'EOB Uploaded' },
+  { value: 'Edi Validation Error - Contact Oryx Support', label: 'Edi Validation Error - Contact Oryx Support' },
+  { value: 'Error Response Received', label: 'Error Response Received' },
+  { value: 'Manual Claim', label: 'Manual Claim' },
+  { value: 'Payment was Denied', label: 'Payment was Denied' },
+  { value: 'Pending At Payor', label: 'Pending At Payor' },
 ];
 
 // Group Date By Range Options (Specific to Outstanding Claims)
@@ -992,3 +1011,5 @@ export const TABS = [
   'DENTICAL REPORTS',
   'ERA REPORTS',
 ];
+export const SORT_REPORT_OPTIONS = [ { value: 'none', label: 'None' }, { value: 'sentDate', label: 'Sent on Date' }, { value: 'printedDate', label: 'Printed on Date' }, { value: 'patientName', label: 'Patient Name' }, { value: 'carrierName', label: 'Carrier Name' }, { value: 'dos', label: 'Date of Service' }, { value: 'claimDate', label: 'Claim Date' } ];
+export const FILTER_DATE_OPTIONS = [ { value: 'all', label: 'All dates' }, { value: 'range', label: 'Range' }, { value: 'thisWeek', label: 'This Week' }, { value: 'thisMonth', label: 'This Month' }, { value: 'last7Days', label: 'Last 7 days' }, { value: 'lastWeek', label: 'Last Week' }, { value: 'last4Weeks', label: 'Last 4 Weeks' }, { value: 'lastMonth', label: 'Last Month' }, { value: 'last3Months', label: 'Last 3 Months' }, { value: 'last12Months', label: 'Last 12 Months' }, { value: 'monthToDate', label: 'Month to date' }, { value: 'quarterToDate', label: 'Quarter to date' }, { value: 'yearToDate', label: 'Year to date' }, { value: 'lastYear', label: 'Last Year' } ];

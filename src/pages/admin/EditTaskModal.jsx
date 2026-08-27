@@ -17,8 +17,9 @@ import { usePatients } from '../../hooks/queries/usePatients';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
-import { useCreateTask } from '../../hooks/queries/useTasks';
+import { useUpdateTask } from '../../hooks/queries/useTasks';
 import { COLORS } from '../../constants/colors';
 import { roundedSelectMenuProps } from '../../constants/styles';
 import CardWrapper from '../../components/admin/AddUserDrawer/CardWrapper';
@@ -26,9 +27,9 @@ import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 // We'll reuse the personalinfo icon or similar for sections, or just omit icons if we don't have task specific ones
 import personalInfoIcon from '../../assets/usermanagement icons/personalinformation.svg';
 
-const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
+const EditTaskModal = ({ open, onClose, users, taskLists, roles, task }) => {
   const { data: patients = [] } = usePatients({ limit: 500, status: 'active' });
-  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
   const [saving, setSaving] = useState(false);
 
   // Merge rounded menu props with high zIndex for modal overlay
@@ -59,6 +60,25 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
     }
   });
 
+  React.useEffect(() => {
+    if (task && open) {
+      const descParts = task.Descript ? task.Descript.split('\n') : [''];
+      reset({
+        Descript: descParts[0] || '',
+        Message: descParts.slice(1).join('\n') || '',
+        PriorityDefNum: task.PriorityDefNum || 0,
+        assignedTo: task.UserNum || '',
+        TaskListNum: task.TaskListNum || '',
+        DateTask: task.DateTask ? dayjs(task.DateTask) : null,
+        dueTime: null, // Depending on if dueTime is part of DateTask or separate
+        IsRepeating: task.IsRepeating || 0,
+        ReminderFrequency: task.ReminderFrequency || 0,
+        comment: '', // don't prefill comment on edit
+        KeyNum: task.KeyNum || '',
+      });
+    }
+  }, [task, open, reset]);
+
   const handleClose = () => {
     if (saving) return;
     reset();
@@ -78,7 +98,7 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
       TaskListNum: data.TaskListNum === '' ? null : data.TaskListNum,
     };
 
-    createTaskMutation.mutate(formattedData, {
+    updateTaskMutation.mutate({ taskId: task.TaskNum, updates: formattedData }, {
       onSuccess: () => {
         setSaving(false);
         handleClose();
@@ -116,7 +136,7 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
       >
         <Box
           component="form"
-          id="create-task-form"
+          id="edit-task-form"
           onSubmit={handleSubmit(onSubmit)}
           sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
         >
@@ -136,10 +156,10 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
               </Box>
               <Box>
                 <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', lineHeight: '24px', letterSpacing: '-0.4px', color: '#111' }}>
-                  Create Task
+                  Edit Task
                 </Typography>
                 <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: '11.5px', lineHeight: '17.25px', color: 'text.secondary' }}>
-                  Assign and schedule a new task
+                  Update task details
                 </Typography>
               </Box>
             </Box>
@@ -390,7 +410,7 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
               startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
               sx={{ backgroundColor: '#2262EF', borderRadius: 2, '&:hover': { backgroundColor: '#1d4ed8' }, boxShadow: 'none', textTransform: 'none', fontWeight: 600, fontFamily: 'Inter', px: 3 }}
             >
-              Add Task
+              Save Changes
             </Button>
           </Box>
         </Box>
@@ -399,4 +419,4 @@ const CreateTaskModal = ({ open, onClose, users, taskLists, roles }) => {
   );
 };
 
-export default CreateTaskModal;
+export default EditTaskModal;

@@ -26,7 +26,7 @@ const EditAllergyPage = () => {
 
   const { data: allergy, isLoading, isError } = useAllergy(id);
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
-  const { data: usersResult, isLoading: usersLoading } = useUsers({ limit: 1000 });
+  const { data: usersResult, isLoading: usersLoading } = useUsers({ limit: 100 });
   const users = usersResult?.users ?? [];
 
   const handleSubmit = async (data) => {

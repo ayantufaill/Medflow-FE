@@ -681,7 +681,7 @@ export const StandardClaimsTable = ({
                             sx={{ m: 0, minWidth: 75 }}
                           >
                             <Select
-                              value={claim.status}
+                              value={claim.status === 'readyForSubmission' ? 'Ready for submission' : claim.status}
                               onChange={(e) =>
                                 handleRowStatusChange(claim.id, e.target.value)
                               }
@@ -764,7 +764,7 @@ export const StandardClaimsTable = ({
                               fontSize: "0.75rem",
                             }}
                           >
-                            {claim.status}
+                            {claim.status === 'readyForSubmission' ? 'Ready for submission' : claim.status}
                           </Typography>
                         )}
                       </TableCell>
