@@ -9,6 +9,7 @@ import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
+import { applyDateFilter } from './claimFilterUtils';
 
 const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [claims, setClaims] = useState([]);
@@ -21,8 +22,10 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     claimType: 'all',
     attachment: 'all',
     status: 'all',
+    filterDate: 'all',
     search: '',
   });
+  const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
   const [showHidden, setShowHidden] = useState(false);
   const [showReadyOnly, setShowReadyOnly] = useState(false);
 
@@ -64,8 +67,8 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     }
   }
 
-  const applyFilters = (data, currentFilters, hidden, readyOnly) => {
-    let result = [...data];
+  const applyFilters = (data, currentFilters, hidden, readyOnly, dateRange = customDateRange) => {
+    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
     if (currentFilters.carrier !== 'all') {
       result = result.filter((c) => c.carrier === currentFilters.carrier);
     }
@@ -100,7 +103,12 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden, showReadyOnly);
+    applyFilters(claims, newFilters, showHidden, showReadyOnly, customDateRange);
+  };
+
+  const handleCustomDateRangeChange = (range) => {
+    setCustomDateRange(range);
+    applyFilters(claims, filters, showHidden, showReadyOnly, range);
   };
 
   const handleClearAll = () => {
@@ -109,10 +117,12 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       claimType: 'all',
       attachment: 'all',
       status: 'all',
+      filterDate: 'all',
       search: '',
     };
     setFilters(defaultFilters);
-    applyFilters(claims, defaultFilters, showHidden, showReadyOnly);
+    setCustomDateRange({ start: null, end: null });
+    applyFilters(claims, defaultFilters, showHidden, showReadyOnly, { start: null, end: null });
   };
 
   const handleSearchChange = (value) => {
@@ -249,6 +259,8 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         ]}
         onRefresh={loadData}
         onClearAll={handleClearAll}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={handleCustomDateRangeChange}
       />
 
       <ClaimAlertBar

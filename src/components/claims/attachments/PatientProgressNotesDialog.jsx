@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { COLORS } from '../../../constants/colors';
 import { progressNoteService } from '../../../services/progress-note.service';
+import { clinicalNoteService } from '../../../services/clinical-note.service';
 import dayjs from 'dayjs';
 
 export default function PatientProgressNotesDialog({ open, onClose, patientId, onAttach }) {
@@ -35,9 +36,45 @@ export default function PatientProgressNotesDialog({ open, onClose, patientId, o
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      // Fetch only Active notes for this patient
-      const data = await progressNoteService.getAll({ patientId, tab: 'Active', limit: 100 });
-      setNotes(data?.notes || data?.data?.notes || []);
+      const [progData, clinData] = await Promise.all([
+        progressNoteService.getAll({ patientId, tab: 'Active', limit: 100 }).catch(() => null),
+        clinicalNoteService.getClinicalNotesByPatient(patientId).catch(() => null)
+      ]);
+
+      const pNotes = progData?.notes || progData?.data?.notes || [];
+      const mappedProgNotes = pNotes.map(n => ({
+        ...n,
+        _type: 'progress'
+      }));
+
+      const cNotes = clinData?.clinicalNotes || clinData?.data?.clinicalNotes || [];
+      const filteredClinNotes = cNotes.filter(n => (n.noteType || '').toLowerCase() !== 'soap');
+      
+      const mappedClinNotes = filteredClinNotes.map(n => {
+        let providerName = 'Unknown';
+        if (n.providerId) {
+          if (typeof n.providerId === 'object') {
+            const fName = n.providerId.userId?.firstName || n.providerId.firstName || '';
+            const lName = n.providerId.userId?.lastName || n.providerId.lastName || '';
+            providerName = fName || lName 
+              ? `${fName} ${lName}`.trim() 
+              : 'Unknown';
+          } else {
+            providerName = n.providerId;
+          }
+        }
+        return {
+          id: n._id || n.id,
+          date: n.createdAt,
+          category: n.noteType || 'Clinical',
+          provider: providerName,
+          description: n.structuredData?.procedureAccomplished || n.chiefComplaint || 'Clinical Note',
+          _type: 'clinical'
+        };
+      });
+
+      const combined = [...mappedProgNotes, ...mappedClinNotes].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setNotes(combined);
     } catch (err) {
       console.error('Failed to fetch progress notes', err);
     } finally {
