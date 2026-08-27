@@ -10,42 +10,41 @@ const TaskCard = ({ task, onToggleComplete }) => {
   const title = descriptLines[0] || "No description";
   const sub = descriptLines.slice(1).join("\n") || "";
   const dateStr = task.DateTask || task.DateTimeEntry;
-  
+
   const deleteTaskMutation = useDeleteTask();
-  
+
   const handleDelete = () => {
     deleteTaskMutation.mutate(task.TaskNum);
   };
   return (
-  <Box sx={{
-    backgroundColor: isCompleted ? "#f9fafb" : "rgba(34, 98, 239, 0.10)",
-    borderRadius: "10px",
-    px: "14px", py: "12px",
-    display: "flex",
-    gap: "12px",
-    alignItems: "flex-start",
-  }}>
-    {/* Circle checkbox */}
-    {isCompleted ? (
-      <CheckCircle onClick={() => onToggleComplete?.(task.TaskNum, task.TaskStatus)} sx={{ fontSize: "22px", color: "#9ca3af", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
-    ) : (
-      <RadioButtonUnchecked onClick={() => onToggleComplete?.(task.TaskNum, task.TaskStatus)} sx={{ fontSize: "22px", color: "#2262ef", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
-    )}
+    <Box sx={{
+      backgroundColor: isCompleted ? "#f9fafb" : "rgba(34, 98, 239, 0.10)",
+      borderRadius: "10px",
+      px: "14px", py: "12px",
+      display: "flex",
+      gap: "12px",
+      alignItems: "flex-start",
+    }}>
+      {/* Circle checkbox */}
+      {isCompleted ? (
+        <CheckCircle onClick={() => onToggleComplete?.(task.TaskNum, task.TaskStatus)} sx={{ fontSize: "22px", color: "#9ca3af", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
+      ) : (
+        <RadioButtonUnchecked onClick={() => onToggleComplete?.(task.TaskNum, task.TaskStatus)} sx={{ fontSize: "22px", color: "#2262ef", flexShrink: 0, mt: "2px", cursor: "pointer" }} />
+      )}
 
-    {/* Content */}
-    <Box sx={{ flex: 1, minWidth: 0 }}>
-      {/* Title */}
-      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: isCompleted ? "#9ca3af" : "#09121f", textDecoration: isCompleted ? "line-through" : "none", mb: "2px" }}>
-        {title}
-      </Typography>
+      {/* Content */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        {/* Title */}
+        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: isCompleted ? "#9ca3af" : "#09121f", textDecoration: isCompleted ? "line-through" : "none", mb: "2px" }}>
+          {title}
+        </Typography>
 
-      {/* Subtitle */}
-      <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: isCompleted ? "#9ca3af" : "#09121f", mb: "10px", whiteSpace: "pre-wrap" }}>
-        {sub}
-      </Typography>
+        {/* Subtitle */}
+        <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: isCompleted ? "#9ca3af" : "#09121f", mb: "10px", whiteSpace: "pre-wrap" }}>
+          {sub}
+        </Typography>
 
-      {/* Info row: date + location (left) | Go to Treatment Plan (right) */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+        {/* Info row: date + location */}
         <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {/* Date */}
           <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -56,32 +55,34 @@ const TaskCard = ({ task, onToggleComplete }) => {
           {/* Location / Assignee */}
           <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <PeopleOutline sx={{ fontSize: "13px", color: "#9aa3ae" }} />
-            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>{task.assignedUser?.UserName || 'Unassigned'}</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>
+              {task.assignedUser?.firstName ? `${task.assignedUser.firstName} ${task.assignedUser.lastName || ''}`.trim() : task.assignedUser?.UserName || 'Unassigned'}
+            </Typography>
           </Box>
         </Box>
 
-        {/* Go to Treatment Plan link — right */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", flexShrink: 0 }}>
-          <AddLinkOutlined sx={{ fontSize: "15px", color: "#2262ef" }} />
-          <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", "&:hover": { textDecoration: "underline" } }}>
-            Go to Treatment Plan
+        {/* Bottom row: Actions & Created by */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: "8px" }}>
+          {/* Go to Treatment link — left */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", flexShrink: 0 }}>
+            <AddLinkOutlined sx={{ fontSize: "15px", color: "#2262ef" }} />
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#2262ef", "&:hover": { textDecoration: "underline" } }}>
+              Go to Treatment
+            </Typography>
+          </Box>
+
+          {/* Created by — right */}
+          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
+            Created by {task.creator?.firstName ? `${task.creator.firstName} ${task.creator.lastName || ''}`.trim() : task.creator?.UserName || "Unknown"}
           </Typography>
         </Box>
       </Box>
 
-      {/* Created by */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: "4px" }}>
-        <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#9aa3ae" }}>
-          Created by {task.creator?.UserName || "Unknown"}
-        </Typography>
-      </Box>
+      {/* Delete icon */}
+      <IconButton onClick={handleDelete} size="small" sx={{ p: "2px", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
+        <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
+      </IconButton>
     </Box>
-
-    {/* Delete icon */}
-    <IconButton onClick={handleDelete} size="small" sx={{ p: "2px", flexShrink: 0, mt: "1px", "&:hover": { backgroundColor: "rgba(239,68,68,0.08)" } }}>
-      <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
-    </IconButton>
-  </Box>
   );
 };
 

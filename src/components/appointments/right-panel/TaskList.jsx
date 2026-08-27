@@ -43,7 +43,8 @@ const TaskList = () => {
             const descriptLines = (task.Descript || "").split("\n");
             const title = descriptLines[0] || "No description";
             const dateStr = task.DateTask || task.DateTimeEntry;
-            const sub = dateStr ? `${dayjs(dateStr).format('MM/DD/YYYY')} · ${task.assignedUser?.UserName || 'Unassigned'}` : 'No date';
+            const assignedName = task.assignedUser?.firstName || task.assignedUser?.lastName ? `${task.assignedUser.firstName || ''} ${task.assignedUser.lastName || ''}`.trim() : task.assignedUser?.UserName || 'Unassigned';
+            const sub = dateStr ? `${dayjs(dateStr).format('MM/DD/YYYY')} · ${assignedName}` : 'No date';
             
             return (
               <Box
