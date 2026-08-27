@@ -32,10 +32,14 @@ import { useTaskLists } from '../../hooks/queries/useTasks';
 import { useRoles } from '../../hooks/queries/useRoles';
 import { roundedSelectMenuProps } from '../../constants/styles';
 import CreateTaskModal from './CreateTaskModal';
+import EditTaskModal from './EditTaskModal';
+import ViewTaskModal from './ViewTaskModal';
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 
 import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 import viewIcon from '../../assets/usermanagement icons/view.svg';
-import editIcon from '../../assets/usermanagement icons/edit.svg';
+import editIcon from '../../assets/practicesetupicon/editicon.svg';
+import deleteIcon from '../../assets/practicesetupicon/deleteicon.svg';
 
 const STATUS_STYLES = {
   0: { label: 'NEW', color: '#1E40AF', bgcolor: '#DBEAFE' },
@@ -69,7 +73,10 @@ const TaskManagement = () => {
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, taskId: null });
   // Data fetching
   const { data: tasksData, isLoading: isLoadingTasks } = useTasks({
     status: statusFilter.join(','),
@@ -77,13 +84,14 @@ const TaskManagement = () => {
     assignedTo: userFilter,
     createdDateFrom: dateFrom ? dateFrom.format('YYYY-MM-DD') : '',
     createdDateTo: dateTo ? dateTo.format('YYYY-MM-DD') : '',
+    isRepeating: activeTab === 1,
     page,
     limit,
     sortBy,
     sortOrder,
   });
 
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsers({ limit: 100 });
   const users = usersData?.users || [];
   const { data: taskLists } = useTaskLists();
   const { data: rolesData } = useRoles();
@@ -106,6 +114,28 @@ const TaskManagement = () => {
     setDateFrom(null);
     setDateTo(null);
     setPage(1);
+  };
+
+  const handleOpenEdit = (task) => {
+    setSelectedTask(task);
+    setIsEditModalOpen(true);
+  };
+
+  const handleOpenView = (task) => {
+    setSelectedTask(task);
+    setIsViewModalOpen(true);
+  };
+
+  const handleDelete = (taskId) => {
+    setDeleteDialog({ open: true, taskId });
+  };
+
+  const handleConfirmDelete = () => {
+    deleteTaskMutation.mutate(deleteDialog.taskId, {
+      onSuccess: () => {
+        setDeleteDialog({ open: false, taskId: null });
+      }
+    });
   };
 
   return (
@@ -207,8 +237,8 @@ const TaskManagement = () => {
               MenuProps={roundedSelectMenuProps}
               renderValue={(selected) => {
                 if (!selected) return <Typography sx={{ color: '#94A3B8', fontSize: '13px' }}>Select...</Typography>;
-                const match = roles?.find(g => String(g._id || g.id) === String(selected));
-                return <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 500 }}>{match ? match.name : selected}</Typography>;
+                const match = taskLists?.find(g => String(g.TaskListNum) === String(selected));
+                return <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 500 }}>{match ? match.Descript : selected}</Typography>;
               }}
               sx={{ 
                 minWidth: 160, bgcolor: 'white', borderRadius: '6px',
@@ -220,8 +250,8 @@ const TaskManagement = () => {
               }}
             >
               <MenuItem value=""><em>None</em></MenuItem>
-              {(roles || []).map(role => (
-                <MenuItem key={role._id || role.id} value={role._id || role.id}>{role.name}</MenuItem>
+              {(taskLists || []).map(list => (
+                <MenuItem key={list.TaskListNum} value={list.TaskListNum}>{list.Descript}</MenuItem>
               ))}
             </Select>
           </Box>
@@ -459,50 +489,49 @@ const TaskManagement = () => {
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px solid #F1F5F9' }}>
                       <Box sx={{ display: 'flex', gap: '8px' }}>
-                        <Button
-                          startIcon={<img src={viewIcon} alt="view" style={{ width: 14, height: 14 }} />}
+                        <IconButton
+                          onClick={() => handleOpenView(task)}
+                          size="small"
                           sx={{
-                            textTransform: 'none',
-                            fontFamily: 'Inter, sans-serif',
-                            fontWeight: 600,
-                            fontSize: '12px',
-                            height: '30px',
-                            borderRadius: '6px',
-                            px: '10px',
-                            bgcolor: '#FFFFFF',
                             border: '1px solid #CBD5E1',
-                            color: '#1E293B',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                            '&:hover': {
-                              bgcolor: '#F8FAFC',
-                              borderColor: '#94A3B8',
-                            },
+                            borderRadius: '6px',
+                            bgcolor: '#FFFFFF',
+                            width: '30px',
+                            height: '30px',
+                            '&:hover': { bgcolor: '#F8FAFC', borderColor: '#94A3B8' }
                           }}
                         >
-                          View
-                        </Button>
-                        <Button
-                          startIcon={<img src={editIcon} alt="edit" style={{ width: 14, height: 14 }} />}
+                          <img src={viewIcon} alt="view" style={{ width: 14, height: 14 }} />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleOpenEdit(task)}
+                          size="small"
                           sx={{
-                            textTransform: 'none',
-                            fontFamily: 'Inter, sans-serif',
-                            fontWeight: 600,
-                            fontSize: '12px',
-                            height: '30px',
-                            borderRadius: '6px',
-                            px: '10px',
-                            bgcolor: '#FFFFFF',
                             border: '1px solid #CBD5E1',
-                            color: '#1E293B',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                            '&:hover': {
-                              bgcolor: '#F8FAFC',
-                              borderColor: '#94A3B8',
-                            },
+                            borderRadius: '6px',
+                            bgcolor: '#FFFFFF',
+                            width: '30px',
+                            height: '30px',
+                            '&:hover': { bgcolor: '#F8FAFC', borderColor: '#94A3B8' }
                           }}
                         >
-                          Edit
-                        </Button>
+                          <img src={editIcon} alt="edit" style={{ width: 14, height: 14 }} />
+                        </IconButton>
+                        <IconButton 
+                          onClick={() => handleDelete(task.TaskNum)}
+                          size="small"
+                          sx={{ 
+                            color: '#EF4444', 
+                            border: '1px solid #FECACA',
+                            borderRadius: '6px',
+                            bgcolor: '#FEF2F2',
+                            width: '30px',
+                            height: '30px',
+                            '&:hover': { bgcolor: '#FEE2E2', borderColor: '#F87171' }
+                          }}
+                        >
+                          <img src={deleteIcon} alt="delete" style={{ width: 14, height: 14 }} />
+                        </IconButton>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -511,29 +540,29 @@ const TaskManagement = () => {
             )}
           </TableBody>
         </Table>
-      </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        component="div"
-        count={tasksData?.pagination?.total || 0}
-        page={page - 1}
-        onPageChange={(e, newPage) => setPage(newPage + 1)}
-        rowsPerPage={limit}
-        onRowsPerPageChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-        labelRowsPerPage="Rows per page:"
-        SelectProps={{
-          MenuProps: roundedSelectMenuProps,
-        }}
-        sx={{
-          borderTop: '1px solid #E2E8F0',
-          '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748B',
-          },
-          '& .MuiTablePagination-select': { fontFamily: 'Inter, sans-serif', fontSize: '13px' },
-        }}
-      />
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={tasksData?.pagination?.total || 0}
+          page={page - 1}
+          onPageChange={(e, newPage) => setPage(newPage + 1)}
+          rowsPerPage={limit}
+          onRowsPerPageChange={(e) => { setLimit(parseInt(e.target.value, 10)); setPage(1); }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          labelRowsPerPage="Rows per page:"
+          SelectProps={{
+            MenuProps: roundedSelectMenuProps,
+          }}
+          sx={{
+            borderTop: '1px solid #E2E8F0',
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748B',
+            },
+            '& .MuiTablePagination-select': { fontFamily: 'Inter, sans-serif', fontSize: '13px' },
+          }}
+        />
+      </TableContainer>
 
       {/* Create Task Modal */}
       <CreateTaskModal 
@@ -542,6 +571,35 @@ const TaskManagement = () => {
         users={users}
         taskLists={taskLists || []}
         roles={roles}
+      />
+
+      <EditTaskModal 
+        open={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setSelectedTask(null); }}
+        task={selectedTask}
+        users={users}
+        taskLists={taskLists || []}
+        roles={roles}
+      />
+
+      <ViewTaskModal 
+        open={isViewModalOpen}
+        onClose={() => { setIsViewModalOpen(false); setSelectedTask(null); }}
+        task={selectedTask}
+        users={users}
+        taskLists={taskLists || []}
+        roles={roles}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialog.open}
+        title="Confirm Delete"
+        content="Are you sure you want to delete this task?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteDialog({ open: false, taskId: null })}
+        confirmText="Delete"
+        confirmColor="error"
+        loading={deleteTaskMutation.isPending}
       />
     </Paper>
   );

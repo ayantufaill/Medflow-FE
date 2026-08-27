@@ -15,12 +15,7 @@ export const roleService = {
       const response = await apiClient.get('/roles');
       return response.data.data.roles || response.data.data || [];
     } catch (error) {
-      // If the endpoint requires authentication and user is not logged in,
-      // we'll return an empty array and handle it in the component
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.warn('Roles endpoint requires authentication. Returning empty array.');
-        return [];
-      }
+      console.error("Roles fetch error:", error);
       throw error;
     }
   },
@@ -33,6 +28,37 @@ export const roleService = {
   async getRoleById(roleId) {
     const response = await apiClient.get(`/roles/${roleId}`);
     return response.data.data.role || response.data.data;
+  },
+
+  /**
+   * Create a new role
+   * @param {Object} roleData - Role data (name, description, defaultRole)
+   * @returns {Promise<Object>} Created role object
+   */
+  async createRole(roleData) {
+    const response = await apiClient.post('/roles', roleData);
+    return response.data.data.role || response.data.data;
+  },
+
+  /**
+   * Update an existing role
+   * @param {string} roleId - Role ID to update
+   * @param {Object} roleData - Updated role data
+   * @returns {Promise<Object>} Updated role object
+   */
+  async updateRole(roleId, roleData) {
+    const response = await apiClient.put(`/roles/${roleId}`, roleData);
+    return response.data.data.role || response.data.data;
+  },
+
+  /**
+   * Delete a role
+   * @param {string} roleId - Role ID to delete
+   * @returns {Promise<Object>} Response data
+   */
+  async deleteRole(roleId) {
+    const response = await apiClient.delete(`/roles/${roleId}`);
+    return response.data;
   },
 };
 
