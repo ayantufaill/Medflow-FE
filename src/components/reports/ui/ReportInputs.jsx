@@ -15,7 +15,12 @@ export const ReportSelect = ({ label, labelPosition = 'top', prefix, options = [
         value={value}
         defaultValue={defaultValue}
         onChange={onChange}
-        MenuProps={{ sx: { zIndex: 1600 } }}
+        MenuProps={{
+          sx: { zIndex: 1600 },
+          PaperProps: { style: { maxHeight: 250 } },
+          anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+          transformOrigin: { vertical: 'top', horizontal: 'left' },
+        }}
         sx={{
           width: '100%',
           height: 36,

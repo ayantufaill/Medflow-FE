@@ -18,7 +18,8 @@ import {
   TextField,
   Select,
   MenuItem,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -30,7 +31,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { COLORS } from '../../../constants/colors';
 import { claimService } from '../../../services/claim.service';
+import { progressNoteService } from '../../../services/progress-note.service';
 import EOBListDialog from './EOBListDialog';
+import PatientProgressNotesDialog from './PatientProgressNotesDialog';
 
 
 const AttachmentAlertModal = ({ open, title = "Attachment", message, onClose, onAttach }) => {
@@ -95,6 +98,7 @@ const AttachmentAlertModal = ({ open, title = "Attachment", message, onClose, on
 
 export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, onSave }) {
   const [activeAlert, setActiveAlert] = useState(null);
+  const [showProgressNotesDialog, setShowProgressNotesDialog] = useState(false);
   const [isEditingPayorRef, setIsEditingPayorRef] = useState(false);
   const [payorRefValue, setPayorRefValue] = useState('');
   
@@ -110,15 +114,82 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const currentPatient = useSelector(selectCurrentPatient);
   const [showEobDialog, setShowEobDialog] = useState(false);
   const eobFileInputRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [localClaimEobs, setLocalClaimEobs] = useState(attachingClaim?.eobs || []);
 
   useEffect(() => {
     if (attachingClaim) {
       setExistingAttachments(attachingClaim.attachments || []);
       setUploadedFiles([]);
+      setLocalClaimEobs(attachingClaim.eobs || []);
     }
   }, [attachingClaim]);
 
   const hasAnyAttachments = existingAttachments.length > 0 || uploadedFiles.length > 0;
+
+  const handleSave = async () => {
+    const newFiles = uploadedFiles.map(u => u.file).filter(Boolean);
+    const claimId = attachingClaim?._id || attachingClaim?.id;
+
+    if (newFiles.length > 0 && claimId) {
+      setSaving(true);
+      try {
+        await claimService.uploadAttachments(claimId, newFiles);
+      } catch (err) {
+        console.error('Failed to upload attachments', err);
+        alert('Failed to upload attachments. Please try again.');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+
+    // Notify parent (refresh data, close dialog, etc.)
+    onSave({ newFiles, retainedFiles: existingAttachments });
+  };
+
+  const handleAttachProgressNotes = async (selectedNotes) => {
+    try {
+      const newFiles = await Promise.all(selectedNotes.map(async (note) => {
+        const noteId = note.id || note._id;
+        const pdfBlob = await progressNoteService.exportPdf(noteId);
+        const file = new File([pdfBlob], `Progress_Note_${noteId}.pdf`, { type: 'application/pdf' });
+        return { file, name: file.name, size: file.size, type: 'Report' };
+      }));
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+    } catch (err) {
+      console.error('Failed to attach progress notes', err);
+      alert('Failed to attach progress notes. Please try again.');
+    }
+  };
+
+  const handleAttachEobs = async (selectedEobs) => {
+    setShowEobDialog(false);
+    
+    setSaving(true);
+    try {
+      const fetchedFiles = await Promise.all(selectedEobs.map(async (eob) => {
+        const url = eob.url || eob.storagePath || eob.fileUrl || eob.documentUrl;
+        if (!url) throw new Error("No URL found for EOB");
+        
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return {
+          file: new File([blob], eob.filename || 'EOB Document', { type: blob.type }),
+          name: eob.filename || 'EOB Document',
+          size: blob.size,
+          type: 'EOB or COB'
+        };
+      }));
+      
+      setUploadedFiles(prev => [...prev, ...fetchedFiles]);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to retrieve EOBs for attaching. Check network or CORS settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!attachingClaim) return null;
 
@@ -383,7 +454,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
               <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY, fontFamily: 'Inter, sans-serif' }}>Dental History</Typography>
             </Box>
             {/* Progress Notes */}
-            <Box onClick={() => setActiveAlert('progress')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee', '&:hover': { opacity: 0.8 } }}>
+            <Box onClick={() => setShowProgressNotesDialog(true)} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee', '&:hover': { opacity: 0.8 } }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
               <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY, fontFamily: 'Inter, sans-serif' }}>Progress Notes</Typography>
             </Box>
@@ -472,24 +543,29 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
           />
           <Button 
             onClick={onClose} 
+            disabled={saving}
             variant="outlined"
             sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY, '&:hover': { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' } }}
           >
             Cancel
           </Button>
           <Button
-            onClick={() => onSave({ newFiles: uploadedFiles.map(u => u.file).filter(Boolean), retainedFiles: existingAttachments })}
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
             variant="contained"
             sx={{ textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif' }}
           >
-            Submit Attachments
+            {saving ? 'Submitting...' : 'Submit Attachments'}
           </Button>
           <Button
-            onClick={() => onSave({ newFiles: uploadedFiles.map(u => u.file).filter(Boolean), retainedFiles: existingAttachments })}
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
             variant="contained"
             sx={{ textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' }, fontFamily: 'Inter, sans-serif' }}
           >
-            Save
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -506,19 +582,38 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
         }
       />
 
-      <AttachmentAlertModal 
-        open={activeAlert === 'progress'}
-        onClose={() => setActiveAlert(null)}
-        onAttach={() => setActiveAlert(null)}
-        message="This patient has no progress notes."
+      <PatientProgressNotesDialog 
+        open={showProgressNotesDialog}
+        onClose={() => setShowProgressNotesDialog(false)}
+        patientId={
+          attachingClaim?.patient?._id || 
+          attachingClaim?.patient?.id || 
+          (typeof attachingClaim?.patient === 'string' ? attachingClaim.patient : null) ||
+          attachingClaim?.patientId?._id || 
+          attachingClaim?.patientId?.id || 
+          (typeof attachingClaim?.patientId === 'string' || typeof attachingClaim?.patientId === 'number' ? attachingClaim.patientId : null) ||
+          currentPatient?._id || 
+          currentPatient?.id
+        }
+        onAttach={handleAttachProgressNotes}
       />
 
       {/* EOB Management Dialog */}
       <EOBListDialog
         open={showEobDialog}
         onClose={() => setShowEobDialog(false)}
+        onAttachSelected={handleAttachEobs}
         claimNumber={attachingClaim?.claimNumber}
-        eobs={attachingClaim?.eobs || []}
+        claimId={attachingClaim?._id || attachingClaim?.id}
+        eobs={localClaimEobs}
+        onEobsChange={(updatedEobs) => {
+          setLocalClaimEobs(updatedEobs);
+          if (attachingClaim) {
+            try { attachingClaim.eobs = updatedEobs; } catch(e) {}
+          }
+          window.dispatchEvent(new CustomEvent('refresh-claims'));
+          window.dispatchEvent(new CustomEvent('refresh-ledger'));
+        }}
       />
     </>
   );

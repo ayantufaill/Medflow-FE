@@ -478,6 +478,9 @@ const NewTreatmentPlanPage = () => {
         open={isNotesDrawerOpen} 
         onClose={() => setIsNotesDrawerOpen(false)} 
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
+        patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
+        currentPatient={currentPatient}
+        selectedProcedures={treatmentPlans}
       />
 
       <Snackbar 

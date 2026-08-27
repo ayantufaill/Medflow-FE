@@ -15,6 +15,7 @@ import {
   Radio,
   RadioGroup,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   DragIndicator as DragIcon,
@@ -24,6 +25,11 @@ import {
 const GeneralRecareConfig = ({
   autoCreate,
   handleToggleAutoCreate,
+  intervalMonths,
+  onIntervalChange,
+  onIntervalCommit,
+  onGenerateNow,
+  generateLoading,
   procedures,
   updateProcedure
 }) => {
@@ -36,18 +42,35 @@ const GeneralRecareConfig = ({
         Automatically create recare plans using the default setting when needed, or uncheck it so recare plans are only created by you using the selected configuration.
       </Typography>
       
-      <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 2, border: '1px solid #f1f5f9', mb: 3 }}>
+      <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 2, border: '1px solid #f1f5f9', mb: 3, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
         <FormControlLabel
           control={
-            <Checkbox 
-              size="small" 
-              checked={autoCreate} 
-              onChange={(e) => handleToggleAutoCreate(e.target.checked)} 
+            <Checkbox
+              size="small"
+              checked={autoCreate}
+              onChange={(e) => handleToggleAutoCreate(e.target.checked)}
               sx={{ color: '#94a3b8', '&.Mui-checked': { color: '#3b82f6' } }}
             />
           }
           label={<Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>Automatically create recare plans</Typography>}
         />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>Every</Typography>
+          <TextField
+            size="small"
+            type="number"
+            value={intervalMonths}
+            onChange={(e) => onIntervalChange(e.target.value)}
+            onBlur={(e) => onIntervalCommit(e.target.value)}
+            inputProps={{ min: 1 }}
+            sx={{
+              width: 70,
+              '& .MuiOutlinedInput-root': { borderRadius: 1.5, backgroundColor: '#fff' },
+              '& .MuiInputBase-input': { fontSize: '0.85rem', py: 0.8, textAlign: 'center' }
+            }}
+          />
+          <Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>months</Typography>
+        </Box>
       </Box>
 
       <Typography sx={{ fontSize: '0.8rem', color: '#64748b', mt: 2, mb: 1 }}>
@@ -67,9 +90,12 @@ const GeneralRecareConfig = ({
         >
           Update Recall Dates For All Patients
         </Button>
-        <Button 
-          variant="contained" 
-          sx={{ 
+        <Button
+          variant="contained"
+          onClick={onGenerateNow}
+          disabled={generateLoading}
+          startIcon={generateLoading ? <CircularProgress size={14} sx={{ color: '#9aa3ae' }} /> : null}
+          sx={{
             fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
             textTransform: "none", borderRadius: "8px",
             backgroundColor: "#2262ef", color: "#fff",

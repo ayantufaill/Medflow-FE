@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchAppointmentsReport, selectAppointmentsData, selectAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
@@ -68,6 +69,22 @@ const AppointmentsReport = () => {
 
   const handleApply = () => {
     fetchReport();
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient', key: 'patient' },
+      { header: 'Flags', key: 'flags' },
+      { header: 'Type', key: 'type' },
+      { header: 'Status', key: 'status' },
+      { header: 'Providers', key: 'providers' },
+      { header: 'Operatory', key: 'operatory' },
+      { header: 'Apt. Date', key: 'aptDate' },
+      { header: 'Time', key: 'time' },
+      { header: 'Duration', key: 'duration' },
+      { header: 'Procedures', key: 'procedures' },
+      { header: 'Next Apt. Date', key: 'nextAptDate' },
+    ], 'Appointments_Report');
   };
 
   const columns = [
@@ -244,7 +261,7 @@ const AppointmentsReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />

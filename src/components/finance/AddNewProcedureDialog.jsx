@@ -11,7 +11,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
   const maxillaryUR = [1, 2, 3, 4, 5];
   const maxillaryUA = [6, 7, 8, 'Q1', '', 'Q2', 9, 10, 11];
   const maxillaryUL = [12, 13, 14, 15, 16];
-  
+
   const mandibularLR = [32, 31, 30, 29, 28];
   const mandibularLA = [27, 26, 25, 'Q4', '', 'Q3', 24, 23, 22];
   const mandibularLL = [21, 20, 19, 18, 17];
@@ -35,14 +35,14 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
 
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
-  const [selectedProcedures, setSelectedProcedures] = useState([]);
+  const [selectedProcedure, setSelectedProcedure] = useState(null);
   const [dontChangeCode, setDontChangeCode] = useState(false);
 
   // Visibility state for additional teeth containers
   const [showSuperAdult, setShowSuperAdult] = useState(false);
   const [showRetainedPrimary, setShowRetainedPrimary] = useState(false);
   const [showSuperPrimary, setShowSuperPrimary] = useState(false);
-  
+
   // Autocomplete and Dialog states
   const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
   const [searchOptions, setSearchOptions] = useState([]);
@@ -70,7 +70,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
     const timer = setTimeout(() => {
       setSearchLoading(true);
       const lowerInput = inputValue.toLowerCase();
-      const filtered = allCodes.filter(c => 
+      const filtered = allCodes.filter(c =>
         (c.ProcCode && c.ProcCode.toLowerCase().includes(lowerInput)) ||
         (c.Descript && c.Descript.toLowerCase().includes(lowerInput))
       ).slice(0, 20); // limit to 20 results for performance
@@ -83,7 +83,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
 
   const handleToothClick = (tooth) => {
     if (tooth === '' || (typeof tooth === 'string' && tooth.startsWith('Q'))) return;
-    setSelectedTeeth(prev => 
+    setSelectedTeeth(prev =>
       prev.includes(tooth) ? prev.filter(t => t !== tooth) : [...prev, tooth]
     );
   };
@@ -97,28 +97,28 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
   const ToothButton = ({ label }) => {
     const isSelected = selectedTeeth.includes(label);
     const isQuadrant = typeof label === 'string' && label.startsWith('Q');
-    
+
     return (
-    <Box
-      onClick={() => handleToothClick(label)}
-      sx={{
-        width: '30px',
-        height: '25px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '12px',
-        color: isSelected ? 'white' : '#4b5563',
-        bgcolor: isSelected ? '#5c7bb5' : 'transparent',
-        cursor: (label === '' || isQuadrant) ? 'default' : 'pointer',
-        '&:hover': { bgcolor: (label === '' || isQuadrant) ? 'transparent' : isSelected ? '#4a6291' : '#f3f4f6' },
-        visibility: label === '' ? 'hidden' : 'visible',
-        borderRadius: '2px',
-        m: '1px'
-      }}
-    >
-      {label}
-    </Box>
+      <Box
+        onClick={() => handleToothClick(label)}
+        sx={{
+          width: '30px',
+          height: '25px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px',
+          color: isSelected ? 'white' : '#4b5563',
+          bgcolor: isSelected ? '#5c7bb5' : 'transparent',
+          cursor: (label === '' || isQuadrant) ? 'default' : 'pointer',
+          '&:hover': { bgcolor: (label === '' || isQuadrant) ? 'transparent' : isSelected ? '#4a6291' : '#f3f4f6' },
+          visibility: label === '' ? 'hidden' : 'visible',
+          borderRadius: '2px',
+          m: '1px'
+        }}
+      >
+        {label}
+      </Box>
     );
   };
 
@@ -383,25 +383,24 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
           <Autocomplete
-            multiple
             freeSolo
             options={searchOptions}
             getOptionLabel={(option) => typeof option === 'string' ? option : `${option.ProcCode} - ${option.Descript}`}
             loading={searchLoading}
             inputValue={inputValue}
             onInputChange={(e, newInputValue) => setInputValue(newInputValue)}
-            value={selectedProcedures}
+            value={selectedProcedure}
             onChange={(e, newValue) => {
-              setSelectedProcedures(newValue);
+              setSelectedProcedure(newValue);
             }}
-            componentsProps={{ 
-              popper: { 
-                sx: { zIndex: 150000 }, 
+            componentsProps={{
+              popper: {
+                sx: { zIndex: 150000 },
                 modifiers: [
                   { name: 'flip', enabled: false },
                   { name: 'preventOverflow', enabled: false }
                 ]
-              } 
+              }
             }}
             renderInput={(params) => (
               <TextField
@@ -427,18 +426,18 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                 }}
               />
             )}
-            sx={{ 
-              width: '250px', 
-              '& .MuiInputBase-root': { 
+            sx={{
+              width: '250px',
+              '& .MuiInputBase-root': {
                 fontSize: '14px',
                 maxHeight: '90px',
                 overflowY: 'auto',
                 alignItems: 'flex-start',
                 pb: 0.5
-              } 
+              }
             }}
           />
-          <Typography 
+          <Typography
             onClick={() => setIsSelectDialogOpen(true)}
             sx={{ color: '#5c7bb5', fontSize: '14px', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
           >
@@ -452,8 +451,8 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <FormControlLabel
             control={
-              <Checkbox 
-                size="small" 
+              <Checkbox
+                size="small"
                 checked={dontChangeCode}
                 onChange={(e) => setDontChangeCode(e.target.checked)}
               />
@@ -465,23 +464,21 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             <Button
               variant="contained"
               onClick={() => {
-                if (selectedProcedures.length === 0) return;
-                
-                selectedProcedures.forEach((proc, index) => {
-                  const isLast = index === selectedProcedures.length - 1;
-                  const code = typeof proc === 'string' ? proc : proc.ProcCode || proc.code;
-                  const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
-                  const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
+                if (!selectedProcedure) return;
 
-                  onSave({
-                    selectedTeeth,
-                    selectedSurfaces,
-                    procedureCode: code,
-                    procedureDescription: desc,
-                    fee: feeAmount,
-                    dontChangeCode
-                  }, !isLast);
-                });
+                const proc = selectedProcedure;
+                const code = typeof proc === 'string' ? proc : proc.ProcCode || proc.code;
+                const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
+                const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
+
+                onSave({
+                  selectedTeeth,
+                  selectedSurfaces,
+                  procedureCode: code,
+                  procedureDescription: desc,
+                  fee: feeAmount,
+                  dontChangeCode
+                }, false);
               }}
               sx={{
                 bgcolor: COLORS.ACCENT,
@@ -517,7 +514,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
         onClose={() => setIsSelectDialogOpen(false)}
         onSelect={(procs) => {
           if (Array.isArray(procs) && procs.length > 0) {
-            setSelectedProcedures(prev => [...prev, ...procs]);
+            setSelectedProcedure(procs[0]);
             setIsSelectDialogOpen(false);
           }
         }}

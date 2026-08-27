@@ -16,6 +16,8 @@ import {
   Link,
   Chip,
   Divider,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,6 +31,8 @@ import {
 } from '@mui/icons-material';
 import { userService } from '../../services/user.service';
 import { useRoles } from '../../hooks/queries/useRoles';
+import { useBranch } from '../../hooks/redux';
+import { roundedSelectMenuProps } from '../../constants/styles';
 import AddUserDrawer from './AddUserDrawer';
 import ViewUserModal from './ViewUserModal';
 import EditUserModal from './EditUserModal';
@@ -40,11 +44,12 @@ import rolesIcon from '../../assets/usermanagement icons/roles.svg';
 
 // ─── UserRow ─────────────────────────────────────────────────────────────────
 
-const UserRow = ({ user, onViewUser, onEditUser, onAssignRolesUser }) => {
+const UserRow = ({ user, branches, onViewUser, onEditUser, onAssignRolesUser }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+  const branchNames = (user.branchIds || []).map((bId) => branches.find((b) => b.id === bId)?.name || bId);
 
   return (
     <Box sx={{ borderTop: `1px solid ${theme.palette.divider}` }}>
@@ -62,6 +67,9 @@ const UserRow = ({ user, onViewUser, onEditUser, onAssignRolesUser }) => {
           {expanded ? 'v' : '>'}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>{fullName}</Typography>
+        {branchNames.map((name) => (
+          <Chip key={name} label={name} size="small" sx={{ height: 18, fontSize: '0.7rem', bgcolor: '#EFF6FF', color: '#2262EF' }} />
+        ))}
         {!user.isActive && (
           <Chip label="Inactive" size="small" color="default" sx={{ height: 18, fontSize: '0.7rem' }} />
         )}
@@ -295,7 +303,7 @@ const UserRow = ({ user, onViewUser, onEditUser, onAssignRolesUser }) => {
 
 // ─── RoleBlock ────────────────────────────────────────────────────────────────
 
-const RoleBlock = ({ roleName, users, onViewUser, onEditUser, onAssignRolesUser }) => {
+const RoleBlock = ({ roleName, users, branches, onViewUser, onEditUser, onAssignRolesUser }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(true);
   if (users.length === 0) return null;
@@ -317,7 +325,7 @@ const RoleBlock = ({ roleName, users, onViewUser, onEditUser, onAssignRolesUser 
         </IconButton>
       </Box>
       <Collapse in={expanded}>
-        {users.map((user) => <UserRow key={user._id || user.id} user={user} onViewUser={onViewUser} onEditUser={onEditUser} onAssignRolesUser={onAssignRolesUser} />)}
+        {users.map((user) => <UserRow key={user._id || user.id} user={user} branches={branches} onViewUser={onViewUser} onEditUser={onEditUser} onAssignRolesUser={onAssignRolesUser} />)}
       </Collapse>
     </Paper>
   );
@@ -327,10 +335,12 @@ const RoleBlock = ({ roleName, users, onViewUser, onEditUser, onAssignRolesUser 
 
 const UserManagementView = () => {
   const { data: roles = [] } = useRoles();
+  const { branches, fetchBranches: loadBranches } = useBranch();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [branchFilter, setBranchFilter] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedUserForView, setSelectedUserForView] = useState(null);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
@@ -350,7 +360,7 @@ const UserManagementView = () => {
       const statusFilter = showInactive ? 'inactive' : '';
 
       while (true) {
-        const result = await userService.getAllUsers(page, PAGE_LIMIT, '', '', statusFilter);
+        const result = await userService.getAllUsers(page, PAGE_LIMIT, '', '', statusFilter, branchFilter);
         const batch = result.users || [];
         allUsers = allUsers.concat(batch);
         const total = result.pagination?.total || 0;
@@ -366,9 +376,14 @@ const UserManagementView = () => {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, [showInactive]);
+  }, [showInactive, branchFilter]);
 
   useEffect(() => { fetchAllUsers(); }, [fetchAllUsers]);
+
+  useEffect(() => {
+    loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const usersByRole = roles.reduce((acc, role) => {
     acc[role.name] = users.filter((u) =>
@@ -391,6 +406,30 @@ const UserManagementView = () => {
         <Typography variant="h6" fontWeight={700}>Users</Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {branches.length > 0 && (
+            <Select
+              size="small"
+              displayEmpty
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              MenuProps={roundedSelectMenuProps}
+              sx={{
+                bgcolor: 'white',
+                borderRadius: '6px',
+                minWidth: 160,
+                height: 36,
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' },
+                '& .MuiSelect-select': { py: 0, display: 'flex', alignItems: 'center', fontSize: '13px', color: '#334155', fontWeight: 500 }
+              }}
+            >
+              <MenuItem value="">All Branches</MenuItem>
+              {branches.map((b) => (
+                <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+              ))}
+            </Select>
+          )}
           <FormControlLabel
             control={
               <Checkbox size="small" checked={showInactive}
@@ -438,6 +477,7 @@ const UserManagementView = () => {
                 <RoleBlock
                   roleName={roleName}
                   users={roleUsers}
+                  branches={branches}
                   onViewUser={setSelectedUserForView}
                   onEditUser={setSelectedUserForEdit}
                   onAssignRolesUser={setSelectedUserForRoles}
@@ -450,6 +490,7 @@ const UserManagementView = () => {
               <RoleBlock
                 roleName="Other"
                 users={ungrouped}
+                branches={branches}
                 onViewUser={setSelectedUserForView}
                 onEditUser={setSelectedUserForEdit}
                 onAssignRolesUser={setSelectedUserForRoles}

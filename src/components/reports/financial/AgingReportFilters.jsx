@@ -14,7 +14,9 @@ import {
   FLAGS_OPTIONS,
   SORT_REPORT_OPTIONS,
   ON_PATIENT_PAYMENT_OPTIONS,
-  ON_INSURANCE_PAYMENT_OPTIONS
+  ON_INSURANCE_PAYMENT_OPTIONS,
+  CARRIER_OPTIONS,
+  BRANCH_OPTIONS
 } from '../../../pages/admin/reports/constants/reportFilters';
 
 const AgingReportFilters = ({ onApplyFilters }) => {
@@ -31,6 +33,8 @@ const AgingReportFilters = ({ onApplyFilters }) => {
     owing: OWING_OPTIONS[0].value,
     arRange: AR_RANGE_OPTIONS[0].value,
     flags: FLAGS_OPTIONS[0].value,
+    carrier: CARRIER_OPTIONS[0].value,
+    branch: BRANCH_OPTIONS[0].value,
     showFlags: true,
     paymentPlanOwing: true,
     resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
@@ -52,6 +56,8 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       owing: OWING_OPTIONS[0].value,
       arRange: AR_RANGE_OPTIONS[0].value,
       flags: FLAGS_OPTIONS[0].value,
+      carrier: CARRIER_OPTIONS[0].value,
+      branch: BRANCH_OPTIONS[0].value,
       showFlags: true,
       paymentPlanOwing: true,
       resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
@@ -89,6 +95,8 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       <ReportSelect label="OWING" options={OWING_OPTIONS} value={draftFilters.owing} onChange={(e) => handleFilterChange('owing', e.target.value)} />
       <ReportSelect label="AR RANGE" options={AR_RANGE_OPTIONS} value={draftFilters.arRange} onChange={(e) => handleFilterChange('arRange', e.target.value)} />
       <ReportSelect label="PTS FLAGS" options={FLAGS_OPTIONS} value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} />
+      <ReportSelect label="CARRIER" options={CARRIER_OPTIONS} value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} />
+      <ReportSelect label="BRANCH" options={BRANCH_OPTIONS} value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} />
     </>
   );
 

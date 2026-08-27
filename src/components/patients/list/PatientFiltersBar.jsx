@@ -26,6 +26,9 @@ const PatientFiltersBar = ({
   providerFilter,
   onProviderFilterChange,
   providerList,
+  branchFilter,
+  onBranchFilterChange,
+  branchList = [],
   sortByName,
   onSortByNameChange,
   loading,
@@ -58,6 +61,15 @@ const PatientFiltersBar = ({
         );
       })}
     </Select>
+
+    {branchList.length > 0 && (
+      <Select value={branchFilter} displayEmpty onChange={(e) => onBranchFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 160 }} MenuProps={roundedSelectMenuProps}>
+        <MenuItem value="">All Branches</MenuItem>
+        {branchList.map((b) => (
+          <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
+        ))}
+      </Select>
+    )}
 
     <FormControlLabel
       control={<Checkbox checked={sortByName} onChange={(e) => onSortByNameChange(e.target.checked)} size="small" sx={{ color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}

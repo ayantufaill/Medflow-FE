@@ -1,4 +1,4 @@
-import apiClient from './api.client';
+import apiClient from '../config/api';
 
 export const referralService = {
   getAllReferrals: async (search = '') => {
@@ -7,6 +7,10 @@ export const referralService = {
   },
   getReferralById: async (referralId) => {
     const response = await apiClient.get(`/referrals/${referralId}`);
+    return response.data.data.referral;
+  },
+  createReferral: async (referralData) => {
+    const response = await apiClient.post('/referrals', referralData);
     return response.data.data.referral;
   }
 };

@@ -25,9 +25,10 @@ export const kpiService = {
 
   /**
    * Get KPI summary metrics (Top Cards)
+   * @param {Object} params - Query params like branchId
    */
-  async getKpiSummary() {
-    const response = await apiClient.get('/kpis/summary');
+  async getKpiSummary(params = {}) {
+    const response = await apiClient.get('/kpis/summary', { params });
     return response.data.data;
   }
 };

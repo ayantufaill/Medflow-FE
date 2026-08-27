@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 
 const formatRelatedInfo = (info) => {
   if (!info) return '--';
@@ -86,6 +87,20 @@ const NotificationsReport = () => {
   const filteredData = status && status !== 'none'
     ? reportData.filter(row => row.status?.toLowerCase() === status.toLowerCase())
     : reportData;
+
+  const handleExportCsv = () => {
+    exportToCSV(filteredData, [
+      { header: 'Sent to Patient', key: 'sentToPatient' },
+      { header: 'Sent to User', key: 'sentToUser' },
+      { header: 'Template', key: 'template' },
+      { header: 'Status', key: 'status' },
+      { header: 'Planned On', key: 'plannedOn' },
+      { header: 'Sent On', key: 'sentOn' },
+      { header: 'Related Info', key: (row) => formatRelatedInfo(row.info) },
+      { header: 'Sent By', key: 'sentBy' },
+      { header: 'Patient Reply', key: 'reply' },
+    ], 'Notifications_Report');
+  };
 
   const columns = [
     { label: 'Sent to Patient' },
@@ -302,7 +317,7 @@ const NotificationsReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={filteredData.length > 0}
               />

@@ -175,6 +175,13 @@ apiClient.interceptors.response.use(
           // Only rotate the access token. Refresh token remains the same.
           localStorage.setItem('accessToken', tokens.accessToken);
 
+          // Notify AuthContext so it can re-seed the optimistic tenant claims
+          // (groupId/branchIds/isGroupAdmin) from the rotated token — a DOM
+          // event bridge since this file has no Redux store access of its own
+          // (this file already dispatches 'auth:logout' the same way below,
+          // though nothing currently listens for that one).
+          window.dispatchEvent(new CustomEvent('auth:token-refreshed', { detail: { accessToken: tokens.accessToken } }));
+
           // Update the original request with new token
           originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
           

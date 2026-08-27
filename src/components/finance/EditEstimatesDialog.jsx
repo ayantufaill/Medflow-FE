@@ -48,7 +48,7 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
         editPtPortion: Number(item.ptPortion || 0).toFixed(2),
         editInsPortion: Number(item.insPortion || 0).toFixed(2),
         editTotalCharge: Number(item.totalPrice || item.total || 0).toFixed(2),
-        editDeductible: '0.00' // Assuming no backend field exists currently
+        editDeductible: '0.00' // No backend field exists yet — rendered disabled, never sent on save
       }));
       setItems(initialItems);
     } catch (err) {
@@ -202,12 +202,13 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
                     />
                   </TableCell>
                   <TableCell>
-                    <TextField 
-                      variant="outlined" 
-                      size="small" 
+                    <TextField
+                      variant="outlined"
+                      size="small"
+                      disabled
                       value={`$${item.editDeductible}`}
-                      onChange={(e) => handleFieldChange(item.id || item._id, 'editDeductible', e.target.value)}
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }} 
+                      title="Not yet supported — the backend has no deductible field on invoice line items"
+                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }}
                     />
                   </TableCell>
                   <TableCell>

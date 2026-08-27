@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchPatientDiscountEditedFeeReport, selectDiscountEditedFeeData, selectDiscountEditedFeeDataLoading } from '../../../../store/slices/patientReportSlice';
 
 
@@ -61,6 +62,19 @@ const PatientDiscountEditedFeeReport = () => {
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.provider}</TableCell>
     </TableRow>
   );
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Patient', key: 'patient' },
+      { header: 'Date', key: 'date' },
+      { header: 'Code', key: 'code' },
+      { header: 'Description', key: 'description' },
+      { header: 'Original Fee', key: 'fee' },
+      { header: 'Edited Fee', key: 'editedFee' },
+      { header: 'Discount', key: 'discount' },
+      { header: 'Provider', key: 'provider' },
+    ], 'Patient_Discount_Edited_Fee_Report');
+  };
 
   const topFilters = (
     <>
@@ -152,7 +166,7 @@ const PatientDiscountEditedFeeReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />

@@ -5,6 +5,7 @@ import { fetchLoginReport } from '../../../../store/slices/othersReportSlice';
 import { ReportLayout, ReportDataTable } from '../../../../components/reports/ui';
 import LoginReportFilters from '../../../../components/reports/others/LoginReportFilters';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import dayjs from 'dayjs';
 
 const LoginReport = () => {
@@ -62,6 +63,16 @@ const LoginReport = () => {
     return true;
   });
 
+  const handleExportCsv = () => {
+    exportToCSV(filteredData, [
+      { header: 'Username', key: (row) => row.username || 'Unknown' },
+      { header: 'Login date', key: (row) => row.date || (row.createdAt ? dayjs(row.createdAt).format('MM/DD/YYYY h:mm A') : 'N/A') },
+      { header: 'Login status', key: (row) => row.status || 'Success' },
+      { header: 'IP address', key: (row) => row.ip || 'N/A' },
+      { header: 'Machine info', key: (row) => row.machine || row.userAgent || 'N/A' },
+    ], 'Login_Report');
+  };
+
   const renderRow = (row, index) => (
     <TableRow key={index} sx={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.75rem', color: '#1a3a6b', fontWeight: 600 }}>{row.username || 'Unknown'}</TableCell>
@@ -88,7 +99,7 @@ const LoginReport = () => {
       />
 
       <ProductionReportActions 
-        onExportCsv={() => alert('Exporting CSV...')} 
+        onExportCsv={handleExportCsv}
         onPrint={() => window.print()} 
       />
 

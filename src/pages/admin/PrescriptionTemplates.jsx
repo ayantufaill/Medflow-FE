@@ -18,7 +18,7 @@ import { COLORS } from '../../constants/colors';
 
 import PrescriptionTemplatesTable from '../../components/admin/clinical-management/prescriptions/PrescriptionTemplatesTable';
 import AddPrescriptionDialog from '../../components/admin/clinical-management/prescriptions/AddPrescriptionDialog';
-import SyncPrescriptionsDialog from '../../components/admin/clinical-management/prescriptions/SyncPrescriptionsDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 
 
@@ -290,7 +290,7 @@ const PrescriptionTemplates = () => {
         />
       </Box>
 
-      <SyncPrescriptionsDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={handleCloseSyncDialog}
       />

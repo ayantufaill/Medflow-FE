@@ -28,6 +28,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Autocomplete,
+  Chip,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -125,6 +127,7 @@ const PatientForm = ({
       preferredDentistId: '',
       preferredHygienistId: '',
       branchId: '',
+      medicalAlerts: [],
       isActive: true,
       address: {
         line1: '',
@@ -234,6 +237,7 @@ const PatientForm = ({
         preferredDentistId: initialData.preferredDentistId || '',
         preferredHygienistId: initialData.preferredHygienistId || '',
         branchId: initialData.branchId || '',
+        medicalAlerts: Array.isArray(initialData.medicalAlerts) ? initialData.medicalAlerts : [],
         isActive:
           initialData.isActive !== undefined ? initialData.isActive : true,
         address: {
@@ -569,7 +573,7 @@ const PatientForm = ({
     });
   };
 
-  const handleFormSubmit = (formData) => {
+  const handleFormSubmit = async (formData) => {
     // Helper to convert dayjs to ISO string
     const formatDate = (dateValue) => {
       if (!dateValue) return undefined;
@@ -658,6 +662,25 @@ const PatientForm = ({
     // Send empty strings for optional fields when cleared instead of excluding them
     // This ensures the backend can properly update fields to empty values
     // Keep all fields but ensure empty strings are sent for cleared optional fields
+
+    // medicalAlerts has no place on the main patient update endpoint — confirmed
+    // live it silently ignores the field either way (doesn't read it, doesn't
+    // reset it) — it's only ever persisted through the /workspace endpoint, the
+    // same one patientFlags already uses elsewhere in the app. Fired separately
+    // so a failure here doesn't block the rest of the form from saving.
+    const patientId = initialData?._id || initialData?.id;
+    if (isEditMode && patientId) {
+      try {
+        await patientService.updatePatientWorkspace(patientId, {
+          medicalAlerts: formData.medicalAlerts || [],
+        });
+      } catch (err) {
+        showSnackbar(
+          err.response?.data?.error?.message || err.response?.data?.message || 'Failed to save medical alerts.',
+          'error'
+        );
+      }
+    }
 
     onSubmit(sanitizedData);
   };
@@ -1616,6 +1639,41 @@ const PatientForm = ({
                     })}
                   </Select>
                 </FormControl>
+              )}
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Controller
+              name="medicalAlerts"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={[]}
+                  value={field.value || []}
+                  onChange={(_, newValue) => field.onChange(newValue)}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        variant="filled"
+                        color="warning"
+                        label={option}
+                        size="small"
+                        {...getTagProps({ index })}
+                        key={option}
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Medical Alerts"
+                      placeholder="Type an alert and press Enter (e.g. Penicillin Allergy)"
+                      helperText="Shown as an alert badge on the patient's chart. Saved separately from the rest of this form."
+                    />
+                  )}
+                />
               )}
             />
           </Grid>

@@ -5,7 +5,7 @@ import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
-import { CARRIERS, CLAIM_TYPES } from '../../pages/claims/claimsConstants';
+import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
 
 const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
@@ -156,8 +156,11 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       value: filters.attachment,
       options: [
         { value: 'all', label: 'All' },
-        { value: 'yes', label: 'Has Attachments' },
-        { value: 'no', label: 'No Attachments' },
+        { value: 'withAttachments', label: 'With Attachments' },
+        { value: 'withoutAttachments', label: 'Without Attachments' },
+        { value: 'unsentAttachments', label: 'Unsent Attachments' },
+        { value: 'sentAttachments', label: 'Sent Attachments' },
+        { value: 'erroredAttachments', label: 'Errored Attachments' }
       ],
       onChange: (val) => handleFilterChange('attachment', val),
     },
@@ -166,13 +169,16 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       label: 'Filter by Claim Status:',
       width: '140px',
       value: filters.status,
-      options: [
-        { value: 'all', label: 'All' },
-        { value: 'readyForSubmission', label: 'Ready for Submission' },
-        { value: 'validationError', label: 'Validation Error' },
-        { value: 'draft', label: 'Draft' },
-      ],
+      options: CLAIM_STATUSES,
       onChange: (val) => handleFilterChange('status', val),
+    },
+    {
+      key: 'filterDate',
+      label: 'Filter by Date:',
+      width: '140px',
+      value: filters.filterDate || 'all',
+      options: FILTER_DATE_OPTIONS,
+      onChange: (val) => handleFilterChange('filterDate', val),
     },
   ];
 

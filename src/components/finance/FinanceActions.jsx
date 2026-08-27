@@ -41,8 +41,12 @@ const FinanceActions = ({
 
   // Insurance Coverage dropdown
   const [insuranceCoverageAnchorEl, setInsuranceCoverageAnchorEl] = useState(null);
+
   const patientId = patient?._id || patient?.id;
-  const patientInsurances = patientId ? (insurancesCache?.[patientId] || []) : [];
+  const patientInsurancesRaw = patientId ? insurancesCache?.[patientId] : null;
+  const patientInsurances = Array.isArray(patientInsurancesRaw) 
+    ? patientInsurancesRaw 
+    : (patientInsurancesRaw?.data || []);
   const hasInsurance = patientInsurances.length > 0;
 
   useEffect(() => {
@@ -55,7 +59,6 @@ const FinanceActions = ({
   const handleInsuranceCoverageClose = () => setInsuranceCoverageAnchorEl(null);
   const handleInsuranceCoverageSelect = () => {
     handleInsuranceCoverageClose();
-    navigate('/insurance');
   };
 
   // Add Claim dialog (dropdown state)
@@ -218,13 +221,17 @@ const FinanceActions = ({
         }}
       >
         {hasInsurance ? (
-          <MenuItem onClick={handleInsuranceCoverageSelect}>
-            <CheckCircle sx={{ color: '#4caf50', mr: 1.5, fontSize: 20 }} />
-            <ListItemText
-              primary="This patient has insurance coverage"
-              primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
-            />
-          </MenuItem>
+          patientInsurances.map((ins, idx) => (
+            <MenuItem key={idx} onClick={handleInsuranceCoverageSelect}>
+              <CheckCircle sx={{ color: '#4caf50', mr: 1.5, fontSize: 20 }} />
+              <ListItemText
+                primary={ins.insuranceCompanyId?.name || ins.insuranceCompany?.name || ins.carrierName || ins.inssub?.insplan?.carrier?.CarrierName || 'Insurance'}
+                secondary={ins.groupName || ins.planName || ins.groupNumber || ins.inssub?.insplan?.GroupName || 'No Group Name'}
+                primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
+                secondaryTypographyProps={{ fontSize: '0.8rem', color: '#666' }}
+              />
+            </MenuItem>
+          ))
         ) : (
           <MenuItem onClick={handleInsuranceCoverageSelect}>
             <Cancel sx={{ color: '#f44336', mr: 1.5, fontSize: 20 }} />

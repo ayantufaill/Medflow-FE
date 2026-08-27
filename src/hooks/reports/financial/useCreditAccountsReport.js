@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { reportingService } from '../../../services/reporting.service';
+import { exportToCSV } from '../../../utils/exportUtils';
 
 export const useCreditAccountsReport = () => {
   const [filter, setFilter] = useState('All patients');
@@ -61,7 +62,15 @@ export const useCreditAccountsReport = () => {
   };
 
   const handleExportCSV = () => {
-    alert('Exporting CSV...');
+    exportToCSV(reportData, [
+      { header: 'Patient Name', key: 'name' },
+      { header: 'Birth Date', key: 'dob' },
+      { header: 'Email', key: 'email' },
+      { header: 'Phone Number', key: 'phone' },
+      { header: 'Amount', key: (row) => (row.amount || 0).toFixed(2) },
+      { header: 'Patient Credit', key: (row) => (row.credit || 0).toFixed(2) },
+      { header: 'Insurance Credit', key: (row) => (row.insCredit || 0).toFixed(2) },
+    ], 'Credit_Accounts_Report');
   };
 
   return {

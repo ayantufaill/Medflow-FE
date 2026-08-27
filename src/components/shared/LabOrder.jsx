@@ -183,6 +183,12 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
 
   // Create & Store Slip to Backend
   const handleCreateSlip = async () => {
+    if (!patientId) {
+      setToastSeverity('error');
+      setToastMessage('Cannot create a lab order without a patient — no patientId was provided.');
+      return;
+    }
+
     setSaving(true);
 
     let calculatedFee = 0;
@@ -194,7 +200,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
     const contentText = editorRef.current ? (editorRef.current.innerText || editorRef.current.innerHTML) : instructions;
 
     const payload = {
-      patientId: String(patientId || "1"),
+      patientId: String(patientId),
       laboratoryId: String(selectedLab && selectedLab !== 'none' ? selectedLab : (labs[0]?._id || "1")),
       appointmentId: appointmentId ? String(appointmentId) : undefined,
       dueDate: dueDate ? dueDate.format('YYYY-MM-DD') : dayjs().add(7, 'day').format('YYYY-MM-DD'),

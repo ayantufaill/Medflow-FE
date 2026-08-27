@@ -34,5 +34,10 @@ export const progressNoteService = {
   async sign(id, data) {
     const response = await apiClient.patch(`/progress-notes/${id}/sign`, data);
     return response.data;
+  },
+
+  async exportPdf(id) {
+    const response = await apiClient.get(`/progress-notes/${id}/export`, { responseType: 'blob' });
+    return response.data;
   }
 };

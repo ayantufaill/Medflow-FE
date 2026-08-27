@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchReferralDocumentReport, selectReferralDocumentData, selectReferralDocumentDataLoading } from '../../../../store/slices/patientReportSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 
@@ -53,6 +54,17 @@ const ReferralDocumentReport = () => {
 
   const handleApply = () => {
     fetchReport();
+  };
+
+  const handleExportCsv = () => {
+    exportToCSV(reportData, [
+      { header: 'Referral Patient', key: 'patient' },
+      { header: 'Referral Provider', key: 'provider' },
+      { header: 'Created Date', key: 'created' },
+      { header: 'Due Date', key: 'due' },
+      { header: 'Shared Date', key: 'shared' },
+      { header: 'Status', key: 'status' },
+    ], 'Referral_Document_Report');
   };
 
   const columns = [
@@ -180,7 +192,7 @@ const ReferralDocumentReport = () => {
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting CSV...')}
+                onExportCsv={handleExportCsv}
                 onPrint={() => window.print()}
                 hasData={reportData.length > 0}
               />
