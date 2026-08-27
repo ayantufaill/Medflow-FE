@@ -13,10 +13,10 @@ import {
 import { Close as CloseIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
-import { useSelector } from 'react-redux';
-import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
-
-
+import { useSelector, useDispatch } from 'react-redux';
+import { selectPracticeInfo, updateDocumentCategories } from '../../store/slices/practiceInfoSlice';
+import ManageDocumentPresetsDialog from './ManageDocumentPresetsDialog';
+import { SettingsOutlined as SettingsIcon } from "@mui/icons-material";
 
 const UploadAdditionalDocumentDialog = ({
   open,
@@ -30,6 +30,8 @@ const UploadAdditionalDocumentDialog = ({
   const presetNames = practiceInfo?.documentCategories?.documents || [];
   const presetCategories = practiceInfo?.documentCategories?.categories || [];
 
+  const dispatch = useDispatch();
+
   useEffect(() => {
     if (open) {
       setName(files.length === 1 ? files[0].name.split('.').slice(0, -1).join('.') || files[0].name : "");
@@ -40,6 +42,32 @@ const UploadAdditionalDocumentDialog = ({
   const handleSave = () => {
     onSave({ name, category, files });
     onClose();
+  };
+
+  const saveNewPreset = (type, value) => {
+    if (!value) return;
+    const newCategories = type === "categories" ? [...presetCategories, value] : presetCategories;
+    const newDocuments = type === "documents" ? [...presetNames, value] : presetNames;
+    dispatch(updateDocumentCategories({
+      practiceInfoId: practiceInfo._id || practiceInfo.id,
+      documentCategoriesData: { categories: newCategories, documents: newDocuments }
+    }));
+  };
+
+  const handleReorder = (type) => {
+    let sortedCategories = presetCategories;
+    let sortedDocuments = presetNames;
+    
+    if (type === "categories") {
+      sortedCategories = [...presetCategories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    } else {
+      sortedDocuments = [...presetNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
+    
+    dispatch(updateDocumentCategories({
+      practiceInfoId: practiceInfo._id || practiceInfo.id,
+      documentCategoriesData: { categories: sortedCategories, documents: sortedDocuments }
+    }));
   };
 
   return (
@@ -100,6 +128,15 @@ const UploadAdditionalDocumentDialog = ({
               onChange={(e) => setName(e.target.value)}
               sx={{ flex: 1, maxWidth: 300, "& .MuiInputBase-input": { fontSize: fontSize.md, fontFamily: "Inter", color: COLORS.TEXT_PRIMARY } }}
             />
+            {name && !presetNames.includes(name) && (
+              <Button size="small" onClick={() => saveNewPreset("documents", name)} sx={{ textTransform: "none", fontSize: "0.7rem", py: 0, minWidth: 'auto', fontWeight: 600 }}>
+                Save as default
+              </Button>
+            )}
+            <Box sx={{ flex: 1 }} />
+            <Button size="small" onClick={() => handleReorder("documents")} sx={{ textTransform: "none", fontSize: "0.7rem", py: 0, minWidth: 'auto', fontWeight: 600, color: COLORS.ACCENT }}>
+              Re-order
+            </Button>
           </Box>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {presetNames.map((preset) => (
@@ -133,6 +170,15 @@ const UploadAdditionalDocumentDialog = ({
               onChange={(e) => setCategory(e.target.value)}
               sx={{ flex: 1, maxWidth: 300, "& .MuiInputBase-input": { fontSize: fontSize.md, fontFamily: "Inter", color: COLORS.TEXT_PRIMARY } }}
             />
+            {category && !presetCategories.includes(category) && (
+              <Button size="small" onClick={() => saveNewPreset("categories", category)} sx={{ textTransform: "none", fontSize: "0.7rem", py: 0, minWidth: 'auto', fontWeight: 600 }}>
+                Save as default
+              </Button>
+            )}
+            <Box sx={{ flex: 1 }} />
+            <Button size="small" onClick={() => handleReorder("categories")} sx={{ textTransform: "none", fontSize: "0.7rem", py: 0, minWidth: 'auto', fontWeight: 600, color: COLORS.ACCENT }}>
+              Re-order
+            </Button>
           </Box>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {presetCategories.map((preset) => (

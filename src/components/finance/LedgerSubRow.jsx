@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, Stack } from '@mui/material';
+import { Box, Typography, Stack, Tooltip } from '@mui/material';
 import {
   Edit, NotInterested, Settings, MoreHoriz,
   InsertDriveFileOutlined, CalendarTodayOutlined,
   AttachFileOutlined, KeyboardArrowDown, KeyboardArrowRight,
   CompareArrowsOutlined, ShieldOutlined, PrintOutlined,
-  LocalHospital, ArrowUpward, CheckCircle
+  LocalHospital, ArrowUpward, CheckCircle, ReplayCircleFilledOutlined
 } from '@mui/icons-material';
 
 import SVGIcon from '../../assets/finance icons/SVG.svg';
@@ -22,7 +22,7 @@ const LedgerSubRow = ({
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
   onAttachClick, attachData, procedures,
-  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick, onEditClaimClick
+  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick, onEditClaimClick, onSendClaimClick, onVoidAndRecreateClick
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasProcedures = procedures && procedures.length > 0;
@@ -32,6 +32,7 @@ const LedgerSubRow = ({
   
   const isPaidClaim = isClaim && (claimStatus?.toLowerCase() === 'paid');
   const isClosedClaim = isClaim && (['paid', 'cancelled'].includes(claimStatus?.toLowerCase()));
+  const isUnsentClaim = isClaim && (['draft', 'readyforsubmission'].includes(claimStatus?.toLowerCase()));
   const rowBgColor = isVoided ? '#ef4444' : isPaidClaim ? '#619c38' : '#FFFFFF';
   const textPrimaryColor = (isVoided || isPaidClaim) ? '#FFFFFF' : '#1A1A1A';
   const textSecondaryColor = (isVoided || isPaidClaim) ? '#E0E0E0' : '#6B778C';
@@ -125,53 +126,105 @@ const LedgerSubRow = ({
     <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', opacity: isClosedClaim ? 0.7 : 1 }}>
       {isVoided ? null : isPayment ? (
         <>
-          <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
-          <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-          <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
-          <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} onClick={() => onEditClick?.(editData)} />
-          <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+          <Tooltip title="Undo Payment" placement="top">
+            <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
+          </Tooltip>
+          <Tooltip title="Print Receipt" placement="top">
+            <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
+          </Tooltip>
+          <Tooltip title="Void Payment" placement="top">
+            <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onVoidClick?.(voidData)} />
+          </Tooltip>
+          <Tooltip title="Edit Payment" placement="top">
+            <Edit sx={{ fontSize: 18, color: '#7cb342', cursor: 'pointer' }} onClick={() => onEditClick?.(editData)} />
+          </Tooltip>
+          <Tooltip title="More Options" placement="top">
+            <MoreHoriz sx={{ fontSize: 18, color: '#90a4ae', cursor: 'pointer' }} />
+          </Tooltip>
         </>
       ) : isClaim ? (
         <Stack direction="row" spacing={1} alignItems="center">
           {/* Attachment */}
-          <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
-            <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
-          </Box>
+          <Tooltip title="Attach Files" placement="top">
+            <Box sx={{ width: 22, height: 22, bgcolor: '#b3d4ff', border: '1px solid #4a90e2', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => onAttachClick?.(attachData)}>
+              <AttachFileOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
+            </Box>
+          </Tooltip>
           {/* Arrows pointing in */}
-          <Box onClick={(e) => { e.stopPropagation(); onReopenClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, bgcolor: isClosedClaim ? '#ffffff' : '#86efac', border: isClosedClaim ? '1px solid #d1d5db' : '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <CompareArrowsOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
-          </Box>
-          {/* Shield / Send Claim */}
-          <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
-            <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
-            <ArrowUpward sx={{ fontSize: 12, color: '#22c55e', position: 'absolute', right: -6, top: -2 }} />
-          </Box>
+          <Tooltip title="Open/Close Claim" placement="top">
+            <Box onClick={(e) => { e.stopPropagation(); onReopenClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, bgcolor: isClosedClaim ? '#ffffff' : '#86efac', border: isClosedClaim ? '1px solid #d1d5db' : '1px solid #22c55e', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <CompareArrowsOutlined sx={{ fontSize: 16, color: '#1A1A1A' }} />
+            </Box>
+          </Tooltip>
+          {/* Shield / Send Claim / Void & Recreate */}
+          <Tooltip title={isUnsentClaim ? "Submit Claim" : "Void and Recreate Claim"} placement="top">
+            <Box 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (isUnsentClaim) {
+                  onSendClaimClick?.(eobData || attachData); 
+                } else {
+                  onVoidAndRecreateClick?.(eobData || attachData);
+                }
+              }} 
+              sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              {isUnsentClaim ? (
+                <>
+                  <ShieldOutlined sx={{ fontSize: 22, color: '#64748b', fill: '#e2e8f0' }} />
+                  <LocalHospital sx={{ fontSize: 12, color: '#3b82f6', position: 'absolute', top: 5 }} />
+                  <ArrowUpward sx={{ fontSize: 12, color: '#22c55e', position: 'absolute', right: -6, top: -2 }} />
+                </>
+              ) : (
+                <ReplayCircleFilledOutlined sx={{ fontSize: 20, color: '#f59e0b' }} />
+              )}
+            </Box>
+          </Tooltip>
           {/* EOB */}
-          <Box onClick={() => onEOBClick?.(eobData)} sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
-          </Box>
+          <Tooltip title="View EOB" placement="top">
+            <Box onClick={() => onEOBClick?.(eobData)} sx={{ px: 0.5, height: 18, bgcolor: '#6366f1', border: '1px solid #4338ca', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <Typography sx={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>EOB</Typography>
+            </Box>
+          </Tooltip>
           {/* Print */}
-          <Box onClick={(e) => { e.stopPropagation(); onPrintClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <PrintOutlined sx={{ fontSize: 20, color: isPaidClaim ? '#fff' : '#38bdf8' }} />
-          </Box>
+          <Tooltip title="Print Claim" placement="top">
+            <Box onClick={(e) => { e.stopPropagation(); onPrintClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <PrintOutlined sx={{ fontSize: 20, color: isPaidClaim ? '#fff' : '#38bdf8' }} />
+            </Box>
+          </Tooltip>
           {/* Edit / Pencil */}
-          <Box onClick={(e) => { e.stopPropagation(); onEditClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <Edit sx={{ fontSize: 18, color: '#10b981' }} />
-          </Box>
+          <Tooltip title="Edit Claim" placement="top">
+            <Box onClick={(e) => { e.stopPropagation(); onEditClaimClick?.(eobData || attachData); }} sx={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <Edit sx={{ fontSize: 18, color: '#10b981' }} />
+            </Box>
+          </Tooltip>
         </Stack>
       ) : showExtendedTools ? (
         <>
-          <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onAdjustmentSelect?.(e)} />
-          <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onPrintClick?.(e)} />
-          <Box component="img" src={ButtonSettingsIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onSettingsClick?.({ id, date, title, amount })} />
-          <Box component="img" src={ButtonMagicIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onMagicStickClick?.(e)} />
+          <Tooltip title="Adjust Invoice" placement="top">
+            <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onAdjustmentSelect?.(e)} />
+          </Tooltip>
+          <Tooltip title="Print Invoice" placement="top">
+            <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onPrintClick?.(e)} />
+          </Tooltip>
+          <Tooltip title="Invoice Settings" placement="top">
+            <Box component="img" src={ButtonSettingsIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={() => onSettingsClick?.({ id, date, title, amount })} />
+          </Tooltip>
+          <Tooltip title="Transfer outstanding to patient" placement="top">
+            <Box component="img" src={ButtonMagicIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => onMagicStickClick?.(e)} />
+          </Tooltip>
         </>
       ) : (
         <>
-          <Box component="img" src={SVGIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
-          <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
-          <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onVoidClick?.(voidData); }} />
+          <Tooltip title="View Details" placement="top">
+            <Box component="img" src={SVGIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} />
+          </Tooltip>
+          <Tooltip title="Refresh" placement="top">
+            <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />
+          </Tooltip>
+          <Tooltip title="Void" placement="top">
+            <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onVoidClick?.(voidData); }} />
+          </Tooltip>
         </>
       )}
     </Stack>

@@ -34,7 +34,9 @@ const LedgerItemCard = ({
   onReopenClaimClick,
   handleAddProcedureClick,
   handleAttachClick,
-  onEditClaimClick
+  onEditClaimClick,
+  onSendClaimClick,
+  onVoidAndRecreateClick
 }) => {
   const title = displayItem.method === 'Invoice'
     ? `Invoice #${displayItem.invoiceNumber || displayItem.id} (${displayItem.date})`
@@ -177,6 +179,8 @@ const LedgerItemCard = ({
                 onPrintClaimClick={onPrintClaimClick}
                 onReopenClaimClick={onReopenClaimClick}
                 onEditClaimClick={onEditClaimClick}
+                onSendClaimClick={onSendClaimClick}
+                onVoidAndRecreateClick={onVoidAndRecreateClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);

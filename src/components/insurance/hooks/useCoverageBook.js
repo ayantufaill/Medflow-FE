@@ -8,6 +8,11 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
   const [expandedTypes, setExpandedTypes] = useState({});
   const [expandedGroups, setExpandedGroups] = useState({});
   const [activeToothSelection, setActiveToothSelection] = useState(null);
+  const [bulkTeethSelection, setBulkTeethSelection] = useState([]);
+
+  useEffect(() => {
+    setBulkTeethSelection([]);
+  }, [activeToothSelection]);
 
   useEffect(() => {
     const fetchFees = async () => {
@@ -73,19 +78,69 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
 
   const handleFieldChange = useCallback((code, field, value) => {
     if (!setCoverageData) return;
-    const newData = [...(coverageData || [])];
-    const index = newData.findIndex(item => item.code === code);
-    if (index >= 0) {
-      newData[index] = { ...newData[index], [field]: value };
-    } else {
-      const item = mergedData.find(i => i.code === code);
-      if (item) newData.push({ ...item, [field]: value });
-    }
-    setCoverageData(newData);
-  }, [coverageData, mergedData, setCoverageData]);
+    setCoverageData(prevData => {
+      const newData = [...(prevData || [])];
+
+      if (code.startsWith('TYPE|')) {
+        const type = code.split('|')[1];
+        const matchingProcs = mergedData.filter(p => getProcedureType(p.code) === type);
+        matchingProcs.forEach(proc => {
+          const index = newData.findIndex(item => item.code === proc.code);
+          if (index >= 0) {
+            newData[index] = { ...newData[index], [field]: value };
+          } else {
+            newData.push({ ...proc, [field]: value });
+          }
+        });
+      } else if (code.startsWith('GROUP|')) {
+        const [, type, group] = code.split('|');
+        const matchingProcs = mergedData.filter(p => getProcedureType(p.code) === type && (p.category || 'General') === group);
+        matchingProcs.forEach(proc => {
+          const index = newData.findIndex(item => item.code === proc.code);
+          if (index >= 0) {
+            newData[index] = { ...newData[index], [field]: value };
+          } else {
+            newData.push({ ...proc, [field]: value });
+          }
+        });
+      } else {
+        const index = newData.findIndex(item => item.code === code);
+        if (index >= 0) {
+          newData[index] = { ...newData[index], [field]: value };
+        } else {
+          const item = mergedData.find(i => i.code === code);
+          if (item) newData.push({ ...item, [field]: value });
+        }
+      }
+      return newData;
+    });
+  }, [mergedData, setCoverageData]);
 
   const handleToothToggle = useCallback((tooth) => {
     if (!activeToothSelection) return;
+    
+    if (activeToothSelection.startsWith('TYPE|') || activeToothSelection.startsWith('GROUP|')) {
+      const toothStr = String(tooth).trim();
+      let currentTeeth = [...bulkTeethSelection];
+      if (currentTeeth.includes(toothStr)) {
+        currentTeeth = currentTeeth.filter(t => t !== toothStr);
+      } else {
+        currentTeeth.push(toothStr);
+      }
+      currentTeeth.sort((a, b) => {
+        const numA = parseInt(a, 10);
+        const numB = parseInt(b, 10);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.localeCompare(b);
+      });
+      setBulkTeethSelection(currentTeeth);
+      
+      const updatedLimit = currentTeeth.join(', ');
+      handleFieldChange(activeToothSelection, 'teethLimit', updatedLimit);
+      handleFieldChange(activeToothSelection, 'teeth', currentTeeth);
+      return;
+    }
+
     const proc = mergedData.find(p => p.code === activeToothSelection);
     if (!proc) return;
     
@@ -113,10 +168,15 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
     const updatedLimit = currentTeeth.join(', ');
     handleFieldChange(activeToothSelection, 'teethLimit', updatedLimit);
     handleFieldChange(activeToothSelection, 'teeth', currentTeeth);
-  }, [activeToothSelection, mergedData, handleFieldChange]);
+  }, [activeToothSelection, mergedData, handleFieldChange, bulkTeethSelection]);
 
   const isToothSelected = useCallback((tooth) => {
     if (!activeToothSelection) return false;
+    
+    if (activeToothSelection.startsWith('TYPE|') || activeToothSelection.startsWith('GROUP|')) {
+      return bulkTeethSelection.includes(String(tooth).trim());
+    }
+
     const proc = mergedData.find(p => p.code === activeToothSelection);
     if (!proc) return false;
     let list = [];
@@ -126,7 +186,7 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
       list = String(proc.teethLimit).split(',').map(t => t.trim()).filter(Boolean);
     }
     return list.includes(String(tooth).trim());
-  }, [activeToothSelection, mergedData]);
+  }, [activeToothSelection, mergedData, bulkTeethSelection]);
 
   return {
     loading,

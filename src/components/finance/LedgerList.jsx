@@ -91,6 +91,26 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowEditClaimDialog(true);
   };
   
+  const handleSendClaimClick = async (claimData) => {
+    if (!claimData?.id) return;
+    try {
+      await claimService.quickStatusUpdate(claimData.id, 'submitted', 'Submitted from Ledger');
+      dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      console.error('Failed to submit claim', err);
+    }
+  };
+
+  const handleVoidAndRecreateClick = async (claimData) => {
+    if (!claimData?.id) return;
+    try {
+      await claimService.quickStatusUpdate(claimData.id, 'readyForSubmission', 'Voided and recreated');
+      dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      console.error('Failed to void and recreate claim', err);
+    }
+  };
+  
   const [showAdaDialog,          setShowAdaDialog]          = useState(false);
   const [adaTarget,              setAdaTarget]              = useState(null);
 
@@ -499,6 +519,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
             onPrintClaimClick={handlePrintClaimClick}
             onReopenClaimClick={handleReopenClaimClick}
             onEditClaimClick={handleEditClaimClick}
+            onSendClaimClick={handleSendClaimClick}
+            onVoidAndRecreateClick={handleVoidAndRecreateClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />

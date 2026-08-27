@@ -76,6 +76,10 @@ const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteG
                 value={row.coverage !== undefined ? row.coverage : ''}
                 InputProps={{ inputProps: { min: 0, max: 100 }, disableUnderline: false }}
                 onChange={(e) => {
+                  if (e.target.value === '') {
+                    if (onChangeItem) onChangeItem(row.id, 'coverage', '');
+                    return;
+                  }
                   let val = parseInt(e.target.value, 10);
                   if (isNaN(val)) val = 0;
                   if (val < 0) val = 0;
@@ -98,6 +102,10 @@ const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteG
                   value={row.waiting !== undefined ? row.waiting : ''}
                   InputProps={{ inputProps: { min: 0 }, disableUnderline: false }}
                   onChange={(e) => {
+                    if (e.target.value === '') {
+                      if (onChangeItem) onChangeItem(row.id, 'waiting', '');
+                      return;
+                    }
                     let val = parseInt(e.target.value, 10);
                     if (isNaN(val)) val = 0;
                     if (val < 0) val = 0;
