@@ -153,8 +153,9 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     try {
       const newFiles = await Promise.all(selectedNotes.map(async (note) => {
         const noteId = note.id || note._id;
-        const pdfBlob = await progressNoteService.exportPdf(noteId);
-        const file = new File([pdfBlob], `Progress_Note_${noteId}.pdf`, { type: 'application/pdf' });
+        const content = `Type: ${note.category || (note._type === 'clinical' ? 'Clinical Note' : 'Progress Note')}\nDate: ${new Date(note.date).toLocaleString()}\nProvider: ${note.provider || 'Unknown'}\n\n${note.description || ''}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const file = new File([blob], `${note._type === 'clinical' ? 'Clinical' : 'Progress'}_Note_${noteId}.txt`, { type: 'text/plain' });
         return { file, name: file.name, size: file.size, type: 'Report' };
       }));
       setUploadedFiles(prev => [...prev, ...newFiles]);

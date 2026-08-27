@@ -7,6 +7,7 @@ import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
+import { applyDateFilter } from './claimFilterUtils';
 
 const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [claims, setClaims] = useState([]);
@@ -14,13 +15,16 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [loadingClaims, setLoadingClaims] = useState(true);
   
   const [filters, setFilters] = useState({
+    sort: 'none',
     claimType: 'all',
     carrier: 'all',
     attachment: 'all',
     status: 'all',
+    filterDate: 'all',
     searchPatient: '',
     searchClaim: '',
   });
+  const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
 
   const [showInactivePolicies, setShowInactivePolicies] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
@@ -52,8 +56,8 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     }
   }
 
-  const applyFilters = (data, currentFilters, hidden) => {
-    let result = [...data];
+  const applyFilters = (data, currentFilters, hidden, dateRange = customDateRange) => {
+    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
 
     if (!hidden) {
       result = result.filter(c => !c.isHidden);
@@ -89,20 +93,28 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden);
+    applyFilters(claims, newFilters, showHidden, customDateRange);
+  };
+
+  const handleCustomDateRangeChange = (range) => {
+    setCustomDateRange(range);
+    applyFilters(claims, filters, showHidden, range);
   };
 
   const handleClearAll = () => {
     const defaultFilters = {
+      sort: 'none',
       claimType: 'all',
       carrier: 'all',
       attachment: 'all',
       status: 'all',
+      filterDate: 'all',
       searchPatient: '',
       searchClaim: '',
     };
     setFilters(defaultFilters);
-    applyFilters(claims, defaultFilters, showHidden);
+    setCustomDateRange({ start: null, end: null });
+    applyFilters(claims, defaultFilters, showHidden, { start: null, end: null });
   };
 
   const handleToggleHidden = (val) => {
@@ -202,6 +214,8 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         ]}
         onRefresh={loadData}
         onClearAll={handleClearAll}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={handleCustomDateRangeChange}
       />
 
       <ClaimAlertBar

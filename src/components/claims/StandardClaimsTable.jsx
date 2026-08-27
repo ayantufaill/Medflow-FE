@@ -71,6 +71,7 @@ export const StandardClaimsTable = ({
   handleOpenAttach = () => { },
   handleOpenPreview = () => { },
   handleOpenInvalidInfo = () => { },
+  handleOpenRejectionReason = () => { },
   handleDeletePredetermination = () => { },
   handleToggleHide = () => { },
   dateRange = 'none',
@@ -282,6 +283,11 @@ export const StandardClaimsTable = ({
             {activeTab !== 0 && (
               <TableCell>
                 Status
+              </TableCell>
+            )}
+            {activeTab === 4 && (
+              <TableCell>
+                Latest Status Change
               </TableCell>
             )}
             {activeTab === 0 && (
@@ -770,6 +776,22 @@ export const StandardClaimsTable = ({
                       </TableCell>
                     )}
 
+                    {/* Latest Status Change Date */}
+                    {activeTab === 4 && (
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            fontFamily: "Inter, sans-serif",
+                            fontWeight: 500,
+                            color: "#475569",
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          {claim.latestStatusChangeDate || "—"}
+                        </Typography>
+                      </TableCell>
+                    )}
+
                     {/* Alerts Column right next to Status */}
                     {activeTab === 0 && (
                       <TableCell sx={{ pl: 3 }}>
@@ -847,21 +869,58 @@ export const StandardClaimsTable = ({
                         <TableCell
                           sx={{ maxWidth: "120px", verticalAlign: "top" }}
                         >
-                          <Typography
-                            noWrap={!isExpanded && !expandAllMessages}
-                            sx={{
-                              fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
-                              color: "#1e293b",
-                              fontWeight: 500,
-                              whiteSpace:
-                                isExpanded || expandAllMessages
-                                  ? "normal"
-                                  : "nowrap",
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {claim.clearingHouseMessage || "—"}
-                          </Typography>
+                          {(activeTab === 1 || activeTab === 2) ? (
+                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.5 }}>
+                              <Typography
+                                noWrap={!isExpanded && !expandAllMessages}
+                                sx={{
+                                  fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
+                                  color: "#1e293b",
+                                  fontWeight: 500,
+                                  whiteSpace: isExpanded || expandAllMessages ? "normal" : "nowrap",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {claim.clearingHouseMessage}
+                              </Typography>
+                              <Button
+                                size="small"
+                                onClick={() => handleOpenRejectionReason && handleOpenRejectionReason(claim)}
+                                sx={{
+                                  backgroundColor: "#e53e3e",
+                                  color: "#ffffff",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  textTransform: "none",
+                                  minWidth: "auto",
+                                  height: "22px",
+                                  py: 0,
+                                  px: 1,
+                                  borderRadius: "4px",
+                                  lineHeight: 1.2,
+                                  "&:hover": { backgroundColor: "#c53030" },
+                                }}
+                              >
+                                Show Valid info
+                              </Button>
+                            </Box>
+                          ) : (
+                            <Typography
+                              noWrap={!isExpanded && !expandAllMessages}
+                              sx={{
+                                fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
+                                color: "#1e293b",
+                                fontWeight: 500,
+                                whiteSpace:
+                                  isExpanded || expandAllMessages
+                                    ? "normal"
+                                    : "nowrap",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {claim.clearingHouseMessage || "—"}
+                            </Typography>
+                          )}
                         </TableCell>
                       )}
 
@@ -903,7 +962,7 @@ export const StandardClaimsTable = ({
                         verticalAlign: "top",
                       }}
                       onDoubleClick={(e) => {
-                        if (activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) return;
+                        if (activeTab === 1 || activeTab === 2 || activeTab === 3) return;
                         if (editingDescId !== claim.id) {
                           handleDescDoubleClick(claim.id, claim.description, e);
                         }
@@ -1041,12 +1100,12 @@ export const StandardClaimsTable = ({
                           </>
                         ) : (
                           <>
-                            {!(activeTab === 1 || activeTab === 2 || activeTab === 3 || activeTab === 4) && (
+                            {!(activeTab === 1 || activeTab === 2 || activeTab === 3) && (
                               <Tooltip title="Edit Narrative">
                                 <IconButton
                                   size="small"
                                   onClick={(e) => {
-                                    if (activeTab === 0) {
+                                    if (activeTab === 0 || activeTab === 4) {
                                       handleDescDoubleClick(claim.id, claim.description || claim.notes, e);
                                     } else {
                                       handleOpenEdit(claim);
@@ -1212,7 +1271,7 @@ export const StandardClaimsTable = ({
             minRows={3}
             maxRows={6}
             disabled={isSavingDesc}
-            placeholder="Enter narrative description..."
+            placeholder="Enter description"
             sx={{
               ...standardFieldSx,
               '& .MuiOutlinedInput-root': {

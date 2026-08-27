@@ -5,8 +5,9 @@ import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
-import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
+import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS, DATE_RANGES, GROUP_BY_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
+import { applyDateFilter } from './claimFilterUtils';
 
 const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [claims, setClaims] = useState([]);
@@ -25,6 +26,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     searchPatient: '',
     searchClaim: '',
   });
+  const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
 
   const [showNonAssignment, setShowNonAssignment] = useState(false);
   const [showInactivePolicies, setShowInactivePolicies] = useState(false);
@@ -58,8 +60,8 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     }
   }
 
-  const applyFilters = (data, currentFilters) => {
-    let result = [...data];
+  const applyFilters = (data, currentFilters, dateRange = customDateRange) => {
+    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
     if (currentFilters.carrier !== 'all') {
       result = result.filter((c) => c.carrier === currentFilters.carrier);
     }
@@ -98,7 +100,12 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters(claims, newFilters);
+    applyFilters(claims, newFilters, customDateRange);
+  };
+
+  const handleCustomDateRangeChange = (range) => {
+    setCustomDateRange(range);
+    applyFilters(claims, filters, range);
   };
 
   const handleClearAll = () => {
@@ -109,13 +116,14 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       attachment: 'all',
       status: 'all',
       dateRange: 'none',
-    filterDate: 'all',
+      filterDate: 'all',
       groupBy: 'none',
       searchPatient: '',
       searchClaim: '',
     };
     setFilters(defaultFilters);
-    applyFilters(claims, defaultFilters);
+    setCustomDateRange({ start: null, end: null });
+    applyFilters(claims, defaultFilters, { start: null, end: null });
   };
 
   // Selection
@@ -252,6 +260,8 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         ]}
         onRefresh={loadData}
         onClearAll={handleClearAll}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={handleCustomDateRangeChange}
       />
 
       <ClaimAlertBar
