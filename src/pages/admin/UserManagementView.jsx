@@ -32,6 +32,7 @@ import {
 import { userService } from '../../services/user.service';
 import { useRoles } from '../../hooks/queries/useRoles';
 import { useBranch } from '../../hooks/redux';
+import { roundedSelectMenuProps } from '../../constants/styles';
 import AddUserDrawer from './AddUserDrawer';
 import ViewUserModal from './ViewUserModal';
 import EditUserModal from './EditUserModal';
@@ -411,7 +412,17 @@ const UserManagementView = () => {
               displayEmpty
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              sx={{ minWidth: 160, height: 36 }}
+              MenuProps={roundedSelectMenuProps}
+              sx={{
+                bgcolor: 'white',
+                borderRadius: '6px',
+                minWidth: 160,
+                height: 36,
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#E2E8F0' },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2262EF', borderWidth: '1px' },
+                '& .MuiSelect-select': { py: 0, display: 'flex', alignItems: 'center', fontSize: '13px', color: '#334155', fontWeight: 500 }
+              }}
             >
               <MenuItem value="">All Branches</MenuItem>
               {branches.map((b) => (
