@@ -17,22 +17,78 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight } from '../../../constants/styles';
 import { MOCK_NOTES, MOCK_NOTE_HISTORY, MOCK_FILTER_TAGS } from './notes.constants';
 import dayjs from 'dayjs';
+import EditNoteForm from '../edit-note/EditNoteForm';
+import { clinicalNoteService } from '../../../services/clinical-note.service';
 
-const NotesDrawer = ({ open, onClose, patientName, patientId }) => {
+const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, selectedProcedures }) => {
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilters, setActiveFilters] = useState(['Clinical']);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [activeNoteId, setActiveNoteId] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'history' | 'filter'
+  const [view, setView] = useState('list'); // 'list' | 'history' | 'filter' | 'edit' | 'create'
   const [pendingFilters, setPendingFilters] = useState(['Clinical']);
+
+  const loadRealNotes = async () => {
+    if (!patientId) return;
+    try {
+      setIsLoading(true);
+      const res = await clinicalNoteService.getClinicalNotesByPatient(patientId);
+      if (res && res.clinicalNotes) {
+        // Filter out empty 'soap' notes (junk seed data) that have no structuredData or text
+        const validNotes = res.clinicalNotes.filter(n => 
+          n.noteType !== 'soap' || n.structuredData || n.text
+        );
+        
+        setNotes(validNotes.map(n => {
+          let titleStr = n.structuredData?.restorativeTreatment?.split('\n')[0];
+          if (!titleStr) {
+            const type = n.noteType || 'Clinical Note';
+            titleStr = type.charAt(0).toUpperCase() + type.slice(1);
+          }
+          let updatedByName = 'Provider';
+          if (n.providerId && typeof n.providerId === 'object') {
+            updatedByName = `${n.providerId.firstName || ''} ${n.providerId.lastName || ''}`.trim();
+          } else if (n.lastEditedBy) {
+            const p = providersList.find(p => p.id === n.lastEditedBy || p._id === n.lastEditedBy);
+            if (p) {
+              updatedByName = `${p.userId?.firstName || p.firstName || ''} ${p.userId?.lastName || p.lastName || ''}`.trim();
+            } else {
+              updatedByName = n.lastEditedBy;
+            }
+          }
+
+          return {
+            id: n._id || n.id,
+            title: titleStr,
+            status: n.isSigned ? 'Signed' : 'Draft',
+            category: 'Clinical',
+            tags: n.structuredData?.isolation || [],
+            text: n.structuredData?.procedureAccomplished || n.structuredData?.treatmentRequirementsNotes || '',
+            updatedBy: updatedByName || 'Provider',
+            updatedAt: dayjs(n.updatedAt).format('MMM D, YYYY [at] h:mm A'),
+            isSigned: n.isSigned,
+            isHeaderOnly: false
+          };
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
-      setNotes(MOCK_NOTES);
+      if (patientId) {
+        loadRealNotes();
+      } else {
+        setNotes([]);
+      }
       setView('list');
     }
-  }, [open]);
+  }, [open, patientId]);
 
   const handleMenuClick = (event, noteId) => {
     setMenuAnchorEl(event.currentTarget);
@@ -102,7 +158,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId }) => {
           <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY }}>
             <Box component="span" sx={{ color: '#2563eb' }}>{patientName || 'Patient'}</Box> / Notes
           </Typography>
-          <IconButton size="small" sx={{ color: '#2563eb', p: 0.5 }}>
+          <IconButton onClick={() => setView('create')} size="small" sx={{ color: '#2563eb', p: 0.5 }}>
             <AddCircleOutlineIcon sx={{ fontSize: "18px" }} />
           </IconButton>
         </Box>
@@ -161,12 +217,25 @@ const NotesDrawer = ({ open, onClose, patientName, patientId }) => {
 
             return (
               <Box key={note._id || note.id}>
-                <Paper elevation={0} sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: '8px' }}>
+                <Paper 
+                  elevation={0} 
+                  onClick={() => {
+                    setActiveNoteId(note._id || note.id);
+                    setView('edit');
+                  }}
+                  sx={{ 
+                    bgcolor: '#f8fafc', 
+                    p: 2, 
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: '#f1f5f9' }
+                  }}
+                >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Typography sx={{ fontWeight: fontWeight.semibold, fontSize: fontSize.lg, color: '#0f172a' }}>{title}</Typography>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      <IconButton size="small"><NotificationsNoneIcon sx={{ color: '#475569' }} /></IconButton>
-                      <IconButton size="small" onClick={(e) => handleMenuClick(e, note._id || note.id)}><MoreVertIcon sx={{ color: '#475569' }} /></IconButton>
+                      <IconButton size="small" onClick={(e) => e.stopPropagation()}><NotificationsNoneIcon sx={{ color: '#475569' }} /></IconButton>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleMenuClick(e, note._id || note.id); }}><MoreVertIcon sx={{ color: '#475569' }} /></IconButton>
                     </Box>
                   </Box>
                   
@@ -290,6 +359,50 @@ const NotesDrawer = ({ open, onClose, patientName, patientId }) => {
             </Button>
           </Box>
         </Box>
+      ) : (view === 'edit' || view === 'create') ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Header */}
+          <Box sx={{
+            boxSizing: 'border-box',
+            px: '25px',
+            py: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_TINT,
+            m: 0,
+            flexShrink: 0,
+          }}>
+            <IconButton onClick={() => setView('list')} size="small" sx={{ color: '#2563eb', p: 0.5, ml: -1 }}>
+              <ArrowBackIcon sx={{ fontSize: '20px' }} />
+            </IconButton>
+            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+              {view === 'create' ? 'Create Note' : 'Edit Note'}
+            </Typography>
+            <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+              <CloseIcon sx={{ fontSize: '18px' }} />
+            </IconButton>
+          </Box>
+          
+          {/* Main Content (Form) */}
+          <Box sx={{ flex: 1, overflowY: 'auto', bgcolor: '#fff' }}>
+            <EditNoteForm 
+              noteId={activeNoteId} 
+              view={view}
+              patientId={patientId || "1"} 
+              appointmentId={"1"} 
+              providerId={"1"}
+              currentPatient={currentPatient}
+              selectedProcedures={selectedProcedures}
+              onCancel={() => setView('list')}
+              onSuccess={() => {
+                loadRealNotes();
+                setView('list');
+              }}
+            />
+          </Box>
+        </Box>
       ) : (
         <>
           {/* History Header */}
@@ -372,7 +485,10 @@ const NotesDrawer = ({ open, onClose, patientName, patientId }) => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={handleMenuClose} sx={{ py: 1, gap: 1.5 }}>
+        <MenuItem onClick={() => {
+          handleMenuClose();
+          setView('edit');
+        }} sx={{ py: 1, gap: 1.5 }}>
           <EditOutlinedIcon sx={{ fontSize: '1.25rem', color: '#334155' }} />
           <Typography sx={{ color: '#334155', fontSize: '0.95rem' }}>Edit</Typography>
         </MenuItem>
