@@ -121,6 +121,7 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
       onClose={handleClose}
       maxWidth="xs"
       fullWidth
+      sx={{ zIndex: 140000 }}
       PaperProps={{
         sx: {
           borderRadius: '12px',
@@ -255,6 +256,13 @@ const AddCoverageItemDialog = ({ open, onClose, onSave }) => {
                   padding: '8px 16px',
                 }
               }
+            }}
+            componentsProps={{
+              popper: {
+                sx: {
+                  zIndex: 150000,
+                },
+              },
             }}
           />
           {selectedProcedure && (

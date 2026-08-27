@@ -21,6 +21,7 @@ import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable'
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
+import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
@@ -467,8 +468,8 @@ const NewTreatmentPlanPage = () => {
           </Box>
         )}
         {activeTab === 2 && (
-          <Box sx={{ p: 2 }}>
-            <div>Perio Charts Content</div>
+          <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden' }}>
+            <PeriodontalExamPage embedded={true} />
           </Box>
         )}
       </Box>

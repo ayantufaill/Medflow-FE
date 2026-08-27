@@ -79,7 +79,7 @@ const initialToothData = (missingTeeth = []) => {
   return data;
 };
 
-const PeriodontalExamPage = () => {
+const PeriodontalExamPage = ({ embedded = false }) => {
   const { showSnackbar } = useSnackbar();
   const patientId = useSelector(selectSelectedPatientId);
   const appointmentId = useSelector(selectSelectedAppointmentId);
@@ -530,59 +530,12 @@ const PeriodontalExamPage = () => {
 
   if (examLoading) {
     return (
-      <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-          <Box>
-            <ClinicalNavbar />
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 2, mb: 0 }}>
-              <Typography sx={{ 
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 700, 
-                fontSize: '24px', 
-                lineHeight: '29.04px',
-                color: '#111827' 
-              }}>
-                Exam
-              </Typography>
-              <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
-                Patient examination records and clinical findings
-              </Typography>
-            </Stack>
-            <Box sx={{ px: 0 }}>
-              <ExamNavbar />
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-            <CircularProgress />
-          </Box>
-        </Box>
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
-          <RightPanel hideAppointmentShortlist />
-        </Box>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
-      
-      {/* LEFT + CENTER COLUMN — Main Exam Content */}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-        <Box sx={{ 
-          backgroundColor: '#ffffff', 
-          flex: 1, 
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <Box>
-            <ClinicalNavbar />
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 0 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
+      <Box sx={{ display: 'flex', gap: 2, p: embedded ? 0 : 2, height: embedded ? '100%' : 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: embedded ? 0 : '12px', boxShadow: embedded ? 'none' : '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          {!embedded && (
+            <Box>
+              <ClinicalNavbar />
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 2, mb: 0 }}>
                 <Typography sx={{ 
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 700, 
@@ -596,14 +549,65 @@ const PeriodontalExamPage = () => {
                   Patient examination records and clinical findings
                 </Typography>
               </Stack>
-              
-
-            </Stack>
-            <Box sx={{ px: 0 }}>
-              <ExamNavbar />
+              <Box sx={{ px: 0 }}>
+                <ExamNavbar />
+              </Box>
             </Box>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <CircularProgress />
           </Box>
-          <Box sx={{ px: 3, pb: 3, flex: 1 }}>
+        </Box>
+        {!embedded && (
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
+            <RightPanel hideAppointmentShortlist />
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', gap: 2, p: embedded ? 0 : 2, height: embedded ? '100%' : 'calc(100vh - 64px)', minHeight: embedded ? '600px' : 'auto', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
+      
+      {/* LEFT + CENTER COLUMN — Main Exam Content */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: embedded ? 0 : '12px', boxShadow: embedded ? 'none' : '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <Box sx={{ 
+          backgroundColor: '#ffffff', 
+          flex: 1, 
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {!embedded && (
+            <Box>
+              <ClinicalNavbar />
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 0 }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Typography sx={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 700, 
+                    fontSize: '24px', 
+                    lineHeight: '29.04px',
+                    color: '#111827' 
+                  }}>
+                    Exam
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
+                    Patient examination records and clinical findings
+                  </Typography>
+                </Stack>
+              </Stack>
+              <Box sx={{ px: 0 }}>
+                <ExamNavbar />
+              </Box>
+            </Box>
+          )}
+          <Box sx={{ px: 3, pb: 3, pt: embedded ? 3 : 0, flex: 1 }}>
         {isSigned && (
           <Alert severity="info" sx={{ mb: 3 }}>
             This exam has been signed and locked. It is now read-only.
@@ -909,9 +913,11 @@ const PeriodontalExamPage = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
-        <RightPanel hideAppointmentShortlist />
-      </Box>
+      {!embedded && (
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
+          <RightPanel hideAppointmentShortlist />
+        </Box>
+      )}
 
       {/* Perio Defaults Dialog */}
       <Dialog 

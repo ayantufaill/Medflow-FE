@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchPatientAgingReport, selectPatientAging, selectPatientAgingLoading } from '../../../../store/slices/billingSlice';
 import { reportingService } from '../../../../services/reporting.service';
 import { Box, Typography, Table, TableBody, TableCell, TableRow } from '@mui/material';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../../components/reports/ui';
 import {
   AR_RANGE_OPTIONS,
@@ -43,7 +45,8 @@ const PatientAgingReport = () => {
     showFlags: true,
     paymentPlanOwing: true,
     resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
-    resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value
+    resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
+    customArRange: { start: null, end: null }
   });
 
   const [appliedFilters, setAppliedFilters] = useState({ ...draftFilters });
@@ -70,7 +73,8 @@ const PatientAgingReport = () => {
       showFlags: true,
       paymentPlanOwing: true,
       resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
-      resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value
+      resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
+      customArRange: { start: null, end: null }
     };
     setDraftFilters(defaultFilters);
     setAppliedFilters(defaultFilters);
@@ -215,13 +219,116 @@ const PatientAgingReport = () => {
   };
 
   const topFilters = (
-    <>
-      <ReportSelect label="AR RANGE" value={draftFilters.arRange} onChange={(e) => handleFilterChange('arRange', e.target.value)} options={AR_RANGE_OPTIONS} width="140px" />
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+        <ReportSelect label="AR RANGE" value={draftFilters.arRange} onChange={(e) => handleFilterChange('arRange', e.target.value)} options={AR_RANGE_OPTIONS} width="140px" />
+        {draftFilters.arRange === 'custom' && (
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 140 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                  start date
+                </Typography>
+                <DatePicker
+                  value={draftFilters.customArRange?.start || null}
+                  onChange={(newValue) => handleFilterChange('customArRange', { ...draftFilters.customArRange, start: newValue })}
+                  slotProps={{ 
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: 150, 
+                        backgroundColor: '#fafbfe',
+                        borderRadius: '4px',
+                        '& .MuiInputBase-root': {
+                           height: 36,
+                           fontSize: '13px',
+                           fontFamily: 'Inter',
+                           fontWeight: 500,
+                           color: '#09121f',
+                        },
+                        '& .MuiInputBase-input': {
+                           padding: '8px 14px',
+                           boxSizing: 'border-box',
+                           '&::placeholder': {
+                             color: '#94a3b8',
+                             opacity: 1
+                           }
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '& .MuiIconButton-root': {
+                          padding: '4px'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: '20px',
+                          color: '#4a5568'
+                        }
+                      } 
+                    } 
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>-</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 140 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                  end date
+                </Typography>
+                <DatePicker
+                  value={draftFilters.customArRange?.end || null}
+                  onChange={(newValue) => handleFilterChange('customArRange', { ...draftFilters.customArRange, end: newValue })}
+                  slotProps={{ 
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: 150, 
+                        backgroundColor: '#fafbfe',
+                        borderRadius: '4px',
+                        '& .MuiInputBase-root': {
+                           height: 36,
+                           fontSize: '13px',
+                           fontFamily: 'Inter',
+                           fontWeight: 500,
+                           color: '#09121f',
+                        },
+                        '& .MuiInputBase-input': {
+                           padding: '8px 14px',
+                           boxSizing: 'border-box',
+                           '&::placeholder': {
+                             color: '#94a3b8',
+                             opacity: 1
+                           }
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '& .MuiIconButton-root': {
+                          padding: '4px'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: '20px',
+                          color: '#4a5568'
+                        }
+                      } 
+                    } 
+                  }}
+                />
+              </Box>
+            </Box>
+          </LocalizationProvider>
+        )}
+      </Box>
       <ReportSelect label="PTS FLAGS" value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} options={FLAGS_OPTIONS} width="180px" />
       <ReportSelect label="SORT REPORT BY" value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} options={SORT_REPORT_OPTIONS} width="180px" />
       <ReportSelect label="CARRIER" value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} options={CARRIER_OPTIONS} width="180px" />
       <ReportSelect label="BRANCH" value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} options={BRANCH_OPTIONS} width="180px" />
-    </>
+    </Box>
   );
 
   const bottomFilters = (

@@ -116,6 +116,7 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const eobFileInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [localClaimEobs, setLocalClaimEobs] = useState(attachingClaim?.eobs || []);
+  const [previewDialog, setPreviewDialog] = useState({ open: false, title: '', html: '' });
 
   useEffect(() => {
     if (attachingClaim) {
@@ -152,8 +153,9 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     try {
       const newFiles = await Promise.all(selectedNotes.map(async (note) => {
         const noteId = note.id || note._id;
-        const pdfBlob = await progressNoteService.exportPdf(noteId);
-        const file = new File([pdfBlob], `Progress_Note_${noteId}.pdf`, { type: 'application/pdf' });
+        const content = `Type: ${note.category || (note._type === 'clinical' ? 'Clinical Note' : 'Progress Note')}\nDate: ${new Date(note.date).toLocaleString()}\nProvider: ${note.provider || 'Unknown'}\n\n${note.description || ''}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const file = new File([blob], `${note._type === 'clinical' ? 'Clinical' : 'Progress'}_Note_${noteId}.txt`, { type: 'text/plain' });
         return { file, name: file.name, size: file.size, type: 'Report' };
       }));
       setUploadedFiles(prev => [...prev, ...newFiles]);
@@ -439,7 +441,10 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
             </Box>
             {/* Medical History */}
             <Box 
-              onClick={() => printMedicalHistoryFromData(medicalHistory, currentPatient)}
+              onClick={() => {
+                const html = printMedicalHistoryFromData(medicalHistory, currentPatient, true);
+                if (html) setPreviewDialog({ open: true, title: 'Medical History Preview', html });
+              }}
               sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee', '&:hover': { opacity: 0.8 } }}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" /><path d="M12 8v8M8 12h8" /></svg>
@@ -447,7 +452,10 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
             </Box>
             {/* Dental History */}
             <Box 
-              onClick={() => printDentalHistoryFromData(dentalHistory, currentPatient)}
+              onClick={() => {
+                const html = printDentalHistoryFromData(dentalHistory, currentPatient, true);
+                if (html) setPreviewDialog({ open: true, title: 'Dental History Preview', html });
+              }}
               sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flex: 1, cursor: 'pointer', borderRight: '1px solid #eee', '&:hover': { opacity: 0.8 } }}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
@@ -615,6 +623,54 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
           window.dispatchEvent(new CustomEvent('refresh-ledger'));
         }}
       />
+
+      {/* HTML Preview Dialog */}
+      <Dialog
+        open={previewDialog.open}
+        onClose={() => setPreviewDialog({ ...previewDialog, open: false })}
+        maxWidth="md"
+        fullWidth
+        sx={{ zIndex: 140000 }}
+        PaperProps={{ sx: { height: '80vh', borderRadius: '12px', display: 'flex', flexDirection: 'column' } }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#f8fafc', flexShrink: 0 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: '15px', color: '#0F172A', fontFamily: 'Inter, sans-serif' }}>
+            {previewDialog.title}
+          </Typography>
+          <IconButton onClick={() => setPreviewDialog({ ...previewDialog, open: false })} size="small" sx={{ color: '#64748B' }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, bgcolor: '#f8fafc', flexGrow: 1, overflow: 'hidden' }}>
+          <iframe
+            srcDoc={previewDialog.html}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            title={previewDialog.title}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #e2e8f0', bgcolor: '#fff', flexShrink: 0 }}>
+          <Button 
+            onClick={() => setPreviewDialog({ ...previewDialog, open: false })}
+            variant="outlined"
+            sx={{ textTransform: 'none', borderRadius: '8px', px: 3, fontWeight: 600, borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY }}
+          >
+            Close
+          </Button>
+          <Button 
+            onClick={() => {
+              const isMedical = previewDialog.title.includes('Medical');
+              const type = isMedical ? 'Medical History' : 'Dental History';
+              const file = new File([previewDialog.html], `${type.replace(' ', '_')}.html`, { type: 'text/html' });
+              setUploadedFiles(prev => [...prev, { file, name: file.name, size: file.size, type }]);
+              setPreviewDialog({ ...previewDialog, open: false });
+            }}
+            variant="contained"
+            sx={{ textTransform: 'none', backgroundColor: COLORS.ACCENT, color: '#fff', borderRadius: '8px', px: 3, fontWeight: 600, boxShadow: 'none', '&:hover': { backgroundColor: '#1565c0', boxShadow: 'none' } }}
+          >
+            Attach
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

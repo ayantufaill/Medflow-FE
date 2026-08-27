@@ -491,7 +491,7 @@ const CoverageBookModal = ({
                         <TableCell sx={cellStyle}></TableCell>
                         <TableCell sx={cellStyle}></TableCell>
                         <TableCell sx={cellStyle}></TableCell>
-                        {renderInputCells()}
+                        {renderInputCells({}, true, `TYPE|${type}`)}
                       </TableRow>
 
                       {/* GROUPS AND PROCEDURES */}
@@ -537,7 +537,7 @@ const CoverageBookModal = ({
                               </TableCell>
                               <TableCell sx={cellStyle}></TableCell>
                               <TableCell sx={cellStyle}></TableCell>
-                              {renderInputCells()}
+                              {renderInputCells({}, true, `GROUP|${type}|${group}`)}
                             </TableRow>
 
                             {/* PROCEDURE ROWS */}
