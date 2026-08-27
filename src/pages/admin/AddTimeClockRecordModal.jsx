@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAddTimeClockRecord } from '../../hooks/queries/useTimeClock';
 import {
   Dialog,
   Box,
@@ -38,9 +39,10 @@ const FieldLabel = ({ children }) => (
 );
 
 const AddTimeClockRecordModal = ({ open, onClose }) => {
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsers({ limit: 500 });
   const users = usersData?.users || [];
   const [saving, setSaving] = useState(false);
+  const { mutate: addTimeClockRecord } = useAddTimeClockRecord();
 
   // Merge rounded menu props with high zIndex for modal overlay
   const modalMenuProps = {
@@ -71,14 +73,27 @@ const AddTimeClockRecordModal = ({ open, onClose }) => {
 
   const onSubmit = (data) => {
     setSaving(true);
-    // TODO: Connect to backend API when ready
-    console.log("Saving Time Clock Record:", data);
     
-    // Simulate API call
-    setTimeout(() => {
-      setSaving(false);
-      handleClose();
-    }, 1000);
+    const formattedDate = dayjs(data.date).format('YYYY-MM-DD');
+    const formattedTime = dayjs(data.time).format('HH:mm');
+
+    addTimeClockRecord(
+      {
+        user: data.user,
+        date: formattedDate,
+        time: formattedTime,
+        recordType: data.recordType,
+      },
+      {
+        onSuccess: () => {
+          setSaving(false);
+          handleClose();
+        },
+        onError: () => {
+          setSaving(false);
+        }
+      }
+    );
   };
 
   return (

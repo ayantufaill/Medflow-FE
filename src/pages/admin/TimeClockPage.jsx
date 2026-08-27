@@ -25,6 +25,8 @@ import validateIcon from '../../assets/timeclock/validate.svg';
 
 import { roundedSelectMenuProps } from '../../constants/styles';
 import AddTimeClockRecordModal from './AddTimeClockRecordModal';
+import { useTimesheets } from '../../hooks/queries/useTimeClock';
+import { CircularProgress } from '@mui/material';
 
 const TimeClockPage = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -33,8 +35,15 @@ const TimeClockPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Mock data for the table
-  const timesheetData = []; // Empty for now to match the screenshot
+  // Fetch data
+  const { data: timesheetResponse, isLoading } = useTimesheets(dateRange);
+  const timesheetData = timesheetResponse?.timesheets || [];
+  const stats = timesheetResponse?.summary || {
+    regularHours: '00:00',
+    numBreaks: 0,
+    breakHours: '00:00',
+    totalHours: '00:00'
+  };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -154,7 +163,7 @@ const TimeClockPage = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 8, mb: 4 }}>
             <Box sx={{ textAlign: 'center' }}>
               <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
-                00:00
+                {stats.regularHours}
               </Typography>
               <Typography sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
                 Regular hours
@@ -162,7 +171,7 @@ const TimeClockPage = () => {
             </Box>
             <Box sx={{ textAlign: 'center' }}>
               <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
-                0
+                {stats.numBreaks}
               </Typography>
               <Typography sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
                 # Breaks
@@ -170,7 +179,7 @@ const TimeClockPage = () => {
             </Box>
             <Box sx={{ textAlign: 'center' }}>
               <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
-                00:00
+                {stats.breakHours}
               </Typography>
               <Typography sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
                 Break Hours
@@ -178,7 +187,7 @@ const TimeClockPage = () => {
             </Box>
             <Box sx={{ textAlign: 'center' }}>
               <Typography sx={{ fontSize: '18px', fontWeight: 600, color: '#1E293B', mb: 0.5 }}>
-                00:00
+                {stats.totalHours}
               </Typography>
               <Typography sx={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
                 Total hours
@@ -210,7 +219,13 @@ const TimeClockPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {timesheetData.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                      <CircularProgress size={24} />
+                    </TableCell>
+                  </TableRow>
+                ) : timesheetData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Typography sx={{ color: '#94A3B8', fontSize: '14px' }}>
@@ -219,9 +234,16 @@ const TimeClockPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  timesheetData.map((row, index) => (
+                  timesheetData
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((row, index) => (
                     <TableRow key={index} hover>
-                      {/* We will populate data here when API is integrated */}
+                      <TableCell sx={{ fontSize: '13px', color: '#1E293B', fontWeight: 500 }}>{row.userName}</TableCell>
+                      <TableCell sx={{ fontSize: '13px', color: '#64748B' }}>{row.role}</TableCell>
+                      <TableCell align="center" sx={{ fontSize: '13px', color: '#64748B' }}>{row.regularHours}</TableCell>
+                      <TableCell align="center" sx={{ fontSize: '13px', color: '#64748B' }}>{row.numBreaks}</TableCell>
+                      <TableCell align="center" sx={{ fontSize: '13px', color: '#64748B' }}>{row.breakHours}</TableCell>
+                      <TableCell align="center" sx={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>{row.totalHours}</TableCell>
                     </TableRow>
                   ))
                 )}
