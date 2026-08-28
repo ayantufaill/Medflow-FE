@@ -10,10 +10,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SecurityIcon from '@mui/icons-material/Security';
 import ReEstimateMenu from '../../components/clinical/ReEstimateMenu';
 
-export const GlobalActionBar = ({ 
-  onReEstimateOptionClick, 
-  onSettingsClick, 
-  onPredetermineClick, 
+export const GlobalActionBar = ({
+  onReEstimateOptionClick,
+  onSettingsClick,
+  onPredetermineClick,
   onViewFeeGuideClick,
   visits = [],
   handleAddVisit,
@@ -51,23 +51,23 @@ export const GlobalActionBar = ({
   };
 
   return (
-    <Stack 
-      direction="row" 
-      alignItems="center" 
-      justifyContent="space-between" 
+    <Stack
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
       sx={{ p: 1, bgcolor: '#f8f9fc', borderBottom: '1px solid #e0e0e0' }}
     >
       {/* Left Button Group */}
       <Stack direction="row" spacing={1} alignItems="center">
-        <Button 
-          variant="contained" 
-          size="small" 
+        <Button
+          variant="contained"
+          size="small"
           endIcon={<KeyboardArrowDownIcon />}
           onClick={handleVisitClick}
-          sx={{ 
-            bgcolor: '#2d4571', 
-            color: '#fff', 
-            textTransform: 'none', 
+          sx={{
+            bgcolor: '#2d4571',
+            color: '#fff',
+            textTransform: 'none',
             borderRadius: 1,
             '&:hover': {
               bgcolor: '#1e3050'
@@ -95,12 +95,12 @@ export const GlobalActionBar = ({
             }
           }}
         >
-          <MenuItem 
+          <MenuItem
             onMouseEnter={handlePhaseMouseEnter}
             onClick={handlePhaseMouseEnter}
-            sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: '0.8rem',
               py: 1,
@@ -114,10 +114,10 @@ export const GlobalActionBar = ({
             <Typography sx={{ fontSize: '0.8rem' }}>Phase 1</Typography>
             <ChevronRightIcon sx={{ fontSize: 16, color: '#64748b' }} />
           </MenuItem>
-          <MenuItem 
+          <MenuItem
             onClick={handleVisitClose}
-            sx={{ 
-              fontSize: '0.8rem', 
+            sx={{
+              fontSize: '0.8rem',
               py: 1,
               px: 2,
               color: '#1976d2',
@@ -149,20 +149,20 @@ export const GlobalActionBar = ({
             }
           }}
         >
-          <MenuItem 
+          <MenuItem
             onClick={handleVisitClose}
-            sx={{ 
-              fontSize: '0.8rem', 
-              py: 1, 
-              px: 2, 
+            sx={{
+              fontSize: '0.8rem',
+              py: 1,
+              px: 2,
               color: '#334155',
-              '&:hover': { bgcolor: '#f1f5f9' } 
+              '&:hover': { bgcolor: '#f1f5f9' }
             }}
           >
             Recare
           </MenuItem>
           {visits.map((v) => (
-            <MenuItem 
+            <MenuItem
               key={v.id}
               onClick={() => {
                 if (selectedProcedureIds.length > 0) {
@@ -175,46 +175,46 @@ export const GlobalActionBar = ({
                 }
                 handleVisitClose();
               }}
-              sx={{ 
-                fontSize: '0.8rem', 
-                py: 1, 
-                px: 2, 
+              sx={{
+                fontSize: '0.8rem',
+                py: 1,
+                px: 2,
                 color: '#334155',
-                '&:hover': { bgcolor: '#f1f5f9' } 
+                '&:hover': { bgcolor: '#f1f5f9' }
               }}
             >
               {v.label}
             </MenuItem>
           ))}
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               if (handleAddVisit) {
                 handleAddVisit();
               }
               handleVisitClose();
             }}
-            sx={{ 
-              fontSize: '0.8rem', 
-              py: 1, 
-              px: 2, 
-              color: '#1976d2', 
+            sx={{
+              fontSize: '0.8rem',
+              py: 1,
+              px: 2,
+              color: '#1976d2',
               fontWeight: 'medium',
-              '&:hover': { bgcolor: '#f0f7ff' } 
+              '&:hover': { bgcolor: '#f0f7ff' }
             }}
           >
             +Add New Visit
           </MenuItem>
         </Menu>
 
-        <Button 
-          variant="contained" 
-          size="small" 
+        <Button
+          variant="contained"
+          size="small"
           endIcon={<KeyboardArrowDownIcon />}
           onClick={onStateClick}
-          sx={{ 
-            bgcolor: '#2d4571', 
-            color: '#fff', 
-            textTransform: 'none', 
+          sx={{
+            bgcolor: '#2d4571',
+            color: '#fff',
+            textTransform: 'none',
             borderRadius: 1,
             '&:hover': {
               bgcolor: '#1e3050'
@@ -223,33 +223,33 @@ export const GlobalActionBar = ({
         >
           State
         </Button>
-        <IconButton 
-          size="small" 
+        <IconButton
+          size="small"
           onClick={onDeleteClick}
           sx={{ bgcolor: '#f4c7c3', mx: 1 }}
         >
           <DeleteIcon fontSize="small" sx={{ color: '#d93025' }} />
         </IconButton>
-        <Button 
-          variant="contained" 
-          color="success" 
-          size="small" 
+        <Button
+          variant="contained"
+          color="success"
+          size="small"
           sx={{ borderRadius: 20, textTransform: 'none', px: 2, bgcolor: '#b7e1cd', color: '#137333' }}
         >
           Complete
         </Button>
-        <Button 
+        <Button
           variant={selectedProcedureIds.length > 0 ? "contained" : "outlined"}
-          size="small" 
+          size="small"
           onClick={(e) => {
             if (selectedProcedureIds.length > 0) {
               onReferClick(e);
             }
           }}
-          sx={{ 
-            borderRadius: 20, 
-            textTransform: 'none', 
-            px: 2, 
+          sx={{
+            borderRadius: 20,
+            textTransform: 'none',
+            px: 2,
             ...(selectedProcedureIds.length > 0 ? {
               bgcolor: '#e0e0e0',
               color: '#424242',
@@ -259,7 +259,7 @@ export const GlobalActionBar = ({
                 boxShadow: 'none'
               }
             } : {
-              color: '#9e9e9e', 
+              color: '#9e9e9e',
               borderColor: '#e0e0e0',
               cursor: 'default'
             })
@@ -272,66 +272,66 @@ export const GlobalActionBar = ({
       {/* Right Action Group */}
       <Stack direction="row" spacing={1} alignItems="center">
         <Stack direction="row">
-          <Button 
-            variant="contained" 
-            size="small" 
+          <Button
+            variant="contained"
+            size="small"
             sx={{ bgcolor: '#1a237e', textTransform: 'none', borderRight: '1px solid #3f51b5', borderRadius: '4px 0 0 4px' }}
             onClick={handleReEstimateClick}
           >
             Re-Estimate
           </Button>
-          <Button 
-            variant="contained" 
-            size="small" 
+          <Button
+            variant="contained"
+            size="small"
             sx={{ bgcolor: '#1a237e', minWidth: 30, borderRadius: '0 4px 4px 0' }}
             onClick={handleReEstimateClick}
           >
             <KeyboardArrowDownIcon fontSize="small" />
           </Button>
         </Stack>
-        
-        <ReEstimateMenu 
+
+        <ReEstimateMenu
           anchorEl={reEstimateAnchor}
           open={Boolean(reEstimateAnchor)}
           onClose={handleReEstimateClose}
           onOptionClick={onReEstimateOptionClick}
         />
-        
-        <Chip 
-          label="DBI" 
-          variant="outlined" 
-          size="small" 
+
+        <Chip
+          label="DBI"
+          variant="outlined"
+          size="small"
           onClick={onDbiClick}
-          sx={{ 
-            borderRadius: 1, 
-            height: 24, 
-            bgcolor: selectedProcedureIds.length > 0 ? '#2d4571' : '#a3b1d6', 
+          sx={{
+            borderRadius: 1,
+            height: 24,
+            bgcolor: selectedProcedureIds.length > 0 ? '#2d4571' : '#a3b1d6',
             color: selectedProcedureIds.length > 0 ? '#fff' : 'inherit',
             border: 'none',
             cursor: selectedProcedureIds.length > 0 ? 'pointer' : 'default',
             '&:hover': {
               bgcolor: selectedProcedureIds.length > 0 ? '#1e3050' : '#a3b1d6'
             }
-          }} 
+          }}
         />
-        
+
         <IconButton size="small" onClick={onPrintClick}><PrintIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small"><CreditCardIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small" onClick={onSettingsClick}><SettingsIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
         <IconButton size="small" onClick={onPredetermineClick}><SecurityIcon fontSize="small" sx={{ color: '#1a237e' }} /></IconButton>
-        
-        <Button 
-          variant="outlined" 
-          size="small" 
+
+        <Button
+          variant="outlined"
+          size="small"
           sx={{ textTransform: 'none', color: '#1a237e', borderColor: '#1a237e' }}
           onClick={onViewFeeGuideClick}
         >
           View Used Fee Guide
         </Button>
-        
-        <Button 
-          variant="contained" 
-          size="small" 
+
+        <Button
+          variant="contained"
+          size="small"
           endIcon={<KeyboardArrowDownIcon />}
           sx={{ bgcolor: '#1a237e', textTransform: 'none' }}
         >
