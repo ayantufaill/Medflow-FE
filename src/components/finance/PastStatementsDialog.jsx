@@ -22,10 +22,13 @@ import { invoiceService } from '../../services/invoice.service';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { fontWeight, radius } from '../../constants/styles';
+import ViewInvoiceDialog from './ViewInvoiceDialog';
 
 const PastStatementsDialog = ({ open, onClose, patient }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+  const [dialogAction, setDialogAction] = useState('view');
 
   const patientId = patient?._id || patient?.id;
 
@@ -65,15 +68,15 @@ const PastStatementsDialog = ({ open, onClose, patient }) => {
   };
 
   const handleOpen = (invoice) => {
-    // Open invoice in a new tab or trigger a preview
     const invoiceId = invoice._id || invoice.id;
-    window.open(`/invoices/${invoiceId}`, '_blank');
+    setDialogAction('view');
+    setSelectedInvoiceId(invoiceId);
   };
 
   const handleDownload = (invoice) => {
-    // Trigger download — opens in new tab for print/save-as-PDF
     const invoiceId = invoice._id || invoice.id;
-    window.open(`/invoices/${invoiceId}?download=true`, '_blank');
+    setDialogAction('download');
+    setSelectedInvoiceId(invoiceId);
   };
 
   return (
@@ -209,6 +212,13 @@ const PastStatementsDialog = ({ open, onClose, patient }) => {
           </Button>
         </Box>
       </DialogActions>
+
+      <ViewInvoiceDialog 
+        open={Boolean(selectedInvoiceId)}
+        onClose={() => setSelectedInvoiceId(null)}
+        invoiceId={selectedInvoiceId}
+        autoDownload={dialogAction === 'download'}
+      />
     </Dialog>
   );
 };
