@@ -477,8 +477,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
   return (
     <Box sx={{ p: 1, bgcolor: '#FFFFFF' }}>
       {ledgerItems.map((item, idx) => {
-        // Apply filters
+        // Apply voided filter
         if (item.isVoided && !filters?.includeVoided) {
+          return null;
+        }
+
+        // Apply transfer filter
+        if (item.isTransfer && filters?.hideBillingTransfers) {
           return null;
         }
 
@@ -487,11 +492,15 @@ const LedgerList = ({ patient, expanded, filters }) => {
           ? { ...item, method: depositOverrides[item.id].paymentType || item.method }
           : item;
 
-        // Also filter out voided child details if they shouldn't be included
-        if (!filters?.includeVoided && displayItem.details) {
+        // Also filter out child details if they shouldn't be included based on filters
+        if (displayItem.details) {
           displayItem = {
             ...displayItem,
-            details: displayItem.details.filter(d => !d.isVoided)
+            details: displayItem.details.filter(d => {
+              if (d.isVoided && !filters?.includeVoided) return false;
+              if (d.isTransfer && filters?.hideBillingTransfers) return false;
+              return true;
+            })
           };
         }
 
