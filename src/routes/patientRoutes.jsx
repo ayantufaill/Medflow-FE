@@ -31,8 +31,10 @@ const adminReception = (children, hideSidebar = false) => (
   </ProtectedRoute>
 );
 
-const adminDoctorReception = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Doctor', 'Receptionist']}>
+// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
+// actual seeded equivalent.
+const adminProviderReception = (children, hideSidebar = false) => (
+  <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Receptionist']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -54,21 +56,21 @@ const patientRoutes = [
     key="/patients/:patientId/allergies/:allergyId"
     path="/patients/:patientId/allergies/:allergyId"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
         <Layout><ViewPatientAllergyPage /></Layout>
       </ProtectedRoute>
     }
   />,
-  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={adminDoctorReception(<PatientMedicalHistoryPage />)} />,
-  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={adminDoctorReception(<PatientDentalHistoryPage />)} />,
-  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={adminDoctorReception(<PatientAdditionalDocumentsPage />)} />,
-  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={adminDoctorReception(<ViewDocumentPage />)} />,
-  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={adminDoctorReception(<PatientReportPage />)} />,
-  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={adminDoctorReception(<RiskAssessmentPage />)} />,
-  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={adminDoctorReception(<HomeCarePage />)} />,
-  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={adminDoctorReception(<ConcernsPage />)} />,
-  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={adminDoctorReception(<ShowcasePage />)} />,
-  <Route key="/patient-reports" path="/patient-reports" element={adminDoctorReception(<PatientReportsPage />)} />,
+  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={adminProviderReception(<PatientMedicalHistoryPage />)} />,
+  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={adminProviderReception(<PatientDentalHistoryPage />)} />,
+  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={adminProviderReception(<PatientAdditionalDocumentsPage />)} />,
+  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={adminProviderReception(<ViewDocumentPage />)} />,
+  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={adminProviderReception(<PatientReportPage />)} />,
+  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={adminProviderReception(<RiskAssessmentPage />)} />,
+  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={adminProviderReception(<HomeCarePage />)} />,
+  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={adminProviderReception(<ConcernsPage />)} />,
+  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={adminProviderReception(<ShowcasePage />)} />,
+  <Route key="/patient-reports" path="/patient-reports" element={adminProviderReception(<PatientReportsPage />)} />,
   <Route key="/patients/:patientId" path="/patients/:patientId" element={adminReception(<RedirectToPatientDetails />)} />,
 ];
 

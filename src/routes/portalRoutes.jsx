@@ -40,11 +40,13 @@ const portalRoutes = [
       </ProtectedRoute>
     }
   />,
+  // 'Doctor' was not a real backend role (see seedRoles.ts) and is dropped
+  // here rather than replaced — 'Provider' already covers it.
   <Route
     key="/portal/messages"
     path="/portal/messages"
     element={
-      <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider']}>
         <RoleBasedPortalMessagesRoute />
       </ProtectedRoute>
     }
@@ -89,7 +91,7 @@ const portalRoutes = [
     key="/portal-messages"
     path="/portal-messages"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Doctor']}>
+      <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
         <Layout><ProviderPortalMessagesPage /></Layout>
       </ProtectedRoute>
     }
