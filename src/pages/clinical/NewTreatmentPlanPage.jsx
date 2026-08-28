@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Snackbar, Alert, Tabs, Tab, Grid, Paper, IconButton, Divider, MenuItem } from '@mui/material';
+import { Box, Snackbar, Alert, Tabs, Tab, Grid, Paper, IconButton, Divider, MenuItem, Menu, Button } from '@mui/material';
+import { COLORS } from '../../constants/colors';
 import dayjs from 'dayjs';
 import {
   ShieldOutlined as ShieldIcon,
   IosShare as ShareIcon,
   PrintOutlined as PrintIcon,
   ArchiveOutlined as ArchiveIcon,
-  KeyboardArrowDown as ExpandMoreIcon
+  KeyboardArrowDown as ExpandMoreIcon,
+  AddCircleOutline as AddCircleOutlineIcon,
+  ContentCopy as ContentCopyIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { OutlinedSelect } from '../../components/patients/form-components/formInputs';
@@ -48,6 +51,11 @@ const NewTreatmentPlanPage = () => {
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(1); // 0: Charts, 1: Treatment Plan, 2: Perio Charts
+  const [showPerioChart, setShowPerioChart] = useState(false);
+
+  const [addMenuAnchorEl, setAddMenuAnchorEl] = useState(null);
+  const handleAddMenuClick = (event) => setAddMenuAnchorEl(event.currentTarget);
+  const handleAddMenuClose = () => setAddMenuAnchorEl(null);
 
   useEffect(() => {
     const fetchTreatmentPlans = async () => {
@@ -414,9 +422,35 @@ const NewTreatmentPlanPage = () => {
                   </OutlinedSelect>
                 </Box>
                 
-                <IconButton size="small" sx={{ border: '1px solid #0f172a', borderRadius: '50%', width: 24, height: 24, p: 0, ml: 2 }}>
+                <IconButton size="small" onClick={handleAddMenuClick} sx={{ border: '1px solid #0f172a', borderRadius: '50%', width: 24, height: 24, p: 0, ml: 2 }}>
                   <Box component="img" src={plusSvg} alt="add" sx={{ width: 14, height: 14 }} />
                 </IconButton>
+
+                <Menu
+                  anchorEl={addMenuAnchorEl}
+                  open={Boolean(addMenuAnchorEl)}
+                  onClose={handleAddMenuClose}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      minWidth: '200px'
+                    }
+                  }}
+                >
+                  <MenuItem onClick={handleAddMenuClose} sx={{ gap: 1.5, py: 1.25, fontSize: '0.875rem', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
+                    <AddCircleOutlineIcon sx={{ fontSize: '1.25rem', color: '#334155' }} />
+                    New draft
+                  </MenuItem>
+                  <MenuItem onClick={handleAddMenuClose} sx={{ gap: 1.5, py: 1.25, fontSize: '0.875rem', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
+                    <ContentCopyIcon sx={{ fontSize: '1.15rem', color: '#334155' }} />
+                    Duplicate draft
+                  </MenuItem>
+                </Menu>
                 
                 <Divider orientation="vertical" flexItem sx={{ mx: 3, my: 0.5, borderColor: '#cbd5e1' }} />
                 
@@ -469,7 +503,30 @@ const NewTreatmentPlanPage = () => {
         )}
         {activeTab === 2 && (
           <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden' }}>
-            <PeriodontalExamPage embedded={true} />
+            {showPerioChart ? (
+              <PeriodontalExamPage embedded={true} />
+            ) : (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <Button 
+                  variant="contained" 
+                  onClick={() => setShowPerioChart(true)}
+                  sx={{ 
+                    textTransform: 'none', 
+                    fontFamily: 'Inter, sans-serif', 
+                    fontWeight: 600, 
+                    borderRadius: '8px', 
+                    boxShadow: 'none',
+                    backgroundColor: COLORS.ACCENT,
+                    '&:hover': {
+                      backgroundColor: COLORS.ACCENT_HOVER,
+                      boxShadow: 'none'
+                    }
+                  }}
+                >
+                  Create Perio chart
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
       </Box>
