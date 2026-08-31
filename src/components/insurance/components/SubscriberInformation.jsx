@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip
+  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip, Divider, Autocomplete, CircularProgress
 } from "@mui/material";
 import { 
   CheckCircle as CheckCircleIcon, 
@@ -9,6 +9,11 @@ import {
   Edit as EditIcon,
   InfoOutlined as InfoIcon
 } from "@mui/icons-material";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import { patientService } from '../../../services/patient.service';
 import FormInput from './FormInput';
 
 const ASSIGNMENT_TOOLTIP_TEXT = "Assignment of Benefits is an authorization of payment. It indicates that the benefits paid from the insurance company will go directly to the office if pay to dentist is selected. It will also populate the signature of subscriber field on the claim form. If this is marked as non assignment the signature field on the claim form will be blank and payment will go directly to the patient.";
@@ -23,9 +28,31 @@ const SubscriberInformation = ({
   inputBg,
   errors = {},
   patient,
-  handleSubscriberSelect
+  handleSubscriberSelect,
+  onCreatePatient
 }) => {
   const [showSsn, setShowSsn] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedPatients, setSearchedPatients] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setLoadingSearch(true);
+      try {
+        const res = await patientService.getAllPatients(1, 20, searchQuery);
+        setSearchedPatients(res.data || res.patients || res || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingSearch(false);
+      }
+    };
+    const timeoutId = setTimeout(() => {
+      fetchPatients();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   // Use API data or default arrays
   const relationships = relationshipOptions.length > 0 ? relationshipOptions : [
@@ -38,26 +65,32 @@ const SubscriberInformation = ({
     { value: 3, label: 'Pay to both (Split)' }
   ];
 
-  const householdMembers = Array.isArray(patient?.household) ? patient.household : [];
+  const householdData = patient?.patientMeta?.household || patient?.household;
+  const householdMembers = Array.isArray(householdData) ? householdData : [];
   const familyOptions = householdMembers.map(m => {
     const name = m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim();
     return {
+      id: m._id || m.id,
       name,
       dateOfBirth: m.dateOfBirth || m.dob,
       ssn: m.ssn,
-      relationship: m.relationship
+      relationship: m.relationship,
+      subscriberId: m.subscriberId
     };
   });
   
-  if (patient?.spouseInfo) {
-    const spouse = patient.spouseInfo;
+  const spouseInfo = patient?.patientMeta?.spouseInfo || patient?.spouseInfo;
+  if (spouseInfo) {
+    const spouse = spouseInfo;
     const name = spouse.name || `${spouse.firstName || ''} ${spouse.lastName || ''}`.trim();
     if (name && !familyOptions.find(o => o.name === name)) {
       familyOptions.push({
+        id: spouse._id || spouse.id,
         name,
         dateOfBirth: spouse.dateOfBirth || spouse.dob,
         ssn: spouse.ssn,
-        relationship: 'Spouse'
+        relationship: 'Spouse',
+        subscriberId: spouse.subscriberId
       });
     }
   }
@@ -110,41 +143,72 @@ const SubscriberInformation = ({
         {/* Name and ID */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
-            {formData.subscriber?.relationship !== 'Self' && familyOptions.length > 0 ? (
-              <FormInput
-                select
-                label="Subscriber Name"
-                required
-                value={formData.subscriber?.name || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const member = familyOptions.find(o => o.name === val);
-                  if (member && handleSubscriberSelect) {
-                    handleSubscriberSelect(member);
-                  } else {
-                    handleSubscriberChange('name', val);
+            <FormInput
+              label="Subscriber Name"
+              required
+              renderInput={() => {
+                const familyNames = familyOptions ? familyOptions.map(f => f.name) : [];
+                const combinedOptions = familyOptions ? [...familyOptions] : [];
+                searchedPatients.forEach(p => {
+                  const pName = p.name || p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim();
+                  if (pName && !familyNames.includes(pName)) {
+                    combinedOptions.push({
+                      id: p._id || p.id,
+                      name: pName,
+                      dateOfBirth: p.dateOfBirth || p.dob,
+                      ssn: p.ssn,
+                      subscriberId: p.subscriberId
+                    });
                   }
-                }}
-                error={!!errors.subscriberName}
-                helperText={errors.subscriberName}
-              >
-                {familyOptions.map((opt) => (
-                  <MenuItem key={opt.name} value={opt.name} sx={{ fontSize: '14px' }}>
-                    {opt.name}
-                  </MenuItem>
-                ))}
-              </FormInput>
-            ) : (
-              <FormInput
-                label="Subscriber Name"
-                required
-                value={formData.subscriber?.name || ''}
-                onChange={(e) => handleSubscriberChange('name', e.target.value)}
-                disabled={formData.subscriber?.relationship === 'Self'}
-                error={!!errors.subscriberName}
-                helperText={errors.subscriberName}
-              />
-            )}
+                });
+                
+                const valueOpt = combinedOptions.find(o => o.name === formData.subscriber?.name) || { name: formData.subscriber?.name || '' };
+
+                return (
+                  <Autocomplete
+                    freeSolo
+                    options={combinedOptions}
+                    getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
+                    value={formData.subscriber?.name ? valueOpt : null}
+                    loading={loadingSearch}
+                    onInputChange={(e, newInputValue) => {
+                      setSearchQuery(newInputValue);
+                    }}
+                    onChange={(e, newValue) => {
+                      if (typeof newValue === 'string') {
+                        handleSubscriberChange('name', newValue);
+                      } else if (newValue && newValue.name) {
+                        if (handleSubscriberSelect) {
+                          handleSubscriberSelect(newValue);
+                        } else {
+                          handleSubscriberChange('name', newValue.name);
+                        }
+                      } else {
+                        handleSubscriberChange('name', '');
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField 
+                        {...params} 
+                        size="small" 
+                        error={!!errors.subscriberName} 
+                        helperText={errors.subscriberName} 
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingSearch ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                        sx={{ bgcolor: '#f8f9fc', '& .MuiInputBase-root': { fontSize: '14px', minHeight: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }} 
+                      />
+                    )}
+                  />
+                );
+              }}
+            />
           </Box>
           <Box sx={{ flex: 1 }}>
             <FormInput
@@ -175,12 +239,37 @@ const SubscriberInformation = ({
         <FormInput
           label="Date of Birth"
           required
-          type="date"
-          InputLabelProps={{ shrink: true }}
-          value={formData.subscriber?.dateOfBirth || ''}
-          onChange={(e) => handleSubscriberChange('dateOfBirth', e.target.value)}
-          error={!!errors.dateOfBirth}
-          helperText={errors.dateOfBirth}
+          renderInput={() => (
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                format="MM/DD/YYYY"
+                value={formData.subscriber?.dateOfBirth ? dayjs(formData.subscriber.dateOfBirth) : null}
+                onChange={(newValue) => {
+                  if (newValue) {
+                    handleSubscriberChange('dateOfBirth', newValue.format('YYYY-MM-DD'));
+                  } else {
+                    handleSubscriberChange('dateOfBirth', '');
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: "small",
+                    error: !!errors.dateOfBirth,
+                    helperText: errors.dateOfBirth,
+                    sx: {
+                      bgcolor: '#f8f9fc',
+                      '& .MuiInputBase-root': {
+                        fontSize: '14px',
+                        height: '36px'
+                      },
+                      '& fieldset': { borderColor: '#DFE5EC' },
+                    }
+                  }
+                }}
+              />
+            </LocalizationProvider>
+          )}
         />
       </Stack>
 

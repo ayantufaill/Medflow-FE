@@ -182,10 +182,13 @@ export default function BatchActionsPage() {
   const loadCarriers = async () => {
     try {
       const data = await insuranceCompanyService.getAllInsuranceCompanies(1, 1000, '', 'active');
-      const fetchedCarriers = (data.companies || []).map(c => c.name).sort();
+      const fetchedCarriers = (data.companies || [])
+        .map(c => ({ id: c._id || c.id || c.CarrierNum || c.insuranceCompanyId, name: c.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
       setAllCarriers(fetchedCarriers);
       if (fetchedCarriers.length > 0) {
-        setNewPaymentCarrier(fetchedCarriers[0]);
+        setNewPaymentCarrier(fetchedCarriers[0].id);
       }
     } catch (error) {
       console.error('Failed to load carriers:', error);
@@ -270,7 +273,7 @@ export default function BatchActionsPage() {
 
     const payload = {
       paymentRef: newPaymentRef,
-      carrierId: '1', // default fallback carrier ID
+      carrierId: newPaymentCarrier || '1',
       paymentDate: newPaymentDate,
       checkAmount: parseFloat(checkAmount) || 0,
       allocations: selectedClaims.map(c => ({
@@ -715,14 +718,14 @@ export default function BatchActionsPage() {
             <FormGroup>
               {allCarriers.length > 0 ? allCarriers.map(carrier => (
                 <FormControlLabel
-                  key={carrier}
+                  key={carrier.id || carrier.name}
                   control={
                     <Checkbox 
                       size="small" 
-                      checked={selectedCarriers.includes(carrier)} 
+                      checked={selectedCarriers.includes(carrier.name)} 
                       onChange={(e) => {
-                        if (e.target.checked) setSelectedCarriers([...selectedCarriers, carrier]);
-                        else setSelectedCarriers(selectedCarriers.filter(c => c !== carrier));
+                        if (e.target.checked) setSelectedCarriers([...selectedCarriers, carrier.name]);
+                        else setSelectedCarriers(selectedCarriers.filter(c => c !== carrier.name));
                       }} 
                       sx={{ 
                         color: '#cbd5e1', 
@@ -731,7 +734,7 @@ export default function BatchActionsPage() {
                       }} 
                     />
                   }
-                  label={<Typography sx={{ fontSize: fontSize.sm, color: '#334155', fontFamily: 'Inter', fontWeight: 500 }}>{carrier}</Typography>}
+                  label={<Typography sx={{ fontSize: fontSize.sm, color: '#334155', fontFamily: 'Inter' }}>{carrier.name}</Typography>}
                   sx={{ 
                     ml: 0, 
                     mr: 0,
