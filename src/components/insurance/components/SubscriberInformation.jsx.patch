@@ -1,0 +1,146 @@
+--- /Users/ayantufail/Documents/Medflow/Medflow-FE/src/components/insurance/components/SubscriberInformation.jsx
++++ /Users/ayantufail/Documents/Medflow/Medflow-FE/src/components/insurance/components/SubscriberInformation.jsx
+@@ -1,5 +1,5 @@
+-import { useState } from 'react';
++import { useState, useEffect } from 'react';
+ import {
+-  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip, Divider
++  Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip, Divider, Autocomplete, CircularProgress
+ } from "@mui/material";
+ import { 
+@@ -11,4 +11,5 @@
+ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+ import dayjs from 'dayjs';
++import { patientService } from '../../../../services/patient.service';
+ import FormInput from './FormInput';
+ 
+@@ -35,4 +36,25 @@
+ }) => {
++  const [searchQuery, setSearchQuery] = useState('');
++  const [searchedPatients, setSearchedPatients] = useState([]);
++  const [loadingSearch, setLoadingSearch] = useState(false);
++
++  useEffect(() => {
++    const fetchPatients = async () => {
++      setLoadingSearch(true);
++      try {
++        const res = await patientService.getAllPatients(1, 20, searchQuery);
++        setSearchedPatients(res.data || res.patients || []);
++      } catch (e) {
++        console.error(e);
++      } finally {
++        setLoadingSearch(false);
++      }
++    };
++    const timeoutId = setTimeout(() => {
++      fetchPatients();
++    }, 300);
++    return () => clearTimeout(timeoutId);
++  }, [searchQuery]);
++
+   const assignmentOptionsList = [
+     { value: 1, label: 'Pay to dentist (Assignment)' },
+@@ -124,42 +146,55 @@
+         {/* Subscriber Name */}
+         <Box sx={{ display: 'flex', gap: 1.5 }}>
+           <Box sx={{ flex: 1 }}>
+-            {familyOptions ? (
+-              <FormInput
+-                select
+-                label="Subscriber Name"
+-                required
+-                value={formData.subscriber?.name || ''}
+-                onChange={(e) => {
+-                  const val = e.target.value;
+-                  if (val === 'CREATE_PATIENT') {
+-                    if (onCreatePatient) onCreatePatient();
+-                    return;
+-                  }
+-                  const member = familyOptions.find(o => o.name === val);
+-                  if (member && handleSubscriberSelect) {
+-                    handleSubscriberSelect(member);
+-                  } else {
+-                    handleSubscriberChange('name', val);
+-                  }
+-                }}
+-                error={!!errors.subscriberName}
+-                helperText={errors.subscriberName}
+-              >
+-                {familyOptions.length === 0 && (
+-                  <MenuItem disabled value="" sx={{ fontSize: '14px', fontStyle: 'italic', color: '#888' }}>
+-                    No family members found
+-                  </MenuItem>
+-                )}
+-                {familyOptions.map((opt) => (
+-                  <MenuItem key={opt.name} value={opt.name} sx={{ fontSize: '14px' }}>
+-                    {opt.name}
+-                  </MenuItem>
+-                ))}
+-                <Divider />
+-                <MenuItem value="CREATE_PATIENT" sx={{ fontSize: '14px', color: '#2563eb', fontWeight: 500 }}>
+-                  + Create a patient
+-                </MenuItem>
+-              </FormInput>
+-            ) : (
+-              <FormInput
+-                label="Subscriber Name"
+-                required
+-                value={formData.subscriber?.name || ''}
+-                onChange={(e) => handleSubscriberChange('name', e.target.value)}
+-                disabled={formData.subscriber?.relationship === 'Self'}
+-                error={!!errors.subscriberName}
+-                helperText={errors.subscriberName}
+-              />
+-            )}
++            <FormInput
++              label="Subscriber Name"
++              required
++              renderInput={() => {
++                const familyNames = familyOptions ? familyOptions.map(f => f.name) : [];
++                const combinedOptions = familyOptions ? [...familyOptions] : [];
++                searchedPatients.forEach(p => {
++                  const pName = p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim();
++                  if (pName && !familyNames.includes(pName)) {
++                    combinedOptions.push({
++                      id: p._id || p.id,
++                      name: pName,
++                      dateOfBirth: p.dateOfBirth || p.dob,
++                      ssn: p.ssn,
++                      subscriberId: p.subscriberId
++                    });
++                  }
++                });
++                
++                const valueOpt = combinedOptions.find(o => o.name === formData.subscriber?.name) || { name: formData.subscriber?.name || '' };
++
++                return (
++                  <Autocomplete
++                    freeSolo
++                    options={combinedOptions}
++                    getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
++                    value={formData.subscriber?.name ? valueOpt : null}
++                    loading={loadingSearch}
++                    onInputChange={(e, newInputValue) => {
++                      setSearchQuery(newInputValue);
++                    }}
++                    onChange={(e, newValue) => {
++                      if (typeof newValue === 'string') {
++                        handleSubscriberChange('name', newValue);
++                      } else if (newValue && newValue.name) {
++                        if (handleSubscriberSelect) {
++                          handleSubscriberSelect(newValue);
++                        } else {
++                          handleSubscriberChange('name', newValue.name);
++                        }
++                      } else {
++                        handleSubscriberChange('name', '');
++                      }
++                    }}
++                    renderInput={(params) => (
++                      <TextField {...params} size="small" error={!!errors.subscriberName} helperText={errors.subscriberName} sx={{ bgcolor: '#f8f9fc', '& .MuiInputBase-root': { fontSize: '14px', minHeight: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }} />
++                    )}
++                  />
++                );
++              }}
++            />
+           </Box>
