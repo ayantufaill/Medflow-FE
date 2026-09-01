@@ -135,12 +135,32 @@ const LedgerList = ({ patient, expanded, filters }) => {
   // Local deposit edits (not server-persisted in the original code either)
   const [depositOverrides,       setDepositOverrides]       = useState({});
 
+  // Refs to access current state inside useCallback without triggering listener resets
+  const ledgerItemsRef = React.useRef(ledgerItems);
+  ledgerItemsRef.current = ledgerItems;
+  const expandedItemsRef = React.useRef(expandedItems);
+  expandedItemsRef.current = expandedItems;
+
   // ── Fetch on mount / patientId change ────────────────────────────────────
   const refreshLedger = useCallback(() => {
     if (patientId) {
       dispatch(fetchLedgerItems(patientId));
       dispatch(fetchMedicalHistoryThunk(patientId));
       dispatch(fetchDentalHistoryThunk(patientId));
+
+      // Re-fetch details for any currently expanded invoices so embedded payments appear
+      const currentExpanded = expandedItemsRef.current || {};
+      const currentLedger = ledgerItemsRef.current || [];
+      
+      Object.keys(currentExpanded).forEach((idxStr) => {
+        const idx = parseInt(idxStr, 10);
+        if (currentExpanded[idx]) {
+          const item = currentLedger[idx];
+          if (item && item.method === 'Invoice') {
+            dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
+          }
+        }
+      });
     }
   }, [dispatch, patientId]);
 

@@ -22,7 +22,6 @@ export const COVERAGE_DATA = {
   ],
   preventative: [
     { id: 3, label: 'Preventative', coverage: 100, waiting: 0, notes: '' },
-    { id: 4, label: 'General', coverage: 100, waiting: 0, notes: '' },
     { id: 5, label: 'Basic', coverage: 80, waiting: 0, notes: '' }
   ],
   restorative: [

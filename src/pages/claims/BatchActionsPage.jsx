@@ -123,7 +123,7 @@ export default function BatchActionsPage() {
   const loadPendingClaims = async () => {
     try {
       const data = await claimService.getAllClaims({
-        status: 'draft',
+        status: 'readyForSubmission',
         search: claimsSearchQuery
       });
       const formatted = (data.claims || []).map(c => {
