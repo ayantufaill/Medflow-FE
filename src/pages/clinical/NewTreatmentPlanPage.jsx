@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Box, Snackbar, Alert, Tabs, Tab, Grid, Paper, IconButton, Divider, MenuItem, Menu, Button, Tooltip, GlobalStyles } from '@mui/material';
 import { COLORS } from '../../constants/colors';
 import dayjs from 'dayjs';
@@ -31,8 +32,9 @@ import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
+import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 
 const INITIAL_MOCK_TREATMENT_PLANS = [
@@ -43,6 +45,17 @@ const INITIAL_MOCK_TREATMENT_PLANS = [
 ];
 
 const NewTreatmentPlanPage = () => {
+  const [searchParams] = useSearchParams();
+  const dispatch = useDispatch();
+  
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointmentId');
+    if (appointmentId) {
+      dispatch(setSelectedAppointmentId(appointmentId));
+      dispatch(fetchAppointmentById(appointmentId));
+    }
+  }, [searchParams, dispatch]);
+
   const [showOdontogram, setShowOdontogram] = useState(true);
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
@@ -432,7 +445,7 @@ const NewTreatmentPlanPage = () => {
 
         {/* Left Pane - Odontogram */}
         {showOdontogram && (
-          <Box sx={{ flex: 7.5, minWidth: 0 }}>
+          <Box className={activeTab === 2 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
             <NewTreatmentPlanOdontogram
               selectedTeeth={selectedTeeth}
               onToothClick={handleToothClick}
@@ -578,9 +591,13 @@ const NewTreatmentPlanPage = () => {
           </Box>
         )}
         {activeTab === 2 && (
-          <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden' }}>
+          <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden', '@media print': { height: 'auto', overflow: 'visible' } }}>
             {showPerioChart ? (
-              <PeriodontalExamPage embedded={true} />
+              <PeriodontalExamPage 
+                embedded={true} 
+                selectedTeethFromParent={selectedTeeth} 
+                onToothClickFromParent={handleToothClick} 
+              />
             ) : (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                 <Button 

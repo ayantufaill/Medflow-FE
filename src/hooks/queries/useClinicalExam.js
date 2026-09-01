@@ -72,3 +72,22 @@ export const useExamHistoryDates = (examType, patientId) => {
     refetchOnWindowFocus: false,
   });
 };
+
+/**
+ * Hook to delete a clinical exam record
+ */
+export const useDeleteClinicalExam = (examType, appointmentId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => clinicalExamService.deleteExam(examType, appointmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: clinicalExamKeys.detail(examType, appointmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: clinicalExamKeys.histories(),
+      });
+    },
+  });
+};
+
