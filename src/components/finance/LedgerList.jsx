@@ -91,6 +91,26 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowEditClaimDialog(true);
   };
   
+  const handleSendClaimClick = async (claimData) => {
+    if (!claimData?.id) return;
+    try {
+      await claimService.quickStatusUpdate(claimData.id, 'submitted', 'Submitted from Ledger');
+      dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      console.error('Failed to submit claim', err);
+    }
+  };
+
+  const handleVoidAndRecreateClick = async (claimData) => {
+    if (!claimData?.id) return;
+    try {
+      await claimService.quickStatusUpdate(claimData.id, 'readyForSubmission', 'Voided and recreated');
+      dispatch(fetchLedgerItems(patientId));
+    } catch (err) {
+      console.error('Failed to void and recreate claim', err);
+    }
+  };
+  
   const [showAdaDialog,          setShowAdaDialog]          = useState(false);
   const [adaTarget,              setAdaTarget]              = useState(null);
 
@@ -115,12 +135,32 @@ const LedgerList = ({ patient, expanded, filters }) => {
   // Local deposit edits (not server-persisted in the original code either)
   const [depositOverrides,       setDepositOverrides]       = useState({});
 
+  // Refs to access current state inside useCallback without triggering listener resets
+  const ledgerItemsRef = React.useRef(ledgerItems);
+  ledgerItemsRef.current = ledgerItems;
+  const expandedItemsRef = React.useRef(expandedItems);
+  expandedItemsRef.current = expandedItems;
+
   // ── Fetch on mount / patientId change ────────────────────────────────────
   const refreshLedger = useCallback(() => {
     if (patientId) {
       dispatch(fetchLedgerItems(patientId));
       dispatch(fetchMedicalHistoryThunk(patientId));
       dispatch(fetchDentalHistoryThunk(patientId));
+
+      // Re-fetch details for any currently expanded invoices so embedded payments appear
+      const currentExpanded = expandedItemsRef.current || {};
+      const currentLedger = ledgerItemsRef.current || [];
+      
+      Object.keys(currentExpanded).forEach((idxStr) => {
+        const idx = parseInt(idxStr, 10);
+        if (currentExpanded[idx]) {
+          const item = currentLedger[idx];
+          if (item && item.method === 'Invoice') {
+            dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
+          }
+        }
+      });
     }
   }, [dispatch, patientId]);
 
@@ -457,8 +497,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
   return (
     <Box sx={{ p: 1, bgcolor: '#FFFFFF' }}>
       {ledgerItems.map((item, idx) => {
-        // Apply filters
+        // Apply voided filter
         if (item.isVoided && !filters?.includeVoided) {
+          return null;
+        }
+
+        // Apply transfer filter
+        if (item.isTransfer && filters?.hideBillingTransfers) {
           return null;
         }
 
@@ -467,11 +512,15 @@ const LedgerList = ({ patient, expanded, filters }) => {
           ? { ...item, method: depositOverrides[item.id].paymentType || item.method }
           : item;
 
-        // Also filter out voided child details if they shouldn't be included
-        if (!filters?.includeVoided && displayItem.details) {
+        // Also filter out child details if they shouldn't be included based on filters
+        if (displayItem.details) {
           displayItem = {
             ...displayItem,
-            details: displayItem.details.filter(d => !d.isVoided)
+            details: displayItem.details.filter(d => {
+              if (d.isVoided && !filters?.includeVoided) return false;
+              if (d.isTransfer && filters?.hideBillingTransfers) return false;
+              return true;
+            })
           };
         }
 
@@ -499,6 +548,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
             onPrintClaimClick={handlePrintClaimClick}
             onReopenClaimClick={handleReopenClaimClick}
             onEditClaimClick={handleEditClaimClick}
+            onSendClaimClick={handleSendClaimClick}
+            onVoidAndRecreateClick={handleVoidAndRecreateClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />

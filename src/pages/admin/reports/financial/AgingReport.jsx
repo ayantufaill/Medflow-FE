@@ -205,9 +205,7 @@ const AgingReport = () => {
       fetchArchived();
     }
   }, [tabValue]);
-
-  const handleDateSelect = async (e) => {
-    const selectedId = e.target.value;
+  const handleViewArchived = async (selectedId) => {
     const reportItem = archivedReportsList.find(r => r.id === selectedId);
     
     if (!selectedId || !reportItem) {
@@ -447,6 +445,8 @@ const AgingReport = () => {
               setHidePatientNames={setHidePatientNames} 
               onExportCsv={() => handleExportCSV()}
               onPrint={() => handlePrint()}
+              onGenerateStatements={() => setShowGenerateStatements(true)}
+              onViewStatements={() => setShowViewGeneratedStatements(true)}
             />
           </Box>
 
@@ -565,21 +565,23 @@ const AgingReport = () => {
             )}
           </Box>
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+          {!archivedDate ? (
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f8fafc', py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
                     <TableCell>Report Date / Name</TableCell>
+                    <TableCell align="right" sx={{ width: 100 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {archivedReportsLoading ? (
                     <TableRow>
-                      <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">Loading archived reports...</Typography></TableCell>
+                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">Loading archived reports...</Typography></TableCell>
                     </TableRow>
                   ) : archivedReportsList.length === 0 ? (
                     <TableRow>
-                      <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No archived reports available.</Typography></TableCell>
+                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No archived reports available.</Typography></TableCell>
                     </TableRow>
                   ) : (() => {
                     const visibleReports = archiveFilterDate && archiveFilterDate.isValid()
@@ -589,7 +591,7 @@ const AgingReport = () => {
                     if (visibleReports.length === 0) {
                       return (
                         <TableRow>
-                          <TableCell align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports match the selected date.</Typography></TableCell>
+                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports match the selected date.</Typography></TableCell>
                         </TableRow>
                       );
                     }
@@ -602,11 +604,31 @@ const AgingReport = () => {
                           key={report.id} 
                           sx={{ 
                             '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
-                            backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff'
+                            backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff',
+                            '&:hover': { backgroundColor: '#f1f5f9' }
                           }}
                         >
                           <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>
                             {formattedName}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Button 
+                              variant="outlined" 
+                              size="small" 
+                              sx={{ 
+                                textTransform: 'none', 
+                                py: 0.25,
+                                px: 2, 
+                                height: 26, 
+                                fontSize: '0.75rem',
+                                borderColor: '#e2e8f0', 
+                                color: '#3b82f6', 
+                                '&:hover': { bgcolor: '#eff6ff', borderColor: '#3b82f6' } 
+                              }}
+                              onClick={() => handleViewArchived(report.id)}
+                            >
+                              Open
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -615,6 +637,39 @@ const AgingReport = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          ) : (
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: '#1e293b' }}>
+                  Viewing Snapshot: <Box component="span" sx={{ fontWeight: 600, color: '#3b82f6' }}>{archivedDate}</Box>
+                </Typography>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={() => {
+                    setArchivedDate('');
+                    setArchivedData([]);
+                  }}
+                  sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#64748b', height: 30 }}
+                >
+                  ← Back to List
+                </Button>
+              </Box>
+              <AgingReportTable 
+                tableId="aging-report-table-archived"
+                loading={archivedLoading}
+                reportData={archivedData}
+                hidePatientNames={hidePatientNames}
+                agingBuckets={agingBuckets}
+                totals={null}
+                showFlags={appliedFilters.showFlags}
+                showPaymentPlan={appliedFilters.paymentPlanOwing}
+                setSelectedPatientForNotes={setSelectedPatientForNotes}
+                selectedNames={selectedNames}
+                setSelectedNames={setSelectedNames}
+              />
+            </Box>
+          )}
         </Box>
       )}
 
@@ -623,74 +678,17 @@ const AgingReport = () => {
         onClose={() => setSelectedPatientForNotes(null)}
       />
 
-      {showGenerateStatements && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowGenerateStatements(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '450px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '4px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GenerateStatementsDialog 
-              onClose={() => setShowGenerateStatements(false)}
-              onGenerate={handleGenerateBatch}
-            />
-          </Box>
-        </Box>
-      )}
+      <GenerateStatementsDialog 
+        open={showGenerateStatements}
+        onClose={() => setShowGenerateStatements(false)}
+        onGenerate={handleGenerateBatch}
+      />
 
       {showViewGeneratedStatements && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowViewGeneratedStatements(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '1200px', 
-              width: '95%',
-              bgcolor: '#fff',
-              borderRadius: '6px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ViewGeneratedStatementsDialog 
-              batches={batches}
-              onClose={() => setShowViewGeneratedStatements(false)}
-            />
-          </Box>
-        </Box>
+        <ViewGeneratedStatementsDialog 
+          batches={batches}
+          onClose={() => setShowViewGeneratedStatements(false)}
+        />
       )}
     </Box>
   );

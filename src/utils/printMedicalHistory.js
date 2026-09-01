@@ -2,7 +2,7 @@
  * Generates a print-ready HTML document from medical history Redux state.
  * Opens a popup window and triggers print instantly — no page navigation or API calls.
  */
-export function printMedicalHistoryFromData(medicalHistory, patient) {
+export function printMedicalHistoryFromData(medicalHistory, patient, returnHtmlOnly = false) {
   const patientName = patient
     ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
     : 'Patient';
@@ -120,6 +120,10 @@ export function printMedicalHistoryFromData(medicalHistory, patient) {
       <h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #3B5998; padding-bottom:4px; margin:16px 0 6px;">Patient Signature</h2>
       <img src="${review.signatureDataUrl}" style="max-height:60px; border:1px solid #e2e8f0; border-radius:4px; margin-top:4px;"/>` : ''}
     </div>`;
+
+  if (returnHtmlOnly) {
+    return innerHtml;
+  }
 
   // Inject a print-only overlay into the current page — no new tab or window
   const styleId = '__med-history-print-style__';

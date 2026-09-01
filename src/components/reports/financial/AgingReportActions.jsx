@@ -3,15 +3,15 @@ import { Box, Button, Checkbox, FormControlLabel, Typography } from '@mui/materi
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 
-const AgingReportActions = ({ hidePatientNames, setHidePatientNames, onExportCsv, onPrint, isSubTable = false }) => {
+const AgingReportActions = ({ hidePatientNames, setHidePatientNames, onExportCsv, onPrint, onGenerateStatements, onViewStatements, isSubTable = false }) => {
   return (
     <Box sx={{ display: 'flex', justifyContent: isSubTable ? 'flex-end' : 'space-between', mb: 2, alignItems: 'center', pt: 0 }}>
       {!isSubTable && (
         <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f8fafc', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#e2e8f0', boxShadow: 'none' } }}>
+          <Button onClick={onGenerateStatements} variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#f8fafc', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#e2e8f0', boxShadow: 'none' } }}>
             Generate Batch Statement
           </Button>
-          <Button variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#14b8a6', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#0d9488', boxShadow: 'none' } }}>
+          <Button onClick={onViewStatements} variant="contained" size="small" sx={{ textTransform: 'none', bgcolor: '#14b8a6', borderRadius: '8px', px: 2, fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#0d9488', boxShadow: 'none' } }}>
             View Generated Statements
           </Button>
         </Box>

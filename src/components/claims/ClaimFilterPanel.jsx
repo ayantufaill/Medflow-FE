@@ -2,6 +2,8 @@ import React from 'react';
 import { Box, Typography, Autocomplete, CircularProgress, InputAdornment, TextField } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportSearchInput } from '../reports/ui';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 /**
  * Configurable filter panel shared across all claim tabs.
@@ -27,17 +29,110 @@ const ClaimFilterPanel = ({
   onRefresh,
   patientSearchProps,
   onClearAll,
+  customDateRange,
+  onCustomDateRangeChange,
 }) => {
-  const topFilters = filters.map((filter) => (
-    <ReportSelect
-      key={filter.key}
-      label={filter.label}
-      options={filter.options}
-      value={filter.value}
-      onChange={(e) => filter.onChange(e.target.value)}
-      width={filter.width || '150px'}
-    />
-  ));
+  const topFilters = filters.map((filter) => {
+    const isFilterDateRange = filter.key === 'filterDate' && filter.value === 'range';
+    
+    return (
+      <Box key={filter.key} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <ReportSelect
+          label={filter.label}
+          options={filter.options}
+          value={filter.value}
+          onChange={(e) => filter.onChange(e.target.value)}
+          width={filter.width || '150px'}
+        />
+        {isFilterDateRange && onCustomDateRangeChange && (
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 140 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                  start date
+                </Typography>
+                <DatePicker
+                  value={customDateRange?.start || null}
+                  onChange={(newValue) => onCustomDateRangeChange({ ...(customDateRange || {}), start: newValue })}
+                  slotProps={{ 
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: 150, 
+                        backgroundColor: '#fafbfe',
+                        borderRadius: '4px',
+                        '& .MuiInputBase-root': {
+                           height: 36,
+                           fontSize: '13px',
+                           fontFamily: 'Inter',
+                           fontWeight: 500,
+                           color: '#09121f',
+                        },
+                        '& .MuiInputBase-input': {
+                           padding: '8px 14px',
+                           boxSizing: 'border-box',
+                           '&::placeholder': {
+                             color: '#94a3b8',
+                             opacity: 1
+                           }
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        },
+                        '& .MuiIconButton-root': {
+                          padding: '4px'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: '20px',
+                          color: '#4a5568'
+                        }
+                      } 
+                    } 
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 3 }}>-</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 140 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                  end date
+                </Typography>
+                <DatePicker
+                  value={customDateRange?.end || null}
+                  onChange={(newValue) => onCustomDateRangeChange({ ...(customDateRange || {}), end: newValue })}
+                  slotProps={{ 
+                    textField: { 
+                      size: 'small', 
+                      sx: { 
+                        width: 140, 
+                        backgroundColor: '#fafbfe',
+                        borderRadius: '4px',
+                        '& .MuiInputBase-root': {
+                           height: 36,
+                           fontSize: '13px',
+                           fontFamily: 'Inter',
+                           fontWeight: 500,
+                           color: '#09121f',
+                        },
+                        '& .MuiInputBase-input': {
+                           padding: '8.5px 14px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#e2e8f0'
+                        }
+                      } 
+                    } 
+                  }}
+                />
+              </Box>
+            </Box>
+          </LocalizationProvider>
+        )}
+      </Box>
+    );
+  });
 
   const middleFilters = bottomRowFilters.map((filter) => (
     <ReportSelect

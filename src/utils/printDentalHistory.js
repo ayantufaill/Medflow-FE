@@ -2,7 +2,7 @@
  * Generates a print-ready HTML document from dental history Redux state.
  * Injects content into the current page and triggers window.print() — no new tabs, no API calls.
  */
-export function printDentalHistoryFromData(dentalHistory, patient) {
+export function printDentalHistoryFromData(dentalHistory, patient, returnHtmlOnly = false) {
   const patientName = patient
     ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
     : 'Patient';
@@ -107,6 +107,10 @@ export function printDentalHistoryFromData(dentalHistory, patient) {
       <h2 style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid #3B5998; padding-bottom:4px; margin:16px 0 6px;">Patient Signature</h2>
       <img src="${review.signatureDataUrl}" style="max-height:60px; border:1px solid #e2e8f0; border-radius:4px; margin-top:4px;"/>` : ''}
     </div>`;
+
+  if (returnHtmlOnly) {
+    return innerHtml;
+  }
 
   const styleId = '__dental-history-print-style__';
   const divId = '__dental-history-print-div__';

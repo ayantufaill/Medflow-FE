@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Radio, RadioGroup, FormControlLabel,
@@ -7,11 +7,8 @@ import {
   CircularProgress, Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import PrintIcon from '@mui/icons-material/Print';
-import MicIcon from '@mui/icons-material/Mic';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import settingIcon from "../../assets/clinicalicons/setting icon.svg";
@@ -30,7 +27,8 @@ import {
   useClinicalExamQuery,
   useUpsertClinicalExam,
   useSignClinicalExam,
-  useExamHistoryDates
+  useExamHistoryDates,
+  useDeleteClinicalExam
 } from '../../hooks/queries/useClinicalExam';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
@@ -79,11 +77,11 @@ const initialToothData = (missingTeeth = []) => {
   return data;
 };
 
-const PeriodontalExamPage = () => {
+const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], onToothClickFromParent }) => {
   const { showSnackbar } = useSnackbar();
   const patientId = useSelector(selectSelectedPatientId);
   const appointmentId = useSelector(selectSelectedAppointmentId);
-  const providerId = useSelector(state => state.auth.user?.providerId || state.auth.user?.id || state.auth.user?._id);
+  const authProviderId = useSelector(state => state.auth.user?.providerId);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -96,8 +94,33 @@ const PeriodontalExamPage = () => {
   const upsertMutation = useUpsertClinicalExam('periodontal', activeAppointmentId);
   const radiographicUpsertMutation = useUpsertClinicalExam('radiographic', activeAppointmentId);
   const signMutation = useSignClinicalExam('periodontal', activeAppointmentId);
+  const deleteMutation = useDeleteClinicalExam('periodontal', activeAppointmentId);
 
   const isSigned = !!examRecord?.isSigned;
+
+  // --- Interactive Tooth Chart State ---
+  const [localSelectedTooth, setLocalSelectedTooth] = useState(null);
+  
+  const selectedToothNumber = embedded && onToothClickFromParent
+    ? (selectedTeethFromParent.length > 0 ? selectedTeethFromParent[0] : null)
+    : localSelectedTooth;
+
+  const handleToothSelection = (toothNum) => {
+    if (embedded && onToothClickFromParent) {
+      onToothClickFromParent(toothNum);
+    } else {
+      setLocalSelectedTooth(prev => prev === toothNum ? null : toothNum);
+    }
+  };
+
+  const perioChartRef = useRef(null);
+
+  // Sync scroll when parent selected tooth changes
+  useEffect(() => {
+    if (selectedToothNumber && perioChartRef.current) {
+      perioChartRef.current.scrollToTooth(selectedToothNumber);
+    }
+  }, [selectedToothNumber]);
 
   const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
   const dispatch = useDispatch();
@@ -106,6 +129,13 @@ const PeriodontalExamPage = () => {
   const missingTeeth = (radiographicRecord?.examData?.missingTeeth || []).map(Number);
 
   const { currentAppointment } = useAppointmentDetail();
+  // currentAppointment.providerId is a full provider object { _id, providerCode, ... }, not a string
+  const appointmentProvId = (() => {
+    const provObj = currentAppointment?.providerId;
+    if (typeof provObj === 'object' && provObj !== null) return provObj._id || provObj.id;
+    return provObj;
+  })();
+  const providerId = authProviderId || appointmentProvId || currentAppointment?.ProvNum;
 
   const { data: historicalDates } = useExamHistoryDates('periodontal', patientId);
   const visitDates = React.useMemo(() => {
@@ -170,6 +200,24 @@ const PeriodontalExamPage = () => {
   const [talkBackEnabled, setTalkBackEnabled] = useState(false);
   const [perioTab, setPerioTab] = useState(0);
 
+  // --- Diagnosis State (persisted to backend) ---
+  const defaultDiagnosis = {
+    type: '',            // 'healthy', 'gingivitis', 'periodontitis'
+    stage: 'stage2',
+    distribution: 'generalized',
+    grading: 'gradeB',
+  };
+  const [diagnosis, setDiagnosis] = useState(sessionState?.diagnosis || defaultDiagnosis);
+  const diagnosisRef = useRef(diagnosis);
+  useEffect(() => {
+    diagnosisRef.current = diagnosis;
+  }, [diagnosis]);
+
+  const handleDiagnosisChange = useCallback((newDiagnosis) => {
+    setDiagnosis(newDiagnosis);
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { diagnosis: newDiagnosis } } });
+  }, [dispatch]);
+
   // --- Compare Mode State ---
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [compareDates, setCompareDates] = useState([]);
@@ -232,27 +280,66 @@ const PeriodontalExamPage = () => {
     // For now, we update Redux with DB data if it arrives
     if (examRecord?.examData && examRecord.examData.chartData) {
       setChartData(examRecord.examData.chartData);
-    } else if (!examLoading) {
+    } else if (!examLoading && !sessionState?.chartData) {
       setChartData(initialToothData(missingTeeth));
     }
     
     if (examRecord?.examData && examRecord.examData.settings) {
       setSettings(examRecord.examData.settings);
-    } else if (!examLoading) {
+    } else if (!examLoading && !sessionState?.settings) {
       setSettings(defaultSettings);
     }
+
+    // Load diagnosis from DB
+    if (examRecord?.examData && examRecord.examData.diagnosis) {
+      setDiagnosis(examRecord.examData.diagnosis);
+    } else if (!examLoading && !sessionState?.diagnosis) {
+      setDiagnosis(defaultDiagnosis);
+    }
   }, [examRecord?.examData, examLoading]);
+
+  // --- Auto-save with debounce (3 seconds after last change) ---
+  const autoSaveTimerRef = useRef(null);
+  const isFirstLoadRef = useRef(true);
+
+  useEffect(() => {
+    // Skip auto-save on initial load
+    if (isFirstLoadRef.current) {
+      isFirstLoadRef.current = false;
+      return;
+    }
+    if (isSigned || !activeAppointmentId || activeAppointmentId === 'undefined' || !providerId) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      upsertMutation.mutate({
+        patientId: patientId ? String(patientId) : undefined,
+        providerId: providerId ? String(providerId) : undefined,
+        examData: { chartData: chartDataRef.current, settings: settingsRef.current, diagnosis: diagnosisRef.current }
+      });
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [chartData, settings, diagnosis]);
 
   const handleSaveExam = async () => {
     if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
       return;
     }
+    if (!providerId) {
+      showSnackbar('Provider ID is required. Please wait for the appointment to fully load.', 'error');
+      return;
+    }
+    // Cancel any pending auto-save
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     try {
       await upsertMutation.mutateAsync({
         patientId: patientId ? String(patientId) : undefined,
         providerId: providerId ? String(providerId) : undefined,
-        examData: { chartData, settings }
+        examData: { chartData, settings, diagnosis }
       });
       showSnackbar('Periodontal exam saved successfully', 'success');
     } catch (err) {
@@ -263,6 +350,10 @@ const PeriodontalExamPage = () => {
   const handleSignExam = () => {
     if (!activeAppointmentId || activeAppointmentId === 'undefined') {
       showSnackbar('No active appointment selected', 'error');
+      return;
+    }
+    if (!providerId) {
+      showSnackbar('Provider ID is required to sign the exam.', 'error');
       return;
     }
     setSignDialogOpen(true);
@@ -282,9 +373,18 @@ const PeriodontalExamPage = () => {
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     setDeleteDialogOpen(false);
-    showSnackbar('Periodontal exam deleted', 'info');
+    try {
+      await deleteMutation.mutateAsync();
+      // Reset local state to initial
+      setChartData(initialToothData(missingTeeth));
+      setSettings(defaultSettings);
+      setDiagnosis(defaultDiagnosis);
+      showSnackbar('Periodontal exam deleted', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || 'Failed to delete exam', 'error');
+    }
   };
 
   const handleRemoveDate = (indexToRemove) => {
@@ -530,59 +630,12 @@ const PeriodontalExamPage = () => {
 
   if (examLoading) {
     return (
-      <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-          <Box>
-            <ClinicalNavbar />
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 2, mb: 0 }}>
-              <Typography sx={{ 
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 700, 
-                fontSize: '24px', 
-                lineHeight: '29.04px',
-                color: '#111827' 
-              }}>
-                Exam
-              </Typography>
-              <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
-                Patient examination records and clinical findings
-              </Typography>
-            </Stack>
-            <Box sx={{ px: 0 }}>
-              <ExamNavbar />
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-            <CircularProgress />
-          </Box>
-        </Box>
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
-          <RightPanel hideAppointmentShortlist />
-        </Box>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ display: 'flex', gap: 2, p: 2, height: 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
-      
-      {/* LEFT + CENTER COLUMN — Main Exam Content */}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-        <Box sx={{ 
-          backgroundColor: '#ffffff', 
-          flex: 1, 
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <Box>
-            <ClinicalNavbar />
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 0 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
+      <Box sx={{ display: 'flex', gap: 2, p: embedded ? 0 : 2, height: embedded ? '100%' : 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: embedded ? 0 : '12px', boxShadow: embedded ? 'none' : '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          {!embedded && (
+            <Box>
+              <ClinicalNavbar />
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ px: 2, mb: 0 }}>
                 <Typography sx={{ 
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 700, 
@@ -596,14 +649,66 @@ const PeriodontalExamPage = () => {
                   Patient examination records and clinical findings
                 </Typography>
               </Stack>
-              
-
-            </Stack>
-            <Box sx={{ px: 0 }}>
-              <ExamNavbar />
+              <Box sx={{ px: 0 }}>
+                <ExamNavbar />
+              </Box>
             </Box>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+            <CircularProgress />
           </Box>
-          <Box sx={{ px: 3, pb: 3, flex: 1 }}>
+        </Box>
+        {!embedded && (
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
+            <RightPanel hideAppointmentShortlist />
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', gap: 2, p: embedded ? 0 : 2, height: embedded ? '100%' : 'calc(100vh - 64px)', minHeight: embedded ? '600px' : 'auto', overflow: 'hidden', backgroundColor: '#f9fafb', '@media print': { height: 'auto !important', minHeight: 'auto !important', overflow: 'visible !important', display: 'block !important' } }}>
+      
+      {/* LEFT + CENTER COLUMN — Main Exam Content */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: embedded ? 0 : '12px', boxShadow: embedded ? 'none' : '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', '@media print': { height: 'auto !important', overflow: 'visible !important', display: 'block !important' } }}>
+        <Box sx={{ 
+          backgroundColor: '#ffffff', 
+          flex: 1, 
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          display: 'flex',
+          flexDirection: 'column',
+          '@media print': { height: 'auto !important', overflow: 'visible !important', display: 'block !important' }
+        }}>
+          {!embedded && (
+            <Box>
+              <ClinicalNavbar />
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, mb: 0 }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Typography sx={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 700, 
+                    fontSize: '24px', 
+                    lineHeight: '29.04px',
+                    color: '#111827' 
+                  }}>
+                    Exam
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#6b7280', pt: 0.5 }}>
+                    Patient examination records and clinical findings
+                  </Typography>
+                </Stack>
+              </Stack>
+              <Box sx={{ px: 0 }}>
+                <ExamNavbar />
+              </Box>
+            </Box>
+          )}
+          <Box sx={{ px: 3, pb: 3, pt: embedded ? 3 : 0, flex: 1 }}>
         {isSigned && (
           <Alert severity="info" sx={{ mb: 3 }}>
             This exam has been signed and locked. It is now read-only.
@@ -611,7 +716,7 @@ const PeriodontalExamPage = () => {
         )}
         
         {/* 1. TIMELINE HEADER */}
-        <Box sx={{ 
+        <Box className="print-hide" sx={{ 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
@@ -669,6 +774,7 @@ const PeriodontalExamPage = () => {
               <img src={settingIcon} alt="Settings" style={{ width: 16, height: 16 }} />
             </IconButton>
             <IconButton 
+              onClick={() => window.print()}
               sx={{ 
                 width: 32,
                 height: 32,
@@ -775,7 +881,7 @@ const PeriodontalExamPage = () => {
 
         {/* 2. DIAGNOSTIC SECTION */}
         <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
-          <Grid item xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' }, minWidth: 0 }}>
+          <Grid item className="print-hide" xs={12} sx={{ flexBasis: { md: '30%' }, maxWidth: { md: '30%' }, minWidth: 0 }}>
             <DiagnosisCard 
               isCompareMode={isCompareMode}
               compareDates={compareDates}
@@ -783,15 +889,17 @@ const PeriodontalExamPage = () => {
               compareFields={compareFields}
               setCompareFields={setCompareFields}
               visitDates={visitDates}
+              diagnosis={diagnosis}
+              onDiagnosisChange={handleDiagnosisChange}
             />
           </Grid>
-          <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' }, minWidth: 0 }}>
+          <Grid item xs={12} sx={{ flexBasis: { md: '70%' }, maxWidth: { md: '70%' }, minWidth: 0, '@media print': { flexBasis: '100% !important', maxWidth: '100% !important' } }}>
             <SummaryCard summaryData={dynamicSummaryData} />
           </Grid>
         </Grid>
 
         {/* 3. TABS HEADER */}
-        <Box sx={{ mt: 4, borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <Box className="print-hide" sx={{ mt: 4, borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <Tabs 
             value={perioTab} 
             onChange={(e, v) => setPerioTab(v)}
@@ -824,7 +932,7 @@ const PeriodontalExamPage = () => {
               }} 
             />
           </Tabs>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, pb: 1 }}>
+          <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', gap: 2.5, pb: 1 }}>
             <Box 
               onClick={() => setTalkBackEnabled(!talkBackEnabled)}
               sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
@@ -865,15 +973,25 @@ const PeriodontalExamPage = () => {
         </Box>
 
         {/* 4. PERIO CHART GRID */}
-        <Box sx={{ overflowX: 'auto', width: '100%' }}>
+        <Box sx={{ 
+          overflowX: 'auto', 
+          width: '100%',
+          '@media print': {
+            overflowX: 'visible',
+            zoom: 0.85
+          }
+        }}>
           {perioTab === 0 ? (
             <PerioChartGrid 
+              ref={perioChartRef}
               chartData={chartData} 
               setChartData={setChartData} 
               missingTeeth={missingTeeth} 
               isCompareMode={isCompareMode}
               compareDates={compareDates}
               compareFields={compareFields}
+              selectedToothNumber={selectedToothNumber}
+              onToothColumnClick={handleToothSelection}
             />
           ) : (
             <PeriographTab chartData={chartData} missingTeeth={missingTeeth} />
@@ -909,9 +1027,11 @@ const PeriodontalExamPage = () => {
       </Box>
 
       {/* RIGHT COLUMN — Task List + Messages Panel */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
-        <RightPanel hideAppointmentShortlist />
-      </Box>
+      {!embedded && (
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, width: { md: 260, lg: 300 }, flexShrink: 0, height: '100%', flexDirection: 'column' }}>
+          <RightPanel hideAppointmentShortlist />
+        </Box>
+      )}
 
       {/* Perio Defaults Dialog */}
       <Dialog 
@@ -947,7 +1067,7 @@ const PeriodontalExamPage = () => {
               width: 40, height: 40, borderRadius: '50%', backgroundColor: '#e2ebfc', 
               display: 'flex', alignItems: 'center', justifyContent: 'center' 
             }}>
-              <SettingsIcon sx={{ color: '#2563EB', fontSize: 20 }} />
+              <img src={settingIcon} alt="Settings" style={{ width: 20, height: 20 }} />
             </Box>
             <Box>
               <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', lineHeight: '24px', letterSpacing: '-0.4px', color: '#111' }}>
@@ -1052,7 +1172,50 @@ const PeriodontalExamPage = () => {
                     size="small"
                     value={settings.mobility}
                     onChange={(e) => setSettings(prev => ({ ...prev, mobility: e.target.value }))}
-                    sx={{ height: 36, fontSize: '0.875rem', minWidth: 100, borderRadius: '6px', bgcolor: '#F8FAFC', '& fieldset': { borderColor: '#E2E8F0' } }}
+                    sx={{ 
+                      height: 36, 
+                      fontSize: '13px', 
+                      fontFamily: 'Inter',
+                      fontWeight: 500,
+                      minWidth: 100, 
+                      borderRadius: '8px', 
+                      bgcolor: '#fff', 
+                      color: '#374151',
+                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                      '& fieldset': { borderColor: '#d0d5dd' },
+                      '&:hover fieldset': { borderColor: '#9aa3ae !important' },
+                      '&.Mui-focused fieldset': { borderColor: '#2262ef !important', borderWidth: '1px !important', boxShadow: '0 0 0 4px #ebf0fe' }
+                    }}
+                    MenuProps={{ 
+                      sx: { zIndex: 100000 },
+                      PaperProps: {
+                        sx: {
+                          mt: 0.5,
+                          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                          borderRadius: '8px',
+                          border: '1px solid #e5e7eb',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '13px',
+                            fontFamily: 'Inter',
+                            color: '#374151',
+                            py: 1,
+                            px: 2,
+                            fontWeight: 500,
+                            '&:hover': {
+                              backgroundColor: '#f3f4f6'
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#eff6ff',
+                              color: '#2262ef',
+                              fontWeight: 600,
+                              '&:hover': {
+                                backgroundColor: '#dbeafe'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }}
                   >
                     <MenuItem value="none">none</MenuItem>
                     <MenuItem value="1">1</MenuItem>
@@ -1139,56 +1302,58 @@ const PeriodontalExamPage = () => {
               </Box>
             </Stack>
           </Box>
-
-          {/* Dialog Footer Actions */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 3, py: 2, borderTop: '1px solid #E2E8F0', bgcolor: '#fff', mt: 3, mx: -3, mb: -2.5 }}>
-            <Button
-              onClick={() => setShowSettings(false)}
-              variant="outlined"
-              sx={{
-                color: '#334155',
-                borderColor: '#E2E8F0',
-                textTransform: 'none',
-                borderRadius: '8px',
-                px: 2.5,
-                fontWeight: 600,
-                '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleClearAll}
-              variant="outlined"
-              color="error"
-              sx={{
-                textTransform: 'none',
-                borderRadius: '8px',
-                px: 2.5,
-                fontWeight: 600,
-                borderColor: '#FCA5A5',
-                '&:hover': { bgcolor: '#FEF2F2', borderColor: '#EF4444' }
-              }}
-            >
-              Clear Grid
-            </Button>
-            <Button
-              onClick={handleApplyAll}
-              variant="contained"
-              sx={{
-                bgcolor: '#4379EE',
-                textTransform: 'none',
-                borderRadius: '8px',
-                px: 3,
-                fontWeight: 600,
-                boxShadow: 'none',
-                '&:hover': { bgcolor: '#3b6be0', boxShadow: 'none' }
-              }}
-            >
-              Apply Defaults
-            </Button>
-          </Box>
         </DialogContent>
+
+        {/* Dialog Footer Actions (Fixed at bottom) */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', bgcolor: '#fff' }}>
+          <Button
+            onClick={() => setShowSettings(false)}
+            variant="outlined"
+            sx={{
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              color: '#374151',
+              borderColor: '#d0d5dd',
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: "16px", py: "7px",
+              '&:hover': { bgcolor: '#f9fafb', borderColor: '#9aa3ae' }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleClearAll}
+            variant="outlined"
+            color="error"
+            sx={{
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: "16px", py: "7px",
+              borderColor: '#fca5a5',
+              color: '#ef4444',
+              '&:hover': { bgcolor: '#fef2f2', borderColor: '#ef4444' }
+            }}
+          >
+            Clear Grid
+          </Button>
+          <Button
+            onClick={handleApplyAll}
+            variant="contained"
+            sx={{
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              bgcolor: '#2262ef',
+              color: '#fff',
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: "20px", py: "7px",
+              boxShadow: 'none',
+              '&:hover': { bgcolor: '#1a50cc', boxShadow: 'none' }
+            }}
+          >
+            Apply Defaults
+          </Button>
+        </Box>
       </Dialog>
 
       <ConfirmationDialog
@@ -1198,7 +1363,7 @@ const PeriodontalExamPage = () => {
         title="Sign & Lock Exam"
         message="Are you sure you want to sign and lock this exam? This action cannot be undone."
         confirmText="Sign & Lock"
-        confirmColor="#0f766e"
+        confirmColor="primary"
         loading={signMutation.isPending}
       />
     </Box>

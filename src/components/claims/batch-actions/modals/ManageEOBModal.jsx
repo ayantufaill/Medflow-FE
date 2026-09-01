@@ -198,65 +198,77 @@ const ManageEOBModal = ({
                 </Typography>
               </Box>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
+              <Box sx={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', mb: 3 }}>
+                {/* Table Header */}
+                <Box sx={{ backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', p: 1.5, borderBottom: '1px solid #e2e8f0', px: 2 }}>
+                  <Box sx={{ flex: 1.5 }}><Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569', fontFamily: 'Inter, sans-serif' }}>Name</Typography></Box>
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569', fontFamily: 'Inter, sans-serif' }}>Date</Typography></Box>
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#475569', fontFamily: 'Inter, sans-serif' }}>Remittance Date</Typography></Box>
+                  <Box sx={{ width: '70px', textAlign: 'center' }}></Box>
+                  <Box sx={{ width: '80px', textAlign: 'center' }}></Box>
+                  <Box sx={{ width: '40px', textAlign: 'center' }}></Box>
+                </Box>
                 {eobs.map((eob, idx) => {
                   const eobId = eob._id || eob.id;
+                  const eobUrl = eob.url || eob.storagePath || eob.fileUrl || eob.documentUrl;
                   const name = eob.filename || eob.fileName || eob.originalName || `EOB Document ${idx + 1}`;
+                  const displayName = name.length > 25 ? name.substring(0, 25) + '...' : name;
                   const date = eob.uploadDate || eob.uploadedAt || eob.createdAt
                     ? new Date(eob.uploadDate || eob.uploadedAt || eob.createdAt).toLocaleDateString()
                     : '';
+                  const remittanceDate = eob.remittanceDate || '-';
                   const isDeleting = deleting === eobId;
 
                   return (
-                    <Paper
-                      key={eobId || idx}
-                      variant="outlined"
-                      sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '8px', border: '1px solid #e2e8f0', bgcolor: '#fff' }}
-                    >
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontFamily: 'Inter, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#718096', display: 'block', fontFamily: 'Inter, sans-serif' }}>
-                          {[date, eob.remittanceDate ? `Remittance: ${eob.remittanceDate}` : null, eob.size].filter(Boolean).join(' · ')}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 0.5, ml: 1, flexShrink: 0 }}>
-                        {eob.url && (
-                          <>
-                            <Tooltip title="Open">
-                              <IconButton size="small" onClick={() => window.open(eob.url, '_blank')} sx={{ color: '#7d9cc4' }}>
-                                <OpenIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Download">
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  const a = document.createElement('a');
-                                  a.href = eob.url;
-                                  a.download = name;
-                                  a.click();
-                                }}
-                                sx={{ color: '#7d9cc4' }}
-                              >
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                        <Tooltip title="Delete">
-                          <IconButton
-                            size="small"
-                            disabled={isDeleting}
-                            onClick={() => handleDelete(eob)}
-                            sx={{ color: '#e53e3e' }}
-                          >
-                            {isDeleting ? <CircularProgress size={14} /> : <DeleteIcon fontSize="small" />}
-                          </IconButton>
+                    <Box key={eobId || idx} sx={{ display: 'flex', alignItems: 'center', py: 1.5, px: 2, borderBottom: idx === eobs.length - 1 ? 'none' : '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                      <Box sx={{ flex: 1.5 }}>
+                        <Tooltip title={name.length > 25 ? name : ''} placement="top">
+                          <Typography sx={{ fontSize: '13px', color: '#1e293b', fontFamily: 'Inter, sans-serif' }}>
+                            {displayName}
+                          </Typography>
                         </Tooltip>
                       </Box>
-                    </Paper>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '13px', color: '#1e293b', fontFamily: 'Inter, sans-serif' }}>
+                          {date}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: '13px', color: '#1e293b', fontFamily: 'Inter, sans-serif' }}>
+                          {remittanceDate}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ width: '70px', textAlign: 'center' }}>
+                        <Typography onClick={(e) => {
+                          e.stopPropagation();
+                          if (eobUrl) window.open(eobUrl, '_blank');
+                        }} sx={{ fontSize: '13px', color: '#3b82f6', cursor: 'pointer', fontFamily: 'Inter, sans-serif', '&:hover': { textDecoration: 'underline' }, opacity: eobUrl ? 1 : 0.4, pointerEvents: eobUrl ? 'auto' : 'none' }}>Open</Typography>
+                      </Box>
+                      <Box sx={{ width: '80px', textAlign: 'center' }}>
+                        <Typography onClick={(e) => {
+                          e.stopPropagation();
+                          if (eobUrl) {
+                            const a = document.createElement('a');
+                            a.href = eobUrl;
+                            a.download = name;
+                            a.target = '_blank';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          }
+                        }} sx={{ fontSize: '13px', color: '#3b82f6', cursor: 'pointer', fontFamily: 'Inter, sans-serif', '&:hover': { textDecoration: 'underline' }, opacity: eobUrl ? 1 : 0.4, pointerEvents: eobUrl ? 'auto' : 'none' }}>Download</Typography>
+                      </Box>
+                      <Box sx={{ width: '40px', textAlign: 'center' }}>
+                        <IconButton
+                          size="small"
+                          disabled={isDeleting}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(eob); }}
+                          sx={{ color: '#e53e3e', p: 0.5 }}
+                        >
+                          {isDeleting ? <CircularProgress size={14} /> : <DeleteIcon sx={{ fontSize: 18 }} />}
+                        </IconButton>
+                      </Box>
+                    </Box>
                   );
                 })}
               </Box>

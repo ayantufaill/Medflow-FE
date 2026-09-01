@@ -22,7 +22,6 @@ export const COVERAGE_DATA = {
   ],
   preventative: [
     { id: 3, label: 'Preventative', coverage: 100, waiting: 0, notes: '' },
-    { id: 4, label: 'General', coverage: 100, waiting: 0, notes: '' },
     { id: 5, label: 'Basic', coverage: 80, waiting: 0, notes: '' }
   ],
   restorative: [
@@ -34,6 +33,7 @@ export const COVERAGE_DATA = {
     { id: 9, label: 'Endodontics', coverage: 80, waiting: 0, notes: '' }
   ],
   periodontics: [
+    { id: 99, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
     { id: 10, label: 'Major', coverage: 50, waiting: 0, notes: '' }
   ],
   implantServices: [

@@ -5,7 +5,9 @@ import AllergiesListPage from '../pages/allergies/AllergiesListPage';
 import CreateAllergyPage from '../pages/allergies/CreateAllergyPage';
 import EditAllergyPage from '../pages/allergies/EditAllergyPage';
 
-const roles = ['Admin', 'Doctor', 'Receptionist'];
+// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
+// actual seeded equivalent.
+const roles = ['Admin', 'Provider', 'Receptionist'];
 
 const allergyRoutes = [
   <Route

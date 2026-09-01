@@ -41,6 +41,9 @@ export const mapClaimFields = (c, tab) => ({
       ? new Date(c.submissionDate).toLocaleDateString()
       : c.sentDate || "",
   printedDate: c.printedDate || "",
+  latestStatusChangeDate: c.statusUpdatedAt 
+    ? new Date(c.statusUpdatedAt).toLocaleDateString() 
+    : (c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : ""),
   procedures: c.procedures || [],
   clearingHouseMessage: c.denialReason || c.clearingHouseMessage || "",
   eraStatus: c.eraStatus || "",

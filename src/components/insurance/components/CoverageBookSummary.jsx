@@ -28,7 +28,11 @@ const CoverageBookSummary = ({
   const displayRows = useMemo(() => {
     const list = [...rowData];
     (coverageData || []).forEach((item) => {
-      if (item.code && !list.some((r) => r.code === item.code)) {
+      if (!item.code) return;
+      const idx = list.findIndex((r) => r.code === item.code);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...item };
+      } else {
         list.push(item);
       }
     });

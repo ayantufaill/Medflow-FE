@@ -640,7 +640,7 @@ const AddNewPatientAppointmentForm = ({
       .filter((tag) => tag.label);
 
     const start = dateTime || dayjs();
-    if (start.isBefore(dayjs().startOf('day'))) {
+    if (!initialAppointment && start.isBefore(dayjs().startOf('day'))) {
       setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }

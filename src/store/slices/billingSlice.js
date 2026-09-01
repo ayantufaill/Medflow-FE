@@ -150,15 +150,17 @@ export const fetchLedgerItems = createAsyncThunk(
 
         const adjsMapped = [...invoiceAdjs].map((adj) => {
           const isVoided = String(adj.status || '').toLowerCase() === 'void' || String(adj.status || '').toLowerCase() === 'voided';
+          const isTransfer = !!(adj.notes && adj.notes.toLowerCase().includes('income transfer'));
           const adjAmt = isVoided ? 0 : Math.abs(Number(adj.amount || 0));
           totalAdjAmt += adjAmt;
           runningBalance -= adjAmt;
 
           return {
             id: adj._id || adj.id,
-            title: `Adjustment #${adj._id || adj.id}: ${adj.type || 'Write-off'} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? ' (VOIDED)' : ''}`,
+            title: isTransfer ? adj.notes : `Adjustment #${adj._id || adj.id}: ${adj.type || 'Write-off'} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? ' (VOIDED)' : ''}`,
             amount: isVoided ? '(Voided)' : `$${Math.max(0, runningBalance).toFixed(2)}`,
             isPayment: true, isAdjustment: true, // Render similarly to payment
+            isTransfer,
             isVoided
           };
         }).reverse();
@@ -271,15 +273,17 @@ export const fetchLedgerItems = createAsyncThunk(
         .map((adj) => {
         const amt = Number(adj.amount || 0);
         const isVoided = String(adj.status || '').toLowerCase() === 'void' || String(adj.status || '').toLowerCase() === 'voided';
+        const isTransfer = !!(adj.notes && adj.notes.toLowerCase().includes('income transfer'));
         return {
           id: adj._id || adj.id,
-          invoiceNumber: `Adj #${adj._id || adj.id}${isVoided ? ' (VOIDED)' : ''}`,
+          invoiceNumber: isTransfer ? adj.notes : `Adj #${adj._id || adj.id}${isVoided ? ' (VOIDED)' : ''}`,
           date: adj.date ? dayjs(adj.date).format('MM/DD/YYYY') : 'N/A',
           rawDate: adj.date || '',
-          method: 'Adjustment',
+          method: isTransfer ? 'Transfer' : 'Adjustment',
           amount: isVoided ? '(Voided)' : `$${Math.abs(amt).toFixed(2)}`,
-          color: isVoided ? '#9e9e9e' : '#7e57c2',
+          color: isVoided ? '#9e9e9e' : (isTransfer ? '#0288d1' : '#7e57c2'),
           isAdjustment: true,
+          isTransfer,
           useCheckmark: false,
           initials: 'STAFF',
           isVoided,
@@ -296,8 +300,9 @@ export const fetchLedgerItems = createAsyncThunk(
           details: [
             {
               id: adj._id || adj.id,
-              title: adj.notes || 'Patient Account Adjustment',
+              title: isTransfer ? adj.notes : (adj.notes || 'Patient Account Adjustment'),
               amount: `$${amt.toFixed(2)}`,
+              isTransfer,
             },
           ],
         };

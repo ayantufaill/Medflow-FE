@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { Box, Typography } from '@mui/material';
 import ClinicalNavbar from '../../components/clinical/ClinicalNavbar';
 import ExamNavbar from '../../components/clinical/ExamNavbar';
@@ -7,11 +9,24 @@ import ExamNavbar from '../../components/clinical/ExamNavbar';
 const ExamPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointmentId');
+    if (appointmentId) {
+      dispatch(setSelectedAppointmentId(appointmentId));
+      dispatch(fetchAppointmentById(appointmentId));
+    }
+  }, [searchParams, dispatch]);
   
   // Redirect to radiographic exam if on base exam route
   useEffect(() => {
     if (location.pathname === '/clinical/exam') {
-      navigate('/clinical/exam/radiographic', { replace: true });
+      navigate({
+        pathname: '/clinical/exam/radiographic',
+        search: location.search
+      }, { replace: true });
     }
   }, [location.pathname, navigate]);
   

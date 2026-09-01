@@ -4,6 +4,7 @@ import { OutlinedSelect } from '../../patients/form-components/formInputs';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProcedureCodes, fetchProcedureButtons, selectProcedureCodes, selectProcedureCodesLoading, selectProcedureButtons, selectProcedureButtonsLoading } from '../../../store/slices/feeGuideSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { selectCurrentAppointment } from '../../../store/slices/appointmentSlice';
 import { COLORS } from '../../../constants/colors';
 import { roundedAutocompletePaperSx, radius, fontSize } from '../../../constants/styles';
 import { KeyboardArrowDown as ExpandMoreIcon } from '@mui/icons-material';
@@ -19,6 +20,7 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProcedureType, setSelectedProcedureType] = useState('Planned');
   const [selectedProvider, setSelectedProvider] = useState('');
+  const currentAppointment = useSelector(selectCurrentAppointment);
   const [selectedProcedureOption, setSelectedProcedureOption] = useState(null);
   const [procedureSearchInput, setProcedureSearchInput] = useState('');
 
@@ -34,6 +36,20 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
       setSelectedCategory(procedureButtons[0].category);
     }
   }, [procedureButtons, selectedCategory]);
+
+  // Auto-select provider from appointment
+  useEffect(() => {
+    if (currentAppointment && !selectedProvider) {
+      // currentAppointment.providerId is a full provider object { _id, providerCode, ... }
+      const provObj = currentAppointment.providerId;
+      const provId = typeof provObj === 'object' && provObj !== null
+        ? (provObj._id || provObj.id)
+        : provObj;
+      if (provId) {
+        setSelectedProvider(String(provId));
+      }
+    }
+  }, [currentAppointment, selectedProvider]);
 
   useEffect(() => {
     if (procedureCodes.length === 0 && !procedureCodesLoading && !hasRequestedCodes) {

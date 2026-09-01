@@ -4,6 +4,7 @@ import { Box, Typography, CircularProgress } from "@mui/material";
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
+import { patientService } from '../../services/patient.service';
 
 import {
   InsuranceInformation,
@@ -529,6 +530,7 @@ const AddCoveragePage = () => {
         newSubscriber.name = '';
         newSubscriber.dateOfBirth = '';
         newSubscriber.ssn = '';
+        newSubscriber.subscriberId = '';
 
         if (value === 'Self' && patient) {
           const { firstName, lastName, dateOfBirth, ssn } = patient;
@@ -654,23 +656,56 @@ const AddCoveragePage = () => {
               <SubscriberInformation
                 formData={formData}
                 handleSubscriberChange={handleSubscriberChange}
-                handleSubscriberSelect={(member) => {
+                handleSubscriberSelect={async (member) => {
                   setFormData(prev => ({
                     ...prev,
                     subscriber: {
                       ...prev.subscriber,
                       name: member.name || '',
                       dateOfBirth: member.dateOfBirth ? member.dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
-                      ssn: member.ssn || prev.subscriber.ssn
+                      ssn: member.ssn || prev.subscriber.ssn,
+                      subscriberId: member.subscriberId || prev.subscriber.subscriberId
                     }
                   }));
-                  setErrors(prev => ({ ...prev, subscriberName: null, dateOfBirth: null }));
+                  setErrors(prev => ({ ...prev, subscriberName: null, dateOfBirth: null, subscriberId: null }));
+
+                  if (member.id) {
+                    try {
+                      // Fetch full patient data (including SSN) and active insurances
+                      const fullPatient = await patientService.getPatientById(member.id, true).catch(() => null);
+                      const insurances = await patientService.getPatientInsurances(member.id, true).catch(() => null);
+                      
+                      setFormData(prev => {
+                        let newSsn = fullPatient?.ssn || prev.subscriber.ssn;
+                        let newSubscriberId = prev.subscriber.subscriberId;
+                        
+                        if (insurances && insurances.length > 0) {
+                          const activeIns = insurances.find(ins => ins.isActive) || insurances[0];
+                          if (activeIns && (activeIns.subscriberId || activeIns.policyNumber)) {
+                            newSubscriberId = activeIns.subscriberId || activeIns.policyNumber;
+                          }
+                        }
+
+                        return {
+                          ...prev,
+                          subscriber: {
+                            ...prev.subscriber,
+                            ssn: newSsn,
+                            subscriberId: newSubscriberId
+                          }
+                        };
+                      });
+                    } catch (err) {
+                      console.error("Failed to fetch full subscriber details", err);
+                    }
+                  }
                 }}
                 handleInputChange={handleInputChange}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 inputBg={STYLE_CONSTANTS.inputBg}
                 errors={errors}
                 patient={patient}
+                onCreatePatient={() => navigate('/patients/new')}
               />
 
               <RenewalSection

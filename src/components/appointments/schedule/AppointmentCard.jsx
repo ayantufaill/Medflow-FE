@@ -449,9 +449,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                       e.stopPropagation();
                       if (appointment.patientId)
                         navigate(
-                          `/clinical/progress-notes?patientId=${appointment.patientId}`,
+                          `/clinical/progress-notes?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
                         );
-                      else navigate("/clinical/progress-notes");
+                      else navigate(`/clinical/progress-notes?appointmentId=${appointment._id || appointment.id}`);
                     }}
                   />
                 </Tooltip>
@@ -482,9 +482,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                       e.stopPropagation();
                       if (appointment.patientId)
                         navigate(
-                          `/clinical/treatment-plan?patientId=${appointment.patientId}`,
+                          `/clinical/treatment-plan?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
                         );
-                      else navigate("/clinical/treatment-plan");
+                      else navigate(`/clinical/treatment-plan?appointmentId=${appointment._id || appointment.id}`);
                     }}
                   >
                     Tx
@@ -497,9 +497,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                       e.stopPropagation();
                       if (appointment.patientId)
                         navigate(
-                          `/clinical/exam?patientId=${appointment.patientId}`,
+                          `/clinical/exam?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
                         );
-                      else navigate("/clinical/exam");
+                      else navigate(`/clinical/exam?appointmentId=${appointment._id || appointment.id}`);
                     }}
                   >
                     🦷

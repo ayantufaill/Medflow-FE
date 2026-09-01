@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import {
-  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Typography,
   Radio,
   RadioGroup,
   FormControlLabel,
   Checkbox,
   Button,
+  Box,
+  IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
-const GenerateStatementsDialog = ({ onClose, onGenerate }) => {
+const GenerateStatementsDialog = ({ open = true, onClose, onGenerate }) => {
   const [statementType, setStatementType] = useState('Family');
   const [shareWithPatients, setShareWithPatients] = useState(true);
 
@@ -20,89 +26,106 @@ const GenerateStatementsDialog = ({ onClose, onGenerate }) => {
     });
   };
 
-  const headerBackground = '#4a70b0';
-  const generateButtonBg = '#d4c197';
-  const generateButtonHover = '#c5b396';
-
   return (
-    <Box sx={{ width: '100%', minWidth: '400px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', bgcolor: '#fff' }}>
-      {/* Header */}
-      <Box sx={{ bgcolor: headerBackground, py: 1.5, textAlign: 'center' }}>
-        <Typography sx={{ color: '#fff', fontSize: '1rem', fontWeight: 500 }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      sx={{ zIndex: 9999 }}
+      PaperProps={{
+        sx: {
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        }
+      }}
+    >
+      <DialogTitle sx={{ boxSizing: 'border-box', px: '25px', py: '16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e0e5eb', backgroundColor: '#f3f8fd', m: 0, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A', flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Generate Statements
         </Typography>
-      </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748B' }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
+      </DialogTitle>
 
-      {/* Body */}
-      <Box sx={{ p: 3 }}>
-        {/* Radio options */}
-        <RadioGroup
-          row
-          value={statementType}
-          onChange={(e) => setStatementType(e.target.value)}
-          sx={{ mb: 2, gap: 3 }}
-        >
-          <FormControlLabel
-            value="Family"
-            control={<Radio size="small" />}
-            label={<Typography sx={{ fontSize: '0.875rem' }}>Family</Typography>}
-          />
-          <FormControlLabel
-            value="Individual"
-            control={<Radio size="small" />}
-            label={<Typography sx={{ fontSize: '0.875rem' }}>Individual</Typography>}
-          />
-        </RadioGroup>
+      <DialogContent sx={{ mt: 2, px: 4, pb: 2 }}>
+        <Typography variant="body2" sx={{ color: '#64748b', mb: 4, fontFamily: 'Inter, sans-serif' }}>
+          Configure the batch statement generation settings for the selected patients.
+        </Typography>
 
-        {/* Checkbox */}
         <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#334155', mb: 1 }}>
+            Statement Type
+          </Typography>
+          <RadioGroup
+            row
+            value={statementType}
+            onChange={(e) => setStatementType(e.target.value)}
+            sx={{ gap: 3 }}
+          >
+            <FormControlLabel
+              value="Family"
+              control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#2563eb' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>Family</Typography>}
+            />
+            <FormControlLabel
+              value="Individual"
+              control={<Radio size="small" sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#2563eb' } }} />}
+              label={<Typography sx={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>Individual</Typography>}
+            />
+          </RadioGroup>
+        </Box>
+
+        <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: '8px', border: '1px solid #e2e8f0' }}>
           <FormControlLabel
             control={
               <Checkbox
                 size="small"
                 checked={shareWithPatients}
                 onChange={(e) => setShareWithPatients(e.target.checked)}
+                sx={{ color: '#3b82f6', '&.Mui-checked': { color: '#2563eb' } }}
               />
             }
-            label={<Typography sx={{ fontSize: '0.875rem' }}>Share With Patients</Typography>}
+            label={
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
+                Share With Patients
+              </Typography>
+            }
           />
+          <Typography variant="caption" sx={{ display: 'block', color: '#64748b', ml: 4, mt: 0.5 }}>
+            Patients will be notified via email or SMS based on their preferences.
+          </Typography>
         </Box>
+      </DialogContent>
 
-        {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-          <Button
-            variant="contained"
-            onClick={handleGenerate}
-            sx={{
-              bgcolor: generateButtonBg,
-              color: '#fff',
-              textTransform: 'none',
-              boxShadow: 'none',
-              px: 3,
-              fontSize: '0.8125rem',
-              '&:hover': { bgcolor: generateButtonHover },
-            }}
-          >
-            Generate
-          </Button>
-          <Button
-            variant="contained"
-            onClick={onClose}
-            sx={{
-              bgcolor: '#a9a9a9',
-              color: '#fff',
-              textTransform: 'none',
-              boxShadow: 'none',
-              px: 3,
-              fontSize: '0.8125rem',
-              '&:hover': { bgcolor: '#999' },
-            }}
-          >
-            Cancel
-          </Button>
-        </Box>
-      </Box>
-    </Box>
+      <DialogActions sx={{ borderTop: '1px solid #e0e5eb', px: 2.5, py: 2, bgcolor: '#fff', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{ textTransform: 'none', color: '#64748b', borderColor: '#cbd5e1', fontWeight: 600, borderRadius: '8px', px: 3, fontFamily: 'Inter, sans-serif', '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' } }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleGenerate}
+          variant="contained"
+          sx={{
+            bgcolor: '#2362EF',
+            color: '#fff',
+            textTransform: 'none',
+            boxShadow: 'none',
+            fontWeight: 600,
+            borderRadius: '8px',
+            px: 3,
+            fontFamily: 'Inter, sans-serif',
+            '&:hover': { bgcolor: '#1D53CC', boxShadow: 'none' },
+          }}
+        >
+          Generate Batch
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

@@ -7,6 +7,7 @@ import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
+import { applyDateFilter } from './claimFilterUtils';
 
 const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [claims, setClaims] = useState([]);
@@ -19,8 +20,10 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     status: 'all',
     carrier: 'all',
     claimType: 'all',
+    filterDate: 'all',
     search: '',
   });
+  const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
 
   const [showHidden, setShowHidden] = useState(false);
   const [selectedClaims, setSelectedClaims] = useState({});
@@ -52,8 +55,8 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
     }
   }
 
-  const applyFilters = (data, currentFilters, hidden) => {
-    let result = [...data];
+  const applyFilters = (data, currentFilters, hidden, dateRange = customDateRange) => {
+    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
 
     if (!hidden) {
       result = result.filter(c => !c.isHidden);
@@ -86,7 +89,12 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden);
+    applyFilters(claims, newFilters, showHidden, customDateRange);
+  };
+
+  const handleCustomDateRangeChange = (range) => {
+    setCustomDateRange(range);
+    applyFilters(claims, filters, showHidden, range);
   };
 
   const handleRowStatusChange = async (claimId, newStatus) => {
@@ -105,10 +113,12 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       claimType: 'all',
       attachment: 'all',
       status: 'all',
+      filterDate: 'all',
       search: '',
     };
     setFilters(defaultFilters);
-    applyFilters(claims, defaultFilters, showHidden);
+    setCustomDateRange({ start: null, end: null });
+    applyFilters(claims, defaultFilters, showHidden, { start: null, end: null });
   };
 
   const handleToggleHidden = (val) => {
@@ -207,6 +217,8 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
         ]}
         onRefresh={loadData}
         onClearAll={handleClearAll}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={handleCustomDateRangeChange}
       />
 
       <ClaimAlertBar

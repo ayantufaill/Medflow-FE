@@ -280,7 +280,14 @@ const AddPaymentModal = ({
                               value={claim.allocatedPaid || ''}
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
-                                setAllocations(prev => prev.map(c => c.claimId === claim.claimId ? { ...c, allocatedPaid: val } : c));
+                                setAllocations(prev => prev.map(c => {
+                                  if (c.claimId === claim.claimId) {
+                                    const openAmt = parseFloat(c.openAmount) || 0;
+                                    const autoWriteOff = Math.max(0, openAmt - val);
+                                    return { ...c, allocatedPaid: val, allocatedWriteOff: autoWriteOff };
+                                  }
+                                  return c;
+                                }));
                               }}
                               sx={{ bgcolor: '#ffffff', '& .MuiOutlinedInput-root': { borderRadius: '8px', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } } }}
                               inputProps={{ style: { fontSize: '0.875rem', padding: '8px' } }}
@@ -372,7 +379,7 @@ const AddPaymentModal = ({
                         <Select value={newPaymentCarrier} onChange={(e) => setNewPaymentCarrier(e.target.value)} sx={{ bgcolor: '#ffffff', borderRadius: '8px', fontSize: '0.875rem', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }} MenuProps={{ sx: { zIndex: 10000 } }}>
                           {allCarriers.length > 0 ? (
                             allCarriers.map(carrier => (
-                              <MenuItem key={carrier} value={carrier} sx={{ fontFamily: 'Inter', fontSize: '13px' }}>{carrier}</MenuItem>
+                              <MenuItem key={carrier.id || carrier.name} value={carrier.id} sx={{ fontFamily: 'Inter', fontSize: '13px' }}>{carrier.name}</MenuItem>
                             ))
                           ) : (
                             <MenuItem value="" disabled sx={{ fontFamily: 'Inter', fontSize: '13px' }}>No carriers available</MenuItem>
@@ -417,7 +424,7 @@ const AddPaymentModal = ({
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="body2" sx={{ color: '#4a5568' }}>Carrier:</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{newPaymentCarrier}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{allCarriers.find(c => c.id === newPaymentCarrier)?.name || newPaymentCarrier}</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="body2" sx={{ color: '#4a5568' }}>Total Allocated:</Typography>

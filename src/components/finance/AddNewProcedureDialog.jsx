@@ -378,7 +378,7 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
         <Divider sx={{ mb: 2, borderColor: '#5c7bb5' }} />
 
         {/* Enter Code */}
-        <Typography sx={{ color: '#5c7bb5', fontSize: '14px', mb: 1, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Enter Code
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -396,10 +396,29 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             componentsProps={{
               popper: {
                 sx: { zIndex: 150000 },
+                placement: 'bottom-start',
                 modifiers: [
                   { name: 'flip', enabled: false },
                   { name: 'preventOverflow', enabled: false }
                 ]
+              },
+              paper: {
+                sx: {
+                  mt: 0.5,
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                  border: '1px solid #e2e8f0',
+                  '& .MuiAutocomplete-listbox': { padding: 0 },
+                  '& .MuiAutocomplete-option': {
+                    fontSize: '13px',
+                    fontFamily: 'Inter',
+                    color: '#334155',
+                    py: 1,
+                    px: 2,
+                    '&[aria-selected="true"]': { backgroundColor: '#e0f2fe !important', color: '#0369a1', fontWeight: 600 },
+                    '&[data-focus="true"]': { backgroundColor: '#f1f5f9' },
+                  }
+                }
               }
             }}
             renderInput={(params) => (
@@ -418,10 +437,19 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                   ),
                 }}
                 sx={{
+                  flex: 1,
                   '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: COLORS.BORDER },
-                    '&:hover fieldset': { borderColor: '#9ca3af' },
-                    '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT },
+                    backgroundColor: '#fafbfe',
+                    borderRadius: '4px',
+                    minHeight: 36,
+                    fontSize: '13px',
+                    fontFamily: 'Inter',
+                    fontWeight: 500,
+                    color: '#09121f',
+                    padding: '2px 8px',
+                    '& fieldset': { borderColor: '#e2e8f0' },
+                    '&:hover fieldset': { borderColor: '#cbd5e1' },
+                    '&.Mui-focused fieldset': { borderColor: '#3b82f6' }
                   },
                 }}
               />
