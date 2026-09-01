@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Grid, Button } from '@mui/material';
+import { Box, Typography, Grid, Button, CircularProgress } from '@mui/material';
 import { AutoAwesome as ShowcaseIcon } from '@mui/icons-material';
 import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
 import SectionCard from '../../components/shared/SectionCard';
@@ -8,6 +8,7 @@ import ClickableReportImage from '../../components/patient-reports/ClickableRepo
 import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius, bodySx, captionSx } from '../../constants/styles';
+import { usePatientReport } from '../../hooks/queries/usePatientReport';
 
 const ShowcasePage = () => {
   const { patientId } = useParams();
@@ -27,33 +28,8 @@ const ShowcasePage = () => {
     { id: 'showcase', label: 'SHOWCASE', path: `/patients/${patientId}/report/showcase` },
   ];
 
-  // Mock data - replace with actual API calls
-  const mockTreatments = [
-    {
-      id: 1,
-      title: 'Teeth Whitening',
-      date: '2024-01-15',
-      beforeImage: '/Damaged_teeth.png',
-      afterImage: '/white_teeth.png',
-      description: 'Professional whitening treatment - 3 shades lighter'
-    },
-    {
-      id: 2,
-      title: 'Composite Filling',
-      date: '2024-01-10',
-      beforeImage: '/cavity_teeth.png',
-      afterImage: '/repaired_teeth.png',
-      description: 'Tooth-colored restoration on molar'
-    },
-    {
-      id: 3,
-      title: 'Dental Crown',
-      date: '2023-12-20',
-      beforeImage: '/before_treatment.png',
-      afterImage: '/repaired_teeth.png',
-      description: 'Porcelain crown on premolar'
-    },
-  ];
+  const { data: reportData, isLoading } = usePatientReport(patientId);
+  const treatments = reportData?.showcase?.completedTreatments || [];
 
   return (
     <Box>
@@ -122,7 +98,16 @@ const ShowcasePage = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 3 }}>
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : !reportData || treatments.length === 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <Typography>No completed treatments found for this patient.</Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', gap: 3 }}>
             {/* Left Side - Visual */}
             <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
               <ClickableReportImage />
@@ -139,9 +124,9 @@ const ShowcasePage = () => {
             {/* Right Side - Content */}
             <Box sx={{ flex: '1 1 calc(50% - 12px)', minWidth: 0 }}>
               <Box>
-                {mockTreatments.map((treatment) => (
+                {treatments.map((treatment, idx) => (
                   <SectionCard
-                    key={treatment.id}
+                    key={idx}
                     title={treatment.title}
                     subtitle={`Completed: ${treatment.date}`}
                     icon={ShowcaseIcon}
@@ -158,7 +143,7 @@ const ShowcasePage = () => {
                         </Typography>
                         <Box
                           component="img"
-                          src={treatment.beforeImage}
+                          src={treatment.beforeImage || '/before_treatment.png'}
                           alt={`Before ${treatment.title}`}
                           sx={{
                             width: '100%',
@@ -175,7 +160,7 @@ const ShowcasePage = () => {
                         </Typography>
                         <Box
                           component="img"
-                          src={treatment.afterImage}
+                          src={treatment.afterImage || '/repaired_teeth.png'}
                           alt={`After ${treatment.title}`}
                           sx={{
                             width: '100%',
@@ -192,6 +177,7 @@ const ShowcasePage = () => {
               </Box>
             </Box>
           </Box>
+          )}
         </Box>
       </Box>
     </Box>

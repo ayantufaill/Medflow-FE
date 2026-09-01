@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
   Box,
   Typography,
   Button,
@@ -119,32 +122,46 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
   const createSendButtonHover = '#c5b396';
 
   return (
-    <Box sx={{ width: '100%', bgcolor: '#fff', borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+    <Dialog 
+      open={true} 
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      sx={{ zIndex: 9999 }}
+      PaperProps={{
+        sx: {
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          maxHeight: '90vh'
+        }
+      }}
+    >
       {/* Title Header */}
-      <Box sx={{ bgcolor: headerBackground, py: 1.5, px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography sx={{ color: '#fff', fontSize: '1.1rem', fontWeight: 500 }}>
+      <DialogTitle sx={{ boxSizing: 'border-box', px: '25px', py: '16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e0e5eb', backgroundColor: '#f3f8fd', m: 0, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A', flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Generated Statements
         </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: '#fff' }}>
-          <CloseIcon fontSize="small" />
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748B' }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
-      </Box>
+      </DialogTitle>
 
-      {/* Column Headers */}
-      <Box sx={{ display: 'flex', borderBottom: '1px solid #e0e0e0', bgcolor: '#fbfbfb', py: 1, px: 3 }}>
-        <Typography sx={{ width: '25%', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}>
-          Created On
-        </Typography>
-        <Typography sx={{ width: '37.5%', fontSize: '0.8rem', fontWeight: 600, color: '#666', pl: 2 }}>
-          Statements Sent Via MyChart
-        </Typography>
-        <Typography sx={{ width: '37.5%', fontSize: '0.8rem', fontWeight: 600, color: '#666', pl: 2 }}>
-          Manual Statements PDF
-        </Typography>
-      </Box>
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
+        {/* Column Headers */}
+        <Box sx={{ display: 'flex', borderBottom: '1px solid #e2e8f0', bgcolor: '#fff', py: 1.5, px: 3, position: 'sticky', top: 0, zIndex: 10 }}>
+          <Typography sx={{ width: '25%', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+            Created On
+          </Typography>
+          <Typography sx={{ width: '37.5%', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', pl: 2 }}>
+            Statements Sent Via MyChart
+          </Typography>
+          <Typography sx={{ width: '37.5%', fontSize: '0.8rem', fontWeight: 600, color: '#64748b', pl: 2 }}>
+            Manual Statements PDF
+          </Typography>
+        </Box>
 
-      {/* Content Area */}
-      <Box sx={{ p: 3, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3, bgcolor: '#f4f5f7' }}>
+        {/* Content Area */}
+        <Box sx={{ p: 3, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
         {batches.map((batch) => (
           <Box
             key={batch.id}
@@ -350,8 +367,9 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
             </Box>
           </Box>
         ))}
-      </Box>
-    </Box>
+        </Box>
+      </DialogContent>
+    </Dialog>
   );
 };
 

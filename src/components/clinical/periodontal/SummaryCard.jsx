@@ -3,7 +3,7 @@ import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow } fro
 
 const SummaryCard = ({ summaryData }) => {
   return (
-    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', height: '100%', minHeight: '219px', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
+    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', height: '100%', minHeight: '219px', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', '@media print': { height: 'auto !important', minHeight: 'auto !important', display: 'block !important' } }}>
       <Box sx={{ py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography sx={{ color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', fontSize: '12px' }}>SUMMARY</Typography>
         <Typography sx={{ color: '#94a3b8', fontSize: '12px' }}>Live metrics update as you chart</Typography>

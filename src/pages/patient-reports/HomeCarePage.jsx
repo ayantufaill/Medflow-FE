@@ -7,6 +7,8 @@ import ClickableReportImage from '../../components/patient-reports/ClickableRepo
 import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
+import { usePatientReport } from '../../hooks/queries/usePatientReport';
+import { CircularProgress } from '@mui/material';
 
 const HomeCarePage = () => {
   const { patientId } = useParams();
@@ -27,90 +29,44 @@ const HomeCarePage = () => {
     { id: 'showcase', label: 'SHOWCASE', path: `/patients/${patientId}/report/showcase` },
   ];
 
-  // Mock data - replace with actual API calls
-  const mockDentalAssessment = {
-    categories: {
-      oralHygiene: {
-        title: 'Oral Hygiene Routine',
-        subtitle: 'Your daily brushing and cleaning habits',
-        description: 'Based on our examination and your reported habits, we\'ve evaluated your current oral hygiene routine and identified areas for improvement.',
-        findingsTitle: 'Current Status',
-        issues: [
-          { id: 1, label: 'Brushing frequency', value: 'Twice daily' },
-          { id: 2, label: 'Brushing duration', value: '2-3 minutes' },
-          { id: 3, label: 'Toothbrush type', value: 'Electric toothbrush' },
-          { id: 4, label: 'Plaque buildup', value: 'Moderate in posterior regions' },
-          { id: 5, label: 'Brushing technique', value: 'Needs improvement - circular motion recommended' },
-        ],
-        comment: 'Your brushing routine shows good consistency, but there\'s room for improvement in technique and thoroughness.',
-        explanations: [
-          'We noticed moderate plaque accumulation in the back teeth areas, which are often missed during regular brushing.',
-          'Your electric toothbrush is an excellent choice, but proper angulation is crucial for optimal plaque removal.',
-          'Consider spending extra time on the molars and premolars where we observed the most buildup.',
-        ],
-      },
-      flossing: {
-        title: 'Flossing Habits',
-        subtitle: 'Interdental cleaning practices',
-        description: 'Regular flossing is essential for removing plaque and food particles between teeth where your toothbrush cannot reach.',
-        findingsTitle: 'Assessment Findings',
-        issues: [
-          { id: 1, label: 'Flossing frequency', value: '2-3 times per week' },
-          { id: 2, label: 'Floss type used', value: 'Waxed mint floss' },
-          { id: 3, label: 'Gum bleeding', value: 'Occasional bleeding when flossing' },
-          { id: 4, label: 'Technique', value: 'Inconsistent C-shape motion' },
-        ],
-        comment: 'Your flossing routine needs significant improvement to maintain optimal gum health.',
-        explanations: [
-          'Flossing only 2-3 times per week leaves plaque between your teeth for extended periods, increasing decay risk.',
-          'The occasional bleeding you experience is actually a sign of gingivitis and will improve with consistent daily flossing.',
-          'Proper C-shape technique around each tooth is more effective than up-and-down motions.',
-        ],
-        recommendations: [
-          'Floss at least once daily, preferably before bedtime',
-          'Use gentle sawing motion to insert floss between teeth',
-          'Curve floss into C-shape against each tooth surface',
-          'Slide gently under the gumline, about 2-3mm deep',
-        ],
-      },
-      products: {
-        title: 'Recommended Products',
-        subtitle: 'Tools and products for optimal care',
-        description: 'Using the right oral care products can significantly improve your dental health outcomes and make your home care routine more effective.',
-        findingsTitle: 'Product Recommendations',
-        issues: [
-          { id: 1, label: 'Current toothpaste', value: 'Regular fluoride toothpaste' },
-          { id: 2, label: 'Mouthwash usage', value: 'Occasionally' },
-          { id: 3, label: 'Tongue cleaner', value: 'Not using' },
-        ],
-        comment: 'Upgrading your oral care products can enhance your daily routine effectiveness.',
-        productRecommendations: [
-          {
-            category: 'Toothpaste',
-            recommendation: 'Sensodyne Pronamel or Colgate Total',
-            reason: 'Provides enhanced enamel protection and antibacterial action'
-          },
-          {
-            category: 'Mouthwash',
-            recommendation: 'Listerine Total Care or Therabreath',
-            reason: 'Alcohol-free formula with fluoride for additional protection'
-          },
-          {
-            category: 'Interdental Brushes',
-            recommendation: 'TePe Interdental Brushes (size 2)',
-            reason: 'For larger spaces between back teeth where floss may not be as effective'
-          },
-          {
-            category: 'Tongue Scraper',
-            recommendation: 'Stainless steel tongue scraper',
-            reason: 'Removes bacteria and freshens breath more effectively than brushing'
-          },
-        ],
-      },
-    },
+  const { data: reportData, isLoading, isError, error } = usePatientReport(patientId);
+
+  const formatIssues = (issuesArr) => {
+    if (!issuesArr || !Array.isArray(issuesArr)) return [];
+    return issuesArr.map((issueStr, idx) => {
+      const parts = issueStr.split(' — ');
+      if (parts.length > 1) {
+        return { id: idx, label: parts[0], value: parts.slice(1).join(' — ') };
+      }
+      return { id: idx, label: issueStr, value: '' };
+    });
   };
 
-  const categories = Object.values(mockDentalAssessment.categories);
+  const categories = reportData?.homeCare ? [
+    {
+      title: 'Oral Hygiene Routine',
+      subtitle: 'Your daily brushing and cleaning habits',
+      description: 'Based on our examination and your reported habits, we\'ve evaluated your current oral hygiene routine and identified areas for improvement.',
+      findingsTitle: 'Current Status',
+      issues: formatIssues(reportData.homeCare.oralHygiene.issues),
+      explanations: reportData.homeCare.oralHygiene.recommendations,
+    },
+    {
+      title: 'Flossing Habits',
+      subtitle: 'Interdental cleaning practices',
+      description: 'Regular flossing is essential for removing plaque and food particles between teeth where your toothbrush cannot reach.',
+      findingsTitle: 'Assessment Findings',
+      issues: formatIssues(reportData.homeCare.flossing.issues),
+      explanations: reportData.homeCare.flossing.recommendations,
+    },
+    {
+      title: 'Recommended Products',
+      subtitle: 'Tools and products for optimal care',
+      description: 'Using the right oral care products can significantly improve your dental health outcomes and make your home care routine more effective.',
+      findingsTitle: 'Product Recommendations',
+      issues: formatIssues(reportData.homeCare.products.productRecommendations),
+    }
+  ] : [];
 
   // Navigation categories for Home Care
   const homeCareCategories = [
@@ -186,7 +142,20 @@ const HomeCarePage = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 3 }}>
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : isError ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <Typography color="error">Error loading report: {error?.response?.data?.error?.message || error?.message || 'Unknown error'}</Typography>
+            </Box>
+          ) : !reportData ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <Typography>No clinical report data found.</Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Side - Visual */}
           <Box sx={{ flex: '0 0 calc(50% - 12px)', maxWidth: 'calc(50% - 12px)' }}>
             <ClickableReportImage />
@@ -243,6 +212,7 @@ const HomeCarePage = () => {
             </Box>
           </Box>
         </Box>
+          )}
         </Box>
       </Box>
     </Box>

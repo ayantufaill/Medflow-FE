@@ -445,6 +445,8 @@ const AgingReport = () => {
               setHidePatientNames={setHidePatientNames} 
               onExportCsv={() => handleExportCSV()}
               onPrint={() => handlePrint()}
+              onGenerateStatements={() => setShowGenerateStatements(true)}
+              onViewStatements={() => setShowViewGeneratedStatements(true)}
             />
           </Box>
 
@@ -676,74 +678,17 @@ const AgingReport = () => {
         onClose={() => setSelectedPatientForNotes(null)}
       />
 
-      {showGenerateStatements && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowGenerateStatements(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '450px', 
-              width: '90%',
-              bgcolor: '#fff',
-              borderRadius: '4px',
-              overflow: 'visible',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GenerateStatementsDialog 
-              onClose={() => setShowGenerateStatements(false)}
-              onGenerate={handleGenerateBatch}
-            />
-          </Box>
-        </Box>
-      )}
+      <GenerateStatementsDialog 
+        open={showGenerateStatements}
+        onClose={() => setShowGenerateStatements(false)}
+        onGenerate={handleGenerateBatch}
+      />
 
       {showViewGeneratedStatements && (
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            bgcolor: 'rgba(0,0,0,0.5)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 1300
-          }}
-          onClick={() => setShowViewGeneratedStatements(false)}
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '1200px', 
-              width: '95%',
-              bgcolor: '#fff',
-              borderRadius: '6px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ViewGeneratedStatementsDialog 
-              batches={batches}
-              onClose={() => setShowViewGeneratedStatements(false)}
-            />
-          </Box>
-        </Box>
+        <ViewGeneratedStatementsDialog 
+          batches={batches}
+          onClose={() => setShowViewGeneratedStatements(false)}
+        />
       )}
     </Box>
   );

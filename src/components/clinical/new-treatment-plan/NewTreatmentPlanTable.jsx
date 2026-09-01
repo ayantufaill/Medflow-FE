@@ -84,10 +84,10 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
     if (providerId === 'CB') return 'CB'; // Keep fallback for existing mock items
     const provider = providersList.find(p => p._id === providerId || p.providerCode === providerId);
     if (!provider) return providerId;
-    
+
     const first = provider.userId?.firstName || provider.firstName || provider.FName || '';
     const last = provider.userId?.lastName || provider.lastName || provider.LName || '';
-    
+
     if (first || last) {
       return `${first.charAt(0).toUpperCase()}${last.charAt(0).toUpperCase()}`;
     }
@@ -133,36 +133,36 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
       {/* Phase / Visit Header Row */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1.5 }}>
         <DragIndicatorIcon sx={{ color: '#cbd5e1', cursor: 'grab', fontSize: '1.2rem' }} />
-        
-        <ReportSelect 
-          options={STATUS_OPTIONS} 
-          value={currentVisitStatus} 
-          onChange={(e) => setCurrentVisitStatus(e.target.value)} 
+
+        <ReportSelect
+          options={STATUS_OPTIONS}
+          value={currentVisitStatus}
+          onChange={(e) => setCurrentVisitStatus(e.target.value)}
           width={130}
         />
-        
-        <ReportSelect 
-          options={NEW_TEMPLATE_OPTIONS} 
-          value={selectedNewTemplate} 
-          onChange={(e) => setSelectedNewTemplate(e.target.value)} 
+
+        <ReportSelect
+          options={NEW_TEMPLATE_OPTIONS}
+          value={selectedNewTemplate}
+          onChange={(e) => setSelectedNewTemplate(e.target.value)}
           width={190}
         />
-        
-        <Box sx={{ 
-          bgcolor: '#f8fafc', color: '#475569', 
+
+        <Box sx={{
+          bgcolor: '#f8fafc', color: '#475569',
           borderRadius: '4px', px: 1.5, py: 0.5, fontWeight: 500, fontSize: '0.85rem', whiteSpace: 'nowrap'
         }}>
           Mon Aug 10, 9:00 am
         </Box>
-        
-        <Box sx={{ 
-          display: 'flex', alignItems: 'center', gap: 0.5, 
-          bgcolor: '#f8fafc', color: '#475569', 
+
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 0.5,
+          bgcolor: '#f8fafc', color: '#475569',
           borderRadius: '4px', px: 1, py: 0.5, fontWeight: 500, fontSize: '0.85rem', whiteSpace: 'nowrap'
         }}>
           60 min <SyncIcon sx={{ fontSize: '0.9rem' }} />
         </Box>
-        
+
         <IconButton size="small" sx={{ ml: 1 }} onClick={(e) => setActionMenuAnchor(e.currentTarget)}>
           <MoreVertIcon />
         </IconButton>
@@ -203,8 +203,8 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8fafc' }}>
               <TableCell padding="checkbox">
-                <Checkbox 
-                  size="small" 
+                <Checkbox
+                  size="small"
                   checked={filteredPlans.length > 0 && selectedRows.length === filteredPlans.length}
                   indeterminate={selectedRows.length > 0 && selectedRows.length < filteredPlans.length}
                   onChange={handleSelectAll}
@@ -233,8 +233,8 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
             {filteredPlans.map((row) => (
               <TableRow key={row.id} hover selected={selectedRows.includes(row.id)}>
                 <TableCell padding="checkbox">
-                  <Checkbox 
-                    size="small" 
+                  <Checkbox
+                    size="small"
                     checked={selectedRows.includes(row.id)}
                     onChange={() => handleSelectRow(row.id)}
                   />
@@ -247,8 +247,8 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
                     variant="standard"
                     disableUnderline
                     IconComponent={ExpandMoreIcon}
-                    sx={{ 
-                      fontSize: '0.8rem', 
+                    sx={{
+                      fontSize: '0.8rem',
                       color: '#475569',
                       '& .MuiSelect-select': { py: 0, px: 0, display: 'flex', alignItems: 'center' },
                       '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
