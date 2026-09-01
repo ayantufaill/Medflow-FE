@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { 
   Box, Typography, Select, MenuItem, Button 
 } from '@mui/material';
@@ -223,12 +223,20 @@ const ToothColumn = ({
   isLastColumn = false,
   isCompareMode = false,
   compareDates = [],
-  compareFields = {}
+  compareFields = {},
+  historicalData = {},
+  isSelected = false,
+  onColumnClick,
+  columnRef
 }) => {
-  // Mock historical data for read-only rows
+  // Lookup real historical data from the historicalData prop
   const getHistoricalData = (date, tooth, side, type) => {
-    // Return empty arrays or strings as default placeholder for now. 
-    // This allows the UI to render correctly.
+    const dateData = historicalData[date];
+    if (dateData && dateData[tooth] && dateData[tooth][side]) {
+      const val = dateData[tooth][side][type];
+      if (val !== undefined) return val;
+    }
+    // Fallback defaults
     if (type === 'bleeding') return [];
     if (type === 'pcs') return [];
     if (type === 'probe') return ['', '', ''];
@@ -241,8 +249,10 @@ const ToothColumn = ({
 
   return (
     <Box 
+      ref={columnRef}
       component="fieldset"
       disabled={isMissing}
+      onClick={() => onColumnClick && onColumnClick(number)}
       sx={{ 
       display: 'flex', 
       flexDirection: 'column', 
@@ -253,10 +263,14 @@ const ToothColumn = ({
       borderTop: 'none',
       borderLeft: 'none',
       borderBottom: 'none',
-      bgcolor: isMissing ? '#f8fafc' : 'transparent',
+      bgcolor: isMissing ? '#f8fafc' : (isSelected ? '#EFF6FF' : 'transparent'),
       opacity: isMissing ? 0.4 : 1,
       pointerEvents: isMissing ? 'none' : 'auto',
-      borderRight: isLastColumn ? 'none' : '1px solid #E2E8F0'
+      borderRight: isLastColumn ? 'none' : '1px solid #E2E8F0',
+      outline: isSelected ? '2px solid #3b82f6' : 'none',
+      outlineOffset: '-1px',
+      transition: 'background-color 0.2s, outline 0.2s',
+      cursor: 'pointer'
     }}>
       {!isBottom ? (
         <>
@@ -381,7 +395,7 @@ const RowLabels = ({ labels, isBottom = false, hasMobility = true }) => (
   </Box>
 );
 
-const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCompareMode, compareDates, compareFields }) => {
+const PerioChartGrid = forwardRef(({ chartData = {}, setChartData, missingTeeth = [], isCompareMode, compareDates, compareFields, selectedToothNumber, onToothColumnClick, historicalData = {} }, ref) => {
   const [editingCell, setEditingCell] = useState(null);
 
   const generateLabels = (baseLabels) => {
@@ -474,6 +488,26 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCom
     });
   };
 
+  // Refs for tooth columns (for scroll-to-tooth)
+  const toothColumnRefs = useRef({});
+
+  const getToothColumnRef = useCallback((toothNum) => {
+    if (!toothColumnRefs.current[toothNum]) {
+      toothColumnRefs.current[toothNum] = { current: null };
+    }
+    return (el) => { toothColumnRefs.current[toothNum] = el; };
+  }, []);
+
+  // Expose scrollToTooth to parent via ref
+  useImperativeHandle(ref, () => ({
+    scrollToTooth: (toothNum) => {
+      const el = toothColumnRefs.current[toothNum];
+      if (el && el.scrollIntoView) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }), []);
+
   const renderQuadrant = (teeth, side = 'facial', isBottom = false, hideMobility = false) => (
     <Box sx={{ display: 'flex', flex: 1, minWidth: 0 }}>
       {teeth.map((n, idx) => (
@@ -491,6 +525,10 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCom
           onSelectChange={handleSelectChange}
           hideMobility={hideMobility}
           isLastColumn={idx === teeth.length - 1}
+          isSelected={selectedToothNumber === n}
+          onColumnClick={onToothColumnClick}
+          historicalData={historicalData}
+          columnRef={getToothColumnRef(n)}
         />
       ))}
     </Box>
@@ -506,7 +544,20 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCom
         </Box>
         <Box sx={{ display: 'flex', flex: 1, minWidth: 0 }}>
           {teeth.map(num => (
-            <Box key={num} sx={{ flex: 1, minWidth: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#0F172A', borderRight: '1px solid #E2E8F0' }}>
+            <Box 
+              key={num} 
+              onClick={() => onToothColumnClick && onToothColumnClick(num)}
+              sx={{ 
+                flex: 1, minWidth: 0, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                fontWeight: 700, fontSize: '12px', 
+                color: selectedToothNumber === num ? '#2563eb' : '#0F172A', 
+                bgcolor: selectedToothNumber === num ? '#EFF6FF' : 'transparent',
+                borderRight: '1px solid #E2E8F0',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                '&:hover': { bgcolor: '#F1F5F9' }
+              }}
+            >
               {num}
             </Box>
           ))}
@@ -639,6 +690,8 @@ const PerioChartGrid = ({ chartData = {}, setChartData, missingTeeth = [], isCom
       </Box>
     </Box>
   );
-};
+});
+
+PerioChartGrid.displayName = 'PerioChartGrid';
 
 export default PerioChartGrid;

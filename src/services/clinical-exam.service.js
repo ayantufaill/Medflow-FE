@@ -32,5 +32,13 @@ export const clinicalExamService = {
   async getExamHistoryDates(examType, patientId) {
     const response = await apiClient.get(`/clinical-exams/history/${examType}/patient/${patientId}`);
     return response.data.data.dates;
+  },
+
+  /**
+   * Delete an exam record
+   */
+  async deleteExam(examType, appointmentId) {
+    const response = await apiClient.delete(`/clinical-exams/${examType}/${appointmentId}`);
+    return response.data;
   }
 };

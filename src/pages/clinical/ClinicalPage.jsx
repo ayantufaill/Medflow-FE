@@ -11,7 +11,10 @@ const ClinicalPage = () => {
   // Redirect /clinical to /clinical/exam/radiographic
   useEffect(() => {
     if (location.pathname === '/clinical') {
-      navigate('/clinical/exam/radiographic', { replace: true });
+      navigate({
+        pathname: '/clinical/exam/radiographic',
+        search: location.search
+      }, { replace: true });
     }
   }, [location.pathname, navigate]);
   

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Radio, FormControlLabel, Select, MenuItem, Checkbox } from '@mui/material';
+import { Box, Typography, Radio, FormControlLabel, Select, MenuItem, Checkbox, RadioGroup } from '@mui/material';
 
 const compareFieldsList = [
   { id: 'bleeding', label: 'Bleeding' },
@@ -12,7 +12,45 @@ const compareFieldsList = [
   { id: 'pcs', label: 'Plq/calc/sup' }
 ];
 
-const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFields, setCompareFields, visitDates }) => {
+const stageOptions = [
+  { value: '', label: 'Select Stage' },
+  { value: 'stage1', label: 'Stage I' },
+  { value: 'stage2', label: 'Stage II' },
+  { value: 'stage3', label: 'Stage III' },
+  { value: 'stage4', label: 'Stage IV' },
+];
+
+const gradeOptions = [
+  { value: '', label: 'Select Grade' },
+  { value: 'gradeA', label: 'Grade A' },
+  { value: 'gradeB', label: 'Grade B' },
+  { value: 'gradeC', label: 'Grade C' },
+];
+
+const DiagnosisCard = ({ 
+  isCompareMode, 
+  compareDates, 
+  setCompareDates, 
+  compareFields, 
+  setCompareFields, 
+  visitDates,
+  diagnosis,
+  onDiagnosisChange
+}) => {
+  // Use provided diagnosis or defaults
+  const currentDiagnosis = diagnosis || {
+    type: '',       // 'healthy', 'gingivitis', 'periodontitis'
+    stage: 'stage2',
+    distribution: 'generalized', // 'localized', 'generalized', 'molar-incisor'
+    grading: 'gradeB',
+  };
+
+  const handleChange = (field, value) => {
+    if (onDiagnosisChange) {
+      onDiagnosisChange({ ...currentDiagnosis, [field]: value });
+    }
+  };
+
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', height: '100%', minHeight: '219px', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
       <Box sx={{ p: 2.5, px: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: isCompareMode ? 'flex-start' : 'space-between', gap: isCompareMode ? 1.5 : 0 }}>
@@ -91,8 +129,30 @@ const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFi
             
             {/* Healthy / Gingivitis */}
             <Box sx={{ display: 'flex', gap: 3 }}>
-              <FormControlLabel control={<Radio size="small" sx={{ p: 0.5, color: '#cbd5e1' }} />} label={<Typography sx={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>Healthy</Typography>} sx={{ m: 0 }} />
-              <FormControlLabel control={<Radio size="small" sx={{ p: 0.5, color: '#cbd5e1' }} />} label={<Typography sx={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>Gingivitis</Typography>} sx={{ m: 0 }} />
+              <FormControlLabel 
+                control={
+                  <Radio 
+                    size="small" 
+                    checked={currentDiagnosis.type === 'healthy'}
+                    onChange={() => handleChange('type', 'healthy')}
+                    sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
+                  />
+                } 
+                label={<Typography sx={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>Healthy</Typography>} 
+                sx={{ m: 0 }} 
+              />
+              <FormControlLabel 
+                control={
+                  <Radio 
+                    size="small" 
+                    checked={currentDiagnosis.type === 'gingivitis'}
+                    onChange={() => handleChange('type', 'gingivitis')}
+                    sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
+                  />
+                } 
+                label={<Typography sx={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>Gingivitis</Typography>} 
+                sx={{ m: 0 }} 
+              />
             </Box>
             
             {/* Periodontitis Dropdown */}
@@ -100,7 +160,13 @@ const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFi
               <Typography sx={{ fontWeight: 600, fontSize: '13px', color: '#334155', minWidth: 90 }}>Periodontitis</Typography>
               <Select 
                 size="small" 
-                value="stage2" 
+                value={currentDiagnosis.stage || ''}
+                onChange={(e) => {
+                  handleChange('stage', e.target.value);
+                  if (currentDiagnosis.type !== 'periodontitis') {
+                    handleChange('type', 'periodontitis');
+                  }
+                }}
                 sx={{ 
                   height: 32, 
                   fontSize: '13px', 
@@ -114,15 +180,50 @@ const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFi
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
                 }} 
               >
-                <MenuItem value="stage2" sx={{ fontSize: '13px' }}>Stage II</MenuItem>
+                {stageOptions.map(opt => (
+                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: '13px' }}>{opt.label}</MenuItem>
+                ))}
               </Select>
             </Box>
 
             {/* Localized / Generalized / Molar */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5 }}>
-              <FormControlLabel control={<Radio size="small" sx={{ p: 0.5, color: '#cbd5e1' }} />} label={<Typography sx={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>Localized (&lt; 30% of teeth)</Typography>} sx={{ m: 0 }} />
-              <FormControlLabel control={<Radio size="small" checked sx={{ p: 0.5, color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>Generalized</Typography>} sx={{ m: 0 }} />
-              <FormControlLabel control={<Radio size="small" sx={{ p: 0.5, color: '#cbd5e1' }} />} label={<Typography sx={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>Molar/Incisor</Typography>} sx={{ m: 0 }} />
+              <FormControlLabel 
+                control={
+                  <Radio 
+                    size="small" 
+                    checked={currentDiagnosis.distribution === 'localized'}
+                    onChange={() => handleChange('distribution', 'localized')}
+                    sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
+                  />
+                } 
+                label={<Typography sx={{ fontSize: '13px', color: currentDiagnosis.distribution === 'localized' ? '#334155' : '#64748b', fontWeight: 500 }}>Localized (&lt; 30% of teeth)</Typography>} 
+                sx={{ m: 0 }} 
+              />
+              <FormControlLabel 
+                control={
+                  <Radio 
+                    size="small" 
+                    checked={currentDiagnosis.distribution === 'generalized'}
+                    onChange={() => handleChange('distribution', 'generalized')}
+                    sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
+                  />
+                } 
+                label={<Typography sx={{ fontSize: '13px', color: currentDiagnosis.distribution === 'generalized' ? '#334155' : '#64748b', fontWeight: 500 }}>Generalized</Typography>} 
+                sx={{ m: 0 }} 
+              />
+              <FormControlLabel 
+                control={
+                  <Radio 
+                    size="small" 
+                    checked={currentDiagnosis.distribution === 'molar-incisor'}
+                    onChange={() => handleChange('distribution', 'molar-incisor')}
+                    sx={{ p: 0.5, color: '#cbd5e1', '&.Mui-checked': { color: '#2563eb' } }} 
+                  />
+                } 
+                label={<Typography sx={{ fontSize: '13px', color: currentDiagnosis.distribution === 'molar-incisor' ? '#334155' : '#64748b', fontWeight: 500 }}>Molar/Incisor</Typography>} 
+                sx={{ m: 0 }} 
+              />
             </Box>
 
             {/* Periodontal Grading Dropdown */}
@@ -130,7 +231,8 @@ const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFi
               <Typography sx={{ fontWeight: 600, fontSize: '13px', color: '#334155', minWidth: 135 }}>Periodontal Grading:</Typography>
               <Select 
                 size="small" 
-                value="gradeB" 
+                value={currentDiagnosis.grading || ''} 
+                onChange={(e) => handleChange('grading', e.target.value)}
                 sx={{ 
                   height: 32, 
                   fontSize: '13px', 
@@ -144,7 +246,9 @@ const DiagnosisCard = ({ isCompareMode, compareDates, setCompareDates, compareFi
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
                 }} 
               >
-                <MenuItem value="gradeB" sx={{ fontSize: '13px' }}>Grade B</MenuItem>
+                {gradeOptions.map(opt => (
+                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: '13px' }}>{opt.label}</MenuItem>
+                ))}
               </Select>
             </Box>
           </>
