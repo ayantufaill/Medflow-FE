@@ -33,6 +33,7 @@ export const COVERAGE_DATA = {
     { id: 9, label: 'Endodontics', coverage: 80, waiting: 0, notes: '' }
   ],
   periodontics: [
+    { id: 99, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
     { id: 10, label: 'Major', coverage: 50, waiting: 0, notes: '' }
   ],
   implantServices: [
