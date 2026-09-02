@@ -13,11 +13,14 @@ const SyncOfficesDialog = ({ open, onClose }) => {
         sx: { 
           width: '880px',
           maxWidth: 'none',
+          maxHeight: '80vh',
           borderRadius: '12px',
           border: '1px solid #e0e5eb',
           boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.1)',
           m: 2,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }
       }}
     >
@@ -54,7 +57,7 @@ const SyncOfficesDialog = ({ open, onClose }) => {
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ px: '25px', pt: '16px !important', pb: '20px', backgroundColor: '#fff', overflow: 'hidden' }}>
+      <DialogContent sx={{ px: '25px', pt: '16px !important', pb: '20px', backgroundColor: '#fff', overflowY: 'auto', flex: 1 }}>
         <Box sx={{ mb: 4 }}>
           <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#334155' }}>
             Source Office:

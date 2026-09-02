@@ -20,7 +20,7 @@ import EmptyFeeGuideDialog from '../../components/admin/feeguides/EmptyFeeGuideD
 import ReestimateDialog from '../../components/admin/feeguides/ReestimateDialog';
 import EditFeeGuideDialog from '../../components/admin/feeguides/EditFeeGuideDialog';
 import AuditHistoryDialog from '../../components/admin/feeguides/AuditHistoryDialog';
-import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 // Redux
 import {
@@ -199,7 +199,7 @@ const FeeGuides = () => {
         open={auditDialogOpen}
         onClose={() => setAuditDialogOpen(false)}
       />
-      <AdjustmentTypesSyncDialog
+      <SyncOfficesDialog
         open={syncDialogOpen}
         onClose={() => setSyncDialogOpen(false)}
       />

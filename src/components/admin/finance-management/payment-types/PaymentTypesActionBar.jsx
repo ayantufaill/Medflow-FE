@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Checkbox, FormControlLabel, Button } from '@mui/material';
-import { Sync as SyncIcon } from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
 
 const PaymentTypesActionBar = ({ showDeleted, setShowDeleted, onSync }) => {
   return (
@@ -22,19 +22,22 @@ const PaymentTypesActionBar = ({ showDeleted, setShowDeleted, onSync }) => {
           sx={{ m: 0 }}
         />
         <Button 
-          startIcon={<SyncIcon />}
-          size="small"
           variant="contained"
+          disableElevation
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
+          size="small"
           onClick={onSync}
           sx={{
             textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
+            borderRadius: '8px',
+            fontFamily: 'Inter',
+            fontSize: '0.875rem',
             fontWeight: 600,
-            borderRadius: 2,
-            px: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+            backgroundColor: '#2362EF',
+            color: '#fff',
+            px: 3,
+            py: 0.8,
+            '&:hover': { backgroundColor: '#1b52cf' }
           }}
         >
           Sync

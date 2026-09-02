@@ -15,7 +15,7 @@ import {
 import CreditAdjustmentSettings from '../../components/admin/finance-management/adjustment-types/CreditAdjustmentSettings';
 import DebitAdjustmentSettings from '../../components/admin/finance-management/adjustment-types/DebitAdjustmentSettings';
 import FinanceChargeSettings from '../../components/admin/finance-management/adjustment-types/FinanceChargeSettings';
-import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 // Redux
 import {
@@ -177,7 +177,7 @@ const AdjustmentTypes = () => {
         />
       </Box>
 
-      <AdjustmentTypesSyncDialog
+      <SyncOfficesDialog
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />

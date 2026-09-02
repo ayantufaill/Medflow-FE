@@ -3,9 +3,10 @@ import { Box, Typography, Collapse, IconButton, TextField, Button, Table, TableB
 import {
   KeyboardArrowDown as ChevronDownIcon,
   KeyboardArrowRight as ChevronRightIcon,
-  Edit as EditIcon,
-  DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
+
+import editSvg from '../../../../assets/practicesetupicon/editicon.svg';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 import { ProviderGoalTableRow, headerStyle } from './SharedGoalInputs';
 import ProcedureGroupDialog from './ProcedureGroupDialog';
@@ -52,8 +53,8 @@ const ProcedureGroupTable = ({ groups, onAdd, onEdit, onDelete }) => (
           {group.hasMore && <Typography sx={{ fontSize: '0.85rem', color: '#2563eb', cursor: 'pointer', fontWeight: 500 }}>Show more codes...</Typography>}
         </Box>
         <Box sx={{ width: '80px', display: 'flex', justifyContent: 'center', gap: 1 }}>
-          <IconButton size="small" onClick={() => onEdit(idx)} sx={{ color: '#2563eb' }}><EditIcon fontSize="small" /></IconButton>
-          <IconButton size="small" onClick={() => onDelete(idx)} sx={{ color: '#ef4444' }}><DeleteIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => onEdit(idx)} sx={{ color: '#2563eb' }}><img src={editSvg} alt="Edit" style={{ width: 16, height: 16 }} /></IconButton>
+          <IconButton size="small" onClick={() => onDelete(idx)} sx={{ color: '#ef4444' }}><img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} /></IconButton>
         </Box>
       </Box>
     ))}

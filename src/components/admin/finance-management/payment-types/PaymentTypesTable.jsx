@@ -13,7 +13,8 @@ import {
   Button,
   TextField,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const DebouncedNoteField = ({ value, onBlur, ...props }) => {
   const [localVal, setLocalVal] = useState(value || '');
@@ -124,7 +125,7 @@ const PaymentTypesTable = ({
                     </Button>
                   ) : (
                     <IconButton size="small" onClick={() => handleDelete(pt.id)} sx={{ color: '#ef4444' }}>
-                      <DeleteIcon sx={{ fontSize: '1.2rem' }} />
+                      <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   )}
                 </TableCell>

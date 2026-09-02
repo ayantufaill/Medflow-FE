@@ -83,13 +83,14 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
       maxWidth="md"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' } }}
     >
       <Box sx={{
         display: "flex", alignItems: "center", gap: "12px",
         px: "20px", py: "16px",
         borderBottom: "1px solid #e0e5eb",
         backgroundColor: "#f3f8fd",
+        flexShrink: 0,
       }}>
         <Box sx={{
           width: "36px", height: "36px", borderRadius: "8px",
@@ -110,7 +111,7 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
           <CloseIcon />
         </IconButton>
       </Box>
-      <DialogContent sx={{ p: 4, pt: 3 }}>
+      <DialogContent sx={{ p: 4, pt: 3, overflowY: 'auto', flex: 1 }}>
         <TableContainer sx={{ maxHeight: 400, border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Table stickyHeader size="small">
             <TableHead>
@@ -145,7 +146,7 @@ const ClearManualFeeGuideDialog = ({ open, onClose }) => {
           </Table>
         </TableContainer>
       </DialogContent>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
         <Button 
           variant="outlined" 
           sx={{ 

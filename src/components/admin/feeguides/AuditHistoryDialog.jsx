@@ -158,6 +158,9 @@ const AuditHistoryDialog = ({
           borderRadius: "12px",
           overflow: "hidden",
           boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
@@ -170,6 +173,7 @@ const AuditHistoryDialog = ({
           py: "16px",
           borderBottom: "1px solid #e0e5eb",
           backgroundColor: "#f3f8fd",
+          flexShrink: 0,
         }}
       >
         <Box
@@ -226,7 +230,7 @@ const AuditHistoryDialog = ({
         </IconButton>
       </Box>
 
-      <DialogContent sx={{ p: 4 }}>
+      <DialogContent sx={{ p: 4, overflowY: 'auto', flex: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
           <Typography
             sx={{

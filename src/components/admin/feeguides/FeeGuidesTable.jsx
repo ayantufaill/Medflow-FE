@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Box,
   Typography,
@@ -11,15 +10,11 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import {
-  Sync as SyncIcon,
-  DeleteOutline as DeleteIcon,
-  VisibilityOutlined as VisibilityIcon,
-  DescriptionOutlined as DescriptionIcon,
-  EditOutlined as EditIcon,
-  FileDownloadOutlined as ExportIcon,
-  ListAltOutlined as PlansIcon,
-} from '@mui/icons-material';
+import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
+import editSvg from '../../../assets/practicesetupicon/editicon.svg';
+import syncSvg from '../../../assets/claimicons/refreshicon.svg';
+import viewSvg from '../../../assets/usermanagement icons/view.svg';
+import documentsSvg from '../../../assets/practicesetupicon/documents.svg';
 
 const FeeGuidesTable = ({
   feeGuidesData,
@@ -71,37 +66,37 @@ const FeeGuidesTable = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                   <Tooltip title="Export as CSV" arrow>
                     <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onExportCSV(e); }}>
-                      <ExportIcon fontSize="small" />
+                      <img src={documentsSvg} alt="Export" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Sync" arrow>
                     <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onSync(); }}>
-                      <SyncIcon fontSize="small" />
+                      <img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete" arrow>
                     <IconButton size="small" sx={{ color: '#ef4444', '&:hover': { color: '#dc2626', backgroundColor: '#fef2f2' }, padding: '6px' }} onClick={(e) => { e.stopPropagation(); onDelete(row.id); }}>
-                      <DeleteIcon fontSize="small" />
+                      <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Edit" arrow>
                     <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onEdit(row); }}>
-                      <EditIcon fontSize="small" />
+                      <img src={editSvg} alt="Edit" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Visibility" arrow>
                     <IconButton size="small" sx={actionBtnStyle}>
-                      <VisibilityIcon fontSize="small" />
+                      <img src={viewSvg} alt="View" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title={`${row.plans} Plan(s)`} arrow>
                     <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onOpenPlans(row.name); }}>
-                      <PlansIcon fontSize="small" />
+                      <img src={documentsSvg} alt="Plans" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Audit History" arrow>
                     <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onAuditHistory(); }}>
-                      <DescriptionIcon fontSize="small" />
+                      <img src={documentsSvg} alt="Audit History" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>

@@ -3,8 +3,8 @@ import { Box, Typography, Button, IconButton, Collapse } from '@mui/material';
 import {
   KeyboardArrowRight as ChevronRightIcon,
   KeyboardArrowDown as ChevronDownIcon,
-  DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const CoverageGroupItem = ({ group, isExpanded, toggleGroup, categoryId, handleEditGroup, handleDeleteGroup }) => {
   return (
@@ -91,7 +91,7 @@ const CoverageGroupItem = ({ group, isExpanded, toggleGroup, categoryId, handleE
             size="small" 
             sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: '#fef2f2' } }}
           >
-            <DeleteIcon fontSize="small" />
+            <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
           </IconButton>
         </Box>
       </Box>

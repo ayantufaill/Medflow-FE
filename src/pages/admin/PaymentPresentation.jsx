@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material';
-import { Sync as SyncIcon } from '@mui/icons-material';
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 
 import {
   fetchStatementForms,
@@ -19,7 +19,7 @@ import StatementSummarySection from '../../components/admin/finance-management/p
 import NextAppointmentsSection from '../../components/admin/finance-management/payment-presentation/NextAppointmentsSection';
 import DisclaimerSection from '../../components/admin/finance-management/payment-presentation/DisclaimerSection';
 import SavedFormsSidebar from '../../components/admin/finance-management/payment-presentation/SavedFormsSidebar';
-import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 const defaultSettings = {
   headerType: 'detachable',
@@ -180,7 +180,7 @@ const PaymentPresentation = () => {
           Payment Presentation
         </Typography>
         <Button 
-          startIcon={<SyncIcon />}
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
           size="small"
           variant="contained"
           onClick={() => setIsSyncDialogOpen(true)}
@@ -297,7 +297,7 @@ const PaymentPresentation = () => {
         </Box>
       </Box>
 
-      <AdjustmentTypesSyncDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />
