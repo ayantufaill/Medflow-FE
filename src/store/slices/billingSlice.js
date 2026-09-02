@@ -90,10 +90,7 @@ export const fetchLedgerItems = createAsyncThunk(
         const rawBal   = Number(invoice.balanceDue   || 0);
         const rawPt    = Number(invoice.patientPortion   || 0);
         const rawIns   = Number(invoice.insurancePortion || 0);
-        const originalTotal = rawPaid > 0
-          ? rawPaid + rawBal          // payment exists → paidAmount + remaining = original charge
-          : rawTotal > 0 ? rawTotal   // no payment yet, backend still has original totalAmount
-          : rawPt + rawIns;           // last resort: sum of portions
+        const originalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
 
         // Map payments and claims associated with this invoice
         const invoicePms = payments.filter((p) => 
@@ -108,7 +105,7 @@ export const fetchLedgerItems = createAsyncThunk(
         // Find adjustments associated with this invoice
         const invoiceAdjs = adjustments.filter((a) => {
           if (!a.notes) return false;
-          return a.notes.includes(`Invoice #${invoice._id || invoice.id}`);
+          return a.notes.includes(`Invoice #${invoice._id}`) || (invoice.id && a.notes.includes(`Invoice #${invoice.id}`));
         });
 
         // Track linked adjustment IDs so we don't render them as standalone items later
@@ -256,7 +253,7 @@ export const fetchLedgerItems = createAsyncThunk(
             String(invoice.status || '').toLowerCase() !== 'voided' &&
             String(invoice.status || '').toLowerCase() !== 'void',
           summary: {
-            insWo:    '$0.00',
+            insWo:    `$${(Number(invoice.writeoffAmount) || 0).toFixed(2)}`,
             ptBal:    `$${adjustedPtBal.toFixed(2)}`,
             insBal:   `$${adjustedInsBal.toFixed(2)}`,
             invBal:   `$${adjustedInvBal.toFixed(2)}`,

@@ -124,7 +124,7 @@ const AddCoveragePage = () => {
   const planFeeGuideOptions = feeGuides
     .filter(fg => !fg.isHidden)
     .map(fg => ({
-      value: fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id,
+      value: String(fg._id || fg.FeeSchedNum || fg.feeSchedNum || fg.id),
       label: fg.Description || fg.description || fg.name || 'Unknown Fee Guide'
     }))
     .filter(option => {

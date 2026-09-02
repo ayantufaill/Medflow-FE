@@ -27,8 +27,20 @@ const FormInput = ({ label, required, children, labelEndAdornment, renderInput, 
           sx={{
             bgcolor: '#f8f9fc',
             '& .MuiInputBase-root': {
-              fontSize: '14px', // Standardized input text size
               height: '36px'
+            },
+            '& .MuiSelect-select': {
+              fontSize: '14px !important',
+              color: '#111827 !important',
+              display: 'flex',
+              alignItems: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              paddingTop: '0 !important',
+              paddingBottom: '0 !important',
+              height: '100% !important',
+              minHeight: 'unset !important'
             },
             '& fieldset': { borderColor: '#DFE5EC' },
             ...(props.sx || {})
