@@ -26,7 +26,7 @@ import {
 import InsurancePlansActionBar from '../../components/admin/insurance-management/insurance-plans/InsurancePlansActionBar';
 import InsurancePlansTable from '../../components/admin/insurance-management/insurance-plans/InsurancePlansTable';
 import PlanFormDialog from '../../components/admin/insurance-management/insurance-plans/PlanFormDialog';
-import CarrierSyncDialog from '../../components/admin/insurance-management/insurance-carriers/CarrierSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 const InsurancePlans = () => {
   const navigate = useNavigate();
@@ -208,7 +208,7 @@ const InsurancePlans = () => {
         confirmColor="error"
       />
 
-      <CarrierSyncDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />

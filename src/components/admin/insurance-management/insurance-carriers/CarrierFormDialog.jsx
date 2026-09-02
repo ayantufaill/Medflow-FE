@@ -17,7 +17,8 @@ import {
   IconButton,
   Box
 } from '@mui/material';
-import { Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import docSvg from '../../../../assets/practicesetupicon/documents.svg';
 import { US_STATES, STATE_CITIES } from '../../../../constants/usAddressData';
 
 const formatPhoneInput = (value) => {
@@ -59,10 +60,10 @@ const CarrierFormDialog = ({
           backgroundColor: "#eff6ff",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          <img src={docSvg} alt="Document" style={{ width: 20, height: 20, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
-          <Typography sx={{ 
+          <Typography sx={{
             display: "flex", flexDirection: "column", justifyContent: "flex-start",
             alignItems: "flex-start", height: "24px", padding: "0px",
             fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f",
@@ -70,7 +71,7 @@ const CarrierFormDialog = ({
           }}>
             {title}
           </Typography>
-          <Typography sx={{ 
+          <Typography sx={{
             fontWeight: 400, lineHeight: "16.25px", letterSpacing: "0px",
             textAlign: "left", color: "#5c646f", fontFamily: "Inter", fontSize: "11px",
           }}>
@@ -224,7 +225,7 @@ const CarrierFormDialog = ({
               )}
             />
           </Grid>
-          
+
           <Grid item xs={4}>
             <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: '#374151', mb: '4px' }}>Zip/Postal Code:</Typography>
             <TextField
@@ -299,10 +300,10 @@ const CarrierFormDialog = ({
         </Grid>
       </DialogContent>
       <DialogActions sx={{ px: "20px", py: "12px", borderTop: '1px solid #e0e5eb', gap: 1.5, justifyContent: 'flex-end' }}>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={onClose}
-          sx={{ 
+          sx={{
             fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
             textTransform: "none", borderRadius: "8px",
             border: "1px solid #d0d5dd", color: "#374151",
@@ -312,10 +313,10 @@ const CarrierFormDialog = ({
         >
           Cancel
         </Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={onSave}
-          sx={{ 
+          sx={{
             fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
             textTransform: "none", borderRadius: "8px",
             backgroundColor: "#2262ef", color: "#fff",
