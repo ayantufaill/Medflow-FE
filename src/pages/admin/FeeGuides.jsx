@@ -7,7 +7,7 @@ import {
   Button,
   CircularProgress,
 } from '@mui/material';
-import { Sync as SyncIcon } from '@mui/icons-material';
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 
 // Sub-components
 import FeeGuidesActionBar from '../../components/admin/feeguides/FeeGuidesActionBar';
@@ -125,17 +125,19 @@ const FeeGuides = () => {
           </Typography>
         </Box>
         <Button
-          variant="contained"
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
+          size="small"
+          variant="outlined"
           onClick={() => setSyncDialogOpen(true)}
-          startIcon={<SyncIcon sx={{ fontSize: '18px' }} />}
           sx={{
-            fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
-            textTransform: "none", borderRadius: "8px",
-            backgroundColor: "#2262ef", color: "#fff",
-            height: 38,
-            px: "20px",
-            boxShadow: "none",
-            "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            textTransform: 'none',
+            color: '#1e293b',
+            borderColor: '#e2e8f0',
+            fontWeight: 600,
+            borderRadius: 2,
+            height: 36,
+            px: 2,
+            '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
           }}
         >
           Sync

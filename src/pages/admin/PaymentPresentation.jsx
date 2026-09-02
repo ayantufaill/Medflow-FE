@@ -180,19 +180,19 @@ const PaymentPresentation = () => {
           Payment Presentation
         </Typography>
         <Button 
-          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
           size="small"
-          variant="contained"
+          variant="outlined"
           onClick={() => setIsSyncDialogOpen(true)}
           sx={{
             textTransform: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
+            color: '#1e293b',
+            borderColor: '#e2e8f0',
             fontWeight: 600,
             borderRadius: 2,
+            height: 36,
             px: 2,
-            boxShadow: 'none',
-            '&:hover': { backgroundColor: '#1d4ed8', boxShadow: 'none' }
+            '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
           }}
         >
           Sync

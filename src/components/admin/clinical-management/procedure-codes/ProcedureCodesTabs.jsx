@@ -1,5 +1,5 @@
 import { Box, Tabs, Tab, Button } from '@mui/material';
-import { Sync as SyncIcon } from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
 
 const ProcedureCodesTabs = ({ activeTab, handleTabChange, handleOpenSyncDialog }) => {
   return (
@@ -32,17 +32,20 @@ const ProcedureCodesTabs = ({ activeTab, handleTabChange, handleOpenSyncDialog }
         <Tab label="Eligibility Used ADA Codes" />
       </Tabs>
       <Button
-        variant="contained"
+        startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
+        size="small"
+        variant="outlined"
         onClick={handleOpenSyncDialog}
-        startIcon={<SyncIcon />}
         sx={{
           mb: 1.5,
-          fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
-          textTransform: "none", borderRadius: "8px",
-          backgroundColor: "#2262ef", color: "#fff",
-          px: "16px", py: "7px",
-          transition: 'all 0.15s',
-          '&:hover': { backgroundColor: '#1a50cc' }
+          textTransform: 'none',
+          color: '#1e293b',
+          borderColor: '#e2e8f0',
+          fontWeight: 600,
+          borderRadius: 2,
+          height: 36,
+          px: 2,
+          '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
         }}
       >
         Sync

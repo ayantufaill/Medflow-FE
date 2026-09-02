@@ -22,22 +22,19 @@ const PaymentTypesActionBar = ({ showDeleted, setShowDeleted, onSync }) => {
           sx={{ m: 0 }}
         />
         <Button 
-          variant="contained"
-          disableElevation
-          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
           size="small"
+          variant="outlined"
           onClick={onSync}
           sx={{
             textTransform: 'none',
-            borderRadius: '8px',
-            fontFamily: 'Inter',
-            fontSize: '0.875rem',
+            color: '#1e293b',
+            borderColor: '#e2e8f0',
             fontWeight: 600,
-            backgroundColor: '#2362EF',
-            color: '#fff',
-            px: 3,
-            py: 0.8,
-            '&:hover': { backgroundColor: '#1b52cf' }
+            borderRadius: 2,
+            height: 36,
+            px: 2,
+            '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
           }}
         >
           Sync

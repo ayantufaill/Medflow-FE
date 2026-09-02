@@ -36,8 +36,8 @@ import {
   Paper,
   IconButton,
 } from '@mui/material';
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 import {
-  Sync as SyncIcon,
   InfoOutlined as InfoIcon,
   ChevronRight as ChevronRightIcon,
   Check as CheckIcon,
@@ -1372,7 +1372,7 @@ const ProcedureCodesManagement = () => {
             '&:hover': { textDecoration: 'underline' }
           }}
         >
-          <SyncIcon sx={{ fontSize: '0.9rem' }} />
+          <img src={syncSvg} alt="Sync" style={{ width: 14, height: 14 }} />
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>Sync</Typography>
         </Box>
       </Box>

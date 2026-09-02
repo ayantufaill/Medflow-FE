@@ -14,10 +14,10 @@ import {
   Paper,
 } from '@mui/material';
 import {
-  Restore as RestoreIcon,
 } from '@mui/icons-material';
 import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
 import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import auditSvg from '../../../../assets/scheduleconfigurationicon/appointmentchecklist.svg';
 
 const InsurancePlansTable = ({ 
   plans, 
@@ -116,9 +116,8 @@ const InsurancePlansTable = ({
                     <IconButton 
                       size="small" 
                       onClick={(e) => { e.stopPropagation(); onAudit(plan); }}
-                      sx={{ color: '#64748b' }}
                     >
-                      <RestoreIcon sx={{ fontSize: '1.1rem' }} />
+                      <img src={auditSvg} alt="Audit" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                     </IconButton>
 
                     <IconButton 
