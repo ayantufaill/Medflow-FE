@@ -3,12 +3,12 @@ import { Box, Typography, TextField, InputAdornment, Button, IconButton, Link } 
 import {
   Search as SearchIcon,
   Add as AddIcon,
-  PrintOutlined as PrintIcon,
 } from '@mui/icons-material';
+import printSvg from '../../../../assets/timeclock/print.svg';
 
 const MembershipPlansActionBar = ({ search, setSearch, onAddPlan, view, setView }) => {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, '@media print': { display: 'none' } }}>
       <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: '#1e293b' }}>
         Membership Plans
       </Typography>
@@ -16,6 +16,7 @@ const MembershipPlansActionBar = ({ search, setSearch, onAddPlan, view, setView 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Link
           component="button"
+          onClick={() => window.print()}
           sx={{
             fontSize: '0.85rem',
             color: '#64748b',
@@ -26,7 +27,7 @@ const MembershipPlansActionBar = ({ search, setSearch, onAddPlan, view, setView 
             '&:hover': { color: '#334155' }
           }}
         >
-          <PrintIcon sx={{ fontSize: '1.2rem' }} />
+          <img src={printSvg} alt="Print" style={{ width: 18, height: 18, filter: 'invert(40%) sepia(10%) saturate(687%) hue-rotate(174deg) brightness(91%) contrast(93%)' }} />
           Print
         </Link>
 

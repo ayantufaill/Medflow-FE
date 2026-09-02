@@ -13,11 +13,8 @@ import {
   Link,
   Paper,
 } from '@mui/material';
-import {
-  Delete as DeleteIcon,
-  Sync as SyncIcon,
-  Edit as EditIcon,
-} from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const InsuranceCarriersTable = ({ companies, loading, onEdit, onDelete, onSync }) => {
   return (
@@ -70,7 +67,7 @@ const InsuranceCarriersTable = ({ companies, loading, onEdit, onDelete, onSync }
                       onClick={(e) => { e.stopPropagation(); onSync(); }}
                       sx={{ fontSize: '0.85rem', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
-                      <SyncIcon sx={{ fontSize: '1rem' }} />
+                      <img src={syncSvg} alt="Sync" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(29%) sepia(87%) saturate(2227%) hue-rotate(215deg) brightness(96%) contrast(92%)' }} />
                       Sync
                     </Link>
 
@@ -87,7 +84,7 @@ const InsuranceCarriersTable = ({ companies, loading, onEdit, onDelete, onSync }
                       onClick={(e) => { e.stopPropagation(); onDelete(company._id || company.id, company.name); }}
                       sx={{ color: '#ef4444' }}
                     >
-                      <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                      <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Box>
                 </TableCell>

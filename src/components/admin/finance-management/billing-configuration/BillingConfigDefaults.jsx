@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Select, MenuItem, TextField } from '@mui/material';
+import { Box, Typography, MenuItem, TextField } from '@mui/material';
+import CustomSelect from '../../../common/CustomSelect';
 
 const BillingConfigDefaults = ({ formData, handleChange, setFormData }) => {
   return (
@@ -17,19 +18,14 @@ const BillingConfigDefaults = ({ formData, handleChange, setFormData }) => {
           <Typography sx={{ fontSize: '0.85rem', color: '#475569', width: '200px', fontWeight: 600 }}>
             Default Billing Type:
           </Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={formData.defaultBillingType || 'Standard'}
             onChange={handleChange('defaultBillingType')}
-            sx={{
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '250px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '250px' }}
           >
             <MenuItem value="Standard">Standard</MenuItem>
-          </Select>
+          </CustomSelect>
         </Box>
 
         {/* Default Practice Service */}
@@ -37,20 +33,15 @@ const BillingConfigDefaults = ({ formData, handleChange, setFormData }) => {
           <Typography sx={{ fontSize: '0.85rem', color: '#475569', width: '200px', fontWeight: 600 }}>
             Default Practice Service:
           </Typography>
-          <Select
+          <CustomSelect
             size="small"
             displayEmpty
             value={formData.defaultPracticeService || ''}
             onChange={handleChange('defaultPracticeService')}
-            sx={{
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '250px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '250px' }}
           >
             <MenuItem value="" disabled>Select Service</MenuItem>
-          </Select>
+          </CustomSelect>
         </Box>
 
         {/* Default Billing Provider */}
@@ -58,19 +49,14 @@ const BillingConfigDefaults = ({ formData, handleChange, setFormData }) => {
           <Typography sx={{ fontSize: '0.85rem', color: '#475569', width: '200px', fontWeight: 600 }}>
             Default Billing Provider:
           </Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={formData.defaultBillingProvider || 'Treating Provider'}
             onChange={handleChange('defaultBillingProvider')}
-            sx={{
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '250px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '250px' }}
           >
             <MenuItem value="Treating Provider">Treating Provider</MenuItem>
-          </Select>
+          </CustomSelect>
         </Box>
 
         {/* Statement Version */}
@@ -78,20 +64,15 @@ const BillingConfigDefaults = ({ formData, handleChange, setFormData }) => {
           <Typography sx={{ fontSize: '0.85rem', color: '#475569', width: '200px', fontWeight: 600 }}>
             Statement Version:
           </Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={formData.statementVersion || '2'}
             onChange={handleChange('statementVersion')}
-            sx={{
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '100px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '100px' }}
           >
             <MenuItem value="1">1</MenuItem>
             <MenuItem value="2">2</MenuItem>
-          </Select>
+          </CustomSelect>
         </Box>
 
         {/* Bank Account Number */}

@@ -28,6 +28,7 @@ import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
 import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
+import { invoiceService } from "../../services/invoice.service";
 
 const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
@@ -125,9 +126,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         ]);
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
+          console.log("Got estimate from backend for new procedure:", est);
           newProcedure.insPortion = `$${Number(est.insPortion || 0).toFixed(2)}`;
           newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
-          newProcedure.balance = `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`;
+          newProcedure.writeoff = `$${Number(est.writeoff || 0).toFixed(2)}`;
+          newProcedure.balance = `$${fee.toFixed(2)}`;
         }
       } catch (err) {
         console.warn("Failed to fetch estimate for procedure:", err);
@@ -206,7 +209,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               ...p,
               insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
               ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
-              balance: `$${(Number(est.insPortion || 0) + Number(est.ptPortion || 0)).toFixed(2)}`
+              writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+              balance: `$${numCharge.toFixed(2)}`
             };
           }));
         }

@@ -11,7 +11,7 @@ import {
 } from '../../store/slices/clinicalManagementSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { Box, Typography, Button } from '@mui/material';
-import { Sync as SyncIcon } from '@mui/icons-material';
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 
 import { radius, fontSize, fontWeight } from '../../constants/styles';
 import { COLORS } from '../../constants/colors';
@@ -237,23 +237,24 @@ const PrescriptionTemplates = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<SyncIcon />}
-            onClick={handleOpenSyncDialog}
-            sx={{
-              textTransform: 'none',
-              borderRadius: radius.md,
-              fontFamily: 'Inter',
-              fontSize: fontSize.base,
-              fontWeight: fontWeight.semibold,
-              color: COLORS.TEXT_MUTED,
-              borderColor: COLORS.BORDER,
-              '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.TEXT_MUTED }
-            }}
-          >
-            Sync
-          </Button>
+            <Button
+              startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
+              size="small"
+              variant="outlined"
+              onClick={handleOpenSyncDialog}
+              sx={{
+                textTransform: 'none',
+                color: '#1e293b',
+                borderColor: '#e2e8f0',
+                fontWeight: 600,
+                borderRadius: 2,
+                height: 36,
+                px: 2,
+                '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
+              }}
+            >
+              Sync
+            </Button>
           <Button
             variant="contained"
             disableElevation

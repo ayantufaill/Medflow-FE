@@ -55,13 +55,14 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
       maxWidth="lg"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' } }}
     >
       <Box sx={{
         display: "flex", alignItems: "center", gap: "12px",
         px: "20px", py: "16px",
         borderBottom: "1px solid #e0e5eb",
         backgroundColor: "#f3f8fd",
+        flexShrink: 0,
       }}>
         <Box sx={{
           width: "36px", height: "36px", borderRadius: "8px",
@@ -82,7 +83,7 @@ const PlansDialog = ({ open, onClose, selectedFeeGuide }) => {
           <CloseIcon />
         </IconButton>
       </Box>
-      <DialogContent sx={{ p: 4, mt: 1 }}>
+      <DialogContent sx={{ p: 4, mt: 1, overflowY: 'auto', flex: 1 }}>
         <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 500, color: "#374151", mb: "6px" }}>
           Insurance Plans:
         </Typography>

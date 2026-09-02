@@ -16,10 +16,10 @@ import {
   CardContent,
 } from '@mui/material';
 import {
-  Delete as DeleteIcon,
-  Sync as SyncIcon,
-  AssignmentTurnedIn as AuditIcon,
 } from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import auditSvg from '../../../../assets/scheduleconfigurationicon/appointmentchecklist.svg';
 
 const MembershipPlansTable = ({ plans, loading, view, onDelete, onSync, onAudit }) => {
   if (view === 'grid') {
@@ -51,14 +51,14 @@ const MembershipPlansTable = ({ plans, loading, view, onDelete, onSync, onAudit 
                   {plan.name}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => onSync()} sx={{ color: '#2563eb', p: 0.5 }}>
-                    <SyncIcon sx={{ fontSize: '1rem' }} />
+                  <IconButton size="small" onClick={() => onSync()} sx={{ p: 0.5 }}>
+                    <img src={syncSvg} alt="Sync" style={{ width: 14, height: 14, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                   </IconButton>
-                  <IconButton size="small" onClick={() => onAudit()} sx={{ color: '#64748b', p: 0.5 }}>
-                    <AuditIcon sx={{ fontSize: '1rem' }} />
+                  <IconButton size="small" onClick={() => onAudit()} sx={{ p: 0.5 }}>
+                    <img src={auditSvg} alt="Audit" style={{ width: 14, height: 14, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                   </IconButton>
                   <IconButton size="small" onClick={() => onDelete(plan.id, plan.name)} sx={{ color: '#ef4444', p: 0.5 }}>
-                    <DeleteIcon sx={{ fontSize: '1rem' }} />
+                    <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16, filter: 'invert(39%) sepia(61%) saturate(2359%) hue-rotate(338deg) brightness(97%) contrast(94%)' }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -127,14 +127,14 @@ const MembershipPlansTable = ({ plans, loading, view, onDelete, onSync, onAudit 
                       onClick={() => onSync()}
                       sx={{ fontSize: '0.85rem', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
-                      <SyncIcon sx={{ fontSize: '1rem' }} />
+                      <img src={syncSvg} alt="Sync" style={{ width: 14, height: 14, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                       Sync
                     </Link>
-                    <IconButton size="small" onClick={() => onAudit()} sx={{ color: '#64748b' }}>
-                      <AuditIcon sx={{ fontSize: '1.1rem' }} />
+                    <IconButton size="small" onClick={() => onAudit()}>
+                      <img src={auditSvg} alt="Audit" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                     </IconButton>
-                    <IconButton size="small" onClick={() => onDelete(plan.id, plan.name)} sx={{ color: '#ef4444' }}>
-                      <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                    <IconButton size="small" onClick={() => onDelete(plan)}>
+                      <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16, filter: 'invert(39%) sepia(61%) saturate(2359%) hue-rotate(338deg) brightness(97%) contrast(94%)' }} />
                     </IconButton>
                   </Box>
                 </TableCell>

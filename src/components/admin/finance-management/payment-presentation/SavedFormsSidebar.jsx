@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Paper, Typography, IconButton } from '@mui/material';
-import { DeleteOutline as DeleteIcon } from '@mui/icons-material';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const SavedFormsSidebar = ({ forms, activeFormId, handleSelectForm, handleCreateNew, handleDelete }) => {
   return (
@@ -47,7 +47,7 @@ const SavedFormsSidebar = ({ forms, activeFormId, handleSelectForm, handleCreate
                   onClick={(e) => { e.stopPropagation(); handleDelete(form.id); }} 
                   sx={{ color: '#ef4444', p: 0.5 }}
                 >
-                  <DeleteIcon fontSize="1.2rem" />
+                  <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
                 </IconButton>
               </Box>
             </Box>

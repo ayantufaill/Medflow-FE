@@ -21,10 +21,11 @@ import {
   Checkbox
 } from '@mui/material';
 import {
-  Sync as SyncIcon,
   Refresh as RefreshIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon
 } from '@mui/icons-material';
+
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 
 import DeleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
 
@@ -350,20 +351,42 @@ const TreatmentPlanPresentation = () => {
 
         {/* Action Icons */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Box
+          <Button
+            startIcon={<RefreshIcon sx={{ fontSize: '16px' }} />}
+            size="small"
+            variant="outlined"
             onClick={handleRefresh}
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#3b82f6', cursor: 'pointer', '&:hover': { color: '#2563eb' } }}
+            sx={{
+              textTransform: 'none',
+              color: '#1e293b',
+              borderColor: '#e2e8f0',
+              fontWeight: 600,
+              borderRadius: 2,
+              height: 36,
+              px: 2,
+              '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
+            }}
           >
-            <RefreshIcon sx={{ fontSize: '1.2rem' }} />
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Refresh</Typography>
-          </Box>
-          <Box
+            Refresh
+          </Button>
+          <Button
+            startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
+            size="small"
+            variant="outlined"
             onClick={handleOpenSyncDialog}
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#3b82f6', cursor: 'pointer', '&:hover': { color: '#2563eb' } }}
+            sx={{
+              textTransform: 'none',
+              color: '#1e293b',
+              borderColor: '#e2e8f0',
+              fontWeight: 600,
+              borderRadius: 2,
+              height: 36,
+              px: 2,
+              '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
+            }}
           >
-            <SyncIcon sx={{ fontSize: '1.2rem' }} />
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Sync</Typography>
-          </Box>
+            Sync
+          </Button>
         </Box>
       </Box>
 
@@ -555,7 +578,7 @@ const TreatmentPlanPresentation = () => {
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenSyncDialog(); }} sx={{ p: 0.5, color: '#94a3b8', '&:hover': { color: '#3b82f6', backgroundColor: '#e0f2fe' } }}>
-                          <SyncIcon sx={{ fontSize: '1rem' }} />
+                          <img src={syncSvg} alt="Sync" width="16" height="16" style={{ opacity: 0.8 }} />
                         </IconButton>
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteForm(form.name); }} sx={{ p: 0.5, color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: '#fee2e2' } }}>
                           <img src={DeleteSvg} alt="Delete" width="16" height="16" style={{ opacity: 0.8 }} />

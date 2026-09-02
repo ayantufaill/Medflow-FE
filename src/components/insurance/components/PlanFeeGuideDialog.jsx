@@ -4,7 +4,8 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, IconButton, Box, Typography, Collapse
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, Close as CloseIcon, DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
+import { KeyboardArrowDown, KeyboardArrowUp, Close as CloseIcon } from '@mui/icons-material';
+import docSvg from '../../../assets/practicesetupicon/documents.svg';
 
 const PlanFeeGuideDialog = ({ open, onClose, planName }) => {
   const [expandedRows, setExpandedRows] = useState({});
@@ -48,7 +49,7 @@ const PlanFeeGuideDialog = ({ open, onClose, planName }) => {
           backgroundColor: "#eff6ff",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          <img src={docSvg} alt="Document" style={{ width: 20, height: 20, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
           <Typography sx={{ 
