@@ -14,10 +14,10 @@ import {
   Paper,
 } from '@mui/material';
 import {
-  Delete as DeleteIcon,
-  Sync as SyncIcon,
-  Restore as RestoreIcon,
 } from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
+import auditSvg from '../../../../assets/scheduleconfigurationicon/appointmentchecklist.svg';
 
 const InsurancePlansTable = ({ 
   plans, 
@@ -109,24 +109,22 @@ const InsurancePlansTable = ({
                       onClick={(e) => { e.stopPropagation(); onSync(plan); }}
                       sx={{ fontSize: '0.85rem', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
-                      <SyncIcon sx={{ fontSize: '1rem' }} />
+                      <img src={syncSvg} alt="Sync" style={{ width: 14, height: 14, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                       Sync
                     </Link>
                     
                     <IconButton 
                       size="small" 
                       onClick={(e) => { e.stopPropagation(); onAudit(plan); }}
-                      sx={{ color: '#64748b' }}
                     >
-                      <RestoreIcon sx={{ fontSize: '1.1rem' }} />
+                      <img src={auditSvg} alt="Audit" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(3088%) hue-rotate(213deg) brightness(96%) contrast(93%)' }} />
                     </IconButton>
 
                     <IconButton 
                       size="small" 
                       onClick={(e) => { e.stopPropagation(); onDelete(plan.id, plan.groupName); }}
-                      sx={{ color: '#ef4444' }}
                     >
-                      <DeleteIcon sx={{ fontSize: '1.1rem' }} />
+                      <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16, filter: 'invert(39%) sepia(61%) saturate(2359%) hue-rotate(338deg) brightness(97%) contrast(94%)' }} />
                     </IconButton>
                   </Box>
                 </TableCell>

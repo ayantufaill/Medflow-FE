@@ -214,13 +214,24 @@ const AdminPage = () => {
   }
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 65px)' }}>
-      <Paper elevation={0} sx={{ backgroundColor: '#fff', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'visible' }}>
+    <Box sx={{ 
+      p: 3, 
+      backgroundColor: '#f5f5f5', 
+      minHeight: 'calc(100vh - 65px)',
+      '@media print': { p: 0, backgroundColor: 'transparent', minHeight: 'auto' }
+    }}>
+      <Paper elevation={0} sx={{ 
+        backgroundColor: '#fff', 
+        borderRadius: 2, 
+        border: '1px solid #e0e0e0', 
+        overflow: 'visible',
+        '@media print': { border: 'none', borderRadius: 0, backgroundColor: 'transparent', boxShadow: 'none' }
+      }}>
 
         {/* Main tab bar + sub-nav wrapper */}
         <Box
           onMouseLeave={() => setHoveredTab(null)}
-          sx={{ position: 'relative', pt: 1 }}
+          sx={{ position: 'relative', pt: 1, '@media print': { display: 'none' } }}
         >
           {/* Admin Title */}
           <Typography variant="h6" fontWeight={700} sx={{ px: 3, pt: 2, pb: 1, color: '#111' }}>

@@ -21,7 +21,7 @@ import {
 import InsuranceCarriersActionBar from '../../components/admin/insurance-management/insurance-carriers/InsuranceCarriersActionBar';
 import InsuranceCarriersTable from '../../components/admin/insurance-management/insurance-carriers/InsuranceCarriersTable';
 import CarrierFormDialog from '../../components/admin/insurance-management/insurance-carriers/CarrierFormDialog';
-import CarrierSyncDialog from '../../components/admin/insurance-management/insurance-carriers/CarrierSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 const InsuranceCarriers = () => {
   const dispatch = useDispatch();
@@ -213,7 +213,7 @@ const InsuranceCarriers = () => {
         getProviderName={getProviderName}
       />
 
-      <CarrierSyncDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />

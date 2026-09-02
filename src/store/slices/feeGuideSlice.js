@@ -144,6 +144,18 @@ export const roundFeeGuideFees = createAsyncThunk(
   }
 );
 
+export const fetchFeeGuideAuditHistory = createAsyncThunk(
+  'feeGuides/fetchAuditHistory',
+  async (id, { rejectWithValue }) => {
+    try {
+      const data = await feeService.getFeeGuideAuditHistory(id);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const savedDefaultId = localStorage.getItem('defaultFeeGuideId');
 
 const initialState = {
@@ -162,6 +174,9 @@ const initialState = {
   procedureButtons: [],
   procedureButtonsLoading: false,
   procedureButtonsError: null,
+  auditHistory: [],
+  auditHistoryLoading: false,
+  auditHistoryError: null,
 };
 
 const feeGuideSlice = createSlice({
@@ -264,6 +279,19 @@ const feeGuideSlice = createSlice({
       .addCase(fetchProcedureButtons.rejected, (state, action) => {
         state.procedureButtonsLoading = false;
         state.procedureButtonsError = action.payload;
+      })
+      // Fetch Audit History
+      .addCase(fetchFeeGuideAuditHistory.pending, (state) => {
+        state.auditHistoryLoading = true;
+        state.auditHistoryError = null;
+      })
+      .addCase(fetchFeeGuideAuditHistory.fulfilled, (state, action) => {
+        state.auditHistoryLoading = false;
+        state.auditHistory = action.payload || [];
+      })
+      .addCase(fetchFeeGuideAuditHistory.rejected, (state, action) => {
+        state.auditHistoryLoading = false;
+        state.auditHistoryError = action.payload;
       });
   },
 });
@@ -280,5 +308,8 @@ export const selectProcedureCodes = (state) => state.feeGuides.procedureCodes;
 export const selectProcedureCodesLoading = (state) => state.feeGuides.procedureCodesLoading;
 export const selectProcedureButtons = (state) => state.feeGuides.procedureButtons;
 export const selectProcedureButtonsLoading = (state) => state.feeGuides.procedureButtonsLoading;
+export const selectFeeGuideAuditHistory = (state) => state.feeGuides.auditHistory;
+export const selectFeeGuideAuditHistoryLoading = (state) => state.feeGuides.auditHistoryLoading;
+export const selectFeeGuideAuditHistoryError = (state) => state.feeGuides.auditHistoryError;
 
 export default feeGuideSlice.reducer;

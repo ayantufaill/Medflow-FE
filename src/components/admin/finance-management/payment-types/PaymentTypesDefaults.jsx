@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Select, MenuItem } from '@mui/material';
+import { Box, Typography, MenuItem } from '@mui/material';
+import CustomSelect from '../../../common/CustomSelect';
 
 const PaymentTypesDefaults = ({ defaultTypes, paymentTypes, handleDefaultChange }) => {
   return (
@@ -16,60 +17,45 @@ const PaymentTypesDefaults = ({ defaultTypes, paymentTypes, handleDefaultChange 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', width: '250px' }}>Patient Payment Default Type:</Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={defaultTypes.patient || ''}
             onChange={(e) => handleDefaultChange('patient', e.target.value)}
-            sx={{ 
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '200px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '200px' }}
           >
             {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
               <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
             ))}
-          </Select>
+          </CustomSelect>
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', width: '250px' }}>Insurance Payment Default Type:</Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={defaultTypes.insurance || ''}
             onChange={(e) => handleDefaultChange('insurance', e.target.value)}
-            sx={{ 
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '200px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '200px' }}
           >
             {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
               <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
             ))}
-          </Select>
+          </CustomSelect>
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', width: '250px' }}>Family Payment Default Type:</Typography>
-          <Select
+          <CustomSelect
             size="small"
             value={defaultTypes.family || ''}
             onChange={(e) => handleDefaultChange('family', e.target.value)}
-            sx={{ 
-              backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '200px',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-            }}
+            sx={{ width: '200px' }}
           >
             <MenuItem value="">None</MenuItem>
             {paymentTypes.filter(pt => !pt.isHidden).map(pt => (
               <MenuItem key={pt.id} value={pt.type}>{pt.type}</MenuItem>
             ))}
-          </Select>
+          </CustomSelect>
         </Box>
       </Box>
     </Box>

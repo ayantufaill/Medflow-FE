@@ -1,5 +1,6 @@
 import React from 'react';
-import { Grid, Typography, RadioGroup, FormControlLabel, Radio, Box, Checkbox, Select, MenuItem } from '@mui/material';
+import { Grid, Typography, RadioGroup, FormControlLabel, Radio, Box, Checkbox, MenuItem } from '@mui/material';
+import CustomSelect from '../../../common/CustomSelect';
 import FormSection from './FormSection';
 
 const HeaderAreaSection = ({ show, onToggle, formSettings, handleSettingChange }) => {
@@ -25,9 +26,9 @@ const HeaderAreaSection = ({ show, onToggle, formSettings, handleSettingChange }
             <FormControlLabel control={<Checkbox size="small" checked={formSettings.officePhone} onChange={(e) => handleSettingChange('officePhone', e.target.checked)} sx={{ color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>Office Phone Number</Typography>} />
             <FormControlLabel control={<Checkbox size="small" checked={formSettings.officeAddress} onChange={(e) => handleSettingChange('officeAddress', e.target.checked)} sx={{ color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>Address</Typography>} />
             <Box sx={{ ml: 3 }}>
-              <Select size="small" value={formSettings.officeAddressValue} onChange={(e) => handleSettingChange('officeAddressValue', e.target.value)} sx={{ height: 30, fontSize: '0.8rem', width: 140 }}>
+              <CustomSelect size="small" value={formSettings.officeAddressValue} onChange={(e) => handleSettingChange('officeAddressValue', e.target.value)} sx={{ width: 140 }}>
                 <MenuItem value="office1">Office Address</MenuItem>
-              </Select>
+              </CustomSelect>
             </Box>
             <FormControlLabel control={<Checkbox size="small" checked={formSettings.officeWebsite} onChange={(e) => handleSettingChange('officeWebsite', e.target.checked)} sx={{ color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>Office Website</Typography>} />
             <FormControlLabel control={<Checkbox size="small" checked={formSettings.officeEmail} onChange={(e) => handleSettingChange('officeEmail', e.target.checked)} sx={{ color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>Office Email</Typography>} />
@@ -48,9 +49,9 @@ const HeaderAreaSection = ({ show, onToggle, formSettings, handleSettingChange }
           <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, mb: 1, color: '#334155' }}>General</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <FormControlLabel control={<Checkbox size="small" checked={formSettings.dueDate} onChange={(e) => handleSettingChange('dueDate', e.target.checked)} sx={{ color: '#2563eb' }} />} label={<Typography sx={{ fontSize: '0.8rem', color: '#475569' }}>Due Date</Typography>} />
-            <Select size="small" value={formSettings.dueDateValue} onChange={(e) => handleSettingChange('dueDateValue', e.target.value)} sx={{ height: 30, fontSize: '0.8rem', width: '100%' }}>
+            <CustomSelect size="small" value={formSettings.dueDateValue} onChange={(e) => handleSettingChange('dueDateValue', e.target.value)} sx={{ width: '100%' }}>
               <MenuItem value="receipt">Upon Receipt</MenuItem>
-            </Select>
+            </CustomSelect>
           </Box>
         </Grid>
       </Grid>

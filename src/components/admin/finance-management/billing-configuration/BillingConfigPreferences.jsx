@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem, Button } from '@mui/material';
+import { Box, Typography, Checkbox, FormControlLabel, Radio, RadioGroup, MenuItem, Button } from '@mui/material';
+import CustomSelect from '../../../common/CustomSelect';
 
 const BillingConfigPreferences = ({ formData, handleChange, setFormData }) => {
   return (
@@ -43,19 +44,14 @@ const BillingConfigPreferences = ({ formData, handleChange, setFormData }) => {
               <Typography sx={{ fontSize: '0.85rem', color: '#475569', minWidth: '220px', fontWeight: 500 }}>
                 Clearing House:
               </Typography>
-              <Select
+              <CustomSelect
                 size="small"
                 value={formData.clearingHouse || 'Vyne'}
                 onChange={handleChange('clearingHouse')}
-                sx={{
-                  backgroundColor: '#f8fafc', borderRadius: 2, fontSize: '0.85rem', width: '150px',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' }
-                }}
+                sx={{ width: '150px' }}
               >
                 <MenuItem value="Vyne">Vyne</MenuItem>
-              </Select>
+              </CustomSelect>
             </Box>
             
             <FormControlLabel

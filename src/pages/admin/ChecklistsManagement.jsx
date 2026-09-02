@@ -12,7 +12,8 @@ import {
   Button,
   IconButton
 } from '@mui/material';
-import { Sync as SyncIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import syncSvg from '../../assets/claimicons/refreshicon.svg';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
@@ -300,6 +301,24 @@ const ChecklistsManagement = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
+              size="small"
+              variant="outlined"
+              onClick={handleOpenSyncDialog}
+              sx={{
+                textTransform: 'none',
+                color: '#1e293b',
+                borderColor: '#e2e8f0',
+                fontWeight: 600,
+                borderRadius: 2,
+                height: 36,
+                px: 2,
+                '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
+              }}
+            >
+              Sync
+            </Button>
           {activeInput?.type === 'category' ? (
             <TextField
               autoFocus
@@ -324,7 +343,8 @@ const ChecklistsManagement = () => {
             />
           ) : (
             <Button
-              variant="outlined"
+              variant="contained"
+              disableElevation
               onClick={() => setActiveInput({ type: 'category', value: '' })}
               sx={{
                 textTransform: 'none',
@@ -332,37 +352,17 @@ const ChecklistsManagement = () => {
                 fontFamily: 'Inter',
                 fontSize: fontSize.base,
                 fontWeight: fontWeight.semibold,
-                color: COLORS.ACCENT,
-                borderColor: COLORS.ACCENT,
-                px: 2,
+                backgroundColor: COLORS.ACCENT,
+                color: COLORS.WHITE,
+                px: 3,
                 py: 0.8,
-                '&:hover': { backgroundColor: COLORS.BACKGROUND, borderColor: COLORS.ACCENT_HOVER }
+                '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
               }}
             >
               + Add Checklist Category
             </Button>
           )}
 
-          <Button
-            variant="contained"
-            disableElevation
-            onClick={handleOpenSyncDialog}
-            startIcon={<SyncIcon />}
-            sx={{
-              textTransform: 'none',
-              borderRadius: radius.md,
-              fontFamily: 'Inter',
-              fontSize: fontSize.base,
-              fontWeight: fontWeight.semibold,
-              backgroundColor: COLORS.ACCENT,
-              color: COLORS.WHITE,
-              px: 3,
-              py: 0.8,
-              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
-            }}
-          >
-            Sync
-          </Button>
         </Box>
       </Box>
 

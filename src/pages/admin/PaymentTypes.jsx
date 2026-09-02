@@ -17,7 +17,7 @@ import {
 import PaymentTypesActionBar from '../../components/admin/finance-management/payment-types/PaymentTypesActionBar';
 import PaymentTypesTable from '../../components/admin/finance-management/payment-types/PaymentTypesTable';
 import PaymentTypesDefaults from '../../components/admin/finance-management/payment-types/PaymentTypesDefaults';
-import AdjustmentTypesSyncDialog from '../../components/admin/finance-management/adjustment-types/AdjustmentTypesSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 const PaymentTypes = () => {
   const dispatch = useDispatch();
@@ -111,7 +111,7 @@ const PaymentTypes = () => {
         handleDefaultChange={handleDefaultChange}
       />
 
-      <AdjustmentTypesSyncDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />
