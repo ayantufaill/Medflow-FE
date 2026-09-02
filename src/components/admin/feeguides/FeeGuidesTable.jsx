@@ -95,7 +95,7 @@ const FeeGuidesTable = ({
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Audit History" arrow>
-                    <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onAuditHistory(); }}>
+                    <IconButton size="small" sx={actionBtnStyle} onClick={(e) => { e.stopPropagation(); onAuditHistory(row); }}>
                       <img src={documentsSvg} alt="Audit History" style={{ width: 16, height: 16 }} />
                     </IconButton>
                   </Tooltip>

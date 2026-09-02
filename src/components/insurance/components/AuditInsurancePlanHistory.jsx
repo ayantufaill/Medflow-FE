@@ -1,17 +1,20 @@
-import {
+import React from "react";
+import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Box, Select, MenuItem, Dialog, DialogContent, Button, DialogActions, IconButton
+  Paper, Typography, Box, MenuItem, Dialog, DialogContent, Button, DialogActions, IconButton
 } from "@mui/material";
 import { Close as CloseIcon } from '@mui/icons-material';
 import docSvg from '../../../assets/practicesetupicon/documents.svg';
+import CustomSelect from '../../common/CustomSelect';
 
 const headerStyle = {
   fontSize: "0.75rem",
-  fontWeight: 700,
-  color: "#333",
-  borderRight: "1px solid #e0e0e0",
-  textAlign: "center",
+  fontWeight: "bold",
+  color: "#1e293b",
+  borderBottom: "1px solid #e2e8f0",
+  borderRight: "1px solid #e2e8f0",
   py: 1,
+  px: 1,
 };
 
 const subHeaderStyle = {
@@ -31,6 +34,16 @@ const bodyCellStyle = {
   verticalAlign: "top",
   py: 1,
   px: 1,
+};
+
+const cellStyle = {
+  fontSize: "0.75rem",
+  color: "#475569",
+  borderBottom: "1px solid #f0f0f0",
+  borderRight: "1px solid #f0f0f0",
+  py: 0.8,
+  px: 1,
+  whiteSpace: "nowrap"
 };
 
 const differenceCellStyle = {
@@ -120,11 +133,15 @@ const AuditInsurancePlanHistory = ({ open, onClose, planName }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1, gap: 1 }}>
             <Typography sx={{ fontSize: "0.75rem", color: "#1976d2", fontWeight: 600 }}>Filter list by:</Typography>
             <Typography sx={{ fontSize: "0.75rem", color: "#1976d2", ml: 2 }}>Action:</Typography>
-            <Select size="small" defaultValue="All" sx={{ height: 25, fontSize: "0.75rem", minWidth: 80 }}>
+            <CustomSelect 
+              size="small" 
+              defaultValue="All" 
+              sx={{ minWidth: 90 }}
+            >
               <MenuItem value="All">All</MenuItem>
               <MenuItem value="Update">Update</MenuItem>
               <MenuItem value="Create">Create</MenuItem>
-            </Select>
+            </CustomSelect>
           </Box>
 
           <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e0e0e0", borderRadius: 0 }}>

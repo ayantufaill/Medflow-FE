@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography, Checkbox, FormControlLabel, Select, MenuItem, TextField } from '@mui/material';
+import { Box, Typography, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
+import CustomSelect from '../../../common/CustomSelect';
 
 const BillingConfigAddress = ({ formData, handleChange, setFormData }) => {
   const addressFields = [
@@ -52,26 +53,17 @@ const BillingConfigAddress = ({ formData, handleChange, setFormData }) => {
               {field.label}:
             </Typography>
             {field.type === 'select' ? (
-              <Select
+              <CustomSelect
                 size="small"
                 value={formData[field.key] || ''}
                 onChange={handleChange(field.key)}
                 displayEmpty
-                sx={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: 2,
-                  fontSize: '0.85rem',
-                  width: '250px',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
-                }}
+                sx={{ width: '250px' }}
               >
                 <MenuItem value="" disabled>{field.placeholder}</MenuItem>
-                <MenuItem value="Country">Country</MenuItem>
                 <MenuItem value="USA">USA</MenuItem>
                 <MenuItem value="Canada">Canada</MenuItem>
-              </Select>
+              </CustomSelect>
             ) : (
               <TextField
                 size="small"

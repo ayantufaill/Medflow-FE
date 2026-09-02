@@ -49,6 +49,7 @@ const FeeGuides = () => {
   // Selected Data States
   const [selectedFeeGuide, setSelectedFeeGuide] = useState('');
   const [selectedFeeGuideObj, setSelectedFeeGuideObj] = useState(null);
+  const [selectedFeeGuideId, setSelectedFeeGuideId] = useState(null);
 
   // Selectors
   const feeGuidesRaw = useSelector(selectFeeGuides);
@@ -162,7 +163,10 @@ const FeeGuides = () => {
         onDelete={handleDelete}
         onEdit={handleEdit}
         onOpenPlans={handleOpenPlans}
-        onAuditHistory={() => setAuditDialogOpen(true)}
+        onAuditHistory={(row) => {
+          setSelectedFeeGuideId(row.id);
+          setAuditDialogOpen(true);
+        }}
       />
 
       {/* Dialogs */}
@@ -200,6 +204,7 @@ const FeeGuides = () => {
       <AuditHistoryDialog
         open={auditDialogOpen}
         onClose={() => setAuditDialogOpen(false)}
+        historyEndpoint={`/admin/finance-management/fee-guides/${selectedFeeGuideId}/audit-history`}
       />
       <SyncOfficesDialog
         open={syncDialogOpen}
