@@ -150,36 +150,42 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
           alignContent: 'start',
           pr: 1 // Add padding for scrollbar
         }}>
-          {activeProcedures.map((proc, idx) => (
-            <Button
-              key={idx}
-              onClick={() => onProcedureClick({
-                name: proc.name,
-                code: proc.code,
-                procedureCode: proc.code,
-                description: proc.name,
-                provider: selectedProvider,
-                status: selectedProcedureType
-              })}
-              variant="outlined"
-              sx={{
-                justifyContent: 'flex-start',
-                textTransform: 'none',
-                color: '#475569',
-                borderColor: '#e2e8f0',
-                bgcolor: '#fff',
-                py: 2,
-                px: 1.5,
-                minHeight: '60px',
-                textAlign: 'left',
-                fontSize: '0.8rem',
-                lineHeight: 1.2,
-                '&:hover': { borderColor: '#94a3b8', bgcolor: '#f8fafc' }
-              }}
-            >
-              {proc.name}
-            </Button>
-            ))}
+          {activeProcedures.map((proc, idx) => {
+            const matchedCode = procedureCodes.find(c => (c.ProcCode || c.code) === proc.code);
+            const resolvedFee = proc.fee || proc.ProcFee || matchedCode?.ProcFee || matchedCode?.fee || 0;
+            return (
+              <Button
+                key={idx}
+                onClick={() => onProcedureClick({
+                  name: proc.name,
+                  code: proc.code,
+                  procedureCode: proc.code,
+                  description: proc.name,
+                  fee: resolvedFee,
+                  charge: resolvedFee,
+                  provider: selectedProvider,
+                  status: selectedProcedureType
+                })}
+                variant="outlined"
+                sx={{
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  color: '#475569',
+                  borderColor: '#e2e8f0',
+                  bgcolor: '#fff',
+                  py: 2,
+                  px: 1.5,
+                  minHeight: '60px',
+                  textAlign: 'left',
+                  fontSize: '0.8rem',
+                  lineHeight: 1.2,
+                  '&:hover': { borderColor: '#94a3b8', bgcolor: '#f8fafc' }
+                }}
+              >
+                {proc.name}
+              </Button>
+            );
+          })}
         </Box>
       </Box>
 
@@ -208,11 +214,14 @@ const NewTreatmentPlanProcedures = ({ onProcedureClick }) => {
           onChange={(_, value) => {
             if (!value) return;
             setSelectedProcedureOption(null);
+            const resolvedFee = value.ProcFee || value.fee || value.charge || 0;
             onProcedureClick({
               name: value.Descript || value.name || value.AbbrDesc || value.ProcCode || value.code,
               code: value.ProcCode || value.code,
               procedureCode: value.ProcCode || value.code,
               description: value.Descript || value.name || value.AbbrDesc || '',
+              fee: resolvedFee,
+              charge: resolvedFee,
               provider: selectedProvider,
               status: selectedProcedureType
             });

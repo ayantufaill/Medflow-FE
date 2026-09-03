@@ -158,11 +158,9 @@ const CreateNewReferral = ({ onClose, patientId }) => {
       setToastMessage('Referral saved.');
       if (onClose) setTimeout(onClose, 600);
       return referral;
-    } catch {
-      // The backend has no /referrals route yet — surface that honestly
-      // instead of pretending the save succeeded.
+    } catch (err) {
       setToastSeverity('error');
-      setToastMessage('Referrals are not supported by the backend yet — nothing was saved.');
+      setToastMessage(err.response?.data?.message || err.message || 'Failed to save referral.');
     } finally {
       setSaving(false);
     }
