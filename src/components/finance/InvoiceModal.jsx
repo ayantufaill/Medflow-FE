@@ -47,7 +47,10 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       if (isNewInvoice) {
         const recalculated = invoiceData.procedures.map(p => {
           const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
-          const numWriteoff = parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          const baseFee = p.allowedFee !== undefined ? parseFloat(p.allowedFee) : p.originalFee !== undefined ? parseFloat(p.originalFee) : numCharge;
+          const numWriteoff = parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || (
+            !p.dbi && baseFee > 0 && numCharge > baseFee ? Math.round((numCharge - baseFee) * 100) / 100 : 0
+          );
           
           const portions = calculatePortionsForCategory({
             charge: numCharge,
@@ -59,6 +62,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           
           return {
             ...p,
+            allowedFee: baseFee,
+            originalFee: baseFee,
+            writeoff: `$${numWriteoff.toFixed(2)}`,
             insPortion: `$${portions.insPortion.toFixed(2)}`,
             ptPortion: `$${portions.ptPortion.toFixed(2)}`,
             balance: `$${portions.balance.toFixed(2)}`,
@@ -109,6 +115,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           : ""),
       treatment: savedData.procedureDescription || "Custom Procedure",
       provider: "",
+      allowedFee: fee,
+      originalFee: fee,
       writeoff: "$0.00",
       coveragePct: portions.coveragePct,
       ptPortion: `$${portions.ptPortion.toFixed(2)}`,
@@ -122,7 +130,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     if (patient && patient._id) {
       try {
         const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
-          { code: newProcedure.code, charge: fee }
+          { code: newProcedure.code, charge: fee, allowedFee: fee, originalFee: fee }
         ]);
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
@@ -131,6 +139,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
           newProcedure.writeoff = `$${Number(est.writeoff || 0).toFixed(2)}`;
           newProcedure.balance = `$${fee.toFixed(2)}`;
+          if (est.allowedFee !== undefined) {
+            newProcedure.allowedFee = Number(est.allowedFee);
+          }
         }
       } catch (err) {
         console.warn("Failed to fetch estimate for procedure:", err);
@@ -160,17 +171,42 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         if (p.id !== procedureId) return p;
 
         const updated = { ...p, [field]: value };
-        updatedProcedure = updated;
 
         const numCharge =
           parseFloat(
             (updated.charge || "").toString().replace(/[^0-9.-]+/g, ""),
           ) || 0;
-        const numWriteoff =
-          parseFloat(
-            (updated.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
-          ) || 0;
         const dbiState = updated.dbi;
+
+        const baseFee =
+          p.allowedFee !== undefined && p.allowedFee !== null && Number(p.allowedFee) > 0
+            ? Number(p.allowedFee)
+            : p.originalFee !== undefined && p.originalFee !== null && Number(p.originalFee) > 0
+            ? Number(p.originalFee)
+            : numCharge;
+
+        let numWriteoff = parseFloat(
+          (updated.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
+        ) || 0;
+
+        if (field === "charge") {
+          if (!dbiState && baseFee > 0 && numCharge > baseFee) {
+            numWriteoff = Math.round((numCharge - baseFee) * 100) / 100;
+          } else if (!dbiState && baseFee > 0 && numCharge <= baseFee) {
+            numWriteoff = 0;
+          }
+          updated.writeoff = `$${numWriteoff.toFixed(2)}`;
+        } else if (field === "dbi") {
+          if (dbiState) {
+            numWriteoff = 0;
+            updated.writeoff = "$0.00";
+          } else if (baseFee > 0 && numCharge > baseFee) {
+            numWriteoff = Math.round((numCharge - baseFee) * 100) / 100;
+            updated.writeoff = `$${numWriteoff.toFixed(2)}`;
+          }
+        }
+
+        updatedProcedure = updated;
 
         if (["charge", "writeoff", "dbi"].includes(field)) {
           const portions = calculatePortionsForCategory({
@@ -186,7 +222,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           updated.balance = `$${portions.balance.toFixed(2)}`;
           updated.coveragePct = portions.coveragePct;
         } else if (["ptPortion", "insPortion"].includes(field)) {
-          updated.balance = `$${Math.max(0, numCharge - numWriteoff).toFixed(2)}`;
+          updated.balance = `$${numCharge.toFixed(2)}`;
         } else if (field === "charge") {
           updated.balance = `$${numCharge.toFixed(2)}`;
         }
@@ -198,8 +234,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     if (["charge", "dbi"].includes(field) && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
       try {
         const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const baseFee = updatedProcedure.allowedFee ?? updatedProcedure.originalFee;
         const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
-          { code: updatedProcedure.code, charge: numCharge }
+          { code: updatedProcedure.code, charge: numCharge, allowedFee: baseFee, originalFee: baseFee }
         ]);
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
@@ -210,7 +247,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
               ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
               writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-              balance: `$${numCharge.toFixed(2)}`
+              balance: `$${numCharge.toFixed(2)}`,
+              allowedFee: est.allowedFee !== undefined ? Number(est.allowedFee) : p.allowedFee,
             };
           }));
         }
@@ -220,13 +258,22 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     }
   };
 
-  const handleReestimate = () => {
+  const handleReestimate = async () => {
+    // 1. Immediate local re-estimation
     setProcedures((prev) =>
       prev.map((p) => {
         const numCharge =
           parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
-        const numWriteoff =
-          parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+        const baseFee =
+          p.allowedFee !== undefined && p.allowedFee !== null && Number(p.allowedFee) > 0
+            ? Number(p.allowedFee)
+            : p.originalFee !== undefined && p.originalFee !== null && Number(p.originalFee) > 0
+            ? Number(p.originalFee)
+            : numCharge;
+        const numWriteoff = (!p.dbi && baseFee > 0 && numCharge > baseFee)
+          ? Math.round((numCharge - baseFee) * 100) / 100
+          : (parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0);
+
         const portions = calculatePortionsForCategory({
           charge: numCharge,
           writeoff: numWriteoff,
@@ -236,6 +283,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         });
         return {
           ...p,
+          writeoff: `$${numWriteoff.toFixed(2)}`,
           insPortion: `$${portions.insPortion.toFixed(2)}`,
           ptPortion: `$${portions.ptPortion.toFixed(2)}`,
           balance: `$${portions.balance.toFixed(2)}`,
@@ -243,6 +291,43 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         };
       })
     );
+
+    // 2. Server-side re-estimation if patient is present
+    if (patient && patient._id && procedures.length > 0) {
+      try {
+        const payload = procedures.map((p) => {
+          const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          const baseFee = p.allowedFee ?? p.originalFee;
+          return {
+            code: p.code,
+            charge: numCharge,
+            allowedFee: baseFee,
+            originalFee: baseFee,
+            dbi: Boolean(p.dbi)
+          };
+        });
+        const estimates = await invoiceService.estimateInvoiceItems(patient._id, payload);
+        if (estimates && estimates.length === procedures.length) {
+          setProcedures((prev) =>
+            prev.map((p, idx) => {
+              const est = estimates[idx];
+              if (!est) return p;
+              const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+              return {
+                ...p,
+                insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
+                ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `$${numCharge.toFixed(2)}`,
+                allowedFee: est.allowedFee !== undefined ? Number(est.allowedFee) : p.allowedFee
+              };
+            })
+          );
+        }
+      } catch (err) {
+        console.warn("Failed to re-estimate procedures:", err);
+      }
+    }
   };
 
   const ProviderDropdown = ({ value, onChange }) => {
@@ -470,6 +555,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           <Button
             variant="outlined"
             size="small"
+            onClick={handleReestimate}
             sx={{ 
               fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
               textTransform: "none", borderRadius: "8px",

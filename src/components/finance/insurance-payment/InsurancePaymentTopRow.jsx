@@ -11,6 +11,8 @@ const MENU_PROPS = {
   PaperProps: {
     sx: {
       bgcolor: '#fff',
+      maxHeight: 250,
+      overflowY: 'auto',
       '& .MuiMenuItem-root': { fontSize: '12px', py: 0.5 }
     },
   },

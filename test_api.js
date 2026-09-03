@@ -1,8 +1,11 @@
-import store from './src/store/index.js';
-import { fetchPatientInsurances } from './src/store/slices/patientSlice.js';
+const http = require('http');
 
-console.log("Initial state:", store.getState().patient.insurancesCache);
-store.dispatch(fetchPatientInsurances({ patientId: '2' })).then(res => {
-  console.log("Result:", res);
-  console.log("Final state:", store.getState().patient.insurancesCache);
-});
+const options = {
+  hostname: 'localhost',
+  port: 5001, // Usually the backend runs on 5001 or 3001, let me check the package.json if it fails. I'll just use curl.
+  path: '/admin-finance/invoices?limit=1000&includeItems=true',
+  method: 'GET',
+  headers: {
+    // Need auth headers!
+  }
+};
