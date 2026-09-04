@@ -1,4 +1,4 @@
-import apiClient from '../config/api';
+import apiClient from "../config/api";
 
 /**
  * Patient Service
@@ -16,26 +16,42 @@ export const patientService = {
    * @param {string} dobEnd - Date of birth end date (YYYY-MM-DD)
    * @returns {Promise<Object>} Patients data with pagination
    */
-  async getAllPatients(page = 1, limit = 10, search = '', status = '', dobStart = '', dobEnd = '', gender = '', providerId = '', signal = null, sortBy = '', sortOrder = '', branchId = '') {
+  async getAllPatients(
+    page = 1,
+    limit = 10,
+    search = "",
+    status = "",
+    dobStart = "",
+    dobEnd = "",
+    gender = "",
+    providerId = "",
+    signal = null,
+    sortBy = "",
+    sortOrder = "",
+    branchId = "",
+  ) {
     const params = new URLSearchParams();
-    if (page) params.append('page', page);
-    if (limit) params.append('limit', limit);
-    if (search) params.append('search', search);
-    if (status) params.append('status', status);
-    if (dobStart) params.append('dobStart', dobStart);
-    if (dobEnd) params.append('dobEnd', dobEnd);
-    if (gender) params.append('gender', gender);
-    if (providerId) params.append('providerId', providerId);
-    if (sortBy) params.append('sortBy', sortBy);
-    if (sortOrder) params.append('sortOrder', sortOrder);
-    if (branchId) params.append('branchId', branchId);
+    if (page) params.append("page", page);
+    if (limit) params.append("limit", limit);
+    if (search) params.append("search", search);
+    if (status) params.append("status", status);
+    if (dobStart) params.append("dobStart", dobStart);
+    if (dobEnd) params.append("dobEnd", dobEnd);
+    if (gender) params.append("gender", gender);
+    if (providerId) params.append("providerId", providerId);
+    if (sortBy) params.append("sortBy", sortBy);
+    if (sortOrder) params.append("sortOrder", sortOrder);
+    if (branchId) params.append("branchId", branchId);
 
     const config = {};
     if (signal) {
       config.signal = signal;
     }
 
-    const response = await apiClient.get(`/patients?${params.toString()}`, config);
+    const response = await apiClient.get(
+      `/patients?${params.toString()}`,
+      config,
+    );
     return response.data.data;
   },
 
@@ -47,10 +63,12 @@ export const patientService = {
    */
   async getPatientById(patientId, includeSSN = false) {
     const params = new URLSearchParams();
-    if (includeSSN) params.append('includeSSN', 'true');
+    if (includeSSN) params.append("includeSSN", "true");
 
     const query = params.toString();
-    const url = query ? `/patients/${patientId}?${query}` : `/patients/${patientId}`;
+    const url = query
+      ? `/patients/${patientId}?${query}`
+      : `/patients/${patientId}`;
 
     const response = await apiClient.get(url);
     return response.data.data.patient;
@@ -62,7 +80,7 @@ export const patientService = {
    * @returns {Promise<Array>} Array of duplicate patients
    */
   async checkDuplicates(data) {
-    const response = await apiClient.post('/patients/check-duplicates', data);
+    const response = await apiClient.post("/patients/check-duplicates", data);
     return response.data.data.duplicates || [];
   },
 
@@ -72,7 +90,7 @@ export const patientService = {
    * @returns {Promise<Object>} Created patient data
    */
   async createPatient(patientData) {
-    const response = await apiClient.post('/patients', patientData);
+    const response = await apiClient.post("/patients", patientData);
     return response.data.data.patient;
   },
 
@@ -98,29 +116,41 @@ export const patientService = {
   },
 
   async getPatientWorkspace(patientId) {
-    console.log('🌐 API CALL - getPatientWorkspace for ID:', patientId);
+    console.log("🌐 API CALL - getPatientWorkspace for ID:", patientId);
     try {
       const response = await apiClient.get(`/patients/${patientId}/workspace`);
-      console.log('📨 API RESPONSE from /patients/:id/workspace:', response.data.data.patient);
+      console.log(
+        "📨 API RESPONSE from /patients/:id/workspace:",
+        response.data.data.patient,
+      );
       return response.data.data.patient;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.log('⚠️ Workspace route not found, falling back to /patients/:id');
+        console.log(
+          "⚠️ Workspace route not found, falling back to /patients/:id",
+        );
         const fallback = await apiClient.get(`/patients/${patientId}`);
-        return fallback.data.data?.patient ?? fallback.data.data ?? fallback.data;
+        return (
+          fallback.data.data?.patient ?? fallback.data.data ?? fallback.data
+        );
       }
       throw error;
     }
   },
 
   async updatePatientWorkspace(patientId, updates) {
-    const response = await apiClient.patch(`/patients/${patientId}/workspace`, updates);
+    const response = await apiClient.patch(
+      `/patients/${patientId}/workspace`,
+      updates,
+    );
     return response.data.data.patient;
   },
 
   async getPatientUpdateRequests(patientId) {
     try {
-      const response = await apiClient.get(`/patients/${patientId}/update-requests`);
+      const response = await apiClient.get(
+        `/patients/${patientId}/update-requests`,
+      );
       return response.data.data.updateRequests || [];
     } catch (error) {
       if (error.response?.status === 404) return [];
@@ -129,13 +159,18 @@ export const patientService = {
   },
 
   async createPatientUpdateRequest(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/update-requests`, payload);
+    const response = await apiClient.post(
+      `/patients/${patientId}/update-requests`,
+      payload,
+    );
     return response.data.data.updateRequests || [];
   },
 
   async getPatientAuditHistory(patientId) {
     try {
-      const response = await apiClient.get(`/patients/${patientId}/audit-history`);
+      const response = await apiClient.get(
+        `/patients/${patientId}/audit-history`,
+      );
       return response.data.data.auditEvents || [];
     } catch (error) {
       if (error.response?.status === 404) return [];
@@ -145,7 +180,9 @@ export const patientService = {
 
   async getPatientCommunications(patientId) {
     try {
-      const response = await apiClient.get(`/patients/${patientId}/communications`);
+      const response = await apiClient.get(
+        `/patients/${patientId}/communications`,
+      );
       return response.data.data.communications || [];
     } catch (error) {
       if (error.response?.status === 404) return [];
@@ -154,13 +191,18 @@ export const patientService = {
   },
 
   async createPatientCommunication(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/communications/send`, payload);
+    const response = await apiClient.post(
+      `/patients/${patientId}/communications/send`,
+      payload,
+    );
     return response.data.data.communications || [];
   },
 
   async getStructuredMedicalHistory(patientId) {
     try {
-      const response = await apiClient.get(`/patients/${patientId}/medical-history`);
+      const response = await apiClient.get(
+        `/patients/${patientId}/medical-history`,
+      );
       return response.data.data;
     } catch (error) {
       if (error.response?.status === 404) return null;
@@ -169,13 +211,18 @@ export const patientService = {
   },
 
   async updateStructuredMedicalHistory(patientId, payload) {
-    const response = await apiClient.patch(`/patients/${patientId}/medical-history`, payload);
+    const response = await apiClient.patch(
+      `/patients/${patientId}/medical-history`,
+      payload,
+    );
     return response.data.data;
   },
 
   async getDentalHistory(patientId) {
     try {
-      const response = await apiClient.get(`/patients/${patientId}/dental-history`);
+      const response = await apiClient.get(
+        `/patients/${patientId}/dental-history`,
+      );
       return response.data.data;
     } catch (error) {
       if (error.response?.status === 404) return null;
@@ -184,13 +231,28 @@ export const patientService = {
   },
 
   async updateDentalHistory(patientId, payload) {
-    const response = await apiClient.patch(`/patients/${patientId}/dental-history`, payload);
+    const response = await apiClient.patch(
+      `/patients/${patientId}/dental-history`,
+      payload,
+    );
     return response.data.data;
   },
 
   async purchaseProducts(patientId, products) {
-    const response = await apiClient.post(`/patients/${patientId}/purchase-products`, { products });
+    const response = await apiClient.post(
+      `/patients/${patientId}/purchase-products`,
+      { products },
+    );
     return response.data.data;
+  },
+
+  async getUnbilledProducts(patientId) {
+    const response = await apiClient.get(
+      `/patients/${patientId}/unbilled-products`,
+    );
+    const result =
+      response.data?.data?.products || response.data?.data || response.data;
+    return Array.isArray(result) ? result : [];
   },
 
   // ---------------- Patient Insurance ----------------
@@ -202,14 +264,19 @@ export const patientService = {
    * @returns {Promise<Array>} Array of patient insurances
    */
   async getPatientInsurances(patientId, isActive) {
-    const query = isActive !== undefined ? `isActive=${isActive}` : '';
+    const query = isActive !== undefined ? `isActive=${isActive}` : "";
     const url = query
       ? `/patients/${patientId}/coverages?${query}`
       : `/patients/${patientId}/coverages`;
-      
+
     const response = await apiClient.get(url);
-    console.log('📨 RAW GET COVERAGES RESPONSE:', response.data);
-    const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
+    console.log("📨 RAW GET COVERAGES RESPONSE:", response.data);
+    const result =
+      response.data?.data?.coverages ||
+      response.data?.data?.plans ||
+      response.data?.data?.insurances ||
+      response.data?.data ||
+      response.data;
     return Array.isArray(result) ? result : [];
   },
 
@@ -219,13 +286,18 @@ export const patientService = {
    * @returns {Promise<Array>} Array of all patient insurances
    */
   async getAllPatientInsurances(isActive) {
-    const query = isActive !== undefined ? `isActive=${isActive}` : '';
+    const query = isActive !== undefined ? `isActive=${isActive}` : "";
     const url = query
       ? `/patients/all/coverages?${query}`
       : `/patients/all/coverages`;
-      
+
     const response = await apiClient.get(url);
-    const result = response.data?.data?.coverages || response.data?.data?.plans || response.data?.data?.insurances || response.data?.data || response.data;
+    const result =
+      response.data?.data?.coverages ||
+      response.data?.data?.plans ||
+      response.data?.data?.insurances ||
+      response.data?.data ||
+      response.data;
     return Array.isArray(result) ? result : [];
   },
 
@@ -237,7 +309,7 @@ export const patientService = {
    */
   async getPatientInsuranceById(patientId, patientInsuranceId) {
     const response = await apiClient.get(
-      `/patients/${patientId}/insurance/${patientInsuranceId}`
+      `/patients/${patientId}/insurance/${patientInsuranceId}`,
     );
     return response.data.data.insurance;
   },
@@ -249,7 +321,10 @@ export const patientService = {
    * @returns {Promise<Object>} Created insurance data
    */
   async createPatientInsurance(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/coverages`, payload);
+    const response = await apiClient.post(
+      `/patients/${patientId}/coverages`,
+      payload,
+    );
     return response.data.data.insurance;
   },
 
@@ -263,7 +338,7 @@ export const patientService = {
   async updatePatientInsurance(patientId, patientInsuranceId, updates) {
     const response = await apiClient.put(
       `/patients/${patientId}/insurance/${patientInsuranceId}`,
-      updates
+      updates,
     );
     return response.data.data.insurance;
   },
@@ -276,7 +351,7 @@ export const patientService = {
    */
   async deletePatientInsurance(patientId, patientInsuranceId) {
     const response = await apiClient.delete(
-      `/patients/${patientId}/insurance/${patientInsuranceId}`
+      `/patients/${patientId}/insurance/${patientInsuranceId}`,
     );
     return response.data.data;
   },
@@ -290,9 +365,13 @@ export const patientService = {
   async reorderPatientInsurances(patientId, insuranceIds) {
     const response = await apiClient.post(
       `/patients/${patientId}/insurance/reorder`,
-      { insuranceIds }
+      { insuranceIds },
     );
-    const result = response.data?.data?.insurances || response.data?.data?.coverages || response.data?.data?.plans || response.data?.data;
+    const result =
+      response.data?.data?.insurances ||
+      response.data?.data?.coverages ||
+      response.data?.data?.plans ||
+      response.data?.data;
     return Array.isArray(result) ? result : [];
   },
 
@@ -306,8 +385,8 @@ export const patientService = {
    */
   async getPatientAllergies(patientId, isActive = true) {
     const params = new URLSearchParams();
-    if (typeof isActive === 'boolean') {
-      params.append('isActive', isActive ? 'true' : 'false');
+    if (typeof isActive === "boolean") {
+      params.append("isActive", isActive ? "true" : "false");
     }
     const query = params.toString();
     const url = query
@@ -325,7 +404,9 @@ export const patientService = {
    * @returns {Promise<Object>} Allergy data
    */
   async getAllergyById(patientId, allergyId) {
-    const response = await apiClient.get(`/patients/${patientId}/allergies/${allergyId}`);
+    const response = await apiClient.get(
+      `/patients/${patientId}/allergies/${allergyId}`,
+    );
     return response.data.data.allergy;
   },
 
@@ -336,7 +417,10 @@ export const patientService = {
    * @returns {Promise<Object>} Created allergy data
    */
   async createPatientAllergy(patientId, payload) {
-    const response = await apiClient.post(`/patients/${patientId}/allergies`, payload);
+    const response = await apiClient.post(
+      `/patients/${patientId}/allergies`,
+      payload,
+    );
     return response.data.data.allergy;
   },
 
@@ -350,7 +434,7 @@ export const patientService = {
   async updatePatientAllergy(patientId, allergyId, updates) {
     const response = await apiClient.put(
       `/patients/${patientId}/allergies/${allergyId}`,
-      updates
+      updates,
     );
     return response.data.data.allergy;
   },
@@ -363,7 +447,7 @@ export const patientService = {
    */
   async deletePatientAllergy(patientId, allergyId) {
     const response = await apiClient.delete(
-      `/patients/${patientId}/allergies/${allergyId}`
+      `/patients/${patientId}/allergies/${allergyId}`,
     );
     return response.data.data;
   },

@@ -1,14 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
-  Box, Paper, Stack, Checkbox, Typography, Divider, Dialog, DialogContent,
-  Button, Menu, MenuItem,
-} from '@mui/material';
+  Box,
+  Paper,
+  Stack,
+  Checkbox,
+  Typography,
+  Divider,
+  Dialog,
+  DialogContent,
+  Button,
+  Menu,
+  MenuItem,
+} from "@mui/material";
 import {
-  CalendarMonth, Print, Edit, NotInterested, Settings, AutoFixHigh,
-  CheckCircle, Refresh, Tune, MoreHoriz,
-} from '@mui/icons-material';
+  CalendarMonth,
+  Print,
+  Edit,
+  NotInterested,
+  Settings,
+  AutoFixHigh,
+  CheckCircle,
+  Refresh,
+  Tune,
+  MoreHoriz,
+} from "@mui/icons-material";
 
 // Redux
 import {
@@ -24,95 +41,109 @@ import {
   selectAdjustmentTypeMap,
   setAdjustmentTypeForItem,
   transferOutstandingToPatient,
-} from '../../store/slices/billingSlice';
-import { fetchMedicalHistoryThunk, fetchDentalHistoryThunk } from '../../store/slices/patientSlice';
-import { paymentService } from '../../services/payment.service';
+} from "../../store/slices/billingSlice";
+import {
+  fetchMedicalHistoryThunk,
+  fetchDentalHistoryThunk,
+} from "../../store/slices/patientSlice";
+import { paymentService } from "../../services/payment.service";
 
-import LedgerItemCard from './LedgerItemCard';
-import { invoiceService } from '../../services/invoice.service';
-import LedgerDialogManager from './LedgerDialogManager';
-import { claimService } from '../../services/claim.service';
-import ManageEOBModal from '../claims/batch-actions/modals/ManageEOBModal';
-import EditClaimDialog from '../claims/EditClaimDialog';
+import LedgerItemCard from "./LedgerItemCard";
+import { invoiceService } from "../../services/invoice.service";
+import LedgerDialogManager from "./LedgerDialogManager";
+import { claimService } from "../../services/claim.service";
+import ManageEOBModal from "../claims/batch-actions/modals/ManageEOBModal";
+import EditClaimDialog from "../claims/EditClaimDialog";
+import { useSnackbar } from "../../contexts/SnackbarContext";
 
 const LedgerList = ({ patient, expanded, filters }) => {
   const dispatch = useDispatch();
   const location = useLocation();
   const patientId = patient?._id || patient?.id;
+  const { showSnackbar } = useSnackbar();
 
   // ── Redux state ──────────────────────────────────────────────────────────
-  const ledgerItems    = useSelector(selectLedgerItemsForPatient(patientId));
-  const ledgerLoading  = useSelector(selectLedgerLoading);
+  const ledgerItems = useSelector(selectLedgerItemsForPatient(patientId));
+  const ledgerLoading = useSelector(selectLedgerLoading);
   const adjustmentTypeMap = useSelector(selectAdjustmentTypeMap);
 
   // ── Local UI state (dialogs / menus — no data) ───────────────────────────
-  const [expandedItems,          setExpandedItems]          = useState({});
-  const [anchorEl,               setAnchorEl]               = useState(null);
-  const [calendarTarget,         setCalendarTarget]         = useState(null);
-  const [adjItem,                setAdjItem]                = useState(null);
-  const [printItem,              setPrintItem]              = useState(null);
-  const [printAnchorEl,          setPrintAnchorEl]          = useState(null);
-  const [adjAnchorEl,            setAdjAnchorEl]            = useState(null);
-  const [showAdjustDialog,       setShowAdjustDialog]       = useState(false);
-  const [showDebitDialog,        setShowDebitDialog]        = useState(false);
-  const [showMembershipDialog,   setShowMembershipDialog]   = useState(false);
-  const [showWriteOffDialog,     setShowWriteOffDialog]     = useState(false);
-  const [showVoidDialog,         setShowVoidDialog]         = useState(false);
-  const [voidTarget,             setVoidTarget]             = useState(null);
-  const [showCourtesyCredit,     setShowCourtesyCredit]     = useState(false);
-  const [editTarget,             setEditTarget]             = useState(null);
-  const [showUndoDialog,         setShowUndoDialog]         = useState(false);
-  const [undoTarget,             setUndoTarget]             = useState(null);
-  const [showSimpleStatement,    setShowSimpleStatement]    = useState(false);
-  const [showDetailedStatement,  setShowDetailedStatement]  = useState(false);
-  const [showEditDeposit,        setShowEditDeposit]        = useState(false);
-  const [editDepositTarget,      setEditDepositTarget]      = useState(null);
-  const [showTransferConfirmation, setShowTransferConfirmation] = useState(false);
-  const [transferTarget,           setTransferTarget]           = useState(null);
-  const [showEditInvoice,        setShowEditInvoice]        = useState(false);
-  const [editInvoiceTarget,      setEditInvoiceTarget]      = useState(null);
-  const [showInvoiceModal,       setShowInvoiceModal]       = useState(false);
-  const [invoiceModalData,       setInvoiceModalData]       = useState(null);
-  const [magicStickAnchorEl,     setMagicStickAnchorEl]     = useState(null);
-  const [showAttachDialog,       setShowAttachDialog]       = useState(false);
-  const [attachTarget,           setAttachTarget]           = useState(null);
-  const [showEOBModal,           setShowEOBModal]           = useState(false);
-  const [eobTarget,              setEOBTarget]              = useState(null);
+  const [expandedItems, setExpandedItems] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [calendarTarget, setCalendarTarget] = useState(null);
+  const [adjItem, setAdjItem] = useState(null);
+  const [printItem, setPrintItem] = useState(null);
+  const [printAnchorEl, setPrintAnchorEl] = useState(null);
+  const [adjAnchorEl, setAdjAnchorEl] = useState(null);
+  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [showDebitDialog, setShowDebitDialog] = useState(false);
+  const [showMembershipDialog, setShowMembershipDialog] = useState(false);
+  const [showWriteOffDialog, setShowWriteOffDialog] = useState(false);
+  const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [voidTarget, setVoidTarget] = useState(null);
+  const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [showUndoDialog, setShowUndoDialog] = useState(false);
+  const [undoTarget, setUndoTarget] = useState(null);
+  const [showSimpleStatement, setShowSimpleStatement] = useState(false);
+  const [showDetailedStatement, setShowDetailedStatement] = useState(false);
+  const [showEditDeposit, setShowEditDeposit] = useState(false);
+  const [editDepositTarget, setEditDepositTarget] = useState(null);
+  const [showTransferConfirmation, setShowTransferConfirmation] =
+    useState(false);
+  const [transferTarget, setTransferTarget] = useState(null);
+  const [showEditInvoice, setShowEditInvoice] = useState(false);
+  const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceModalData, setInvoiceModalData] = useState(null);
+  const [magicStickAnchorEl, setMagicStickAnchorEl] = useState(null);
+  const [showAttachDialog, setShowAttachDialog] = useState(false);
+  const [attachTarget, setAttachTarget] = useState(null);
+  const [showEOBModal, setShowEOBModal] = useState(false);
+  const [eobTarget, setEOBTarget] = useState(null);
 
   const handleEOBClick = (data) => {
     setEOBTarget(data);
     setShowEOBModal(true);
   };
-  const [showEditClaimDialog,    setShowEditClaimDialog]    = useState(false);
-  const [editClaimTarget,        setEditClaimTarget]        = useState(null);
+  const [showEditClaimDialog, setShowEditClaimDialog] = useState(false);
+  const [editClaimTarget, setEditClaimTarget] = useState(null);
 
   const handleEditClaimClick = (claimData) => {
     setEditClaimTarget(claimData);
     setShowEditClaimDialog(true);
   };
-  
+
   const handleSendClaimClick = async (claimData) => {
     if (!claimData?.id) return;
     try {
-      await claimService.quickStatusUpdate(claimData.id, 'submitted', 'Submitted from Ledger');
+      await claimService.quickStatusUpdate(
+        claimData.id,
+        "submitted",
+        "Submitted from Ledger",
+      );
       dispatch(fetchLedgerItems(patientId));
     } catch (err) {
-      console.error('Failed to submit claim', err);
+      console.error("Failed to submit claim", err);
     }
   };
 
   const handleVoidAndRecreateClick = async (claimData) => {
     if (!claimData?.id) return;
     try {
-      await claimService.quickStatusUpdate(claimData.id, 'readyForSubmission', 'Voided and recreated');
+      await claimService.quickStatusUpdate(
+        claimData.id,
+        "readyForSubmission",
+        "Voided and recreated",
+      );
       dispatch(fetchLedgerItems(patientId));
     } catch (err) {
-      console.error('Failed to void and recreate claim', err);
+      console.error("Failed to void and recreate claim", err);
     }
   };
-  
-  const [showAdaDialog,          setShowAdaDialog]          = useState(false);
-  const [adaTarget,              setAdaTarget]              = useState(null);
+
+  const [showAdaDialog, setShowAdaDialog] = useState(false);
+  const [adaTarget, setAdaTarget] = useState(null);
 
   const handlePrintClaimClick = (claim) => {
     setAdaTarget(claim);
@@ -122,18 +153,20 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const handleReopenClaimClick = async (claim) => {
     if (!claim?.id) return;
     try {
-      const isClosed = ['paid', 'cancelled'].includes((claim.status || '').toLowerCase());
-      const newStatus = isClosed ? 'draft' : 'cancelled';
+      const isClosed = ["paid", "cancelled"].includes(
+        (claim.status || "").toLowerCase(),
+      );
+      const newStatus = isClosed ? "draft" : "cancelled";
       await claimService.updateClaim(claim.id, { status: newStatus });
       refreshLedger();
     } catch (err) {
-      console.error('Failed to toggle claim status', err);
-      alert('Failed to toggle claim status.');
+      console.error("Failed to toggle claim status", err);
+      alert("Failed to toggle claim status.");
     }
   };
-  
+
   // Local deposit edits (not server-persisted in the original code either)
-  const [depositOverrides,       setDepositOverrides]       = useState({});
+  const [depositOverrides, setDepositOverrides] = useState({});
 
   // Refs to access current state inside useCallback without triggering listener resets
   const ledgerItemsRef = React.useRef(ledgerItems);
@@ -151,12 +184,12 @@ const LedgerList = ({ patient, expanded, filters }) => {
       // Re-fetch details for any currently expanded invoices so embedded payments appear
       const currentExpanded = expandedItemsRef.current || {};
       const currentLedger = ledgerItemsRef.current || [];
-      
+
       Object.keys(currentExpanded).forEach((idxStr) => {
         const idx = parseInt(idxStr, 10);
         if (currentExpanded[idx]) {
           const item = currentLedger[idx];
-          if (item && item.method === 'Invoice') {
+          if (item && item.method === "Invoice") {
             dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
           }
         }
@@ -166,11 +199,11 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
   useEffect(() => {
     refreshLedger();
-    window.addEventListener('refresh-ledger', refreshLedger);
-    window.addEventListener('add-ledger-item', refreshLedger);
+    window.addEventListener("refresh-ledger", refreshLedger);
+    window.addEventListener("add-ledger-item", refreshLedger);
     return () => {
-      window.removeEventListener('refresh-ledger', refreshLedger);
-      window.removeEventListener('add-ledger-item', refreshLedger);
+      window.removeEventListener("refresh-ledger", refreshLedger);
+      window.removeEventListener("add-ledger-item", refreshLedger);
     };
   }, [refreshLedger]);
 
@@ -180,10 +213,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
     if (expanded !== undefined && expanded !== prevExpandedRef.current) {
       prevExpandedRef.current = expanded;
       const all = {};
-      ledgerItems.forEach((item, idx) => { 
-        all[idx] = expanded; 
+      ledgerItems.forEach((item, idx) => {
+        all[idx] = expanded;
         // If expanding all, automatically fetch details for any invoices missing them
-        if (expanded && item.method === 'Invoice' && !item.details) {
+        if (expanded && item.method === "Invoice" && !item.details) {
           dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
         }
       });
@@ -194,17 +227,20 @@ const LedgerList = ({ patient, expanded, filters }) => {
   useEffect(() => {
     if (location.state?.invoiceId && ledgerItems.length > 0) {
       const targetInvoiceId = location.state.invoiceId;
-      const idx = ledgerItems.findIndex(item => 
-        String(item.id) === String(targetInvoiceId) || 
-        String(item.invoiceNumber) === String(targetInvoiceId)
+      const idx = ledgerItems.findIndex(
+        (item) =>
+          String(item.id) === String(targetInvoiceId) ||
+          String(item.invoiceNumber) === String(targetInvoiceId),
       );
-      
+
       if (idx !== -1) {
         setExpandedItems((prev) => {
           if (!prev[idx]) {
             const targetItem = ledgerItems[idx];
-            if (targetItem?.method === 'Invoice') {
-              dispatch(fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }));
+            if (targetItem?.method === "Invoice") {
+              dispatch(
+                fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }),
+              );
             }
             return { ...prev, [idx]: true };
           }
@@ -214,12 +250,12 @@ const LedgerList = ({ patient, expanded, filters }) => {
         setTimeout(() => {
           const element = document.getElementById(`ledger-item-${idx}`);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
             // Add a temporary highlight effect
-            element.style.transition = 'box-shadow 0.3s ease-in-out';
-            element.style.boxShadow = '0 0 10px 2px #4caf50';
+            element.style.transition = "box-shadow 0.3s ease-in-out";
+            element.style.boxShadow = "0 0 10px 2px #4caf50";
             setTimeout(() => {
-              element.style.boxShadow = 'none';
+              element.style.boxShadow = "none";
             }, 2000);
           }
         }, 300);
@@ -232,7 +268,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setExpandedItems((prev) => ({ ...prev, [idx]: !prev[idx] }));
     const targetItem = ledgerItems[idx];
     // condition() in the thunk guards against duplicate/in-flight fetches
-    if (targetItem?.method === 'Invoice') {
+    if (targetItem?.method === "Invoice") {
       dispatch(fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }));
     }
   };
@@ -243,103 +279,149 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
 
   const handleBackdateDone = async (date) => {
-    console.log('handleBackdateDone called with:', date, 'calendarTarget:', calendarTarget);
+    console.log(
+      "handleBackdateDone called with:",
+      date,
+      "calendarTarget:",
+      calendarTarget,
+    );
     if (!calendarTarget) {
-      console.warn('calendarTarget is null');
+      console.warn("calendarTarget is null");
     }
     if (!date) {
-      console.warn('date is empty or null');
+      console.warn("date is empty or null");
     }
-    
+
     if (calendarTarget && date) {
-      console.log('Dispatching backdateTransaction...', { patientId, itemId: calendarTarget.id, date, isAdjustment: calendarTarget.isAdjustment });
+      console.log("Dispatching backdateTransaction...", {
+        patientId,
+        itemId: calendarTarget.id,
+        date,
+        isAdjustment: calendarTarget.isAdjustment,
+      });
       try {
-        await dispatch(backdateTransaction({
-          patientId,
-          itemId: calendarTarget.id,
-          date,
-          isAdjustment: calendarTarget.isAdjustment,
-        })).unwrap();
-        console.log('backdateTransaction succeeded');
+        await dispatch(
+          backdateTransaction({
+            patientId,
+            itemId: calendarTarget.id,
+            date,
+            isAdjustment: calendarTarget.isAdjustment,
+          }),
+        ).unwrap();
+        console.log("backdateTransaction succeeded");
       } catch (err) {
-        console.error('backdateTransaction failed', err);
-        alert('Failed to backdate: ' + err);
+        console.error("backdateTransaction failed", err);
+        alert("Failed to backdate: " + err);
       }
     }
     setCalendarTarget(null);
     setAnchorEl(null);
   };
 
-  const handleVoidClick  = (item) => { setVoidTarget(item); setShowVoidDialog(true); };
-  const handleVoidCancel = () => { setShowVoidDialog(false); setVoidTarget(null); };
+  const handleVoidClick = (item) => {
+    setVoidTarget(item);
+    setShowVoidDialog(true);
+  };
+  const handleVoidCancel = () => {
+    setShowVoidDialog(false);
+    setVoidTarget(null);
+  };
   const handleVoidConfirm = async () => {
     if (voidTarget) {
       try {
-        console.log('Dispatching voidTransaction with:', voidTarget);
-        await dispatch(voidTransaction({
-          patientId,
-          invoiceId: voidTarget.invoiceId, // might be undefined for adjustments
-          itemId:    voidTarget.id,
-          isAdjustment: voidTarget.isAdjustment,
-          isGrouped:    voidTarget.isGrouped,
-          isPayment:    voidTarget.isPayment,
-        })).unwrap();
-        console.log('voidTransaction succeeded');
+        console.log("Dispatching voidTransaction with:", voidTarget);
+        await dispatch(
+          voidTransaction({
+            patientId,
+            invoiceId: voidTarget.invoiceId, // might be undefined for adjustments
+            itemId: voidTarget.id,
+            isAdjustment: voidTarget.isAdjustment,
+            isGrouped: voidTarget.isGrouped,
+            isPayment: voidTarget.isPayment,
+          }),
+        ).unwrap();
+        console.log("voidTransaction succeeded");
       } catch (err) {
-        console.error('voidTransaction failed:', err);
+        console.error("voidTransaction failed:", err);
       }
     }
     setShowVoidDialog(false);
     setVoidTarget(null);
   };
 
-  const handleEditClick = (item) => { setEditTarget(item); setShowCourtesyCredit(true); };
+  const handleEditClick = (item) => {
+    setEditTarget(item);
+    setShowCourtesyCredit(true);
+  };
 
   const handleCourtesyCreditSave = async (data) => {
-    await dispatch(applyCourtesyCredit({
-      patientId,
-      procedureId:    data.id,
-      invoiceId:      data.invoiceId,
-      adjustmentType: data.adjustmentType,
-      creditAmount:   data.creditAmount,
-    }));
+    await dispatch(
+      applyCourtesyCredit({
+        patientId,
+        procedureId: data.id,
+        invoiceId: data.invoiceId,
+        adjustmentType: data.adjustmentType,
+        creditAmount: data.creditAmount,
+      }),
+    );
     // Optimistically update the local adjustmentTypeMap via dispatch (slice handles it too)
-    dispatch(setAdjustmentTypeForItem({ key: `${data.invoiceId}-${data.id}`, adjustmentType: data.adjustmentType }));
+    dispatch(
+      setAdjustmentTypeForItem({
+        key: `${data.invoiceId}-${data.id}`,
+        adjustmentType: data.adjustmentType,
+      }),
+    );
     setShowCourtesyCredit(false);
     setEditTarget(null);
   };
 
-  const handleCourtesyCreditCancel = () => { setShowCourtesyCredit(false); setEditTarget(null); };
+  const handleCourtesyCreditCancel = () => {
+    setShowCourtesyCredit(false);
+    setEditTarget(null);
+  };
 
-  const handleRefreshClick = (data) => { setUndoTarget(data); setShowUndoDialog(true); };
-  const handleUndoCancel   = () => { setShowUndoDialog(false); setUndoTarget(null); };
+  const handleRefreshClick = (data) => {
+    setUndoTarget(data);
+    setShowUndoDialog(true);
+  };
+  const handleUndoCancel = () => {
+    setShowUndoDialog(false);
+    setUndoTarget(null);
+  };
   const handleUndoConfirm = async () => {
     if (undoTarget) {
       try {
         if (undoTarget.isAdjustment) {
-          console.log('Dispatching voidTransaction for adjustment with:', undoTarget);
-          await dispatch(voidTransaction({
-            patientId,
-            invoiceId: undoTarget.invoiceId,
-            itemId: undoTarget.id,
-            isAdjustment: true
-          })).unwrap();
-          console.log('voidTransaction succeeded');
+          console.log(
+            "Dispatching voidTransaction for adjustment with:",
+            undoTarget,
+          );
+          await dispatch(
+            voidTransaction({
+              patientId,
+              invoiceId: undoTarget.invoiceId,
+              itemId: undoTarget.id,
+              isAdjustment: true,
+            }),
+          ).unwrap();
+          console.log("voidTransaction succeeded");
         } else if (undoTarget.isPayment) {
-          console.log('Dispatching voidPayment with:', undoTarget);
-          await paymentService.voidPayment(undoTarget.id, 'Undone by user');
-          console.log('voidPayment succeeded');
+          console.log("Dispatching voidPayment with:", undoTarget);
+          await paymentService.voidPayment(undoTarget.id, "Undone by user");
+          console.log("voidPayment succeeded");
         } else {
-          console.log('Dispatching undoCourtesyCredit with:', undoTarget);
-          await dispatch(undoCourtesyCredit({
-            patientId,
-            procedureId: undoTarget.id,
-            invoiceId:   undoTarget.invoiceId,
-          })).unwrap();
-          console.log('undoCourtesyCredit succeeded');
+          console.log("Dispatching undoCourtesyCredit with:", undoTarget);
+          await dispatch(
+            undoCourtesyCredit({
+              patientId,
+              procedureId: undoTarget.id,
+              invoiceId: undoTarget.invoiceId,
+            }),
+          ).unwrap();
+          console.log("undoCourtesyCredit succeeded");
         }
       } catch (err) {
-        console.error('undo action failed:', err);
+        console.error("undo action failed:", err);
       }
     }
     setShowUndoDialog(false);
@@ -351,60 +433,140 @@ const LedgerList = ({ patient, expanded, filters }) => {
     if (transferTarget) {
       if (transferTarget.isGrouped && transferTarget.procedures) {
         let successCount = 0;
+        let skippedCount = 0;
         for (let i = 0; i < transferTarget.procedures.length; i++) {
           const proc = transferTarget.procedures[i];
           const procId = proc.ProcNum || proc._id || proc.id;
+          const insRaw =
+            (proc.insuranceAmount ??
+              proc.insPortion ??
+              proc.insurancePortion ??
+              proc.insAmt ??
+              proc.insurance) ||
+            0;
+          const insAmt = Number(String(insRaw).replace(/[^0-9.-]+/g, "")) || 0;
+          if (insAmt <= 0) {
+            skippedCount++;
+            console.warn(
+              "Skipping transfer for procedure with no outstanding insurance:",
+              procId,
+              insAmt,
+            );
+            continue;
+          }
           if (procId) {
             const isLast = i === transferTarget.procedures.length - 1;
             try {
-              await dispatch(transferOutstandingToPatient({
-                patientId,
-                invoiceId: transferTarget.invoiceId,
-                procedureId: procId,
-                skipFetch: !isLast
-              })).unwrap();
+              await dispatch(
+                transferOutstandingToPatient({
+                  patientId,
+                  invoiceId: transferTarget.invoiceId,
+                  procedureId: procId,
+                  skipFetch: !isLast,
+                }),
+              ).unwrap();
               successCount++;
             } catch (err) {
-              console.error('Failed to transfer for procedure:', procId, err);
+              console.error("Failed to transfer for procedure:", procId, err);
+              showSnackbar(
+                err || "Failed to transfer outstanding insurance",
+                "error",
+              );
             }
           }
         }
+        // Ensure ledger refresh after grouped transfers complete
+        try {
+          refreshLedger();
+        } catch (e) {
+          console.warn("refreshLedger failed after grouped transfer", e);
+        }
         if (successCount === 0 && transferTarget.procedures.length > 0) {
           // If all failed, they might not have any outstanding balance
-          console.warn('No procedures had outstanding insurance to transfer');
+          console.warn("No procedures had outstanding insurance to transfer");
+          if (skippedCount === transferTarget.procedures.length) {
+            showSnackbar(
+              "No outstanding insurance estimate to transfer for selected procedures",
+              "warning",
+            );
+          }
         }
       } else {
-        await dispatch(transferOutstandingToPatient({
-          patientId,
-          invoiceId: transferTarget.invoiceId,
-          procedureId: transferTarget.id,
-        }));
+        const insRaw =
+          (transferTarget.insuranceAmount ??
+            transferTarget.insPortion ??
+            transferTarget.insurancePortion ??
+            transferTarget.insAmt ??
+            transferTarget.insurance) ||
+          0;
+        const insAmt = Number(String(insRaw).replace(/[^0-9.-]+/g, "")) || 0;
+        if (insAmt <= 0) {
+          console.warn(
+            "No outstanding insurance to transfer for item:",
+            transferTarget,
+          );
+          showSnackbar(
+            "No outstanding insurance estimate to transfer for this item",
+            "warning",
+          );
+        } else {
+          try {
+            await dispatch(
+              transferOutstandingToPatient({
+                patientId,
+                invoiceId: transferTarget.invoiceId,
+                procedureId: transferTarget.id,
+              }),
+            ).unwrap();
+            // Force refresh after single-item transfer
+            try {
+              refreshLedger();
+            } catch (e) {
+              console.warn("refreshLedger failed after transfer", e);
+            }
+          } catch (err) {
+            console.error("Transfer outstanding failed:", err);
+            showSnackbar(
+              err || "Failed to transfer outstanding insurance",
+              "error",
+            );
+          }
+        }
       }
     }
     setShowTransferConfirmation(false);
     setTransferTarget(null);
   };
 
-  const handleCollapsedEditClick = (item) => { setEditDepositTarget(item); setShowEditDeposit(true); };
-  const handleEditDepositSave    = (data) => {
+  const handleCollapsedEditClick = (item) => {
+    setEditDepositTarget(item);
+    setShowEditDeposit(true);
+  };
+  const handleEditDepositSave = (data) => {
     if (editDepositTarget) {
-      setDepositOverrides((prev) => ({ ...prev, [editDepositTarget.id]: data }));
+      setDepositOverrides((prev) => ({
+        ...prev,
+        [editDepositTarget.id]: data,
+      }));
     }
     setShowEditDeposit(false);
     setEditDepositTarget(null);
   };
-  const handleEditDepositCancel = () => { setShowEditDeposit(false); setEditDepositTarget(null); };
+  const handleEditDepositCancel = () => {
+    setShowEditDeposit(false);
+    setEditDepositTarget(null);
+  };
 
   const handlePrintSelect = (option) => {
-    if (option === 'Simple Statements') setShowSimpleStatement(true);
-    else if (option === 'Detailed Statement') setShowDetailedStatement(true);
+    if (option === "Simple Statements") setShowSimpleStatement(true);
+    else if (option === "Detailed Statement") setShowDetailedStatement(true);
   };
 
   const handleAdjustmentSelect = (option) => {
-    if (option === 'Credit (subtraction)')     setShowAdjustDialog(true);
-    else if (option === 'Debit (addition)')    setShowDebitDialog(true);
-    else if (option === 'Membership Adjustment') setShowMembershipDialog(true);
-    else if (option === 'Insurance Write-Off') setShowWriteOffDialog(true);
+    if (option === "Credit (subtraction)") setShowAdjustDialog(true);
+    else if (option === "Debit (addition)") setShowDebitDialog(true);
+    else if (option === "Membership Adjustment") setShowMembershipDialog(true);
+    else if (option === "Insurance Write-Off") setShowWriteOffDialog(true);
   };
 
   const handleAttachClick = (data) => {
@@ -412,58 +574,96 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowAttachDialog(true);
   };
 
-  const handleAddProcedureClick = (item) => { setInvoiceModalData(item); setShowInvoiceModal(true); };
-  const handleInvoiceModalCancel = () => { setShowInvoiceModal(false); setInvoiceModalData(null); };
+  const handleAddProcedureClick = (item) => {
+    setInvoiceModalData(item);
+    setShowInvoiceModal(true);
+  };
+  const handleInvoiceModalCancel = () => {
+    setShowInvoiceModal(false);
+    setInvoiceModalData(null);
+  };
 
   const handleInvoiceModalSave = async (savePayload) => {
     // Support both old array format and new object format from InvoiceModal
-    const data = Array.isArray(savePayload) ? savePayload : savePayload.procedures;
+    const data = Array.isArray(savePayload)
+      ? savePayload
+      : savePayload.procedures;
     const shouldAddClaim = !Array.isArray(savePayload) && savePayload.addClaim;
-    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []).filter((row) => !row.dbi && String(row.dbi).toLowerCase() !== 'true') : [];
+    const claimRows = !Array.isArray(savePayload)
+      ? (savePayload.claimProcedures || []).filter(
+          (row) => !row.dbi && String(row.dbi).toLowerCase() !== "true",
+        )
+      : [];
 
     const payload = {
       patientId: parseInt(patientId, 10) || 1,
       notes: savePayload.description,
       items: data.map((row) => {
         let parsedDate = new Date().toISOString();
-        if (row.date) { const d = new Date(row.date); if (!isNaN(d.getTime())) parsedDate = d.toISOString(); }
+        if (row.date) {
+          const d = new Date(row.date);
+          if (!isNaN(d.getTime())) parsedDate = d.toISOString();
+        }
         return {
-          code: row.code, description: row.treatment, date: parsedDate, site: row.site,
+          code: row.code,
+          description: row.treatment,
+          date: parsedDate,
+          site: row.site,
           provider: row.provider,
-          writeoff:   parseFloat((String(row.writeoff   || '')).replace(/[^0-9.-]+/g, '')) || 0,
-          ptPortion:  parseFloat((String(row.ptPortion  || '')).replace(/[^0-9.-]+/g, '')) || 0,
-          insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
-          charge:     parseFloat((String(row.charge     || '')).replace(/[^0-9.-]+/g, '')) || 0,
-          balance:    parseFloat((String(row.balance    || '')).replace(/[^0-9.-]+/g, '')) || 0,
-          dbi:       Boolean(row.dbi), completed: Boolean(row.completed),
+          writeoff:
+            parseFloat(String(row.writeoff || "").replace(/[^0-9.-]+/g, "")) ||
+            0,
+          ptPortion:
+            parseFloat(String(row.ptPortion || "").replace(/[^0-9.-]+/g, "")) ||
+            0,
+          insPortion:
+            parseFloat(
+              String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+            ) || 0,
+          charge:
+            parseFloat(String(row.charge || "").replace(/[^0-9.-]+/g, "")) || 0,
+          balance:
+            parseFloat(String(row.balance || "").replace(/[^0-9.-]+/g, "")) ||
+            0,
+          dbi: Boolean(row.dbi),
+          completed: Boolean(row.completed),
         };
       }),
     };
-    if (payload.items.length === 0) { alert('Please add at least one procedure before saving.'); return; }
+    if (payload.items.length === 0) {
+      alert("Please add at least one procedure before saving.");
+      return;
+    }
     try {
       let createdInvoiceId;
 
       if (invoiceModalData?.invoiceId) {
         const targetInvoiceId = invoiceModalData.invoiceId;
         await Promise.all(
-          payload.items.map(item => invoiceService.addInvoiceItem(targetInvoiceId, {
-            serviceId: item.code,
-            unitPrice: item.charge,
-            description: item.description,
-            cptCode: item.code,
-            quantity: 1,
-            // passing additional fields in case the backend uses them
-            date: item.date,
-            provider: item.provider,
-            site: item.site,
-            dbi: item.dbi,
-            completed: item.completed
-          }))
+          payload.items.map((item) =>
+            invoiceService.addInvoiceItem(targetInvoiceId, {
+              serviceId: item.code,
+              unitPrice: item.charge,
+              description: item.description,
+              cptCode: item.code,
+              quantity: 1,
+              // passing additional fields in case the backend uses them
+              date: item.date,
+              provider: item.provider,
+              site: item.site,
+              dbi: item.dbi,
+              completed: item.completed,
+            }),
+          ),
         );
         createdInvoiceId = targetInvoiceId;
       } else {
         const result = await dispatch(createInvoice(payload)).unwrap();
-        createdInvoiceId = result?.invoice?._id || result?.invoice?.id || result?._id || result?.id;
+        createdInvoiceId =
+          result?.invoice?._id ||
+          result?.invoice?.id ||
+          result?._id ||
+          result?.id;
       }
 
       setShowInvoiceModal(false);
@@ -477,26 +677,35 @@ const LedgerList = ({ patient, expanded, filters }) => {
               procedures: claimRows.map((row) => ({
                 code: row.code,
                 description: row.treatment,
-                charge: parseFloat((String(row.charge || '')).replace(/[^0-9.-]+/g, '')) || 0,
-                insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+                charge:
+                  parseFloat(
+                    String(row.charge || "").replace(/[^0-9.-]+/g, ""),
+                  ) || 0,
+                insPortion:
+                  parseFloat(
+                    String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+                  ) || 0,
                 dbi: false,
               })),
             });
           } catch (claimErr) {
-            console.warn('Invoice created but claim creation failed:', claimErr);
+            console.warn(
+              "Invoice created but claim creation failed:",
+              claimErr,
+            );
           }
         }
       }
 
       refreshLedger();
     } catch (err) {
-      alert('Failed to create invoice: ' + (err.message || err));
+      alert("Failed to create invoice: " + (err.message || err));
     }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ p: 1, bgcolor: '#FFFFFF' }}>
+    <Box sx={{ p: 1, bgcolor: "#FFFFFF" }}>
       {ledgerItems.map((item, idx) => {
         // Apply voided filter
         if (item.isVoided && !filters?.includeVoided) {
@@ -510,18 +719,21 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
         const isExpanded = expandedItems[idx] || false;
         let displayItem = depositOverrides[item.id]
-          ? { ...item, method: depositOverrides[item.id].paymentType || item.method }
+          ? {
+              ...item,
+              method: depositOverrides[item.id].paymentType || item.method,
+            }
           : item;
 
         // Also filter out child details if they shouldn't be included based on filters
         if (displayItem.details) {
           displayItem = {
             ...displayItem,
-            details: displayItem.details.filter(d => {
+            details: displayItem.details.filter((d) => {
               if (d.isVoided && !filters?.includeVoided) return false;
               if (d.isTransfer && filters?.hideBillingTransfers) return false;
               return true;
-            })
+            }),
           };
         }
 
@@ -558,32 +770,69 @@ const LedgerList = ({ patient, expanded, filters }) => {
       })}
 
       <LedgerDialogManager
-        anchorEl={anchorEl} setAnchorEl={setAnchorEl} handleBackdateDone={handleBackdateDone}
-        printAnchorEl={printAnchorEl} setPrintAnchorEl={setPrintAnchorEl} handlePrintSelect={handlePrintSelect} printItem={printItem}
-        adjAnchorEl={adjAnchorEl} setAdjAnchorEl={setAdjAnchorEl} handleAdjustmentSelect={handleAdjustmentSelect} adjItem={adjItem}
-        showAdjustDialog={showAdjustDialog} setShowAdjustDialog={setShowAdjustDialog}
-        showDebitDialog={showDebitDialog} setShowDebitDialog={setShowDebitDialog}
-        showMembershipDialog={showMembershipDialog} setShowMembershipDialog={setShowMembershipDialog}
-        showWriteOffDialog={showWriteOffDialog} setShowWriteOffDialog={setShowWriteOffDialog}
-        showVoidDialog={showVoidDialog} handleVoidCancel={handleVoidCancel} handleVoidConfirm={handleVoidConfirm} voidTarget={voidTarget}
-        showCourtesyCredit={showCourtesyCredit} handleCourtesyCreditCancel={handleCourtesyCreditCancel} handleCourtesyCreditSave={handleCourtesyCreditSave} editTarget={editTarget}
-        showUndoDialog={showUndoDialog} handleUndoCancel={handleUndoCancel} handleUndoConfirm={handleUndoConfirm}
-        showSimpleStatement={showSimpleStatement} setShowSimpleStatement={setShowSimpleStatement}
-        showDetailedStatement={showDetailedStatement} setShowDetailedStatement={setShowDetailedStatement}
-        showEditDeposit={showEditDeposit} handleEditDepositCancel={handleEditDepositCancel} handleEditDepositSave={handleEditDepositSave} editDepositTarget={editDepositTarget}
-        showInvoiceModal={showInvoiceModal} handleInvoiceModalCancel={handleInvoiceModalCancel} handleInvoiceModalSave={handleInvoiceModalSave} invoiceModalData={invoiceModalData}
-        magicStickAnchorEl={magicStickAnchorEl} setMagicStickAnchorEl={setMagicStickAnchorEl}
-        showTransferConfirmation={showTransferConfirmation} setShowTransferConfirmation={setShowTransferConfirmation} handleTransferConfirm={handleTransferConfirm}
-        showEditInvoice={showEditInvoice} setShowEditInvoice={setShowEditInvoice} editInvoiceTarget={editInvoiceTarget}
-        showAttachDialog={showAttachDialog} setShowAttachDialog={setShowAttachDialog} attachTarget={attachTarget}
-        showAdaDialog={showAdaDialog} setShowAdaDialog={setShowAdaDialog} adaTarget={adaTarget}
+        anchorEl={anchorEl}
+        setAnchorEl={setAnchorEl}
+        handleBackdateDone={handleBackdateDone}
+        printAnchorEl={printAnchorEl}
+        setPrintAnchorEl={setPrintAnchorEl}
+        handlePrintSelect={handlePrintSelect}
+        printItem={printItem}
+        adjAnchorEl={adjAnchorEl}
+        setAdjAnchorEl={setAdjAnchorEl}
+        handleAdjustmentSelect={handleAdjustmentSelect}
+        adjItem={adjItem}
+        showAdjustDialog={showAdjustDialog}
+        setShowAdjustDialog={setShowAdjustDialog}
+        showDebitDialog={showDebitDialog}
+        setShowDebitDialog={setShowDebitDialog}
+        showMembershipDialog={showMembershipDialog}
+        setShowMembershipDialog={setShowMembershipDialog}
+        showWriteOffDialog={showWriteOffDialog}
+        setShowWriteOffDialog={setShowWriteOffDialog}
+        showVoidDialog={showVoidDialog}
+        handleVoidCancel={handleVoidCancel}
+        handleVoidConfirm={handleVoidConfirm}
+        voidTarget={voidTarget}
+        showCourtesyCredit={showCourtesyCredit}
+        handleCourtesyCreditCancel={handleCourtesyCreditCancel}
+        handleCourtesyCreditSave={handleCourtesyCreditSave}
+        editTarget={editTarget}
+        showUndoDialog={showUndoDialog}
+        handleUndoCancel={handleUndoCancel}
+        handleUndoConfirm={handleUndoConfirm}
+        showSimpleStatement={showSimpleStatement}
+        setShowSimpleStatement={setShowSimpleStatement}
+        showDetailedStatement={showDetailedStatement}
+        setShowDetailedStatement={setShowDetailedStatement}
+        showEditDeposit={showEditDeposit}
+        handleEditDepositCancel={handleEditDepositCancel}
+        handleEditDepositSave={handleEditDepositSave}
+        editDepositTarget={editDepositTarget}
+        showInvoiceModal={showInvoiceModal}
+        handleInvoiceModalCancel={handleInvoiceModalCancel}
+        handleInvoiceModalSave={handleInvoiceModalSave}
+        invoiceModalData={invoiceModalData}
+        magicStickAnchorEl={magicStickAnchorEl}
+        setMagicStickAnchorEl={setMagicStickAnchorEl}
+        showTransferConfirmation={showTransferConfirmation}
+        setShowTransferConfirmation={setShowTransferConfirmation}
+        handleTransferConfirm={handleTransferConfirm}
+        showEditInvoice={showEditInvoice}
+        setShowEditInvoice={setShowEditInvoice}
+        editInvoiceTarget={editInvoiceTarget}
+        showAttachDialog={showAttachDialog}
+        setShowAttachDialog={setShowAttachDialog}
+        attachTarget={attachTarget}
+        showAdaDialog={showAdaDialog}
+        setShowAdaDialog={setShowAdaDialog}
+        adaTarget={adaTarget}
       />
       {showEOBModal && (
         <ManageEOBModal
           open={showEOBModal}
-          onClose={(hasChanges) => { 
-            setShowEOBModal(false); 
-            setEOBTarget(null); 
+          onClose={(hasChanges) => {
+            setShowEOBModal(false);
+            setEOBTarget(null);
             if (hasChanges && patientId) {
               dispatch(fetchLedgerItems(patientId));
             }
@@ -595,7 +844,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
         <EditClaimDialog
           open={showEditClaimDialog}
           claim={editClaimTarget}
-          onClose={() => { setShowEditClaimDialog(false); setEditClaimTarget(null); }}
+          onClose={() => {
+            setShowEditClaimDialog(false);
+            setEditClaimTarget(null);
+          }}
           onSave={async (data) => {
             try {
               if (editClaimTarget?._id || editClaimTarget?.id) {
