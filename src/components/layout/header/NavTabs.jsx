@@ -1,5 +1,8 @@
-import { Box, Typography } from "@mui/material";
+import { useRef, useState } from "react";
+import { Box, MenuItem, Popper, Typography } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
+import { PATIENT_SECTION_TABS, getPatientSectionPath } from "../../patients/PatientSectionTabs";
+import { usePatient } from "../../../hooks/redux";
 
 const TABS = [
   // { label: "Dashboard", path: "/dashboard" },
@@ -14,6 +17,10 @@ const TABS = [
 const NavTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentPatient, selectedPatientId } = usePatient();
+  const [patientsMenuAnchor, setPatientsMenuAnchor] = useState(null);
+  const patientsMenuCloseTimer = useRef(null);
+  const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum || selectedPatientId;
 
   const isActive = (path) => {
     if (path === "/clinical/treatment-plan") {
@@ -39,6 +46,25 @@ const NavTabs = () => {
     );
   };
 
+  const openPatientsMenu = (event) => {
+    window.clearTimeout(patientsMenuCloseTimer.current);
+    setPatientsMenuAnchor(event.currentTarget);
+  };
+
+  const closePatientsMenu = () => {
+    patientsMenuCloseTimer.current = window.setTimeout(() => setPatientsMenuAnchor(null), 150);
+  };
+
+  const handleNavClick = (path) => {
+    navigate(path);
+    setPatientsMenuAnchor(null);
+  };
+
+  const handlePatientSectionClick = (tabId) => {
+    navigate(getPatientSectionPath(tabId, patientId));
+    setPatientsMenuAnchor(null);
+  };
+
   return (
     <Box
       sx={{
@@ -56,7 +82,9 @@ const NavTabs = () => {
         return (
           <Box
             key={label}
-            onClick={() => navigate(path)}
+            onClick={() => handleNavClick(path)}
+            onMouseEnter={label === "Patients" ? openPatientsMenu : undefined}
+            onMouseLeave={label === "Patients" ? closePatientsMenu : undefined}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -92,6 +120,42 @@ const NavTabs = () => {
           </Box>
         );
       })}
+      <Popper
+        anchorEl={patientsMenuAnchor}
+        open={Boolean(patientsMenuAnchor)}
+        placement="bottom-start"
+        modifiers={[{ name: "offset", options: { offset: [0, 4] } }]}
+        sx={{ zIndex: 1600 }}
+      >
+        <Box
+          onMouseEnter={() => window.clearTimeout(patientsMenuCloseTimer.current)}
+          onMouseLeave={closePatientsMenu}
+          sx={{
+            minWidth: 220,
+            backgroundColor: "#fff",
+            border: "1px solid #e0e5eb",
+            borderRadius: "10px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+            overflow: "hidden",
+          }}
+        >
+          {PATIENT_SECTION_TABS.map((tab) => (
+            <MenuItem
+              key={tab.id}
+              onClick={() => handlePatientSectionClick(tab.id)}
+              sx={{
+                px: 2,
+                py: 1.1,
+                fontFamily: "Inter",
+                fontSize: "14px",
+                color: "#334155",
+              }}
+            >
+              {tab.label}
+            </MenuItem>
+          ))}
+        </Box>
+      </Popper>
     </Box>
   );
 };

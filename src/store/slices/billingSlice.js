@@ -53,6 +53,12 @@ function withConcurrency(concurrency, tasks) {
   });
 }
 
+const isDbiProcedure = (item = {}) => (
+  item.dbi === true ||
+  item.dbi === 1 ||
+  String(item.dbi).toLowerCase() === 'true'
+);
+
 export const createInvoice = createAsyncThunk(
   'billing/createInvoice',
   async (invoiceData, { rejectWithValue }) => {
@@ -182,9 +188,9 @@ export const fetchLedgerItems = createAsyncThunk(
                 String(l.id || l._id || l.procedureId || l.procId || l.ProcNum) === String(proc.id || proc.ProcNum)
               );
               return { ...matchedLine, ...proc };
-            });
+            }).filter(proc => !isDbiProcedure(proc));
           } else {
-            specificProcedures = (invoice.lineItems || []).filter(l => !l.dbi);
+            specificProcedures = (invoice.lineItems || []).filter(l => !isDbiProcedure(l));
           }
           const specificAmount = specificProcedures.reduce((sum, line) => sum + Number(line.fee || line.charge || line.total || line.totalPrice || line.ProcFee || 0), 0);
 
@@ -431,7 +437,16 @@ export const fetchInvoiceDetails = createAsyncThunk(
         claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => {
           let specificProcedures = claim.procedures;
           if (!specificProcedures || specificProcedures.length === 0) {
-            specificProcedures = (fullInvoice.lineItems || []).filter(l => !l.dbi);
+            specificProcedures = (fullInvoice.lineItems || []).filter(l => !isDbiProcedure(l));
+          } else {
+            specificProcedures = specificProcedures
+              .map(proc => {
+                const matchedLine = (fullInvoice.lineItems || []).find(l =>
+                  String(l.id || l._id || l.procedureId || l.procId || l.ProcNum) === String(proc.id || proc.ProcNum || proc.procedureId)
+                );
+                return { ...matchedLine, ...proc };
+              })
+              .filter(proc => !isDbiProcedure(proc));
           }
           const specificAmount = specificProcedures.reduce((sum, line) => sum + Number(line.fee || line.charge || line.total || line.totalPrice || line.ProcFee || 0), 0);
           

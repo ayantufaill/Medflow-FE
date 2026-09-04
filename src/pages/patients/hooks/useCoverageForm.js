@@ -31,8 +31,9 @@ export const useCoverageForm = (patient) => {
       ortho: { unlimited: false, annualMax: '', usedAmount: '', usedAmountDate: '' },
       diagnostic: { unlimited: false, annualMax: '' },
       preventative: { unlimited: false, annualMax: '' },
+      basic: { unlimited: false, annualMax: '' },
       major: { unlimited: false, annualMax: '' },
-      categories: ['Diagnostic', 'Preventative', 'Major']
+      categories: ['Diagnostic', 'Preventative', 'Basic', 'Major']
     },
     subscriber: {
       relationship: 'Self',

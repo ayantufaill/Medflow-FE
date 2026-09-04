@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { Search, PersonAdd, Add } from "@mui/icons-material";
 import { useDebounce } from "use-debounce";
@@ -9,6 +9,14 @@ dayjs.extend(utc);
 import CurrentPatientCard from "./CurrentPatientCard";
 import PatientListCard from "./PatientListCard";
 import { usePatients, usePatient } from "../../../../hooks/redux";
+import { useDispatch } from "react-redux";
+import {
+  clearPatientScopedData,
+  fetchDentalHistoryThunk,
+  fetchMedicalHistoryThunk,
+  fetchPatientBalance,
+  fetchPatientInsurances,
+} from "../../../../store/slices/patientSlice";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -108,7 +116,9 @@ const FooterAction = ({ icon, label, onClick }) => (
 // onClose is called after a patient is selected so the parent can hide the panel.
 
 const PatientDropdownPanel = ({ onClose }) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { patients, loading, fetch: searchPatients } = usePatients();
   const { currentPatient, setPatient, fetchById, setPatientId } = usePatient();
 
@@ -117,6 +127,29 @@ const PatientDropdownPanel = ({ onClose }) => {
 
   // Debounce the raw input so the API is not called on every keystroke.
   const [debouncedQuery] = useDebounce(searchQuery, 350);
+
+  const navigateToSelectedPatient = (patientId) => {
+    const currentPath = location.pathname;
+    let nextPath = currentPath;
+
+    if (/^\/patients\/[^/]+\/insurance\/[^/]+/.test(currentPath)) {
+      nextPath = `/patients/${patientId}/insurance`;
+    } else if (/^\/patients\/[^/]+\/signed-documents\/[^/]+/.test(currentPath)) {
+      nextPath = `/patients/${patientId}/signed-documents`;
+    } else if (/^\/patients\/[^/]+\/allergies\/[^/]+/.test(currentPath)) {
+      nextPath = `/patients/details/${patientId}`;
+    } else if (/^\/patients\/details\/[^/]+/.test(currentPath)) {
+      nextPath = currentPath.replace(/^\/patients\/details\/[^/]+/, `/patients/details/${patientId}`);
+    } else if (/^\/patients\/[^/]+/.test(currentPath)) {
+      nextPath = currentPath.replace(/^\/patients\/[^/]+/, `/patients/${patientId}`);
+    } else if (/^\/vital-signs\/patient\/[^/]+/.test(currentPath)) {
+      nextPath = currentPath.replace(/^\/vital-signs\/patient\/[^/]+/, `/vital-signs/patient/${patientId}`);
+    }
+
+    if (nextPath !== currentPath) {
+      navigate(`${nextPath}${location.search}`, { replace: true });
+    }
+  };
 
   // Load patients immediately when the panel mounts (shows a default list before the
   // user types). Also re-fetches whenever the debounced query changes.
@@ -137,10 +170,16 @@ const PatientDropdownPanel = ({ onClose }) => {
     // Fallback: set basic patient data immediately so UI reacts fast
     setPatient(rawPatient);
     if (pId) setPatientId(pId);
+    dispatch(clearPatientScopedData());
+    if (pId) navigateToSelectedPatient(pId);
     
     if (pId) {
       // Then fetch full workspace in background to populate family details
       fetchById(pId);
+      dispatch(fetchMedicalHistoryThunk(pId));
+      dispatch(fetchDentalHistoryThunk(pId));
+      dispatch(fetchPatientInsurances({ patientId: pId, force: true }));
+      dispatch(fetchPatientBalance(pId));
     }
     
     onClose?.(); // collapse the dropdown

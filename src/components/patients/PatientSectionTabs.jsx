@@ -13,6 +13,17 @@ export const PATIENT_SECTION_TABS = [
   { id: 'signed_docs', label: 'Signed Docs' },
 ];
 
+export const getPatientSectionPath = (tabId, patientId) => {
+  if (!patientId) return '/patients';
+  if (tabId === 'details') return `/patients/details/${patientId}`;
+  if (tabId === 'medical') return `/patients/${patientId}/medical-history`;
+  if (tabId === 'dental') return `/patients/${patientId}/dental-history`;
+  if (tabId === 'insurance') return `/patients/details/${patientId}?tab=insurance`;
+  if (tabId === 'additional_docs') return `/patients/${patientId}/additional-documents`;
+  if (tabId === 'signed_docs') return `/patients/${patientId}/signed-documents`;
+  return '/patients';
+};
+
 /**
  * Shared tab bar for patient section. Always visible on /patients, /patients/details/:id, /patients/:id/signed-documents, etc.
  * One click navigates to that section. Pass activeTab and optional patientId (when viewing a specific patient).

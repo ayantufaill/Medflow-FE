@@ -143,6 +143,7 @@ const AnnualMaximumsTable = ({ formData, handleCoverageChange, handleInputChange
               { key: 'ortho', label: 'Ortho' },
               { key: 'diagnostic', label: 'Diagnostic' },
               { key: 'preventative', label: 'Preventative' },
+              { key: 'basic', label: 'Basic' },
               { key: 'major', label: 'Major' }
             ].map(({ key: catKey, label }) => {
               const catObj = formData.coverage?.[catKey] || {};

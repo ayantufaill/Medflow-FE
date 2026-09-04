@@ -1,10 +1,12 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
-import SyncIcon from '@mui/icons-material/Sync';
+import syncIcon from '../../../assets/claimicons/refreshicon.svg';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import { radius, fontSize, fontWeight } from '../../../constants/styles';
 import { COLORS } from '../../../constants/colors';
+
+
 
 const PatientFlagsHeader = ({ onAddCategory, onSave, onSync }) => (
   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6, flexWrap: 'wrap', gap: 2 }}>
@@ -14,15 +16,20 @@ const PatientFlagsHeader = ({ onAddCategory, onSave, onSync }) => (
 
     <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
       <Button
-        startIcon={<SyncIcon sx={{ fontSize: '16px' }} />}
+        startIcon={<img src={syncIcon} alt="Sync" style={{ width: 16, height: 16 }} />}
         onClick={onSync}
-        sx={{ 
-          textTransform: 'none', 
-          color: COLORS.TEXT_MUTED,
-          fontFamily: 'Inter',
-          fontSize: fontSize.base,
-          fontWeight: fontWeight.semibold,
+        sx={{
+          textTransform: 'none',
+          color: '#1e293b',
+          borderColor: '#e2e8f0',
+          fontWeight: 600,
+          borderRadius: 2,
+          height: 36,
+          px: 2,
+          '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
         }}
+        variant="outlined"
+        size="small"
       >
         Sync
       </Button>

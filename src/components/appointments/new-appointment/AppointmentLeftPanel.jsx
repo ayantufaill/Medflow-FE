@@ -30,6 +30,7 @@ const AppointmentLeftPanel = ({
   visitType, onVisitTypeChange,
   // Procedure tags
   selectedTagLabels, onTagClick,
+  onOpenAddProcedureDialog,
   addingProcedure, procedureInput,
   onProcedureInputChange, onAddingProcedureToggle, onSelectProcedure,
   // Procedure table
@@ -267,11 +268,7 @@ const AppointmentLeftPanel = ({
     <ProcedureTagStrip
       selectedTagLabels={selectedTagLabels}
       onTagClick={onTagClick}
-      addingProcedure={addingProcedure}
-      procedureInput={procedureInput}
-      onProcedureInputChange={onProcedureInputChange}
-      onAddingProcedureToggle={onAddingProcedureToggle}
-      onSelectProcedure={onSelectProcedure}
+      onOpenAddProcedureDialog={onOpenAddProcedureDialog}
     />
 
     {showExtendedOptions && (

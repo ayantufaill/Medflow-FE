@@ -12,6 +12,9 @@ import PatientFlagsHeader from '../../components/admin/patient-flags/PatientFlag
 import PatientFlagCategorySection from '../../components/admin/patient-flags/PatientFlagCategorySection';
 import PatientFlagsDialog from '../../components/admin/patient-flags/PatientFlagsDialog';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
+
+
 
 const defaultFlags = [
   { id: '1', category: 'Patient Communication', name: 'Send appointment reminder earlier than scheduled time', color: '#22c55e' },
@@ -35,6 +38,7 @@ const PatientFlags = () => {
   const practiceInfo = useSelector(selectPracticeInfo);
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
+  const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchCurrentPracticeInfo());
@@ -129,7 +133,7 @@ const PatientFlags = () => {
       <PatientFlagsHeader
         onAddCategory={openAddCategoryDialog}
         onSave={handleSave}
-        onSync={() => showSnackbar('Sync is not available yet.', 'info')}
+        onSync={() => setSyncDialogOpen(true)}
       />
       <Grid container spacing={3}>
         {categories.map((category) => (
@@ -163,7 +167,12 @@ const PatientFlags = () => {
         confirmText="Delete"
         confirmColor="error"
       />
+      <SyncOfficesDialog
+        open={isSyncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+      />
     </Box>
+
   );
 };
 

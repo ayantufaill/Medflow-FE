@@ -108,10 +108,10 @@ const ViewProviderDialog = ({ providerId, providerName, open, onClose }) => {
             <VisibilityIcon sx={{ fontSize: '22px', color: '#16a34a' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '18px', color: '#0f172a', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', color: '#0f172a', lineHeight: 1 }}>
               {providerName || 'Provider Details'}
             </Typography>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '13px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: '11.5px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
               View provider information and credentials
             </Typography>
           </Box>
@@ -122,7 +122,7 @@ const ViewProviderDialog = ({ providerId, providerName, open, onClose }) => {
       </Box>
 
       {/* Content */}
-      <DialogContent sx={{ p: '24px', bgcolor: '#fafbfc', flex: 1, overflowY: 'auto' }}>
+      <DialogContent sx={{ p: '24px', bgcolor: '#ffff', flex: 1, overflowY: 'auto' }}>
         {isLoading ? (
           <Box display="flex" justifyContent="center" alignItems="center" py={8}>
             <CircularProgress />
