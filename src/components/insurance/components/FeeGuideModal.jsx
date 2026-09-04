@@ -81,78 +81,111 @@ const FeeGuideModal = ({ open, onClose, feeGuideId }) => {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1400 }}>
-      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f5f5f5' }}>
-        <Typography variant="h6" fontWeight={700}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth 
+      sx={{ zIndex: 1400 }}
+      PaperProps={{
+        sx: {
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          maxHeight: '90vh'
+        }
+      }}
+    >
+      <DialogTitle sx={{ boxSizing: 'border-box', px: '25px', py: '16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e0e5eb', backgroundColor: '#f3f8fd', m: 0, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0F172A', flex: 1, fontFamily: 'Inter, sans-serif' }}>
           Fee Schedule Details
         </Typography>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
+        <IconButton onClick={onClose} size="small" sx={{ color: '#64748B' }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <TextField
-            size="small"
-            placeholder="Search procedure code or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ width: '300px' }}
-          />
-          <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-            * Provider-specific overrides can be layered on top
-          </Typography>
-        </Box>
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-            <CircularProgress />
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
+        <Box sx={{ p: '24px' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <TextField
+              size="small"
+              placeholder="Search procedure code or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: '#94a3b8' }} />
+                  </InputAdornment>
+                ),
+                sx: { bgcolor: '#fff', borderRadius: '8px', fontSize: '14px', '& fieldset': { borderColor: '#e2e8f0' } }
+              }}
+              sx={{ width: '320px' }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 500, color: '#64748b', fontSize: '13px' }}>
+              * Provider-specific overrides can be layered on top
+            </Typography>
           </Box>
-        ) : (
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#f0f4f8' }}>
-                  <TableCell sx={{ fontWeight: 700, width: '20%' }}>Procedure Code</TableCell>
-                  <TableCell sx={{ fontWeight: 700, width: '60%' }}>Description</TableCell>
-                  <TableCell sx={{ fontWeight: 700, width: '20%' }} align="right">Amount</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredFees.map((fee, index) => {
-                  const procCode = fee.code || fee.procCode;
-                  const description = fee.name || fee.description;
-                  const amount = fee.fee !== undefined && fee.fee !== null ? fee.fee : fee.amount;
-                  return (
-                  <TableRow key={index} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{procCode}</TableCell>
-                    <TableCell>{description}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-                      {typeof amount === 'number' ? `$${amount.toFixed(2)}` : amount || '-'}
-                    </TableCell>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+              <CircularProgress size={32} sx={{ color: '#3b5f9a' }} />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '8px', borderColor: '#e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', bgcolor: '#fff' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+                    <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: '13px', py: 1.5, borderBottom: '1px solid #e2e8f0', width: '20%' }}>Procedure Code</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: '13px', py: 1.5, borderBottom: '1px solid #e2e8f0', width: '60%' }}>Description</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#475569', fontSize: '13px', py: 1.5, borderBottom: '1px solid #e2e8f0', width: '20%' }} align="right">Amount</TableCell>
                   </TableRow>
-                )})}
-                {filteredFees.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#666' }}>
-                      No fees found matching your search.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+                </TableHead>
+                <TableBody>
+                  {filteredFees.map((fee, index) => {
+                    const procCode = fee.code || fee.procCode;
+                    const description = fee.name || fee.description;
+                    const amount = fee.fee !== undefined && fee.fee !== null ? fee.fee : fee.amount;
+                    return (
+                    <TableRow key={index} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                      <TableCell sx={{ fontWeight: 600, color: '#334155', fontSize: '14px', py: 1.5, borderBottom: '1px solid #f1f5f9' }}>{procCode}</TableCell>
+                      <TableCell sx={{ color: '#475569', fontSize: '14px', py: 1.5, borderBottom: '1px solid #f1f5f9' }}>{description}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, color: '#059669', fontSize: '14px', py: 1.5, borderBottom: '1px solid #f1f5f9' }}>
+                        {typeof amount === 'number' ? `$${amount.toFixed(2)}` : amount || '-'}
+                      </TableCell>
+                    </TableRow>
+                  )})}
+                  {filteredFees.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center" sx={{ py: 4, color: '#94a3b8', fontSize: '14px' }}>
+                        No fees found matching your search.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-        <Button onClick={onClose} variant="contained" sx={{ textTransform: 'none' }}>
+      <DialogActions sx={{ p: '16px 24px', borderTop: '1px solid #e2e8f0', bgcolor: '#fff' }}>
+        <Button 
+          onClick={onClose} 
+          variant="outlined" 
+          sx={{ 
+            textTransform: 'none', 
+            bgcolor: '#fff', 
+            color: '#334155',
+            borderColor: '#e2e8f0',
+            borderRadius: '6px', 
+            px: 3, 
+            py: 0.75, 
+            fontSize: '14px', 
+            fontWeight: 500,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1', boxShadow: 'none' } 
+          }}
+        >
           Close
         </Button>
       </DialogActions>

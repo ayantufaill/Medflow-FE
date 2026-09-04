@@ -15,11 +15,13 @@ import {
   IconButton,
   CircularProgress,
   Alert,
+  MenuItem,
 } from "@mui/material";
 import {
   Close as CloseIcon,
   DescriptionOutlined as DescriptionIcon,
 } from "@mui/icons-material";
+import CustomSelect from "../../common/CustomSelect";
 import apiClient from "../../../config/api";
 
 const normalizeHistoryRows = (payload) => {
@@ -93,12 +95,14 @@ const AuditHistoryDialog = ({
   historyItems = null,
 }) => {
   const [rows, setRows] = useState([]);
+  const [filterAction, setFilterAction] = useState('All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!open) {
       setRows([]);
+      setFilterAction('All');
       setLoading(false);
       setError(null);
       return;
@@ -158,6 +162,9 @@ const AuditHistoryDialog = ({
           borderRadius: "12px",
           overflow: "hidden",
           boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
@@ -170,6 +177,7 @@ const AuditHistoryDialog = ({
           py: "16px",
           borderBottom: "1px solid #e0e5eb",
           backgroundColor: "#f3f8fd",
+          flexShrink: 0,
         }}
       >
         <Box
@@ -226,7 +234,7 @@ const AuditHistoryDialog = ({
         </IconButton>
       </Box>
 
-      <DialogContent sx={{ p: 4 }}>
+      <DialogContent sx={{ p: 4, overflowY: 'auto', flex: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
           <Typography
             sx={{
@@ -249,24 +257,17 @@ const AuditHistoryDialog = ({
           >
             Action:
           </Typography>
-          <TextField
-            select
+          <CustomSelect
             size="small"
-            defaultValue="All"
-            SelectProps={{ native: true }}
-            sx={{
-              "& .MuiInputBase-root": {
-                fontFamily: "Inter",
-                fontSize: "13px",
-                backgroundColor: "#fff",
-                borderRadius: "8px",
-                color: "#374151",
-              },
-              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d0d5dd" },
-            }}
+            value={filterAction}
+            onChange={(e) => setFilterAction(e.target.value)}
+            sx={{ width: '120px' }}
           >
-            <option value="All">All</option>
-          </TextField>
+            <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Create">Create</MenuItem>
+            <MenuItem value="Update">Update</MenuItem>
+            <MenuItem value="Delete">Delete</MenuItem>
+          </CustomSelect>
         </Box>
 
         {loading ? (
@@ -274,54 +275,8 @@ const AuditHistoryDialog = ({
             <CircularProgress size={28} />
           </Box>
         ) : error ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Alert severity="info">{error}</Alert>
-            <Box
-              sx={{
-                p: 2,
-                border: "1px solid #e2e8f0",
-                borderRadius: 2,
-                backgroundColor: "#f8fafc",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontWeight: 600,
-                  fontSize: "13px",
-                  color: "#0f172a",
-                  mb: 1,
-                }}
-              >
-                Backend implementation plan
-              </Typography>
-              <Typography
-                component="ul"
-                sx={{
-                  pl: 2.5,
-                  m: 0,
-                  color: "#475569",
-                  fontSize: "13px",
-                  lineHeight: 1.7,
-                }}
-              >
-                <li>
-                  Add a backend endpoint such as GET
-                  /admin/finance-management/fee-guides/audit-history.
-                </li>
-                <li>
-                  Persist each create/update/delete action for fee guides in an
-                  audit table or change-log collection.
-                </li>
-                <li>
-                  Return rows with date, actor, fee-guide name, action, and
-                  change diffs in a consistent shape.
-                </li>
-                <li>
-                  Wire the frontend to consume that endpoint through the same
-                  dialog component.
-                </li>
-              </Typography>
-            </Box>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, py: 2 }}>
+            <Alert severity="error">{error}</Alert>
           </Box>
         ) : rows.length === 0 ? (
           <Box
@@ -394,7 +349,9 @@ const AuditHistoryDialog = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row) => (
+                {rows
+                  .filter((row) => filterAction === "All" || row.action === filterAction)
+                  .map((row) => (
                   <React.Fragment key={row.id}>
                     <TableRow
                       sx={{

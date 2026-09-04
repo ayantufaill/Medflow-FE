@@ -32,7 +32,7 @@ const AppointmentPage = ({ patient, open, onClose, onSave, appointments: initial
   const TAG_DEFAULT_PROCEDURES = {
     New:  { code: "D0150", treatment: "Comprehensive Evaluation",         charge: "$85.00"  },
     Scr:  { code: "D4341", treatment: "Periodontal Scaling & Root Planing", charge: "$220.00" },
-    FULL: { code: "D2391", treatment: "Resin Composite – One Surface",     charge: "$185.00" },
+    FULL: { code: "D4355", treatment: "Full Mouth Debridement",             charge: "$170.00" },
     Pano: { code: "D0330", treatment: "Panoramic Radiographic Image",      charge: "$120.00" },
     FMX:  { code: "D0210", treatment: "Complete Series of Radiographs",    charge: "$150.00" },
     Xray: { code: "D0220", treatment: "Periapical First Image",            charge: "$30.00"  },

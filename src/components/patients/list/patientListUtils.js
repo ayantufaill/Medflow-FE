@@ -1,3 +1,5 @@
+import { formatDate as formatUtcDate, computeAge as computeUtcAge } from '../../../utils/dateUtils';
+
 // Pure helpers shared by the patients list table (PatientsListPage + PatientRow).
 
 export const getPatientInitials = (firstName, lastName) => {
@@ -6,23 +8,12 @@ export const getPatientInitials = (firstName, lastName) => {
 };
 
 export const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  try { return new Date(dateString).toLocaleDateString(); }
-  catch { return '-'; }
+  return formatUtcDate(dateString, 'MM/DD/YYYY');
 };
 
 export const computeAge = (dateOfBirth) => {
-  if (!dateOfBirth) return '-';
-  try {
-    const today = new Date();
-    const dob = new Date(dateOfBirth);
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-    return age;
-  } catch {
-    return '-';
-  }
+  const age = computeUtcAge(dateOfBirth);
+  return age !== null && age !== undefined ? age : '-';
 };
 
 export const validatePhoneNumber = (phone) => {

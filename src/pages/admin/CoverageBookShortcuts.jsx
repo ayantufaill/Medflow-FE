@@ -21,7 +21,9 @@ import {
   Edit as EditIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
+import addSvg from '../../assets/timeclock/add.svg';
+import docSvg from '../../assets/practicesetupicon/documents.svg';
+import deleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   fetchCoverageShortcuts, 
@@ -47,6 +49,8 @@ const CoverageBookShortcuts = () => {
   
   const [addTemplateModalOpen, setAddTemplateModalOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
+  
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, type: '', id: null, categoryId: null, message: '' });
 
   React.useEffect(() => {
     dispatch(fetchCoverageShortcuts());
@@ -92,20 +96,25 @@ const CoverageBookShortcuts = () => {
 
   const handleDeleteTemplate = (e, id) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this template?")) {
-      dispatch(deleteCoverageShortcut(id));
-    }
+    setDeleteConfirm({ open: true, type: 'template', id, categoryId: null, message: 'Are you sure you want to delete this template?' });
   };
 
   const handleDeleteGroup = (e, categoryId, groupId) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this group?")) {
-      const category = shortcuts.find(c => c.id === categoryId);
+    setDeleteConfirm({ open: true, type: 'group', id: groupId, categoryId, message: 'Are you sure you want to delete this group?' });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.type === 'template') {
+      dispatch(deleteCoverageShortcut(deleteConfirm.id));
+    } else if (deleteConfirm.type === 'group') {
+      const category = shortcuts.find(c => c.id === deleteConfirm.categoryId);
       if (category) {
-        const updatedGroups = category.groups.filter(g => g.id !== groupId);
-        dispatch(updateCoverageShortcut({ id: categoryId, updates: { groups: updatedGroups } }));
+        const updatedGroups = category.groups.filter(g => g.id !== deleteConfirm.id);
+        dispatch(updateCoverageShortcut({ id: deleteConfirm.categoryId, updates: { groups: updatedGroups } }));
       }
     }
+    setDeleteConfirm({ open: false, type: '', id: null, categoryId: null, message: '' });
   };
 
   const handleSaveGroup = (groupData) => {
@@ -143,7 +152,7 @@ const CoverageBookShortcuts = () => {
         <Button
           variant="contained"
           onClick={handleAddTemplate}
-          startIcon={<AddIcon sx={{ fontSize: '18px' }} />}
+          startIcon={<img src={addSvg} alt="Add" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
           sx={{ 
             fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
             textTransform: "none", borderRadius: "8px",
@@ -208,7 +217,7 @@ const CoverageBookShortcuts = () => {
             backgroundColor: "#eff6ff",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>
-            <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+            <img src={docSvg} alt="Template" style={{ width: 20, height: 20, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
             <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
@@ -269,6 +278,75 @@ const CoverageBookShortcuts = () => {
             }}
           >
             Create Template
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog 
+        open={deleteConfirm.open} 
+        onClose={() => setDeleteConfirm({ ...deleteConfirm, open: false })}
+        maxWidth="xs"
+        fullWidth
+        sx={{ zIndex: 9999 }}
+        PaperProps={{
+          sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }
+        }}
+      >
+        <Box sx={{
+          display: "flex", alignItems: "center", gap: "12px",
+          px: "20px", py: "16px",
+          borderBottom: "1px solid #e0e5eb",
+          backgroundColor: "#f3f8fd",
+        }}>
+          <Box sx={{
+            width: "36px", height: "36px", borderRadius: "8px",
+            backgroundColor: "#eff6ff",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "15px", fontWeight: 700, color: "#09121f" }}>
+              Confirm Deletion
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setDeleteConfirm({ ...deleteConfirm, open: false })} sx={{ color: "#6b7280", "&:hover": { color: "#111928", backgroundColor: "#e5e7eb" } }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ px: 4, py: 4 }}>
+          <Typography sx={{ fontFamily: "Inter", color: '#374151', fontSize: '14px' }}>
+            {deleteConfirm.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, py: 3, borderTop: '1px solid #f1f5f9', gap: 1.5, justifyContent: 'flex-end' }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => setDeleteConfirm({ ...deleteConfirm, open: false })}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
+              textTransform: "none", borderRadius: "8px",
+              border: "1px solid #d0d5dd", color: "#374151",
+              px: "16px", py: "7px",
+              "&:hover": { borderColor: "#9aa3ae", backgroundColor: "#f9fafb" },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleConfirmDelete}
+            sx={{ 
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#1a50cc", boxShadow: "none" },
+            }}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

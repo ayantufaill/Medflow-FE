@@ -34,13 +34,14 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
       maxWidth="xs"
       fullWidth
       sx={{ zIndex: 9999 }}
-      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' } }}
+      PaperProps={{ sx: { borderRadius: "12px", overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' } }}
     >
       <Box sx={{
         display: "flex", alignItems: "center", gap: "12px",
         px: "20px", py: "16px",
         borderBottom: "1px solid #e0e5eb",
         backgroundColor: "#f3f8fd",
+        flexShrink: 0,
       }}>
         <Box sx={{
           width: "36px", height: "36px", borderRadius: "8px",
@@ -61,7 +62,7 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
           <CloseIcon />
         </IconButton>
       </Box>
-      <DialogContent sx={{ p: 0 }}>
+      <DialogContent sx={{ p: 0, overflowY: 'auto', flex: 1 }}>
         <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', backgroundColor: '#F8FAFC' }}>
           <TextField
             size="small"
@@ -97,7 +98,8 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
             </ListItem>
           )}
         </List>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9' }}>
+      </DialogContent>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, px: 4, py: 3, borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
           <Button 
             variant="outlined" 
             sx={{ 
@@ -112,7 +114,6 @@ const CopyFeeGuideDialog = ({ open, onClose, feeGuidesData }) => {
             Cancel
           </Button>
         </Box>
-      </DialogContent>
     </Dialog>
   );
 };

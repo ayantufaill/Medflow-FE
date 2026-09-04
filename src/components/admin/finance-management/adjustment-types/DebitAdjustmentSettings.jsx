@@ -14,9 +14,9 @@ import {
 } from '@mui/material';
 import {
   AddCircleOutline as AddCircleIcon,
-  DeleteOutline as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 
 const DebouncedTextField = ({ value, onBlur, ...props }) => {
   const [localVal, setLocalVal] = React.useState(value || '');
@@ -97,7 +97,7 @@ const DebitAdjustmentSettings = ({ data, section = 'debit', onAdd, onInputChange
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.5 }}>
                       {row.deletable && (
                         <IconButton size="small" onClick={() => onDelete(section, row.id)} sx={{ color: '#ef4444', '&:hover': { backgroundColor: '#fef2f2' } }}>
-                          <DeleteIcon fontSize="small" />
+                          <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
                         </IconButton>
                       )}
                     </Box>

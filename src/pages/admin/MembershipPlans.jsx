@@ -15,7 +15,8 @@ import MembershipPlansActionBar from '../../components/admin/insurance-managemen
 import MembershipPlansTable from '../../components/admin/insurance-management/membership-plans/MembershipPlansTable';
 import MembershipPlanFormDialog from '../../components/admin/insurance-management/membership-plans/MembershipPlanFormDialog';
 import MembershipAuditDialog from '../../components/admin/insurance-management/membership-plans/MembershipAuditDialog';
-import CarrierSyncDialog from '../../components/admin/insurance-management/insurance-carriers/CarrierSyncDialog';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
+import medflowLogo from '../../assets/medflow-logo.png';
 
 const MembershipPlans = () => {
   const dispatch = useDispatch();
@@ -96,7 +97,19 @@ const MembershipPlans = () => {
   };
 
   return (
-    <Box sx={{ p: 4, backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh' }}>
+    <Box sx={{ 
+      p: 4, 
+      backgroundColor: '#FBFCFE', 
+      borderRadius: '12px', 
+      border: '1px solid #E5E9F2', 
+      minHeight: '100vh',
+      '@media print': {
+        p: 0,
+        backgroundColor: 'transparent',
+        border: 'none',
+        minHeight: 'auto'
+      }
+    }}>
       
       <MembershipPlansActionBar 
         search={search}
@@ -105,6 +118,10 @@ const MembershipPlans = () => {
         view={view}
         setView={setView}
       />
+
+      <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', mb: 3 } }}>
+        <img src={medflowLogo} alt="Medflow Logo" style={{ height: '48px' }} />
+      </Box>
 
       <MembershipPlansTable 
         plans={filteredPlans}
@@ -126,7 +143,7 @@ const MembershipPlans = () => {
         confirmColor="error"
       />
 
-      <CarrierSyncDialog 
+      <SyncOfficesDialog 
         open={isSyncDialogOpen}
         onClose={() => setIsSyncDialogOpen(false)}
       />

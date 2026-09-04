@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Typography, TextField, InputAdornment, Button } from '@mui/material';
-import { Search as SearchIcon, Sync as SyncIcon, Add as AddIcon } from '@mui/icons-material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import syncSvg from '../../../../assets/claimicons/refreshicon.svg';
+import addSvg from '../../../../assets/timeclock/add.svg';
 
 const InsuranceCarriersActionBar = ({ search, setSearch, onAddCarrier, onSync }) => {
   return (
@@ -34,7 +36,7 @@ const InsuranceCarriersActionBar = ({ search, setSearch, onAddCarrier, onSync })
         />
 
         <Button
-          startIcon={<SyncIcon />}
+          startIcon={<img src={syncSvg} alt="Sync" style={{ width: 16, height: 16 }} />}
           size="small"
           variant="outlined"
           onClick={onSync}
@@ -53,7 +55,7 @@ const InsuranceCarriersActionBar = ({ search, setSearch, onAddCarrier, onSync })
         </Button>
 
         <Button
-          startIcon={<AddIcon />}
+          startIcon={<img src={addSvg} alt="Add" style={{ width: 16, height: 16, filter: 'brightness(0) invert(1)' }} />}
           size="small"
           variant="contained"
           onClick={onAddCarrier}

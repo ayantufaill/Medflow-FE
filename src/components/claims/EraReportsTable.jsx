@@ -165,10 +165,10 @@ export const EraReportsTable = ({ filteredEraReports }) => {
                             size="small" 
                             sx={{ color: '#3b82f6', '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.08)' } }} 
                             title="Generate Secondary Claim"
-                            onClick={() => handleGenerateSecondary(era.id)}
-                            disabled={generatingId === era.id}
+                            onClick={() => handleGenerateSecondary(era.claimId || era.id)}
+                            disabled={generatingId === (era.claimId || era.id)}
                           >
-                            {generatingId === era.id ? <CircularProgress size={20} /> : <DescriptionIcon fontSize="small" />}
+                            {generatingId === (era.claimId || era.id) ? <CircularProgress size={20} /> : <DescriptionIcon fontSize="small" />}
                           </IconButton>
                         ) : (
                           <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>—</Typography>

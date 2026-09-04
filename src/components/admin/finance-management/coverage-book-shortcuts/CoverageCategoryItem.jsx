@@ -3,9 +3,9 @@ import { Box, Typography, Button, IconButton, Collapse } from '@mui/material';
 import {
   KeyboardArrowRight as ChevronRightIcon,
   KeyboardArrowDown as ChevronDownIcon,
-  Add as AddIcon,
-  DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
+import addSvg from '../../../../assets/timeclock/add.svg';
+import deleteSvg from '../../../../assets/practicesetupicon/deleteicon.svg';
 import CoverageGroupItem from './CoverageGroupItem';
 
 const CoverageCategoryItem = ({ 
@@ -48,7 +48,7 @@ const CoverageCategoryItem = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
             onClick={(e) => { e.stopPropagation(); handleAddGroup(e, category.id); }}
-            startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
+            startIcon={<img src={addSvg} alt="Add" style={{ width: 14, height: 14, filter: 'brightness(0) saturate(100%) invert(29%) sepia(87%) saturate(2227%) hue-rotate(215deg) brightness(96%) contrast(92%)' }} />}
             sx={{
               color: '#2563eb',
               textTransform: 'none',
@@ -64,7 +64,7 @@ const CoverageCategoryItem = ({
             size="small" 
             sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444', backgroundColor: '#fef2f2' } }}
           >
-            <DeleteIcon fontSize="small" />
+            <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16 }} />
           </IconButton>
         </Box>
       </Box>

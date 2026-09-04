@@ -15,8 +15,10 @@ import {
   FormControl,
   Select,
   MenuItem,
+  Menu,
   CircularProgress,
   TextField,
+  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -37,7 +39,6 @@ import {
   PrintOutlined as PrintIcon,
   DownloadOutlined as DownloadIcon,
   MailOutline as MailIcon,
-  DeleteOutline as DeleteIcon,
   ArrowDropDown as ArrowDropDownIcon,
   ShieldOutlined as ShieldIcon,
   InsertDriveFileOutlined as FileIcon,
@@ -48,6 +49,8 @@ import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
 import { authorizationService } from '../../../services/authorization.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
+import { ICON_TAGS } from '../../appointments/new-appointment/constants';
+import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
 const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures = [], onSave }) => {
   const currentPatient = useSelector(selectCurrentPatient);
@@ -59,9 +62,10 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [savedAuthorizationId, setSavedAuthorizationId] = useState(null);
   
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
-  const [newTag, setNewTag] = useState('');
+  const [tagAnchorEl, setTagAnchorEl] = useState(null);
+  const [selectedTags, setSelectedTags] = useState([]);
   
   const [attachments, setAttachments] = useState([]);
   const [comments, setComments] = useState([]);
@@ -105,10 +109,37 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   
   const { showSnackbar } = useSnackbar();
 
+  const normalizeProcedure = (procedure) => ({
+    ...procedure,
+    code: procedure.code || procedure.procedureCode || procedure.ProcCode || '-',
+    description: procedure.description || procedure.procedureDescription || procedure.treatment || procedure.name || procedure.Descript || '-',
+    fee: procedure.fee ?? procedure.amount ?? procedure.charge ?? '0.00',
+  });
+
+  useEffect(() => {
+    setAttachments([]);
+    setSelectedTags([]);
+    setComments([]);
+    setNewComment('');
+    setTabValue(0);
+    setOrder('Primary');
+    setHistoryLogs([{
+      id: 1,
+      action: 'Created Pre-Auth Draft',
+      user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
+      date: dayjs().format('MM/DD/YYYY h:mm A')
+    }]);
+  }, [open, patientId, currentUser]);
+
+  useEffect(() => {
+    setSavedAuthorizationId(preAuthId || null);
+  }, [open, patientId, preAuthId]);
+
   useEffect(() => {
     const fetchAuthData = async () => {
       if (!open) return;
       setIsLoading(true);
+      setAuthData(null);
       
       try {
         // Get dynamic fallbacks
@@ -131,10 +162,17 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           const data = await authorizationService.getAuthorizationById(preAuthId);
           setAuthData({
             ...data,
+            procedures: (data.procedures || selectedProcedures).map(normalizeProcedure),
             billingProvider: data.billingProvider || primaryProvider,
             treatmentProvider: data.treatmentProvider || primaryProvider,
             insuranceCompany: data.insuranceCompany || data.insuranceCompanyId?.name || patientInsuranceName,
-            attachments: data.attachments || 'None Required'
+            attachments: data.attachments || 'None Required',
+            serviceDate: data.serviceDate || data.requestedDate,
+            latestActivity: data.latestActivity || (
+              data.updatedAt || data.createdAt || data.requestedDate
+                ? `Updated on ${dayjs(data.updatedAt || data.createdAt || data.requestedDate).format('MM/DD/YYYY')}`
+                : 'No recent activity.'
+            ),
           });
           if (data.order) setOrder(data.order);
         } else {
@@ -142,7 +180,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             id: 'NEW',
             status: 'Draft',
             serviceDate: new Date(),
-            procedures: selectedProcedures,
+            procedures: selectedProcedures.map(normalizeProcedure),
             billingProvider: primaryProvider,
             treatmentProvider: primaryProvider,
             insuranceCompany: patientInsuranceName,
@@ -160,7 +198,16 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     };
     
     fetchAuthData();
-  }, [open, preAuthId, selectedProcedures]);
+  }, [
+    open,
+    preAuthId,
+    patientId,
+    selectedProcedures,
+    currentPatient,
+    currentUser,
+    insurancesCache,
+    showSnackbar,
+  ]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -169,6 +216,12 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   const handleOrderChange = (event) => {
     setOrder(event.target.value);
     setAuthData(prev => ({ ...prev, order: event.target.value }));
+  };
+
+  const handleTagToggle = (tag) => {
+    setSelectedTags((currentTags) => currentTags.some((selectedTag) => selectedTag.id === tag.id)
+      ? currentTags.filter((selectedTag) => selectedTag.id !== tag.id)
+      : [...currentTags, tag]);
   };
 
   const handleSubmit = async () => {
@@ -185,7 +238,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           serviceDate: authData.serviceDate,
           status: 'requested',
           // map selected procedures
-          procedures: selectedProcedures.map(p => p.id || p._id)
+          procedures: (authData.procedures || []).map(p => p.id || p._id || p.procedureId || p.code)
         });
         showSnackbar('Authorization requested successfully', 'success');
         if (onSave) onSave(newAuth._id || newAuth.id);
@@ -196,27 +249,76 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }
   };
 
+  const ensureAuthorizationId = async () => {
+    const existingId = preAuthId || savedAuthorizationId;
+    if (existingId) return existingId;
+
+    const newAuth = await authorizationService.requestAuthorization({
+      patientId,
+      order,
+      serviceDate: authData.serviceDate,
+      status: 'requested',
+      procedures: (authData.procedures || []).map((procedure) => (
+        procedure.id || procedure._id || procedure.procedureId || procedure.code
+      )),
+    });
+    const newId = newAuth._id || newAuth.id;
+    setSavedAuthorizationId(newId);
+    setAuthData((previous) => ({ ...previous, id: newId }));
+    onSave?.(newId);
+    return newId;
+  };
+
+  const getAuthorizationForm = async () => {
+    const authorizationId = await ensureAuthorizationId();
+    const blob = await authorizationService.printAuthorizationForm(authorizationId);
+    return { authorizationId, blob };
+  };
+
   const handlePrint = async () => {
-    if (!preAuthId) {
-      showSnackbar('Save the pre-auth first to print it', 'warning');
-      return;
-    }
     try {
-      const blob = await authorizationService.printAuthorizationForm(preAuthId);
+      const { blob } = await getAuthorizationForm();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `PreAuth-${preAuthId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
+
+      const printFrame = document.createElement('iframe');
+      printFrame.title = 'Print authorization form';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '1px';
+      printFrame.style.height = '1px';
+      printFrame.style.border = '0';
+      printFrame.style.opacity = '0';
+      printFrame.onload = () => {
+        printFrame.contentWindow?.focus();
+        printFrame.contentWindow?.print();
+        window.setTimeout(() => {
+          printFrame.remove();
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+      };
+      printFrame.src = url;
+      document.body.appendChild(printFrame);
+    } catch {
       showSnackbar('Failed to generate print form', 'error');
     }
   };
 
-  const handleDownload = () => {
-    showSnackbar('Form downloaded successfully', 'success');
+  const handleDownload = async () => {
+    try {
+      const { authorizationId, blob } = await getAuthorizationForm();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `PreAuth-${authorizationId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSnackbar('Form downloaded successfully', 'success');
+    } catch {
+      showSnackbar('Failed to download form', 'error');
+    }
   };
 
   const handleSubmitManually = () => {
@@ -269,7 +371,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
               </Typography>
             </Box>
             <Typography sx={{ fontFamily: 'Inter', fontWeight: 400, fontSize: '11.5px', color: '#6B7280', lineHeight: '17.25px' }}>
-              Service Date - {authData?.serviceDate ? dayjs(authData.serviceDate).format('MMMM DD, YYYY') : '-'}
+              Service Date - {authData?.serviceDate || authData?.requestedDate ? dayjs(authData.serviceDate || authData.requestedDate).format('MMMM DD, YYYY') : '-'}
             </Typography>
           </Box>
         </Box>
@@ -316,15 +418,55 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
               
               <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: 'none' }}>
                 <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', mb: 1, color: '#0f172a' }}>Tags</Typography>
-                <Box sx={{ mt: 'auto' }}>
-                  <IconButton size="small" onClick={() => setTagDialogOpen(true)} sx={{ p: 0, color: '#64748b' }}>
-                    <AddIcon fontSize="small" />
-                  </IconButton>
+                  <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                    {selectedTags.map((tag) => (
+                      <Tooltip key={tag.id} title={tag.label} arrow placement="top" disableInteractive>
+                        <Box sx={{ width: 26, height: 26, borderRadius: '6px', backgroundColor: '#e0e7ff', border: '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Box component="img" src={tag.src} alt={tag.label} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </Box>
+                      </Tooltip>
+                    ))}
+                    <IconButton size="small" onClick={(event) => setTagAnchorEl(event.currentTarget)} sx={{ p: 0, color: '#64748b' }}>
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                    <Menu
+                      anchorEl={tagAnchorEl}
+                      open={Boolean(tagAnchorEl)}
+                      onClose={() => setTagAnchorEl(null)}
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                      sx={{ zIndex: 1700 }}
+                      MenuListProps={{ dense: true }}
+                      PaperProps={{ sx: { mt: 1, maxHeight: 320, minWidth: 210, zIndex: 1600, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', border: '1px solid #e2e8f0', borderRadius: '8px' } }}
+                    >
+                      {ICON_TAGS.map((tag) => {
+                        const isSelected = selectedTags.some((selectedTag) => selectedTag.id === tag.id);
+                        return (
+                          <MenuItem key={tag.id} selected={isSelected} onClick={() => handleTagToggle(tag)} sx={{ gap: 1, fontFamily: 'Inter', fontSize: 13 }}>
+                            <Box component="img" src={tag.src} alt="" sx={{ width: 22, height: 22, objectFit: 'contain' }} />
+                            {tag.label}
+                          </MenuItem>
+                        );
+                      })}
+                    </Menu>
                 </Box>
               </Paper>
               
               <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: 'none' }}>
                 <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', mb: 1, color: '#0f172a' }}>Documents</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
+                  {attachments.map((file, index) => (
+                    <Box key={`${file.name}-${index}`} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                      <FileIcon sx={{ color: '#2563eb', fontSize: 18, flexShrink: 0 }} />
+                      <Typography noWrap title={file.name} sx={{ fontFamily: 'Inter', color: '#475569', fontSize: '12px', minWidth: 0, flex: 1 }}>
+                        {file.name}
+                      </Typography>
+                      <IconButton size="small" onClick={() => setAttachments(attachments.filter((_, fileIndex) => fileIndex !== index))} sx={{ p: 0, flexShrink: 0 }}>
+                        <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Box>
                 <Box sx={{ mt: 'auto' }}>
                   <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
                   <Typography onClick={() => fileInputRef.current?.click()} sx={{ fontFamily: 'Inter', color: '#2563eb', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
@@ -357,7 +499,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
               <Button onClick={handleSubmitManually} variant="outlined" startIcon={<MailIcon />} size="small" sx={{ fontFamily: 'Inter', color: '#2563EB', borderColor: '#BFDBFE', backgroundColor: '#EFF6FF', textTransform: 'none', fontWeight: 500, borderRadius: '6px', px: 2, '&:hover': { backgroundColor: '#DBEAFE', borderColor: '#BFDBFE' } }}>
                 Submit manually
               </Button>
-              <Button onClick={handleDeletePreAuth} variant="outlined" startIcon={<DeleteIcon />} size="small" sx={{ fontFamily: 'Inter', color: '#DC2626', borderColor: '#FECACA', backgroundColor: '#FEF2F2', textTransform: 'none', fontWeight: 500, borderRadius: '6px', px: 2, '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#FECACA' } }}>
+              <Button onClick={handleDeletePreAuth} variant="outlined" startIcon={<Box component="img" src={deleteSvg} alt="" sx={{ width: 18, height: 18 }} />} size="small" sx={{ fontFamily: 'Inter', color: '#DC2626', borderColor: '#FECACA', backgroundColor: '#FEF2F2', textTransform: 'none', fontWeight: 500, borderRadius: '6px', px: 2, '&:hover': { backgroundColor: '#FEE2E2', borderColor: '#FECACA' } }}>
                 Delete pre-auth
               </Button>
             </Box>
@@ -478,7 +620,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                               <TableCell sx={{ fontFamily: 'Inter', color: '#0f172a' }}>{proc.code || proc.procedureCode || '-'}</TableCell>
                               <TableCell sx={{ fontFamily: 'Inter', color: '#0f172a' }}>{proc.description || proc.procedureDescription || '-'}</TableCell>
                               <TableCell sx={{ fontFamily: 'Inter', color: '#0f172a' }}>{proc.tooth || proc.surf || '-'}</TableCell>
-                              <TableCell sx={{ fontFamily: 'Inter', color: '#0f172a' }}>${proc.fee || proc.amount || '0.00'}</TableCell>
+                              <TableCell sx={{ fontFamily: 'Inter', color: '#0f172a' }}>{String(proc.fee || '0.00').startsWith('$') ? proc.fee : `$${proc.fee || '0.00'}`}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -495,8 +637,8 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                     <List sx={{ pt: 0 }}>
                       {attachments.map((file, index) => (
                         <ListItem key={index} secondaryAction={
-                          <IconButton edge="end" onClick={() => setAttachments(attachments.filter((_, i) => i !== index))} size="small" sx={{ color: '#ef4444' }}>
-                            <DeleteIcon fontSize="small" />
+                          <IconButton edge="end" onClick={() => setAttachments(attachments.filter((_, i) => i !== index))} size="small">
+                            <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
                           </IconButton>
                         } sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mb: 1 }}>
                           <ListItemAvatar>
@@ -621,24 +763,6 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         </Button>
       </DialogActions>
 
-      {/* Add Tags Dialog */}
-      <Dialog open={tagDialogOpen} onClose={() => setTagDialogOpen(false)} sx={{ zIndex: 1500 }} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', color: '#0f172a' }}>Add Tag</DialogTitle>
-        <DialogContent>
-          <TextField 
-            fullWidth 
-            size="small" 
-            placeholder="Enter tag name..." 
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            sx={{ mt: 1, '& .MuiOutlinedInput-root': { fontFamily: 'Inter', fontSize: '14px' } }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={() => setTagDialogOpen(false)} sx={{ textTransform: 'none', color: '#64748b', fontWeight: 600 }}>Cancel</Button>
-          <Button variant="contained" onClick={() => { setTagDialogOpen(false); setNewTag(''); showSnackbar('Tag added temporarily', 'success'); }} sx={{ textTransform: 'none', bgcolor: '#3b82f6', fontWeight: 600, '&:hover': { bgcolor: '#2563eb' } }}>Add</Button>
-        </DialogActions>
-      </Dialog>
     </Dialog>
   );
 };

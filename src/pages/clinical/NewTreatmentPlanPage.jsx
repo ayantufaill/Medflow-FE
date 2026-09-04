@@ -36,6 +36,43 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
+
+const formatMoney = (val, fallback = '-') => {
+  if (typeof val === 'number') return `$${val.toFixed(2)}`;
+  if (typeof val === 'string' && val.trim() && val !== '-') {
+    const num = Number(val.replace(/[^0-9.-]+/g, ''));
+    return !isNaN(num) ? `$${num.toFixed(2)}` : val;
+  }
+  return fallback;
+};
+
+const mapPlanItems = (items, createdAt) => {
+  if (!items || !Array.isArray(items)) return [];
+  return items.map((item, idx) => {
+    const feeVal = item.charge ?? item.fee ?? item.negRate;
+    const insVal = item.insPortion ?? item.insuranceAmount ?? item.insEst;
+    const ptVal = item.ptPortion ?? item.patientAmount ?? item.ptEst;
+
+    return {
+      id: item.id || idx + 1,
+      priority: item.priority || '- -',
+      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'D' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
+      created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
+      scheduled: item.scheduled || '-',
+      site: item.site || (item.tooth ? `#${item.tooth}` : '-'),
+      code: item.procedureCode || item.code || '-',
+      description: item.description || '-',
+      icd: item.icd || '-',
+      provider: item.provider || '-',
+      negRate: formatMoney(feeVal, '-'),
+      insEst: formatMoney(insVal, '-'),
+      ptEst: formatMoney(ptVal, '-'),
+      preAuth: item.preAuth || '-',
+      labCase: item.labCase || '-'
+    };
+  });
+};
 
 const INITIAL_MOCK_TREATMENT_PLANS = [
   { id: 1, priority: '- -', status: 'Scheduled', created: '05/15/2025', scheduled: '07/17/2026', site: '#1 OD', code: 'D2392', description: 'resin-based composite - two surfaces, p...', icd: '-', provider: 'CB', negRate: '$206.00', insEst: '$164.80', ptEst: '$41.20', preAuth: '-', labCase: '+' },
@@ -62,8 +99,15 @@ const NewTreatmentPlanPage = () => {
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [isPreAuthModalOpen, setIsPreAuthModalOpen] = useState(false);
   const [createdPreAuthId, setCreatedPreAuthId] = useState(null);
+  const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
 
   const currentPatient = useSelector(selectCurrentPatient);
+  const currentPatientId = currentPatient?._id || currentPatient?.id;
+
+  useEffect(() => {
+    setCreatedPreAuthId(null);
+    setCreatedPreAuthPatientId(null);
+  }, [currentPatientId]);
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -93,29 +137,7 @@ const NewTreatmentPlanPage = () => {
         if (plans.length > 0) {
           const activePlan = plans[0]; // Load the most recent plan
           setActivePlanId(activePlan._id);
-
-          if (activePlan.items && Array.isArray(activePlan.items)) {
-            const mappedItems = activePlan.items.map((item, idx) => ({
-              id: item.id || idx + 1,
-              priority: item.priority || '- -',
-              status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'D' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : 'Planned')))),
-              created: item.created || dayjs(activePlan.createdAt).format('MM/DD/YYYY') || dayjs().format('MM/DD/YYYY'),
-              scheduled: item.scheduled || '-',
-              site: item.site || '-',
-              code: item.procedureCode || item.code || '-',
-              description: item.description || '-',
-              icd: item.icd || '-',
-              provider: item.provider || '-',
-              negRate: typeof item.charge === 'number' ? `$${item.charge.toFixed(2)}` : (item.negRate || '-'),
-              insEst: typeof item.insPortion === 'number' ? `$${item.insPortion.toFixed(2)}` : (item.insEst || '-'),
-              ptEst: typeof item.ptPortion === 'number' ? `$${item.ptPortion.toFixed(2)}` : (item.ptEst || '-'),
-              preAuth: item.preAuth || '-',
-              labCase: item.labCase || '-'
-            }));
-            setTreatmentPlans(mappedItems);
-          } else {
-            setTreatmentPlans([]);
-          }
+          setTreatmentPlans(mapPlanItems(activePlan.items, activePlan.createdAt));
         } else {
           setActivePlanId(null);
           setTreatmentPlans([]);
@@ -158,6 +180,9 @@ const NewTreatmentPlanPage = () => {
     const procedureCode = procedure.code || procedure.procedureCode || `D${Math.floor(1000 + Math.random() * 9000)}`;
     const procedureDescription = procedure.description || procedure.name || procedureCode;
 
+    const rawFee = Number(procedure.fee || procedure.charge || procedure.ProcFee || 0);
+    const { insPortion: estIns, ptPortion: estPt } = calculatePortionsForCategory(procedureCode, rawFee, 0);
+
     const newProcedure = {
       id: newId,
       priority: '- -',
@@ -169,9 +194,9 @@ const NewTreatmentPlanPage = () => {
       description: procedureDescription,
       icd: '-',
       provider: procedure.provider || 'CB',
-      negRate: '$0.00',
-      insEst: '-',
-      ptEst: '$0.00',
+      negRate: rawFee > 0 ? `$${rawFee.toFixed(2)}` : '$0.00',
+      insEst: rawFee > 0 ? `$${estIns.toFixed(2)}` : '$0.00',
+      ptEst: rawFee > 0 ? `$${estPt.toFixed(2)}` : '$0.00',
       preAuth: '-',
       labCase: '-'
     };
@@ -192,34 +217,51 @@ const NewTreatmentPlanPage = () => {
         title: `Treatment Plan - ${dayjs().format('MM/DD/YYYY')}`,
         status: 'A',
         totalAmount: 0,
-        items: newTreatmentPlans.map(item => ({
-          procedureCode: item.code,
-          description: item.description,
-          tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
-          site: item.site,
-          fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-          charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-          priority: item.priority,
-          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
-          icd: item.icd,
-          provider: item.provider !== 'CB' ? item.provider : null,
-          preAuth: item.preAuth,
-          labCase: item.labCase,
-          insEst: item.insEst,
-          ptEst: item.ptEst,
-        }))
+        items: newTreatmentPlans.map(item => {
+          const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
+          const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
+          const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
+          return {
+            procedureCode: item.code,
+            description: item.description,
+            tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+            site: item.site,
+            fee: itemFee,
+            charge: itemFee,
+            priority: item.priority,
+            status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
+            icd: item.icd,
+            provider: item.provider !== 'CB' ? item.provider : null,
+            preAuth: item.preAuth,
+            labCase: item.labCase,
+            insEst: item.insEst,
+            ptEst: item.ptEst,
+            insPortion: itemIns,
+            ptPortion: itemPt,
+            insuranceAmount: `$${itemIns.toFixed(2)}`,
+            patientAmount: `$${itemPt.toFixed(2)}`,
+          };
+        })
       };
 
       if (activePlanId) {
-        // Update existing plan instead of creating a new one
-        await treatmentPlanService.update(activePlanId, { items: payload.items });
+        // Update existing plan
+        const res = await treatmentPlanService.update(activePlanId, { items: payload.items });
+        const updatedPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
+        if (updatedPlan?.items && Array.isArray(updatedPlan.items)) {
+          setTreatmentPlans(mapPlanItems(updatedPlan.items, updatedPlan.createdAt));
+        }
         setToast({ open: true, message: 'Treatment plan auto-saved!', type: 'success' });
       } else {
         // Create initial plan
         const res = await treatmentPlanService.create(payload);
-        const createdId = res?.data?.treatmentPlan?._id || res?._id;
+        const createdPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
+        const createdId = createdPlan?._id || res?._id;
         if (createdId) {
           setActivePlanId(createdId);
+        }
+        if (createdPlan?.items && Array.isArray(createdPlan.items)) {
+          setTreatmentPlans(mapPlanItems(createdPlan.items, createdPlan.createdAt));
         }
         setToast({ open: true, message: 'Treatment plan created and saved!', type: 'success' });
       }
@@ -637,10 +679,13 @@ const NewTreatmentPlanPage = () => {
       <PreAuthModal
         open={isPreAuthModalOpen}
         onClose={() => setIsPreAuthModalOpen(false)}
-        preAuthId={createdPreAuthId}
-        onSave={(newId) => setCreatedPreAuthId(newId)}
-        patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
-        selectedProcedures={treatmentPlans.filter(p => selectedRows.includes(p.id || p._id))}
+        preAuthId={createdPreAuthPatientId === currentPatientId ? createdPreAuthId : null}
+        onSave={(newId) => {
+          setCreatedPreAuthId(newId);
+          setCreatedPreAuthPatientId(currentPatientId);
+        }}
+        patientId={currentPatientId}
+        selectedProcedures={treatmentPlans}
       />
 
       <Snackbar

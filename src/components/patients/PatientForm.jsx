@@ -54,6 +54,7 @@ import { patientService } from '../../services/patient.service';
 import { useNavigate } from 'react-router-dom';
 import AddressSelectFields from '../common/AddressSelectFields';
 import { useBranch } from '../../hooks/redux';
+import { formatDateForPayload } from '../../utils/dateUtils';
 
 const PatientForm = ({
   onSubmit,
@@ -574,11 +575,9 @@ const PatientForm = ({
   };
 
   const handleFormSubmit = async (formData) => {
-    // Helper to convert dayjs to ISO string
+    // Helper to format dates to YYYY-MM-DD
     const formatDate = (dateValue) => {
-      if (!dateValue) return undefined;
-      const dayjsDate = dayjs.isDayjs(dateValue) ? dateValue : dayjs(dateValue);
-      return dayjsDate.isValid() ? dayjsDate.toISOString() : undefined;
+      return formatDateForPayload(dateValue);
     };
 
     // Format SSN - remove hyphens and send as digits only

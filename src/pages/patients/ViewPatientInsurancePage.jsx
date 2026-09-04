@@ -17,10 +17,9 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 
-// Redux hooks
-import { usePatient } from '../../hooks/redux/usePatient';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
 import { insuranceCompanyService } from '../../services/insurance.service';
+import { formatDate } from '../../utils/dateUtils';
 
 const ViewPatientInsurancePage = () => {
   const navigate = useNavigate();
@@ -77,11 +76,6 @@ const ViewPatientInsurancePage = () => {
 
   const handleBack = () => {
     navigate(`/patients/${patientId}`);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return dayjs(dateString).format('MM/DD/YYYY');
   };
 
   if (loading) {

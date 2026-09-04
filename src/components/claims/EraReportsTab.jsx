@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, InputAdornment, Button
+  TextField, InputAdornment, Button, IconButton, CircularProgress, Tooltip, Snackbar, Alert
 } from '@mui/material';
-import { Search as SearchIcon, FilterList as FilterIcon } from '@mui/icons-material';
+import { Search as SearchIcon, FilterList as FilterIcon, Description as DescriptionIcon } from '@mui/icons-material';
 import { claimService } from '../../services/claim.service';
+import apiClient from '../../config/api';
 import refreshIcon from '../../assets/claimicons/refreshicon.svg';
 
 const EraReportsTab = () => {
@@ -14,6 +15,8 @@ const EraReportsTab = () => {
   const [activeEraTab, setActiveEraTab] = useState('active'); // 'active' or 'voided'
   const [search, setSearch] = useState('');
   const [counts, setCounts] = useState({ active: 0, voided: 0 });
+  const [generatingId, setGeneratingId] = useState(null);
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'info' });
 
   useEffect(() => {
     loadData();
@@ -53,6 +56,23 @@ const EraReportsTab = () => {
       setLoading(false);
     }
   }
+
+  const handleGenerateSecondary = async (targetId) => {
+    if (!targetId) return;
+    setGeneratingId(targetId);
+    try {
+      await apiClient.post(`/claims/${targetId}/generate-secondary`, {});
+      setToast({ open: true, message: 'Secondary claim generated successfully!', severity: 'success' });
+    } catch (err) {
+      setToast({
+        open: true,
+        message: err.response?.data?.message || err.message || 'Failed to generate secondary claim',
+        severity: 'error'
+      });
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   // Filter based on search input manually if backend doesn't handle it well
   const filteredReports = reports.filter((report) => {
@@ -137,11 +157,11 @@ const EraReportsTab = () => {
         </Button>
 
         {/* Search */}
-        <Box sx={{ flex: 1, maxWidth: 300 }}>
+        <Box sx={{ flexGrow: 1, minWidth: 200, maxWidth: 360 }}>
           <TextField
             fullWidth
             size="small"
-            placeholder="Search by Patient ID, Name, or Claim #"
+            placeholder="Search ERA reports..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
@@ -194,12 +214,13 @@ const EraReportsTab = () => {
                   {head}
                 </TableCell>
               ))}
+              <TableCell align="right">ACTIONS</TableCell>
             </TableRow>
           </TableHead>
           <TableBody sx={{ "& .MuiTableCell-root": { py: 1.5, px: 1, fontSize: "0.75rem", verticalAlign: "middle", borderBottom: "1px solid #e2e8f0", color: "#1e293b", whiteSpace: "nowrap" } }}>
             {filteredReports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                   <Typography variant="body2" sx={{ color: '#64748b', fontStyle: 'italic' }}>
                     No ERA reports found matching the selection criteria.
                   </Typography>
@@ -209,6 +230,7 @@ const EraReportsTab = () => {
               filteredReports.map((era) => {
                 const isVoided = era.status === 'Voided';
                 const isDenial = era.status === 'Denial';
+                const targetClaimId = era.claimId || era.claimNumber || era.id;
                 return (
                   <TableRow key={era.id} hover={false}>
                     <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>{era.patientId}</Typography></TableCell>
@@ -222,6 +244,28 @@ const EraReportsTab = () => {
                     <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#64748b' }}>${(era.writeOff || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography></TableCell>
                     <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b' }}>{era.dateReceived}</Typography></TableCell>
                     <TableCell sx={{ py: 1.5 }}><Typography sx={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 500 }}>{era.paymentType}</Typography></TableCell>
+                    <TableCell align="right" sx={{ py: 1.5 }}>
+                      {era.status === 'Paid' || era.status === 'Accepted' || era.status === 'Partially_Paid' ? (
+                        <Tooltip title="Generate Secondary Claim">
+                          <span>
+                            <IconButton 
+                              size="small" 
+                              sx={{ color: '#3b82f6', '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.08)' } }} 
+                              onClick={() => handleGenerateSecondary(targetClaimId)}
+                              disabled={generatingId === targetClaimId}
+                            >
+                              {generatingId === targetClaimId ? (
+                                <CircularProgress size={18} />
+                              ) : (
+                                <DescriptionIcon fontSize="small" />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>—</Typography>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -229,6 +273,21 @@ const EraReportsTab = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          severity={toast.severity}
+          sx={{ width: '100%' }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

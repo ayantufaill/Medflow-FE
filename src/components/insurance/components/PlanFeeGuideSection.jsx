@@ -98,9 +98,9 @@ const PlanFeeGuideSection = ({
 
       {/* Single row: PLAN FEE GUIDE + View Fee Guide + COVERAGE TYPE */}
       <Box sx={{ p: 1.5 }}>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Plan Fee Guide */}
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: '0 0 auto' }}>
           <Typography sx={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', letterSpacing: '1px', mb: 0.5, textTransform: 'uppercase' }}>
             PLAN FEE GUIDE
           </Typography>
@@ -111,14 +111,26 @@ const PlanFeeGuideSection = ({
               value={formData.planFeeGuide || ''}
               onChange={(e) => handleInputChange('planFeeGuide', e.target.value)}
               sx={{ 
-                flex: 1,
+                minWidth: '240px',
                 '& .MuiOutlinedInput-root': { 
                   bgcolor: '#f3f4f6', 
                   borderRadius: '8px',
-                  fontSize: '14px', 
                   height: '36px' 
                 },
-                '& fieldset': { borderColor: '#DFE5EC' }
+                '& fieldset': { borderColor: '#DFE5EC' },
+                '& .MuiSelect-select': {
+                  fontSize: '14px !important',
+                  color: '#111827 !important',
+                  display: 'flex',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  paddingTop: '0 !important',
+                  paddingBottom: '0 !important',
+                  height: '100% !important',
+                  minHeight: 'unset !important'
+                }
               }}
             >
               {planFeeGuideOptions.map(option => (
@@ -152,7 +164,7 @@ const PlanFeeGuideSection = ({
         </Box>
 
         {/* Coverage Type */}
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: '0 0 auto', minWidth: '260px' }}>
           <FormInput
             select
             label="COVERAGE TYPE"
@@ -184,7 +196,7 @@ const PlanFeeGuideSection = ({
             size="small"
             value={guide.providerId || ''}
             onChange={(e) => handleProviderFeeGuideChange(index, 'providerId', e.target.value)}
-            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
+            sx={{ minWidth: '240px', bgcolor: '#fff', '& .MuiInputBase-root': { height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' }, '& .MuiSelect-select': { fontSize: '14px !important', color: '#111827 !important', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingTop: '0 !important', paddingBottom: '0 !important', height: '100% !important', minHeight: 'unset !important' } }}
           >
             <MenuItem value="" disabled sx={{ fontSize: '14px', color: '#aaa' }}>
               <em>Select Provider</em>
@@ -212,7 +224,7 @@ const PlanFeeGuideSection = ({
             size="small"
             value={guide.feeGuide || ''}
             onChange={(e) => handleProviderFeeGuideChange(index, 'feeGuide', e.target.value)}
-            sx={{ flex: 1, bgcolor: '#fff', '& .MuiInputBase-root': { fontSize: '14px', height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' } }}
+            sx={{ minWidth: '240px', bgcolor: '#fff', '& .MuiInputBase-root': { height: '36px' }, '& fieldset': { borderColor: '#DFE5EC' }, '& .MuiSelect-select': { fontSize: '14px !important', color: '#111827 !important', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingTop: '0 !important', paddingBottom: '0 !important', height: '100% !important', minHeight: 'unset !important' } }}
           >
             <MenuItem value="" disabled sx={{ fontSize: '14px', color: '#aaa' }}>
               <em>Select Fee Guide</em>

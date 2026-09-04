@@ -23,6 +23,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
+import { formatDateForPayload } from "../../utils/dateUtils";
 import { Save as SaveIcon } from "@mui/icons-material";
 import { patientService } from "../../services/patient.service";
 import { useSelector, useDispatch } from "react-redux";
@@ -298,9 +299,7 @@ const formatSSNInput = (value) => {
 };
 
 const formatDateValue = (value) => {
-  if (!value) return undefined;
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.toISOString() : undefined;
+  return formatDateForPayload(value);
 };
 
 const removeEmptyCustomFields = (fields) =>

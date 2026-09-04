@@ -112,48 +112,67 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     }
     
     let claimProcs = [];
-    if (claim.invoice && claim.invoice.lineItems && claim.invoice.lineItems.length > 0) {
-      claimProcs = claim.invoice.lineItems.filter(l => !l.dbi && String(l.dbi) !== 'true').map(l => ({
-        id: l.id || l._id || l.procedureId || l.procId,
-        code: `${l.code || ''} - ${l.description || l.name || ''}`,
-        submitted: `$${Number(l.charge || l.totalPrice || 0).toFixed(2)}`,
-        bal: `$${Number(l.balance || l.charge || 0).toFixed(2)}`,
-        ded: '0.00',
-        allowed: Number(l.charge || l.totalPrice || 0).toFixed(2),
-        wo: '0.00',
-        pay: Number(l.charge || l.totalPrice || 0).toFixed(2),
-        updateAllowedFee: false,
-        updateInsFlatPortion: false,
-        moveToNewClaim: false
-      }));
-    } else if (claim.procedures && claim.procedures.length > 0) {
-      claimProcs = claim.procedures.filter(p => !p.dbi && String(p.dbi) !== 'true').map(p => ({
-        id: p.id || p._id || p.ProcNum || p.procedureId,
-        code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
-        submitted: `$${Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2)}`,
-        bal: `$${Number(p.fee || p.ProcFee || p.balance || p.charge || 0).toFixed(2)}`,
-        ded: '0.00',
-        allowed: Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2),
-        wo: '0.00',
-        pay: Number(p.fee || p.ProcFee || p.charge || 0).toFixed(2),
-        updateAllowedFee: false,
-        updateInsFlatPortion: false,
-        moveToNewClaim: false
-      }));
+    if (claim.procedures && claim.procedures.length > 0) {
+      claimProcs = claim.procedures
+        .filter(p => !p.dbi && String(p.dbi) !== 'true' && (p.insPayEst === undefined || Number(p.insPayEst) > 0))
+        .map(p => {
+          const submittedNum = Number(p.fee || p.ProcFee || p.charge || 0);
+          const allowedNum = p.insPayEst !== undefined && p.insPayEst !== null ? Number(p.insPayEst) : submittedNum;
+          const woNum = Math.max(0, submittedNum - allowedNum);
+
+          return {
+            id: p.id || p._id || p.ProcNum || p.procedureId,
+            code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
+            submitted: `$${submittedNum.toFixed(2)}`,
+            bal: `$${Number(p.balance || submittedNum).toFixed(2)}`,
+            ded: '0.00',
+            allowed: allowedNum.toFixed(2),
+            wo: woNum.toFixed(2),
+            pay: allowedNum.toFixed(2),
+            updateAllowedFee: false,
+            updateInsFlatPortion: false,
+            moveToNewClaim: false
+          };
+        });
+    } else if (claim.invoice && claim.invoice.lineItems && claim.invoice.lineItems.length > 0) {
+      claimProcs = claim.invoice.lineItems
+        .filter(l => !l.dbi && String(l.dbi) !== 'true' && (l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0))
+        .map(l => {
+          const submittedNum = Number(l.charge || l.totalPrice || 0);
+          const allowedNum = l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : submittedNum);
+          const woNum = Math.max(0, submittedNum - allowedNum);
+
+        return {
+          id: l.id || l._id || l.procedureId || l.procId,
+          code: `${l.code || ''} - ${l.description || l.name || ''}`,
+          submitted: `$${submittedNum.toFixed(2)}`,
+          bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
+          ded: '0.00',
+          allowed: allowedNum.toFixed(2),
+          wo: woNum.toFixed(2),
+          pay: allowedNum.toFixed(2),
+          updateAllowedFee: false,
+          updateInsFlatPortion: false,
+          moveToNewClaim: false
+        };
+      });
     } else if (claim.selectedItems && claim.selectedItems.length > 0) {
-      claimProcs = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true').map(item => ({
-        id: item.id || item._id || item.itemId || item.procedureId,
-        code: `Item ID: ${item.itemId}`,
-        submitted: `$${Number(item.amount || 0).toFixed(2)}`,
-        bal: `$${Number(item.amount || 0).toFixed(2)}`,
-        ded: '0.00',
-        allowed: Number(item.amount || 0).toFixed(2),
-        wo: '0.00',
-        pay: Number(item.amount || 0).toFixed(2),
-        updateAllowedFee: false,
-        updateInsFlatPortion: false,
-        moveToNewClaim: false
-      }));
+      claimProcs = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true').map(item => {
+        const submittedNum = Number(item.amount || 0);
+        return {
+          id: item.id || item._id || item.itemId || item.procedureId,
+          code: `Item ID: ${item.itemId}`,
+          submitted: `$${submittedNum.toFixed(2)}`,
+          bal: `$${submittedNum.toFixed(2)}`,
+          ded: '0.00',
+          allowed: submittedNum.toFixed(2),
+          wo: '0.00',
+          pay: submittedNum.toFixed(2),
+          updateAllowedFee: false,
+          updateInsFlatPortion: false,
+          moveToNewClaim: false
+        };
+      });
     }
     setProcedures(claimProcs);
   }, [selectedClaim, claims]);

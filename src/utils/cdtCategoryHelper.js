@@ -91,7 +91,7 @@ export const calculatePortionsForCategory = ({
     return {
       insPortion: 0,
       ptPortion: owed,
-      balance: owed,
+      balance: charge,
       coveragePct: explicitPct,
       categoryKey: getCategoryByCdtCode(code),
     };
@@ -111,7 +111,7 @@ export const calculatePortionsForCategory = ({
   return {
     insPortion: insVal,
     ptPortion: ptVal,
-    balance: owed,
+    balance: charge,
     coveragePct: pct,
     categoryKey,
   };

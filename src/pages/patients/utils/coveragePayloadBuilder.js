@@ -1,4 +1,5 @@
 import { monthMap } from './coverageConstants';
+import { formatDateForPayload } from '../../../utils/dateUtils';
 
 export const buildCoveragePayload = (formData, coverageBookData, coverageCategoryData) => {
   const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
@@ -14,10 +15,10 @@ export const buildCoveragePayload = (formData, coverageBookData, coverageCategor
     groupNumber: formData.groupNumber || undefined,
     groupName: formData.groupName || undefined,
     subscriberName: formData.subscriber.name,
-    subscriberDateOfBirth: new Date(formData.subscriber.dateOfBirth).toISOString(),
+    subscriberDateOfBirth: formatDateForPayload(formData.subscriber.dateOfBirth),
     relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
-    effectiveDate: new Date(formData.policyStarted).toISOString(),
-    expirationDate: formData.policyEnds ? new Date(formData.policyEnds).toISOString() : undefined,
+    effectiveDate: formatDateForPayload(formData.policyStarted),
+    expirationDate: formData.policyEnds ? formatDateForPayload(formData.policyEnds) : undefined,
     deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
     individualAnnualMax: !isNaN(parsedIndMax) ? parsedIndMax : undefined,
     usedAmount: !isNaN(parsedIndUsed) ? parsedIndUsed : undefined,

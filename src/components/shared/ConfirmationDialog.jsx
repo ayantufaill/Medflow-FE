@@ -11,7 +11,8 @@ import {
   Typography
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { DescriptionOutlined as DescriptionIcon } from '@mui/icons-material';
+import docSvg from '../../assets/practicesetupicon/documents.svg';
+import deleteSvg from '../../assets/practicesetupicon/deleteicon.svg';
 
 const ConfirmationDialog = ({
   open,
@@ -57,7 +58,11 @@ const ConfirmationDialog = ({
           backgroundColor: "#eff6ff",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <DescriptionIcon sx={{ fontSize: "20px", color: "#2262ef" }} />
+          {confirmColor === 'error' || title.toLowerCase().includes('delete') ? (
+            <img src={deleteSvg} alt="Delete" style={{ width: 16, height: 16, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
+          ) : (
+            <img src={docSvg} alt="Document" style={{ width: 20, height: 20, filter: 'brightness(0) saturate(100%) invert(35%) sepia(87%) saturate(5833%) hue-rotate(219deg) brightness(97%) contrast(98%)' }} />
+          )}
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
           <Typography sx={{ 
