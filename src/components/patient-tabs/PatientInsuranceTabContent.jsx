@@ -27,6 +27,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import { formatDate, formatDateForPayload } from '../../utils/dateUtils';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
 import apiClient from '../../config/api';
@@ -202,7 +203,7 @@ const CoverageRow = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's Birthday:</Typography>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>
-                  {ins.subscriberDateOfBirth ? dayjs(ins.subscriberDateOfBirth).format('MM/DD/YYYY') : (((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient?.dateOfBirth) ? dayjs(patient.dateOfBirth).format('MM/DD/YYYY') : '-')}
+                  {ins.subscriberDateOfBirth ? formatDate(ins.subscriberDateOfBirth) : (((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient?.dateOfBirth) ? formatDate(patient.dateOfBirth) : '-')}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -241,8 +242,9 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const { showSnackbar } = useSnackbar();
 
   const patientName = patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "Patient";
-  const dobText = patient?.dateOfBirth 
-    ? `DOB: ${dayjs(patient.dateOfBirth).format('MMM D, YYYY')}`
+  const formattedDob = patient?.dateOfBirth ? formatDate(patient.dateOfBirth, 'MMM D, YYYY') : null;
+  const dobText = formattedDob && formattedDob !== '-' 
+    ? `DOB: ${formattedDob}`
     : "DOB: N/A";
   const {
     insurances,
@@ -406,11 +408,11 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
         groupNumber: planData.groupNumber,
         groupName: planData.groupName,
         subscriberName: planData.subscriberName || 'Subscriber',
-        subscriberDateOfBirth: planData.subscriberDateOfBirth ? dayjs(planData.subscriberDateOfBirth).toISOString() : dayjs().subtract(25, 'year').toISOString(),
+        subscriberDateOfBirth: formatDateForPayload(planData.subscriberDateOfBirth) || dayjs().subtract(25, 'year').format('YYYY-MM-DD'),
         relationshipToPatient: planData.relationshipToPatient || 'self',
 
-        effectiveDate: planData.effectiveDate ? dayjs(planData.effectiveDate).toISOString() : dayjs().toISOString(),
-        expirationDate: planData.expirationDate ? dayjs(planData.expirationDate).toISOString() : undefined,
+        effectiveDate: formatDateForPayload(planData.effectiveDate) || dayjs().format('YYYY-MM-DD'),
+        expirationDate: formatDateForPayload(planData.expirationDate),
         copayAmount: 0,
         deductibleAmount: planData.individualAnnualMax ?? 1500,
         notes: planData.notes,

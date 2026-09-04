@@ -17,8 +17,9 @@ import {
   DescriptionOutlined as DescriptionOutlinedIcon,
   FolderOutlined as FolderOutlinedIcon,
 } from "@mui/icons-material";
-import { useSelector } from 'react-redux';
-import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
+import { useSelector, useDispatch } from 'react-redux';
+import { selectPracticeInfo, fetchCurrentPracticeInfo, updateDocumentCategories } from '../../store/slices/practiceInfoSlice';
+import { defaultDocumentList, defaultCategoryList } from '../../constants/documentCategories';
 
 // ─── Design tokens (mirrors RecordVitalsDialog) ───────────────────────────────
 
@@ -122,61 +123,97 @@ export const EditDocumentDialog = ({
     type: type || "",
     category: category || "",
   });
+  const dispatch = useDispatch();
   const practiceInfo = useSelector(selectPracticeInfo);
-  const presetNames = practiceInfo?.documentCategories?.documents || [];
-  const presetCategories = practiceInfo?.documentCategories?.categories || [];
+
+  useEffect(() => {
+    if (open && (!practiceInfo || !practiceInfo.documentCategories)) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [open, practiceInfo, dispatch]);
+
+  const dbDocs = practiceInfo?.documentCategories?.documents;
+  const dbCats = practiceInfo?.documentCategories?.categories;
+  const isDummyDocs = !dbDocs || dbDocs.length === 0 || (dbDocs.length === 5 && dbDocs[0] === "BOB(Breakdown of Benefit)");
+  const isDummyCats = !dbCats || dbCats.length === 0 || (dbCats.length === 5 && dbCats[0] === "BOB(Breakdown of Benefit)");
+
+  const presetNames = isDummyDocs ? defaultDocumentList : dbDocs;
+  const presetCategories = isDummyCats ? defaultCategoryList : dbCats;
 
   const [nameSuggestions, setNameSuggestions] = useState(presetNames);
   const [categorySuggestions, setCategorySuggestions] = useState(presetCategories);
+
+  useEffect(() => {
+    setNameSuggestions(presetNames);
+  }, [presetNames]);
+
+  useEffect(() => {
+    setCategorySuggestions(presetCategories);
+  }, [presetCategories]);
 
   // Sync fields when props change (dialog re-opens for a different doc)
   useEffect(() => {
     setEditData({ name: name || "", type: type || "", category: category || "" });
   }, [name, type, category, open]);
 
-  // Load persisted suggestions from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedNames = localStorage.getItem("medflow_doc_names");
-      if (savedNames) setNameSuggestions(JSON.parse(savedNames));
-
-      const savedCats = localStorage.getItem("medflow_doc_categories");
-      if (savedCats) setCategorySuggestions(JSON.parse(savedCats));
-    } catch {
-      // ignore parse errors
-    }
-  }, []);
-
   const handleSave = () => {
     onSave({ section, docId, name: editData.name, category: editData.category });
   };
 
   // ── Name suggestion persistence ──
-  const handleSaveNameDefault = () => {
+  const handleSaveNameDefault = async () => {
     const val = editData.name.trim();
     if (!val || nameSuggestions.includes(val)) return;
     const updated = [val, ...nameSuggestions];
     setNameSuggestions(updated);
-    localStorage.setItem("medflow_doc_names", JSON.stringify(updated));
+
+    let practiceId = practiceInfo?._id || practiceInfo?.id;
+    if (!practiceId) {
+      try {
+        const res = await dispatch(fetchCurrentPracticeInfo()).unwrap();
+        practiceId = res?._id || res?.id;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (practiceId) {
+      dispatch(updateDocumentCategories({
+        practiceInfoId: practiceId,
+        documentCategoriesData: { categories: categorySuggestions, documents: updated }
+      }));
+    }
   };
 
   const handleResetNameDefaults = () => {
-    setNameSuggestions(presetNames);
-    localStorage.removeItem("medflow_doc_names");
+    setNameSuggestions(defaultDocumentList);
   };
 
   // ── Category suggestion persistence ──
-  const handleSaveCategoryDefault = () => {
+  const handleSaveCategoryDefault = async () => {
     const val = editData.category.trim();
     if (!val || categorySuggestions.includes(val)) return;
     const updated = [val, ...categorySuggestions];
     setCategorySuggestions(updated);
-    localStorage.setItem("medflow_doc_categories", JSON.stringify(updated));
+
+    let practiceId = practiceInfo?._id || practiceInfo?.id;
+    if (!practiceId) {
+      try {
+        const res = await dispatch(fetchCurrentPracticeInfo()).unwrap();
+        practiceId = res?._id || res?.id;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (practiceId) {
+      dispatch(updateDocumentCategories({
+        practiceInfoId: practiceId,
+        documentCategoriesData: { categories: updated, documents: nameSuggestions }
+      }));
+    }
   };
 
   const handleResetCategoryDefaults = () => {
-    setCategorySuggestions(presetCategories);
-    localStorage.removeItem("medflow_doc_categories");
+    setCategorySuggestions(defaultCategoryList);
   };
 
   return (

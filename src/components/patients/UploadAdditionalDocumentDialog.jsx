@@ -14,7 +14,8 @@ import { Close as CloseIcon } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 import { useSelector, useDispatch } from 'react-redux';
-import { selectPracticeInfo, updateDocumentCategories } from '../../store/slices/practiceInfoSlice';
+import { selectPracticeInfo, fetchCurrentPracticeInfo, updateDocumentCategories } from '../../store/slices/practiceInfoSlice';
+import { defaultDocumentList, defaultCategoryList } from '../../constants/documentCategories';
 import ManageDocumentPresetsDialog from './ManageDocumentPresetsDialog';
 import { SettingsOutlined as SettingsIcon } from "@mui/icons-material";
 
@@ -26,11 +27,22 @@ const UploadAdditionalDocumentDialog = ({
 }) => {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
-  const practiceInfo = useSelector(selectPracticeInfo);
-  const presetNames = practiceInfo?.documentCategories?.documents || [];
-  const presetCategories = practiceInfo?.documentCategories?.categories || [];
-
   const dispatch = useDispatch();
+  const practiceInfo = useSelector(selectPracticeInfo);
+
+  useEffect(() => {
+    if (open && (!practiceInfo || !practiceInfo.documentCategories)) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [open, practiceInfo, dispatch]);
+
+  const dbDocs = practiceInfo?.documentCategories?.documents;
+  const dbCats = practiceInfo?.documentCategories?.categories;
+  const isDummyDocs = !dbDocs || dbDocs.length === 0 || (dbDocs.length === 5 && dbDocs[0] === "BOB(Breakdown of Benefit)");
+  const isDummyCats = !dbCats || dbCats.length === 0 || (dbCats.length === 5 && dbCats[0] === "BOB(Breakdown of Benefit)");
+
+  const presetNames = isDummyDocs ? defaultDocumentList : dbDocs;
+  const presetCategories = isDummyCats ? defaultCategoryList : dbCats;
 
   useEffect(() => {
     if (open) {
@@ -44,17 +56,29 @@ const UploadAdditionalDocumentDialog = ({
     onClose();
   };
 
-  const saveNewPreset = (type, value) => {
+  const saveNewPreset = async (type, value) => {
     if (!value) return;
-    const newCategories = type === "categories" ? [...presetCategories, value] : presetCategories;
-    const newDocuments = type === "documents" ? [...presetNames, value] : presetNames;
-    dispatch(updateDocumentCategories({
-      practiceInfoId: practiceInfo._id || practiceInfo.id,
-      documentCategoriesData: { categories: newCategories, documents: newDocuments }
-    }));
+    const newCategories = type === "categories" ? (presetCategories.includes(value) ? presetCategories : [...presetCategories, value]) : presetCategories;
+    const newDocuments = type === "documents" ? (presetNames.includes(value) ? presetNames : [...presetNames, value]) : presetNames;
+    
+    let practiceId = practiceInfo?._id || practiceInfo?.id;
+    if (!practiceId) {
+      try {
+        const res = await dispatch(fetchCurrentPracticeInfo()).unwrap();
+        practiceId = res?._id || res?.id;
+      } catch (err) {
+        console.error('Failed to fetch practice info', err);
+      }
+    }
+    if (practiceId) {
+      dispatch(updateDocumentCategories({
+        practiceInfoId: practiceId,
+        documentCategoriesData: { categories: newCategories, documents: newDocuments }
+      }));
+    }
   };
 
-  const handleReorder = (type) => {
+  const handleReorder = async (type) => {
     let sortedCategories = presetCategories;
     let sortedDocuments = presetNames;
     
@@ -64,10 +88,21 @@ const UploadAdditionalDocumentDialog = ({
       sortedDocuments = [...presetNames].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     }
     
-    dispatch(updateDocumentCategories({
-      practiceInfoId: practiceInfo._id || practiceInfo.id,
-      documentCategoriesData: { categories: sortedCategories, documents: sortedDocuments }
-    }));
+    let practiceId = practiceInfo?._id || practiceInfo?.id;
+    if (!practiceId) {
+      try {
+        const res = await dispatch(fetchCurrentPracticeInfo()).unwrap();
+        practiceId = res?._id || res?.id;
+      } catch (err) {
+        console.error('Failed to fetch practice info', err);
+      }
+    }
+    if (practiceId) {
+      dispatch(updateDocumentCategories({
+        practiceInfoId: practiceId,
+        documentCategoriesData: { categories: sortedCategories, documents: sortedDocuments }
+      }));
+    }
   };
 
   return (
