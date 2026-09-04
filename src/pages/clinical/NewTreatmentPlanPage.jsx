@@ -62,8 +62,15 @@ const NewTreatmentPlanPage = () => {
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [isPreAuthModalOpen, setIsPreAuthModalOpen] = useState(false);
   const [createdPreAuthId, setCreatedPreAuthId] = useState(null);
+  const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
 
   const currentPatient = useSelector(selectCurrentPatient);
+  const currentPatientId = currentPatient?._id || currentPatient?.id;
+
+  useEffect(() => {
+    setCreatedPreAuthId(null);
+    setCreatedPreAuthPatientId(null);
+  }, [currentPatientId]);
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -637,9 +644,12 @@ const NewTreatmentPlanPage = () => {
       <PreAuthModal
         open={isPreAuthModalOpen}
         onClose={() => setIsPreAuthModalOpen(false)}
-        preAuthId={createdPreAuthId}
-        onSave={(newId) => setCreatedPreAuthId(newId)}
-        patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
+        preAuthId={createdPreAuthPatientId === currentPatientId ? createdPreAuthId : null}
+        onSave={(newId) => {
+          setCreatedPreAuthId(newId);
+          setCreatedPreAuthPatientId(currentPatientId);
+        }}
+        patientId={currentPatientId}
         selectedProcedures={treatmentPlans}
       />
 

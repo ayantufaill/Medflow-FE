@@ -62,6 +62,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [savedAuthorizationId, setSavedAuthorizationId] = useState(null);
   
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -117,12 +118,28 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
   useEffect(() => {
     setAttachments([]);
-  }, [open, patientId]);
+    setSelectedTags([]);
+    setComments([]);
+    setNewComment('');
+    setTabValue(0);
+    setOrder('Primary');
+    setHistoryLogs([{
+      id: 1,
+      action: 'Created Pre-Auth Draft',
+      user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
+      date: dayjs().format('MM/DD/YYYY h:mm A')
+    }]);
+  }, [open, patientId, currentUser]);
+
+  useEffect(() => {
+    setSavedAuthorizationId(preAuthId || null);
+  }, [open, patientId, preAuthId]);
 
   useEffect(() => {
     const fetchAuthData = async () => {
       if (!open) return;
       setIsLoading(true);
+      setAuthData(null);
       
       try {
         // Get dynamic fallbacks
@@ -149,7 +166,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             billingProvider: data.billingProvider || primaryProvider,
             treatmentProvider: data.treatmentProvider || primaryProvider,
             insuranceCompany: data.insuranceCompany || data.insuranceCompanyId?.name || patientInsuranceName,
-            attachments: data.attachments || 'None Required'
+            attachments: data.attachments || 'None Required',
+            serviceDate: data.serviceDate || data.requestedDate,
+            latestActivity: data.latestActivity || (
+              data.updatedAt || data.createdAt || data.requestedDate
+                ? `Updated on ${dayjs(data.updatedAt || data.createdAt || data.requestedDate).format('MM/DD/YYYY')}`
+                : 'No recent activity.'
+            ),
           });
           if (data.order) setOrder(data.order);
         } else {
@@ -175,7 +198,16 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     };
     
     fetchAuthData();
-  }, [open, preAuthId, selectedProcedures]);
+  }, [
+    open,
+    preAuthId,
+    patientId,
+    selectedProcedures,
+    currentPatient,
+    currentUser,
+    insurancesCache,
+    showSnackbar,
+  ]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -217,27 +249,76 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }
   };
 
+  const ensureAuthorizationId = async () => {
+    const existingId = preAuthId || savedAuthorizationId;
+    if (existingId) return existingId;
+
+    const newAuth = await authorizationService.requestAuthorization({
+      patientId,
+      order,
+      serviceDate: authData.serviceDate,
+      status: 'requested',
+      procedures: (authData.procedures || []).map((procedure) => (
+        procedure.id || procedure._id || procedure.procedureId || procedure.code
+      )),
+    });
+    const newId = newAuth._id || newAuth.id;
+    setSavedAuthorizationId(newId);
+    setAuthData((previous) => ({ ...previous, id: newId }));
+    onSave?.(newId);
+    return newId;
+  };
+
+  const getAuthorizationForm = async () => {
+    const authorizationId = await ensureAuthorizationId();
+    const blob = await authorizationService.printAuthorizationForm(authorizationId);
+    return { authorizationId, blob };
+  };
+
   const handlePrint = async () => {
-    if (!preAuthId) {
-      showSnackbar('Save the pre-auth first to print it', 'warning');
-      return;
-    }
     try {
-      const blob = await authorizationService.printAuthorizationForm(preAuthId);
+      const { blob } = await getAuthorizationForm();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `PreAuth-${preAuthId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
+
+      const printFrame = document.createElement('iframe');
+      printFrame.title = 'Print authorization form';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '1px';
+      printFrame.style.height = '1px';
+      printFrame.style.border = '0';
+      printFrame.style.opacity = '0';
+      printFrame.onload = () => {
+        printFrame.contentWindow?.focus();
+        printFrame.contentWindow?.print();
+        window.setTimeout(() => {
+          printFrame.remove();
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+      };
+      printFrame.src = url;
+      document.body.appendChild(printFrame);
+    } catch {
       showSnackbar('Failed to generate print form', 'error');
     }
   };
 
-  const handleDownload = () => {
-    showSnackbar('Form downloaded successfully', 'success');
+  const handleDownload = async () => {
+    try {
+      const { authorizationId, blob } = await getAuthorizationForm();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `PreAuth-${authorizationId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSnackbar('Form downloaded successfully', 'success');
+    } catch {
+      showSnackbar('Failed to download form', 'error');
+    }
   };
 
   const handleSubmitManually = () => {
@@ -290,7 +371,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
               </Typography>
             </Box>
             <Typography sx={{ fontFamily: 'Inter', fontWeight: 400, fontSize: '11.5px', color: '#6B7280', lineHeight: '17.25px' }}>
-              Service Date - {authData?.serviceDate ? dayjs(authData.serviceDate).format('MMMM DD, YYYY') : '-'}
+              Service Date - {authData?.serviceDate || authData?.requestedDate ? dayjs(authData.serviceDate || authData.requestedDate).format('MMMM DD, YYYY') : '-'}
             </Typography>
           </Box>
         </Box>
