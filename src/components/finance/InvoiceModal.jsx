@@ -26,7 +26,10 @@ import {
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
-import { Close as CloseIcon, Receipt as ReceiptIcon } from "@mui/icons-material";
+import {
+  Close as CloseIcon,
+  Receipt as ReceiptIcon,
+} from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
 
@@ -39,27 +42,47 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [showDescription, setShowDescription] = useState(false);
 
   useEffect(() => {
-    if (invoiceData && invoiceData.procedures && invoiceData.procedures.length > 0) {
-      // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions 
+    console.log("InvoiceModal debug - invoiceData:", invoiceData);
+    if (
+      invoiceData &&
+      invoiceData.procedures &&
+      invoiceData.procedures.length > 0
+    ) {
+      // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions
       // based on the patient's coverage table and the dbi (Do Not Bill Insurance) flag.
       const isNewInvoice = !invoiceData._id && !invoiceData.id;
-      
+
       if (isNewInvoice) {
-        const recalculated = invoiceData.procedures.map(p => {
-          const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
-          const baseFee = p.allowedFee !== undefined ? parseFloat(p.allowedFee) : p.originalFee !== undefined ? parseFloat(p.originalFee) : numCharge;
-          const numWriteoff = parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || (
-            !p.dbi && baseFee > 0 && numCharge > baseFee ? Math.round((numCharge - baseFee) * 100) / 100 : 0
-          );
-          
+        const recalculated = invoiceData.procedures.map((p) => {
+          const numCharge =
+            parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) ||
+            0;
+          const baseFee =
+            p.allowedFee !== undefined
+              ? parseFloat(p.allowedFee)
+              : p.originalFee !== undefined
+                ? parseFloat(p.originalFee)
+                : numCharge;
+          const numWriteoff =
+            parseFloat(
+              (p.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
+            ) ||
+            (!p.dbi && baseFee > 0 && numCharge > baseFee
+              ? Math.round((numCharge - baseFee) * 100) / 100
+              : 0);
+
           const portions = calculatePortionsForCategory({
             charge: numCharge,
             writeoff: numWriteoff,
             code: p.code,
             dbi: p.dbi || false,
             coverageTable: patient?.coverageTable || null,
+            explicitPct:
+              p.coveragePct !== undefined && p.coveragePct !== null
+                ? Number(p.coveragePct)
+                : null,
           });
-          
+
           return {
             ...p,
             allowedFee: baseFee,
@@ -71,6 +94,10 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             coveragePct: portions.coveragePct,
           };
         });
+        console.log(
+          "InvoiceModal debug - recalculated procedures:",
+          recalculated,
+        );
         setProcedures(recalculated);
       } else {
         setProcedures(invoiceData.procedures);
@@ -129,9 +156,17 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
     if (patient && patient._id) {
       try {
-        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
-          { code: newProcedure.code, charge: fee, allowedFee: fee, originalFee: fee }
-        ]);
+        const estimates = await invoiceService.estimateInvoiceItems(
+          patient._id,
+          [
+            {
+              code: newProcedure.code,
+              charge: fee,
+              allowedFee: fee,
+              originalFee: fee,
+            },
+          ],
+        );
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
           console.log("Got estimate from backend for new procedure:", est);
@@ -165,7 +200,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   const handleAmountChange = async (procedureId, field, value) => {
     let updatedProcedure = null;
-    
+
     setProcedures((prev) => {
       return prev.map((p) => {
         if (p.id !== procedureId) return p;
@@ -179,15 +214,20 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         const dbiState = updated.dbi;
 
         const baseFee =
-          p.allowedFee !== undefined && p.allowedFee !== null && Number(p.allowedFee) > 0
+          p.allowedFee !== undefined &&
+          p.allowedFee !== null &&
+          Number(p.allowedFee) > 0
             ? Number(p.allowedFee)
-            : p.originalFee !== undefined && p.originalFee !== null && Number(p.originalFee) > 0
-            ? Number(p.originalFee)
-            : numCharge;
+            : p.originalFee !== undefined &&
+                p.originalFee !== null &&
+                Number(p.originalFee) > 0
+              ? Number(p.originalFee)
+              : numCharge;
 
-        let numWriteoff = parseFloat(
-          (updated.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
-        ) || 0;
+        let numWriteoff =
+          parseFloat(
+            (updated.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
+          ) || 0;
 
         if (field === "charge") {
           if (!dbiState && baseFee > 0 && numCharge > baseFee) {
@@ -231,26 +271,51 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       });
     });
 
-    if (["charge", "dbi"].includes(field) && patient && patient._id && updatedProcedure && !updatedProcedure.dbi) {
+    if (
+      ["charge", "dbi"].includes(field) &&
+      patient &&
+      patient._id &&
+      updatedProcedure &&
+      !updatedProcedure.dbi
+    ) {
       try {
-        const numCharge = parseFloat((updatedProcedure.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
-        const baseFee = updatedProcedure.allowedFee ?? updatedProcedure.originalFee;
-        const estimates = await invoiceService.estimateInvoiceItems(patient._id, [
-          { code: updatedProcedure.code, charge: numCharge, allowedFee: baseFee, originalFee: baseFee }
-        ]);
+        const numCharge =
+          parseFloat(
+            (updatedProcedure.charge || "")
+              .toString()
+              .replace(/[^0-9.-]+/g, ""),
+          ) || 0;
+        const baseFee =
+          updatedProcedure.allowedFee ?? updatedProcedure.originalFee;
+        const estimates = await invoiceService.estimateInvoiceItems(
+          patient._id,
+          [
+            {
+              code: updatedProcedure.code,
+              charge: numCharge,
+              allowedFee: baseFee,
+              originalFee: baseFee,
+            },
+          ],
+        );
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
-          setProcedures((prev) => prev.map((p) => {
-            if (p.id !== procedureId) return p;
-            return {
-              ...p,
-              insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
-              ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
-              writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-              balance: `$${numCharge.toFixed(2)}`,
-              allowedFee: est.allowedFee !== undefined ? Number(est.allowedFee) : p.allowedFee,
-            };
-          }));
+          setProcedures((prev) =>
+            prev.map((p) => {
+              if (p.id !== procedureId) return p;
+              return {
+                ...p,
+                insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
+                ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `$${numCharge.toFixed(2)}`,
+                allowedFee:
+                  est.allowedFee !== undefined
+                    ? Number(est.allowedFee)
+                    : p.allowedFee,
+              };
+            }),
+          );
         }
       } catch (err) {
         console.warn("Failed to fetch estimate after charge change:", err);
@@ -263,16 +328,24 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     setProcedures((prev) =>
       prev.map((p) => {
         const numCharge =
-          parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) ||
+          0;
         const baseFee =
-          p.allowedFee !== undefined && p.allowedFee !== null && Number(p.allowedFee) > 0
+          p.allowedFee !== undefined &&
+          p.allowedFee !== null &&
+          Number(p.allowedFee) > 0
             ? Number(p.allowedFee)
-            : p.originalFee !== undefined && p.originalFee !== null && Number(p.originalFee) > 0
-            ? Number(p.originalFee)
-            : numCharge;
-        const numWriteoff = (!p.dbi && baseFee > 0 && numCharge > baseFee)
-          ? Math.round((numCharge - baseFee) * 100) / 100
-          : (parseFloat((p.writeoff || "").toString().replace(/[^0-9.-]+/g, "")) || 0);
+            : p.originalFee !== undefined &&
+                p.originalFee !== null &&
+                Number(p.originalFee) > 0
+              ? Number(p.originalFee)
+              : numCharge;
+        const numWriteoff =
+          !p.dbi && baseFee > 0 && numCharge > baseFee
+            ? Math.round((numCharge - baseFee) * 100) / 100
+            : parseFloat(
+                (p.writeoff || "").toString().replace(/[^0-9.-]+/g, ""),
+              ) || 0;
 
         const portions = calculatePortionsForCategory({
           charge: numCharge,
@@ -289,39 +362,50 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           balance: `$${portions.balance.toFixed(2)}`,
           coveragePct: portions.coveragePct,
         };
-      })
+      }),
     );
 
     // 2. Server-side re-estimation if patient is present
     if (patient && patient._id && procedures.length > 0) {
       try {
         const payload = procedures.map((p) => {
-          const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+          const numCharge =
+            parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) ||
+            0;
           const baseFee = p.allowedFee ?? p.originalFee;
           return {
             code: p.code,
             charge: numCharge,
             allowedFee: baseFee,
             originalFee: baseFee,
-            dbi: Boolean(p.dbi)
+            dbi: Boolean(p.dbi),
           };
         });
-        const estimates = await invoiceService.estimateInvoiceItems(patient._id, payload);
+        const estimates = await invoiceService.estimateInvoiceItems(
+          patient._id,
+          payload,
+        );
         if (estimates && estimates.length === procedures.length) {
           setProcedures((prev) =>
             prev.map((p, idx) => {
               const est = estimates[idx];
               if (!est) return p;
-              const numCharge = parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0;
+              const numCharge =
+                parseFloat(
+                  (p.charge || "").toString().replace(/[^0-9.-]+/g, ""),
+                ) || 0;
               return {
                 ...p,
                 insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
                 ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
                 writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
                 balance: `$${numCharge.toFixed(2)}`,
-                allowedFee: est.allowedFee !== undefined ? Number(est.allowedFee) : p.allowedFee
+                allowedFee:
+                  est.allowedFee !== undefined
+                    ? Number(est.allowedFee)
+                    : p.allowedFee,
               };
-            })
+            }),
           );
         }
       } catch (err) {
@@ -338,11 +422,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         displayEmpty
         variant="outlined"
         size="small"
-        MenuProps={{ 
-          style: { zIndex: 150000 }, 
+        MenuProps={{
+          style: { zIndex: 150000 },
           sx: { zIndex: 150000 },
           anchorOrigin: { vertical: "bottom", horizontal: "left" },
-          transformOrigin: { vertical: "top", horizontal: "left" }
+          transformOrigin: { vertical: "top", horizontal: "left" },
         }}
         renderValue={(selected) => {
           if (!selected) return "Sel";
@@ -368,11 +452,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             borderColor: COLORS.BORDER,
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: '#9ca3af',
+            borderColor: "#9ca3af",
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: COLORS.ACCENT,
-          }
+          },
         }}
       >
         <MenuItem value="" disabled sx={{ fontSize: "12px" }}>
@@ -400,7 +484,17 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', bgcolor: 'white', borderRadius: '14px', overflow: 'hidden' }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
+        bgcolor: "white",
+        borderRadius: "14px",
+        overflow: "hidden",
+      }}
+    >
       <DialogTitle
         sx={{
           boxSizing: "border-box",
@@ -416,15 +510,35 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         }}
       >
         <ReceiptIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
-          {invoiceData?.invoiceId ? `Invoice #${invoiceData.invoiceId}` : 'New Invoice'}
+        <Typography
+          sx={{
+            fontSize: "15px",
+            fontWeight: 600,
+            color: COLORS.TEXT_PRIMARY,
+            flex: 1,
+          }}
+        >
+          {invoiceData?.invoiceId
+            ? `Invoice #${invoiceData.invoiceId}`
+            : "New Invoice"}
         </Typography>
-        <IconButton onClick={onClose || onCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+        <IconButton
+          onClick={onClose || onCancel}
+          size="small"
+          sx={{ color: COLORS.TEXT_SECONDARY }}
+        >
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: procedures.length > 0 ? 0 : 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <DialogContent
+        sx={{
+          p: procedures.length > 0 ? 0 : 3,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
         {procedures.length === 0 ? (
           <Typography sx={{ color: "#666", fontSize: "14px", my: 2 }}>
             There are no completed procedures ready to be billed
@@ -449,11 +563,19 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                   fontWeight: 600,
                 }}
               >
-                {new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })}
+                {new Date().toLocaleDateString("en-US", {
+                  month: "2-digit",
+                  day: "2-digit",
+                  year: "numeric",
+                })}
               </Typography>
               <Typography
                 variant="subtitle1"
-                sx={{ display: "inline-block", color: COLORS.TEXT_SECONDARY, fontSize: "13px" }}
+                sx={{
+                  display: "inline-block",
+                  color: COLORS.TEXT_SECONDARY,
+                  fontSize: "13px",
+                }}
               >
                 No descriptions
               </Typography>
@@ -462,62 +584,205 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>DATE</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>CODE</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>SITE</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>TREATMENT</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>PROVIDER</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>WRITEOFF</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>PT PORTION</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>INS PORTION</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, fontWeight: 600, py: 1 }}>CHARGE</TableCell>
-                    <TableCell sx={{ fontSize: "11px", color: COLORS.ACCENT, fontWeight: 600, py: 1 }}>BALANCE</TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      DATE
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      CODE
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      SITE
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      TREATMENT
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      PROVIDER
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      WRITEOFF
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      PT PORTION
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      INS PORTION
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.TEXT_SECONDARY,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      CHARGE
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontSize: "11px",
+                        color: COLORS.ACCENT,
+                        fontWeight: 600,
+                        py: 1,
+                      }}
+                    >
+                      BALANCE
+                    </TableCell>
                     <TableCell sx={{ py: 1 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {procedures.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.date}</TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.code}</TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.site || "-"}</TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.treatment}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.date}
+                      </TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.code}
+                      </TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.site || "-"}
+                      </TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.treatment}
+                      </TableCell>
                       <TableCell sx={{ py: 1 }}>
                         <ProviderDropdown
                           value={row.provider}
                           onChange={(val) => handleProviderChange(row.id, val)}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.writeoff}</TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.ptPortion}</TableCell>
-                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>{row.insPortion}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.writeoff}
+                      </TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.ptPortion}
+                      </TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
+                        {row.insPortion}
+                      </TableCell>
                       <TableCell sx={{ py: 1 }}>
                         <TextField
                           size="small"
                           value={row.charge}
-                          onChange={(e) => handleAmountChange(row.id, "charge", e.target.value)}
-                          sx={{ width: "80px", "& .MuiInputBase-input": { py: 0.5, px: 1, fontSize: "12px" } }}
+                          onChange={(e) =>
+                            handleAmountChange(row.id, "charge", e.target.value)
+                          }
+                          sx={{
+                            width: "80px",
+                            "& .MuiInputBase-input": {
+                              py: 0.5,
+                              px: 1,
+                              fontSize: "12px",
+                            },
+                          }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: COLORS.ACCENT, fontWeight: 600, py: 1 }}>{row.balance}</TableCell>
+                      <TableCell
+                        sx={{ color: COLORS.ACCENT, fontWeight: 600, py: 1 }}
+                      >
+                        {row.balance}
+                      </TableCell>
                       <TableCell sx={{ py: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
                           <FormControlLabel
                             control={
                               <Checkbox
                                 size="small"
                                 checked={row.dbi || false}
-                                onChange={(e) => handleAmountChange(row.id, "dbi", e.target.checked)}
+                                onChange={(e) =>
+                                  handleAmountChange(
+                                    row.id,
+                                    "dbi",
+                                    e.target.checked,
+                                  )
+                                }
                                 sx={{ p: 0.5, color: COLORS.TEXT_SECONDARY }}
                               />
                             }
-                            label={<Typography sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY }}>DBI</Typography>}
+                            label={
+                              <Typography
+                                sx={{
+                                  fontSize: "11px",
+                                  color: COLORS.TEXT_SECONDARY,
+                                }}
+                              >
+                                DBI
+                              </Typography>
+                            }
                             sx={{ m: 0 }}
                           />
                           <Box
-                            onClick={() => handleAmountChange(row.id, "completed", row.completed === undefined ? false : !row.completed)}
+                            onClick={() =>
+                              handleAmountChange(
+                                row.id,
+                                "completed",
+                                row.completed === undefined
+                                  ? false
+                                  : !row.completed,
+                              )
+                            }
                             sx={{
-                              bgcolor: row.completed === false ? "#d32f2f" : "#8bc34a",
+                              bgcolor:
+                                row.completed === false ? "#d32f2f" : "#8bc34a",
                               color: "white",
                               borderRadius: "4px",
                               display: "flex",
@@ -526,7 +791,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                               width: "20px",
                               height: "20px",
                               cursor: "pointer",
-                              fontSize: "12px"
+                              fontSize: "12px",
                             }}
                           >
                             {row.completed === false ? "✗" : "✓"}
@@ -542,12 +807,26 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         )}
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: `1px solid ${COLORS.BORDER}`, p: 2, display: 'flex', justifyContent: 'space-between', bgcolor: '#fff' }}>
+      <DialogActions
+        sx={{
+          borderTop: `1px solid ${COLORS.BORDER}`,
+          p: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          bgcolor: "#fff",
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Button
             variant="contained"
             size="small"
-            sx={{ bgcolor: COLORS.ACCENT, color: "white", textTransform: "none", boxShadow: 'none', "&:hover": { bgcolor: "#1565c0", boxShadow: 'none' } }}
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: "white",
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": { bgcolor: "#1565c0", boxShadow: "none" },
+            }}
             onClick={() => setShowAddProcedure(true)}
           >
             +Add Procedure
@@ -556,12 +835,18 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             variant="outlined"
             size="small"
             onClick={handleReestimate}
-            sx={{ 
-              fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
-              textTransform: "none", borderRadius: "8px",
-              border: "1px solid #f97316", color: "#f97316",
-              px: "16px", py: "4px", bgcolor: 'white',
-              "&:hover": { borderColor: "#ea6c00", backgroundColor: "#fff7ed" }
+            sx={{
+              fontFamily: "Inter",
+              fontSize: "13px",
+              fontWeight: 500,
+              textTransform: "none",
+              borderRadius: "8px",
+              border: "1px solid #f97316",
+              color: "#f97316",
+              px: "16px",
+              py: "4px",
+              bgcolor: "white",
+              "&:hover": { borderColor: "#ea6c00", backgroundColor: "#fff7ed" },
             }}
           >
             Re-estimate
@@ -571,18 +856,22 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               variant="text"
               size="small"
               onClick={() => setShowDescription(true)}
-              sx={{ color: COLORS.ACCENT, textTransform: "none", fontWeight: 600 }}
+              sx={{
+                color: COLORS.ACCENT,
+                textTransform: "none",
+                fontWeight: 600,
+              }}
             >
               + Add description
             </Button>
           ) : (
-            <TextField 
-              placeholder="Description" 
-              value={description} 
+            <TextField
+              placeholder="Description"
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
-              variant="standard" 
-              autoFocus 
-              sx={{ width: 250, input: { fontSize: '13px' } }} 
+              variant="standard"
+              autoFocus
+              sx={{ width: 250, input: { fontSize: "13px" } }}
             />
           )}
         </Box>
@@ -596,15 +885,30 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                 size="small"
               />
             }
-            label={<Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>Add Claim</Typography>}
+            label={
+              <Typography sx={{ fontSize: "13px", color: COLORS.TEXT_PRIMARY }}>
+                Add Claim
+              </Typography>
+            }
             sx={{ m: 0 }}
           />
 
           <Button
             variant="contained"
             size="small"
-            onClick={() => { if (onSave) onSave({ procedures, addClaim, claimProcedures, description }); }}
-            sx={{ bgcolor: COLORS.ACCENT, color: "#fff", textTransform: "none", boxShadow: "none", borderRadius: '8px', fontWeight: 600, "&:hover": { bgcolor: "#1565c0" } }}
+            onClick={() => {
+              if (onSave)
+                onSave({ procedures, addClaim, claimProcedures, description });
+            }}
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: "#fff",
+              textTransform: "none",
+              boxShadow: "none",
+              borderRadius: "8px",
+              fontWeight: 600,
+              "&:hover": { bgcolor: "#1565c0" },
+            }}
           >
             Add New Invoice
           </Button>
@@ -613,13 +917,13 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             size="small"
             onClick={onCancel || onClose}
             sx={{
-              color: '#64748b',
-              borderColor: '#cbd5e1',
-              borderRadius: '8px',
-              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
-              textTransform: 'none',
+              color: "#64748b",
+              borderColor: "#cbd5e1",
+              borderRadius: "8px",
+              "&:hover": { borderColor: "#94a3b8", backgroundColor: "#f1f5f9" },
+              textTransform: "none",
               px: 2,
-              fontWeight: 600
+              fontWeight: 600,
             }}
           >
             Cancel
