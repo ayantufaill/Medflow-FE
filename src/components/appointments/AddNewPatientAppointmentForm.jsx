@@ -11,6 +11,7 @@ import AppointmentFooter      from "./new-appointment/AppointmentFooter";
 import AppointmentLeftPanel   from "./new-appointment/AppointmentLeftPanel";
 import AppointmentRightPanel  from "./new-appointment/AppointmentRightPanel";
 import LabOrderModal          from "./new-appointment/LabOrderModal";
+import AddNewProcedureDialog  from "../finance/AddNewProcedureDialog";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -59,6 +60,7 @@ const AddNewPatientAppointmentForm = ({
   const [selectedTagLabels, setSelectedTagLabels] = useState(new Set());
   const [tagProcedureIds,   setTagProcedureIds]   = useState({});
   const [addingProcedure,   setAddingProcedure]   = useState(false);
+  const [isAddProcedureOpen, setIsAddProcedureOpen] = useState(false);
   const [procedureInput,    setProcedureInput]    = useState("");
   const nextId = useRef(10);
 
@@ -600,6 +602,38 @@ const AddNewPatientAppointmentForm = ({
     setProcedureInput(""); setAddingProcedure(false);
   };
 
+  const handleSaveNewProcedure = ({ selectedTeeth, selectedSurfaces, procedureCode, procedureDescription, fee }) => {
+    if (!procedureCode) return;
+
+    let siteStr = "";
+    const surfaceStr = (selectedSurfaces || []).join("");
+    if (selectedTeeth && selectedTeeth.length > 0) {
+      siteStr = selectedTeeth.map(t => surfaceStr ? `${t} ${surfaceStr}` : `${t}`).join(", ");
+    } else if (surfaceStr) {
+      siteStr = surfaceStr;
+    }
+
+    const numFee = typeof fee === 'number' ? fee : parseFloat(String(fee || '').replace(/[^0-9.-]+/g, '')) || 0;
+    const chargeStr = numFee > 0 ? `$${numFee.toFixed(2)}` : "$0.00";
+
+    const newId = nextId.current++;
+    setProcedures((prev) => [
+      ...prev,
+      {
+        id: newId,
+        code: procedureCode,
+        treatment: procedureDescription || procedureCode,
+        site: siteStr,
+        provider: providerRows[0]?.providerId || "",
+        charge: chargeStr,
+        checked: true,
+        tag: { label: "PRC", color: "#e5e7eb", font: "#374151" },
+      },
+    ]);
+
+    setIsAddProcedureOpen(false);
+  };
+
   useEffect(() => {
     // If a procedure associated with a tag is removed, untoggle the tag
     const currentProcedureIds = new Set(procedures.map(p => p.id));
@@ -892,6 +926,7 @@ const AddNewPatientAppointmentForm = ({
             onVisitTypeChange={setVisitType}
             selectedTagLabels={selectedTagLabels}
             onTagClick={handleTagClick}
+            onOpenAddProcedureDialog={() => setIsAddProcedureOpen(true)}
             addingProcedure={addingProcedure}
             procedureInput={procedureInput}
             onProcedureInputChange={setProcedureInput}
@@ -960,6 +995,29 @@ const AddNewPatientAppointmentForm = ({
           computedVisitType={computedVisitType}
         />
       </Box>
+
+      {isAddProcedureOpen && (
+        <Dialog
+          open={isAddProcedureOpen}
+          onClose={() => setIsAddProcedureOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: "14px",
+              overflow: "hidden",
+              maxWidth: "600px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            },
+          }}
+          sx={{ zIndex: 1400 }}
+        >
+          <AddNewProcedureDialog
+            onClose={() => setIsAddProcedureOpen(false)}
+            onSave={handleSaveNewProcedure}
+          />
+        </Dialog>
+      )}
 
       {isLabOrderOpen && (
         <LabOrderModal 

@@ -492,9 +492,17 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             <Button
               variant="contained"
               onClick={() => {
-                if (!selectedProcedure) return;
+                let proc = selectedProcedure;
+                if (!proc && inputValue) {
+                  const match = (allCodes || []).find(c => 
+                    (c.ProcCode && c.ProcCode.toLowerCase() === inputValue.toLowerCase()) || 
+                    (c.code && c.code.toLowerCase() === inputValue.toLowerCase()) ||
+                    (c.Descript && c.Descript.toLowerCase() === inputValue.toLowerCase())
+                  );
+                  proc = match || { ProcCode: inputValue, Descript: inputValue, fee: 0 };
+                }
+                if (!proc) return;
 
-                const proc = selectedProcedure;
                 const code = typeof proc === 'string' ? proc : proc.ProcCode || proc.code;
                 const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
                 const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
