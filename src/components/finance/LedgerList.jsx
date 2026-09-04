@@ -419,7 +419,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
     // Support both old array format and new object format from InvoiceModal
     const data = Array.isArray(savePayload) ? savePayload : savePayload.procedures;
     const shouldAddClaim = !Array.isArray(savePayload) && savePayload.addClaim;
-    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []) : [];
+    const claimRows = !Array.isArray(savePayload) ? (savePayload.claimProcedures || []).filter((row) => !row.dbi && String(row.dbi).toLowerCase() !== 'true') : [];
 
     const payload = {
       patientId: parseInt(patientId, 10) || 1,
@@ -479,6 +479,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
                 description: row.treatment,
                 charge: parseFloat((String(row.charge || '')).replace(/[^0-9.-]+/g, '')) || 0,
                 insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+                dbi: false,
               })),
             });
           } catch (claimErr) {
