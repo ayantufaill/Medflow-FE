@@ -25,6 +25,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Controller, useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
+import { formatDateForPayload } from '../../../utils/dateUtils';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { patientService } from '../../../services/patient.service';
 import { extractTextFromImage, parseInsuranceCard } from '../../../services/ocr.service';
@@ -239,12 +240,12 @@ export default function InsuranceDialog({
       const payload = {
         ...data,
         patientId,
-        subscriberDateOfBirth: data.subscriberDateOfBirth ? dayjs(data.subscriberDateOfBirth).toISOString() : undefined,
-        effectiveDate: data.effectiveDate ? dayjs(data.effectiveDate).toISOString() : undefined,
-        expirationDate: data.expirationDate ? dayjs(data.expirationDate).toISOString() : undefined,
+        subscriberDateOfBirth: formatDateForPayload(data.subscriberDateOfBirth),
+        effectiveDate: formatDateForPayload(data.effectiveDate),
+        expirationDate: formatDateForPayload(data.expirationDate),
         copayAmount: data.copayAmount ? parseFloat(data.copayAmount) : undefined,
         deductibleAmount: data.deductibleAmount ? parseFloat(data.deductibleAmount) : undefined,
-        verificationDate: data.verificationDate ? dayjs(data.verificationDate).toISOString() : undefined,
+        verificationDate: formatDateForPayload(data.verificationDate),
       };
       if (mode === 'add') {
         await patientService.createPatientInsurance(patientId, payload);

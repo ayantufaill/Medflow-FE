@@ -1,18 +1,15 @@
 import { Box, Typography } from '@mui/material';
 import InitialsAvatar from '../shared/InitialsAvatar';
 import { computeAge } from './utils';
+import { formatDate } from '../../utils/dateUtils';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight } from '../../constants/styles';
 
-// "27 Jun 1983" — distinct from utils.js's formatDate (locale numeric format),
-// matching the compact DOB format used in the header.
+// "27 Jun 1983" — compact UTC-safe DOB format used in the header.
 const formatShortDate = (dateString) => {
   if (!dateString) return null;
-  try {
-    return new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateString));
-  } catch {
-    return null;
-  }
+  const res = formatDate(dateString, 'DD MMM YYYY');
+  return res === '-' ? null : res;
 };
 
 // Header identity block: avatar, name, DOB/age/chart# on one line, email/phone

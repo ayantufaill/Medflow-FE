@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { formatDateForPayload } from '../../../utils/dateUtils';
 
 // Pure value formatters/helpers shared across the New Patient Intake form
 // (main form file, FormFieldsGrid, AddressFieldsSection).
@@ -32,9 +33,7 @@ export const formatSSNInput = (value) => {
 };
 
 export const formatDateValue = (value) => {
-  if (!value) return undefined;
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.toISOString() : undefined;
+  return formatDateForPayload(value);
 };
 
 export const removeEmptyCustomFields = (fields) =>

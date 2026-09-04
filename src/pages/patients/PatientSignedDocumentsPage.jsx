@@ -16,6 +16,8 @@ import {
   Description as DocIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
+import { useDispatch } from "react-redux";
+import { fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { documentService } from "../../services/document.service";
 import { usePatientDocuments } from "../../hooks/redux/usePatientDocuments";
@@ -70,6 +72,7 @@ const PatientSignedDocumentsPage = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const dispatch = useDispatch();
 
   // Redux hooks
   const { currentPatient: patient, fetchById: fetchPatient } = usePatient();
@@ -101,6 +104,10 @@ const PatientSignedDocumentsPage = () => {
     type: "",
     category: "",
   });
+
+  useEffect(() => {
+    dispatch(fetchCurrentPracticeInfo());
+  }, [dispatch]);
 
   useEffect(() => {
     if (patientId) {
