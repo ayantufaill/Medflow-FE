@@ -26,6 +26,7 @@ import AddRoleModal from './AddRoleModal';
 import EditRoleModal from './EditRoleModal';
 import RolePermissionsGrid from './RolePermissionsGrid';
 import { useDeleteRole } from '../../hooks/mutations/useRoleMutations';
+import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
 
 const RolesManagement = () => {
   const { data: roles = [], isLoading, error } = useRoles();
@@ -38,6 +39,9 @@ const RolesManagement = () => {
   const [roleToDelete, setRoleToDelete] = useState(null);
   const [showInactive, setShowInactive] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
+  const [isSyncdialogOpen, setSyncDialogOpen] = useState(false);
+
+
 
   const toggleRow = (roleId) => {
     setExpandedRows(prev => ({
@@ -67,30 +71,19 @@ const RolesManagement = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            startIcon={<img src={syncIcon} alt="Sync" style={{ width: 16, height: 16 }} />}
-            sx={{
-              textTransform: 'none',
-              fontFamily: 'Inter',
-              fontSize: '13px',
-              color: '#64748B',
-              '&:hover': { backgroundColor: 'transparent', color: '#2262EF' }
-            }}
-          >
-            Sync
-          </Button>
+
 
           <FormControlLabel
             control={
-              <Checkbox 
-                size="small" 
+              <Checkbox
+                size="small"
                 checked={showInactive}
                 onChange={(e) => setShowInactive(e.target.checked)}
-                sx={{ 
-                  color: '#CBD5E1', 
+                sx={{
+                  color: '#CBD5E1',
                   '&.Mui-checked': { color: '#2262EF' },
                   '& .MuiSvgIcon-root': { fontSize: 18 }
-                }} 
+                }}
               />
             }
             label={
@@ -100,7 +93,24 @@ const RolesManagement = () => {
             }
             sx={{ margin: 0 }}
           />
-
+          <Button
+            startIcon={<img src={syncIcon} alt="Sync" style={{ width: 16, height: 16 }} />}
+            onClick={() => setSyncDialogOpen(true)}
+            sx={{
+              textTransform: 'none',
+              color: '#1e293b',
+              borderColor: '#e2e8f0',
+              fontWeight: 600,
+              borderRadius: 2,
+              height: 36,
+              px: 2,
+              '&:hover': { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' }
+            }}
+            variant="outlined"
+            size="small"
+          >
+            Sync
+          </Button>
           <Button
             variant="contained"
             onClick={() => setIsAddModalOpen(true)}
@@ -153,8 +163,8 @@ const RolesManagement = () => {
                     <TableRow sx={{ '& > *': { borderBottom: '1px solid #E2E8F0' }, '&:hover': { backgroundColor: '#F8FAFC' } }}>
                       <TableCell sx={{ py: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => toggleRow(role.id || role._id)}
                             sx={{ color: '#64748B', p: 0.5 }}
                           >
@@ -169,6 +179,7 @@ const RolesManagement = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
                           <Button
                             startIcon={<img src={syncIcon} alt="Sync" style={{ width: 14, height: 14 }} />}
+                            onClick={() => setSyncDialogOpen(true)}
                             size="small"
                             sx={{
                               textTransform: 'none',
@@ -182,15 +193,15 @@ const RolesManagement = () => {
                           >
                             Sync
                           </Button>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => setSelectedEditRole(role)}
                             sx={{ color: '#3CA2E0', '&:hover': { backgroundColor: '#F0F9FF' } }}
                           >
                             <img src={editIcon} alt="Edit" style={{ width: 16, height: 16 }} />
                           </IconButton>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleDelete(role.id || role._id)}
                             sx={{ color: '#EF4444', '&:hover': { backgroundColor: '#FEF2F2' } }}
                           >
@@ -199,7 +210,7 @@ const RolesManagement = () => {
                         </Box>
                       </TableCell>
                     </TableRow>
-                    
+
                     {/* Collapsed Row for Permissions */}
                     <TableRow>
                       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={2}>
@@ -217,14 +228,14 @@ const RolesManagement = () => {
       </Box>
 
       {/* Modals */}
-      <AddRoleModal 
-        open={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
+      <AddRoleModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
       />
-      
-      <EditRoleModal 
-        open={Boolean(selectedEditRole)} 
-        onClose={() => setSelectedEditRole(null)} 
+
+      <EditRoleModal
+        open={Boolean(selectedEditRole)}
+        onClose={() => setSelectedEditRole(null)}
         role={selectedEditRole}
       />
 
@@ -321,6 +332,10 @@ const RolesManagement = () => {
           </Box>
         </Box>
       </Dialog>
+      <SyncOfficesDialog
+        open={isSyncdialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+      />
     </Paper>
   );
 };

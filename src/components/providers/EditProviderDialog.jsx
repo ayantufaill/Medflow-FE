@@ -61,7 +61,7 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
     } catch (err) {
       let msg = 'Failed to update provider. Please try again.';
       if (err?.name === 'ConditionError') return;
-      
+
       if (typeof err === 'string') {
         msg = err;
       } else if (err?.message) {
@@ -111,10 +111,10 @@ const EditProviderDialog = ({ providerId, providerName, open, onClose, onSaved }
             <EditIcon sx={{ fontSize: '22px', color: '#3b82f6' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '18px', color: '#0f172a', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', color: '#0f172a', lineHeight: 1 }}>
               Edit {providerName || 'Provider'}
             </Typography>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '13px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: '11.5px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
               Update provider information, credentials, and settings
             </Typography>
           </Box>

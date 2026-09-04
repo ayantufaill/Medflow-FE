@@ -384,6 +384,10 @@ const patientSlice = createSlice({
       state.currentMedicalHistory = null;
       state.currentDentalHistory = null;
     },
+    clearPatientScopedData: (state) => {
+      state.currentMedicalHistory = null;
+      state.currentDentalHistory = null;
+    },
     // Invalidate cache (e.g. after create/update/delete)
     invalidatePatients: (state) => {
       state.lastFetched = null;
@@ -443,7 +447,7 @@ const patientSlice = createSlice({
       })
       .addCase(fetchPatientById.fulfilled, (state, action) => {
         state.currentPatient = action.payload;
-        state.selectedPatientId = action.payload?._id || null;
+        state.selectedPatientId = action.payload?._id || action.payload?.id || null;
         if (state.selectedPatientId) {
           localStorage.setItem('selectedPatientId', state.selectedPatientId);
         } else {
@@ -532,6 +536,7 @@ export const {
   setFilters,
   clearFilters,
   clearCurrentPatient,
+  clearPatientScopedData,
   invalidatePatients,
   invalidatePatientDetail,
   invalidatePatientInsurances,

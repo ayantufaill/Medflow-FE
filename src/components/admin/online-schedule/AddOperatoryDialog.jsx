@@ -93,7 +93,7 @@ const AddOperatoryDialog = ({ open, onClose, onSuccess }) => {
       <Box sx={{
         px: '24px', height: '73px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#f3f8fd',
         borderBottom: `1px solid ${COLORS.BORDER}`,
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -104,10 +104,10 @@ const AddOperatoryDialog = ({ open, onClose, onSuccess }) => {
             <GridViewIcon sx={{ fontSize: '22px', color: '#3b82f6' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '18px', color: '#0f172a', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', color: '#0f172a', lineHeight: 1 }}>
               Add Operatory
             </Typography>
-            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '13px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 400, fontSize: '11.5px', color: '#64748b', mt: '4px', lineHeight: 1 }}>
               Create a new room or chair for online booking
             </Typography>
           </Box>
