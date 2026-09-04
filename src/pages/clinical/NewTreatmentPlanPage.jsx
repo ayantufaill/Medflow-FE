@@ -640,7 +640,7 @@ const NewTreatmentPlanPage = () => {
         preAuthId={createdPreAuthId}
         onSave={(newId) => setCreatedPreAuthId(newId)}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
-        selectedProcedures={treatmentPlans.filter(p => selectedRows.includes(p.id || p._id))}
+        selectedProcedures={treatmentPlans}
       />
 
       <Snackbar
