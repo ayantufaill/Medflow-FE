@@ -78,12 +78,14 @@ export const StandardClaimsTable = ({
 }) => {
   const [editingDescId, setEditingDescId] = React.useState(null);
   const [editingDescValue, setEditingDescValue] = React.useState("");
+  const [editingDescField, setEditingDescField] = React.useState("description");
   const [isSavingDesc, setIsSavingDesc] = React.useState(false);
   const [descPopoverAnchor, setDescPopoverAnchor] = React.useState(null);
 
-  const handleDescDoubleClick = (id, currentDesc, event) => {
+  const handleDescDoubleClick = (id, currentDesc, event, field = "description") => {
     setEditingDescId(id);
     setEditingDescValue(currentDesc || "");
+    setEditingDescField(field);
     if (event) {
       setDescPopoverAnchor(event.currentTarget);
     }
@@ -92,7 +94,10 @@ export const StandardClaimsTable = ({
   const handleDescSave = async (id) => {
     setIsSavingDesc(true);
     try {
-      await claimService.updateClaim(id, { notes: editingDescValue });
+      const payload = editingDescField === "clearingHouseMessage"
+        ? { denialReason: editingDescValue }
+        : { notes: editingDescValue };
+      await claimService.updateClaim(id, payload);
       window.dispatchEvent(new CustomEvent('refresh-claims'));
       setEditingDescId(null);
       setDescPopoverAnchor(null);
@@ -107,6 +112,7 @@ export const StandardClaimsTable = ({
   const handleDescCancel = () => {
     setEditingDescId(null);
     setEditingDescValue("");
+    setEditingDescField("description");
     setDescPopoverAnchor(null);
   };
 
@@ -906,11 +912,13 @@ export const StandardClaimsTable = ({
                             </Box>
                           ) : (
                             <Typography
+                              onDoubleClick={activeTab === 4 ? (event) => handleDescDoubleClick(claim.id, claim.clearingHouseMessage, event, "clearingHouseMessage") : undefined}
                               noWrap={!isExpanded && !expandAllMessages}
                               sx={{
                                 fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
                                 color: "#1e293b",
                                 fontWeight: 500,
+                                cursor: activeTab === 4 ? "pointer" : "default",
                                 whiteSpace:
                                   isExpanded || expandAllMessages
                                     ? "normal"
@@ -1271,7 +1279,7 @@ export const StandardClaimsTable = ({
             minRows={3}
             maxRows={6}
             disabled={isSavingDesc}
-            placeholder="Enter description"
+            placeholder={editingDescField === "clearingHouseMessage" ? "Enter clearing house status message" : "Enter description"}
             sx={{
               ...standardFieldSx,
               '& .MuiOutlinedInput-root': {
