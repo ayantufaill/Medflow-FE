@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
-import { Box, MenuItem, Popper, Typography } from "@mui/material";
+import { Box, MenuItem, Popper, Typography, useTheme } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import { PATIENT_SECTION_TABS, getPatientSectionPath } from "../../patients/PatientSectionTabs";
+import {
+  PATIENT_SECTION_TABS,
+  getPatientSectionPath,
+} from "../../patients/PatientSectionTabs";
 import { usePatient } from "../../../hooks/redux";
 
 const TABS = [
@@ -18,9 +21,14 @@ const NavTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentPatient, selectedPatientId } = usePatient();
+  const theme = useTheme();
   const [patientsMenuAnchor, setPatientsMenuAnchor] = useState(null);
   const patientsMenuCloseTimer = useRef(null);
-  const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum || selectedPatientId;
+  const patientId =
+    currentPatient?._id ||
+    currentPatient?.id ||
+    currentPatient?.PatNum ||
+    selectedPatientId;
 
   const isActive = (path) => {
     if (path === "/clinical/treatment-plan") {
@@ -32,12 +40,14 @@ const NavTabs = () => {
       return (
         location.pathname === path ||
         location.pathname.startsWith(path + "/") ||
-        (location.pathname.startsWith("/patients/") && location.pathname.includes("/report"))
+        (location.pathname.startsWith("/patients/") &&
+          location.pathname.includes("/report"))
       );
     }
     if (path === "/patients") {
       return (
-        (location.pathname === path || location.pathname.startsWith(path + "/")) &&
+        (location.pathname === path ||
+          location.pathname.startsWith(path + "/")) &&
         !location.pathname.includes("/report")
       );
     }
@@ -52,7 +62,10 @@ const NavTabs = () => {
   };
 
   const closePatientsMenu = () => {
-    patientsMenuCloseTimer.current = window.setTimeout(() => setPatientsMenuAnchor(null), 150);
+    patientsMenuCloseTimer.current = window.setTimeout(
+      () => setPatientsMenuAnchor(null),
+      150,
+    );
   };
 
   const handleNavClick = (path) => {
@@ -128,32 +141,54 @@ const NavTabs = () => {
         sx={{ zIndex: 1600 }}
       >
         <Box
-          onMouseEnter={() => window.clearTimeout(patientsMenuCloseTimer.current)}
+          onMouseEnter={() =>
+            window.clearTimeout(patientsMenuCloseTimer.current)
+          }
           onMouseLeave={closePatientsMenu}
           sx={{
-            minWidth: 220,
-            backgroundColor: "#fff",
-            border: "1px solid #e0e5eb",
-            borderRadius: "10px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
-            overflow: "hidden",
+            minWidth: 260,
+            maxWidth: 320,
+            maxHeight: 400,
+            overflowY: "auto",
+            backgroundColor: "#ffffff",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: "8px",
+            boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
+            display: "flex",
+            flexDirection: "column",
+            py: 1,
           }}
         >
-          {PATIENT_SECTION_TABS.map((tab) => (
-            <MenuItem
-              key={tab.id}
-              onClick={() => handlePatientSectionClick(tab.id)}
-              sx={{
-                px: 2,
-                py: 1.1,
-                fontFamily: "Inter",
-                fontSize: "14px",
-                color: "#334155",
-              }}
-            >
-              {tab.label}
-            </MenuItem>
-          ))}
+          {PATIENT_SECTION_TABS.map((tab) => {
+            const isActive =
+              location.pathname === getPatientSectionPath(tab.id, patientId);
+            return (
+              <Typography
+                key={tab.id}
+                onClick={() => handlePatientSectionClick(tab.id)}
+                sx={{
+                  px: 2,
+                  py: 1.2,
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  color: isActive
+                    ? theme.palette.primary.main
+                    : "text.secondary",
+                  display: "block",
+                  cursor: "pointer",
+                  transition: "background-color 0.15s, color 0.15s",
+                  textDecoration: "none",
+                  "&:hover": {
+                    color: theme.palette.primary.main,
+                    backgroundColor: "rgba(25, 118, 210, 0.08)",
+                  },
+                }}
+              >
+                {tab.label}
+              </Typography>
+            );
+          })}
         </Box>
       </Popper>
     </Box>
