@@ -18,6 +18,8 @@ import {
   Select,
   MenuItem,
   IconButton,
+  InputAdornment,
+  TextField,
 } from "@mui/material";
 import SelectToothDialog from "./SelectToothDialog";
 import {
@@ -25,6 +27,7 @@ import {
   KeyboardArrowRight as KeyboardArrowRightIcon,
   HelpOutline as HelpOutlineIcon,
   AutoFixNormal as ToothIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import CloseIcon from '@mui/icons-material/Close';
 import { useCoverageBook } from "../hooks/useCoverageBook";
@@ -41,6 +44,7 @@ const CoverageBookModal = ({
   onSave,
 }) => {
   const [localCoverageData, setLocalCoverageData] = React.useState([]);
+  const [searchTerm, setSearchTerm] = React.useState("");
   const hasLoadedRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -267,6 +271,35 @@ const CoverageBookModal = ({
 
   const getGroupKey = (type, group) => `${type}_${group}`;
 
+  const filteredTreeData = React.useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) return treeData;
+
+    return Object.entries(treeData).reduce((typeAcc, [type, groups]) => {
+      const typeMatches = type.toLowerCase().includes(normalizedSearch);
+      const filteredGroups = Object.entries(groups).reduce((groupAcc, [group, procs]) => {
+        const groupMatches = group.toLowerCase().includes(normalizedSearch);
+        const matchingProcs = procs.filter((proc) => {
+          const code = String(proc.code || "").toLowerCase();
+          const name = String(proc.name || proc.procedureName || "").toLowerCase();
+          return typeMatches || groupMatches || code.includes(normalizedSearch) || name.includes(normalizedSearch);
+        });
+
+        if (matchingProcs.length > 0) {
+          groupAcc[group] = matchingProcs;
+        }
+        return groupAcc;
+      }, {});
+
+      if (Object.keys(filteredGroups).length > 0) {
+        typeAcc[type] = filteredGroups;
+      }
+      return typeAcc;
+    }, {});
+  }, [treeData, searchTerm]);
+
+  const hasSearch = searchTerm.trim().length > 0;
+
   const handleSaveClick = () => {
     if (setCoverageData) {
       setCoverageData(localCoverageData);
@@ -347,6 +380,31 @@ const CoverageBookModal = ({
             </Box>
           ) : (
             <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
+              <Box sx={{ p: 1.5, borderBottom: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
+                <TextField
+                  size="small"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search code or procedure"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    maxWidth: 360,
+                    width: '100%',
+                    '& .MuiInputBase-root': {
+                      height: 36,
+                      fontSize: '0.8rem',
+                      bgcolor: '#f8fafc',
+                    },
+                    '& fieldset': { borderColor: '#e2e8f0' },
+                  }}
+                />
+              </Box>
               <TableContainer sx={{ flex: 1, overflow: "auto" }}>
                 <Table
                   size="small"
@@ -452,7 +510,7 @@ const CoverageBookModal = ({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {Object.entries(treeData).map(([type, groups]) => (
+                  {Object.entries(filteredTreeData).map(([type, groups]) => (
                     <React.Fragment key={type}>
                       {/* TYPE ROW */}
                       <TableRow hover>
@@ -468,7 +526,7 @@ const CoverageBookModal = ({
                             }}
                             onClick={() => toggleType(type)}
                           >
-                            {expandedTypes[type] ? (
+                            {hasSearch || expandedTypes[type] ? (
                               <KeyboardArrowDownIcon
                                 sx={{
                                   fontSize: "1rem",
@@ -495,7 +553,7 @@ const CoverageBookModal = ({
                       </TableRow>
 
                       {/* GROUPS AND PROCEDURES */}
-                      {expandedTypes[type] &&
+                      {(hasSearch || expandedTypes[type]) &&
                         Object.entries(groups).map(([group, procs]) => (
                           <React.Fragment key={group}>
                             {/* GROUP ROW */}
@@ -515,7 +573,7 @@ const CoverageBookModal = ({
                                     toggleGroup(getGroupKey(type, group))
                                   }
                                 >
-                                  {expandedGroups[getGroupKey(type, group)] ? (
+                                  {hasSearch || expandedGroups[getGroupKey(type, group)] ? (
                                     <KeyboardArrowDownIcon
                                       sx={{
                                         fontSize: "1rem",
@@ -541,7 +599,7 @@ const CoverageBookModal = ({
                             </TableRow>
 
                             {/* PROCEDURE ROWS */}
-                            {expandedGroups[getGroupKey(type, group)] &&
+                            {(hasSearch || expandedGroups[getGroupKey(type, group)]) &&
                               procs.map((proc) => (
                                 <TableRow key={proc.code} hover>
                                   <TableCell sx={cellStyle}></TableCell>

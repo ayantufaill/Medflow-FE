@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { Box, Typography, CircularProgress, IconButton } from "@mui/material";
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { usePatient } from '../../hooks/redux/usePatient';
 import { usePatientInsurance } from '../../hooks/redux/usePatientInsurance';
@@ -21,8 +22,8 @@ import {
 } from '../../components/insurance';
 
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
-import TaskList from '../../components/appointments/right-panel/TaskList';
-import Messages from '../../components/appointments/right-panel/Messages';
+import RightPanel from '../../components/appointments/right-panel/RightPanel';
+import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 import AddCoverageHeader from '../../components/insurance/components/AddCoverageHeader';
 
 import { COVERAGE_DATA } from '../../components/insurance';
@@ -45,6 +46,7 @@ const AddCoveragePage = () => {
   const { create: createInsurance, update: updateInsurance } = usePatientInsurance(patientId);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(!insuranceId);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   const [isFeeGuideModalOpen, setIsFeeGuideModalOpen] = useState(false);
   const [isCoverageBookModalOpen, setIsCoverageBookModalOpen] = useState(false);
@@ -84,8 +86,9 @@ const AddCoveragePage = () => {
       ortho: { unlimited: false, annualMax: '', usedAmount: '', usedAmountDate: '' },
       diagnostic: { unlimited: false, annualMax: '' },
       preventative: { unlimited: false, annualMax: '' },
+      basic: { unlimited: false, annualMax: '' },
       major: { unlimited: false, annualMax: '' },
-      categories: ['Diagnostic', 'Preventative', 'Major']
+      categories: ['Diagnostic', 'Preventative', 'Basic', 'Major']
     },
     subscriber: {
       relationship: 'Self',
@@ -606,8 +609,8 @@ const AddCoveragePage = () => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', gap: '8px', p: 1.5, maxWidth: '1857px', margin: '0 auto' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', gap: '8px', p: 1.5, maxWidth: '1857px', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box', margin: '0 auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: 0, minHeight: 0, overflowY: 'auto' }}>
           <AddCoverageHeader
             isEditing={isEditing}
             onEditToggle={() => setIsEditing(true)}
@@ -637,7 +640,7 @@ const AddCoveragePage = () => {
               }
             }}
           >
-            <Box sx={{ flex: 1, minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <Box sx={{ flex: '0 0 33%', width: '35%', minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <InsuranceInformation
                 formData={{
                   ...formData,
@@ -771,10 +774,20 @@ const AddCoveragePage = () => {
           </Box>
         </Box>
 
-        <Box sx={{ width: '290px', minWidth: '290px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <TaskList />
-          <Messages />
-        </Box>
+        {rightPanelOpen ? (
+          <Box sx={{ flex: '0 0 320px', width: '320px', minWidth: '320px', maxWidth: '320px', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+              <IconButton onClick={() => setRightPanelOpen(false)} sx={{ color: 'text.secondary', p: 0, '&:hover': { color: 'primary.main' } }}>
+                <KeyboardDoubleArrowRightIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <RightPanel hideAppointmentShortlist={true} />
+          </Box>
+        ) : (
+          <Box sx={{ height: '100%', flexShrink: 0 }}>
+            <RightPanelCollapsed onExpand={() => setRightPanelOpen(true)} hideAppointmentShortlist={true} />
+          </Box>
+        )}
       </Box>
 
       <FeeGuideModal

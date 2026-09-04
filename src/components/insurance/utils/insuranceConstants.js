@@ -26,8 +26,7 @@ export const COVERAGE_DATA = {
   ],
   restorative: [
     { id: 6, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
-    { id: 7, label: 'Major', coverage: 50, waiting: 0, notes: '' },
-    { id: 8, label: 'General', coverage: 80, waiting: 0, notes: '' }
+    { id: 7, label: 'Major', coverage: 50, waiting: 0, notes: '' }
   ],
   endodontics: [
     { id: 9, label: 'Endodontics', coverage: 80, waiting: 0, notes: '' }
@@ -37,18 +36,17 @@ export const COVERAGE_DATA = {
     { id: 10, label: 'Major', coverage: 50, waiting: 0, notes: '' }
   ],
   implantServices: [
-    { id: 11, label: 'Major', coverage: 50, waiting: 0, notes: '' },
-    { id: 12, label: 'General', coverage: 50, waiting: 0, notes: '' }
+    { id: 11, label: 'Implant Services', coverage: 50, waiting: 0, notes: '' }
   ],
   oralSurgery: [
     { id: 13, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
     { id: 14, label: 'Major', coverage: 50, waiting: 0, notes: '' }
   ],
   prosthodonticsFixed: [
-    { id: 15, label: 'General', coverage: 50, waiting: 0, notes: '' }
+    { id: 15, label: 'Prosthodontics, Fixed', coverage: 50, waiting: 0, notes: '' }
   ],
   prosthodonticsRemovable: [
-    { id: 16, label: 'General', coverage: 50, waiting: 0, notes: '' }
+    { id: 16, label: 'Prosthodontics, Removable', coverage: 50, waiting: 0, notes: '' }
   ],
   adjunctGeneral: [
     { id: 17, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
@@ -56,12 +54,10 @@ export const COVERAGE_DATA = {
     { id: 19, label: 'Standard', coverage: 50, waiting: 0, notes: '' }
   ],
   orthodontics: [
-    { id: 20, label: 'Orthodontics', coverage: 50, waiting: 0, notes: '' },
-    { id: 21, label: 'orthodontics', coverage: 50, waiting: 0, notes: '' }
+    { id: 20, label: 'Orthodontics', coverage: 50, waiting: 0, notes: '' }
   ],
   maxillofacialProsthetics: [
-    { id: 22, label: 'Major', coverage: 50, waiting: 0, notes: '' },
-    { id: 23, label: 'General', coverage: 50, waiting: 0, notes: '' }
+    { id: 22, label: 'Maxillofacial Prosthetics', coverage: 50, waiting: 0, notes: '' }
   ]
 };
 
