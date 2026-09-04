@@ -46,7 +46,7 @@ export const DEFAULT_PROCEDURE_TAGS = [
 export const TAG_DEFAULT_PROCEDURES = {
   NP:    { code: "D0150", treatment: "Comprehensive Evaluation",           charge: "$85.00"  },
   Exm:   { code: "D0120", treatment: "Periodic Oral Evaluation",           charge: "$55.00"  },
-  FULL:  { code: "D2391", treatment: "Resin Composite – One Surface",      charge: "$185.00" },
+  FULL:  { code: "D4355", treatment: "Full Mouth Debridement",             charge: "$170.00" },
   Pano:  { code: "D0330", treatment: "Panoramic Radiographic Image",       charge: "$120.00" },
   HYG:   { code: "D1110", treatment: "Prophy",                             charge: "$120.00" },
   Perio: { code: "D4341", treatment: "Periodontal Scaling & Root Planing", charge: "$220.00" },
@@ -62,7 +62,7 @@ export const DUMMY_PROCEDURE_OPTIONS = [
   { code: "D0330", treatment: "Panoramic Radiographic Image",       tag: { label: "Pano",  color: "#1e293b", font: "white" }, charge: "$120.00" },
   { code: "D1110", treatment: "Prophy",                             tag: { label: "HYG",   color: "#16a34a", font: "white" }, charge: "$120.00" },
   { code: "D1206", treatment: "Fluoride",                           tag: { label: "HYG",   color: "#059669", font: "white" }, charge: "$45.00"  },
-  { code: "D2391", treatment: "Resin Composite – One Surface",      tag: { label: "FULL",  color: "#7f1d1d", font: "white" }, charge: "$185.00" },
+  { code: "D4355", treatment: "Full Mouth Debridement",             tag: { label: "FULL",  color: "#7f1d1d", font: "white" }, charge: "$170.00" },
   { code: "D4341", treatment: "Periodontal Scaling & Root Planing", tag: { label: "Perio", color: "#6b7280", font: "white" }, charge: "$220.00" },
 ];
 
