@@ -146,26 +146,24 @@ export const fetchLedgerItems = createAsyncThunk(
         let totalAdjAmt = 0;
         let runningBalance = originalTotal;
 
-        const paymentsMapped = [...invoicePms]
-          .reverse()
-          .map((payment) => {
-            const isVoided =
-              String(payment.status || "").toLowerCase() === "void" ||
-              String(payment.status || "").toLowerCase() === "voided";
+        // Combine payments and adjustments to calculate a single unified running balance chronologically
+        const combinedDetails = [
+          ...invoicePms.map(p => ({ ...p, _isPmt: true })),
+          ...invoiceAdjs.map(a => ({ ...a, _isAdj: true }))
+        ].sort((a, b) => {
+          const numA = Number(a.id || a._id);
+          const numB = Number(b.id || b._id);
+          return numA - numB; // Oldest first for running balance math
+        });
 
-            const rawAmount =
-              payment.isAccountCredit &&
-              payment.appliedCreditAmount !== undefined
-                ? Number(payment.appliedCreditAmount)
-                : Number(payment.amount || 0);
-
+        const mappedCombinedDetails = combinedDetails.map((item) => {
+          if (item._isPmt) {
+            const payment = item;
+            const isVoided = String(payment.status || "").toLowerCase() === "void" || String(payment.status || "").toLowerCase() === "voided";
+            const rawAmount = payment.isAccountCredit && payment.appliedCreditAmount !== undefined ? Number(payment.appliedCreditAmount) : Number(payment.amount || 0);
             const paymentAmt = isVoided ? 0 : rawAmount;
-            const originalAmt = rawAmount;
-
-            const isIns =
-              payment.paymentSource === "insurance_company" ||
-              payment.method === "insurance";
-            if (isIns) {
+            
+            if (payment.paymentSource === "insurance_company" || payment.method === "insurance") {
               totalInsPaidAmt += paymentAmt;
             } else {
               totalPtPaidAmt += paymentAmt;
@@ -174,53 +172,35 @@ export const fetchLedgerItems = createAsyncThunk(
 
             return {
               id: payment._id || payment.id,
-              title: isIns
-                ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "EFT"} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
-                : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "Patient Check"} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
-              amount: isVoided
-                ? "(Voided)"
-                : `$${Math.max(0, runningBalance).toFixed(2)}`,
+              title: (payment.paymentSource === "insurance_company" || payment.method === "insurance")
+                ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "EFT"} : $${rawAmount.toFixed(2)} / $${rawAmount.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
+                : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "Patient Check"} : $${rawAmount.toFixed(2)} / $${rawAmount.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
+              amount: isVoided ? "(Voided)" : `$${Math.max(0, runningBalance).toFixed(2)}`,
               isPayment: true,
               isVoided,
             };
-          })
-          .reverse();
-
-        const adjsMapped = [...invoiceAdjs]
-          .map((adj) => {
-            const isVoided =
-              String(adj.status || "").toLowerCase() === "void" ||
-              String(adj.status || "").toLowerCase() === "voided";
-            const isTransfer = !!(
-              adj.notes && adj.notes.toLowerCase().includes("income transfer")
-            );
-            const isCourtesy = !!(
-              adj.notes && adj.notes.toLowerCase().includes("courtesy")
-            );
-
+          } else {
+            const adj = item;
+            const isVoided = String(adj.status || "").toLowerCase() === "void" || String(adj.status || "").toLowerCase() === "voided";
+            const isTransfer = !!(adj.notes && adj.notes.toLowerCase().includes("income transfer"));
+            const isCourtesy = !!(adj.notes && adj.notes.toLowerCase().includes("courtesy"));
             const adjAmt = isVoided ? 0 : Math.abs(Number(adj.amount || 0));
+            
             totalAdjAmt += adjAmt;
-            if (isCourtesy || isTransfer) {
-              totalPtAdjAmt += adjAmt;
-            }
-
+            if (isCourtesy || isTransfer) totalPtAdjAmt += adjAmt;
             runningBalance -= adjAmt;
 
             return {
               id: adj._id || adj.id,
-              title: isTransfer
-                ? adj.notes
-                : `Adjustment #${adj._id || adj.id}: ${adj.type || "Write-off"} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
-              amount: isVoided
-                ? "(Voided)"
-                : `$${Math.max(0, runningBalance).toFixed(2)}`,
+              title: isTransfer ? adj.notes : `Adjustment #${adj._id || adj.id}: ${adj.type || "Write-off"} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
+              amount: isVoided ? "(Voided)" : `$${Math.max(0, runningBalance).toFixed(2)}`,
               isPayment: true,
-              isAdjustment: true, // Render similarly to payment
+              isAdjustment: true,
               isTransfer,
               isVoided,
             };
-          })
-          .reverse();
+          }
+        }).reverse(); // Reverse at the end so newest is at the top
 
         const claimsMapped = invoiceClaims.map((claim) => {
           let claimStatus = claim.statusDisplay || claim.status || "Unsent";
@@ -362,8 +342,7 @@ export const fetchLedgerItems = createAsyncThunk(
             insPaid: `$${totalInsPaidAmt.toFixed(2)}`,
           },
           details: [
-            ...paymentsMapped,
-            ...adjsMapped,
+            ...mappedCombinedDetails,
             ...claimsMapped,
             ...detailsMapped,
           ],
@@ -474,6 +453,12 @@ export const fetchLedgerItems = createAsyncThunk(
         const dateA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
         const dateB = b.rawDate ? new Date(b.rawDate).getTime() : 0;
         if (dateB !== dateA) return dateB - dateA;
+        
+        const numA = Number(a.id);
+        const numB = Number(b.id);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return numB - numA;
+        }
         return String(b.id).localeCompare(String(a.id));
       });
 
@@ -517,7 +502,13 @@ export const fetchInvoiceDetails = createAsyncThunk(
                 ? invPt
                 : invBal;
         let runningBalance = trueTotal;
-        paymentsMapped = (Array.isArray(payments) ? payments : []).map(
+        const sortedPayments = (Array.isArray(payments) ? [...payments] : []).sort((a, b) => {
+          const numA = Number(a.PayNum || a.id);
+          const numB = Number(b.PayNum || b.id);
+          return numA - numB;
+        });
+        
+        paymentsMapped = sortedPayments.map(
           (payment) => {
             const isVoided =
               String(payment.status || "").toLowerCase() === "void" ||
@@ -548,8 +539,8 @@ export const fetchInvoiceDetails = createAsyncThunk(
               isPayment: true,
               isVoided,
             };
-          },
-        );
+          }
+        ).reverse();
       } catch (e) {
         console.error("Failed to fetch payments for invoice", e);
       }
@@ -877,105 +868,177 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
       });
       const fetchedInvoices = res.invoices || [];
 
-      // Skip individual detail fetches if backend returned items inline
-      const needsDetailFetch = fetchedInvoices.some((inv) => !inv.lineItems);
-
-      const rawInvoices = needsDetailFetch
-        ? await withConcurrency(
-            3,
-            fetchedInvoices.map((inv) => async () => {
-              if (inv.lineItems) return inv;
-              try {
-                return await invoiceService.getInvoiceById(inv._id || inv.id);
-              } catch {
-                return null;
-              }
-            }),
-          )
-        : fetchedInvoices;
-
-      const enrichedInvoices = rawInvoices.filter(Boolean).map((fullInv) => ({
-        ...fullInv,
-        id: fullInv.id || fullInv._id,
-        checked: false,
-        lineItems: (fullInv.lineItems || []).map((item) => {
-          const itemId = item.id || item._id;
-          const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
-          // Try all possible field names the backend might use for insurance/patient portions
-          const ins = Number(
-            item.insPortion ||
-              item.insurancePortion ||
-              item.insAmt ||
-              item.insurance ||
-              0,
-          );
-          const pt = Number(
-            item.ptPortion || item.patientPortion || item.ptAmt || 0,
-          );
-          const total = Number(
-            item.total || item.totalPrice || item.amount || 0,
-          );
-          const owed = Math.max(0, total - writeoff);
-
-          let patientBal, insBal;
-          if (item.dbi === true) {
-            // Direct Bill Insurance override: patient owes everything remaining
-            patientBal = owed;
-            insBal = 0;
-          } else if (item.dbi === false) {
-            // Explicitly not DBI: patient pays their ptPortion, insurance pays the rest
-            patientBal = pt;
-            insBal = Math.max(0, owed - pt);
-          } else if (ins > 0 && pt > 0) {
-            // Both portions set: use them directly
-            patientBal = pt;
-            insBal = ins;
-          } else if (ins > 0 && pt === 0) {
-            // Insurance-only procedure: patient owes nothing, insurance owes the balance
-            patientBal = 0;
-            insBal = owed;
-          } else if (pt > 0 && ins === 0) {
-            // Patient-only procedure
-            patientBal = pt;
-            insBal = 0;
-          } else {
-            // No portions set: full remaining goes to patient
-            patientBal = owed;
-            insBal = 0;
+      // Fetch full invoice details + payments for each invoice concurrently.
+      // payments are needed to compute patient-only paid amounts (excluding insurance payments).
+      const rawInvoices = await withConcurrency(
+        3,
+        fetchedInvoices.map((inv) => async () => {
+          const invId = inv._id || inv.id;
+          try {
+            const [fullInv, paymentsRes] = await Promise.all([
+              inv.lineItems ? inv : invoiceService.getInvoiceById(invId),
+              apiClient.get(`/payments/invoice/${invId}?limit=1000`).catch(() => ({ data: { data: { payments: [] } } })),
+            ]);
+            const payments = paymentsRes?.data?.data?.payments || paymentsRes?.data?.data || [];
+            return { ...fullInv, _payments: Array.isArray(payments) ? payments : [] };
+          } catch {
+            return null;
           }
-
-          const alreadyPaid = Number(item.paidAmount || 0);
-          const remainingBal = Math.max(0, owed - alreadyPaid);
-          return {
-            ...item,
-            id: itemId,
-            checked: false,
-            // If patient was originally estimated to owe 0 but there is a remaining balance (e.g., insurance denied or underpaid), the remaining falls to the patient
-            payAmount: (patientBal > 0 ? patientBal : remainingBal).toFixed(2),
-            patientBalance: patientBal > 0 ? patientBal : remainingBal,
-            writeoffAmount: writeoff,
-            insuranceAmount: insBal,
-            totalAmount: total,
-            remainingBal,
-          };
         }),
-      }));
+      );
 
-      // Keep invoices that have items with either remaining balances or patient balances
+      const enrichedInvoices = rawInvoices.filter(Boolean).map((fullInv) => {
+        // Compute total patient and insurance payments for this invoice.
+        const invoicePayments = fullInv._payments || [];
+        let totalPatientPaid = 0;
+        let totalInsurancePaid = 0;
+
+        invoicePayments.forEach((pmt) => {
+          const method = (pmt.method || pmt.paymentMethod || '').toLowerCase();
+          const isVoided = (pmt.status || '').toLowerCase().includes('void');
+          if (isVoided) return;
+          
+          if (method === 'insurance') {
+            totalInsurancePaid += (Number(pmt.amount) || 0);
+          } else {
+            totalPatientPaid += (Number(pmt.amount) || 0);
+          }
+        });
+
+        // Compute total gross patient portion across all items (for proportional distribution).
+        const items = fullInv.lineItems || [];
+        const totalGrossPatient = items.reduce((sum, item) => {
+          const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
+          const total    = Number(item.total || item.totalPrice || item.amount || 0);
+          const owed     = Math.max(0, total - writeoff);
+          const pt       = Number(item.ptPortion || item.patientPortion || item.ptAmt || 0);
+          const ins      = Number(item.insPortion || item.insurancePortion || 0);
+          let patientBal;
+          if (item.dbi === true)          patientBal = owed;
+          else if (item.dbi === false)    patientBal = pt;
+          else if (ins > 0 && pt > 0)     patientBal = pt;
+          else if (ins > 0 && pt === 0)   patientBal = 0;
+          else if (pt > 0 && ins === 0)   patientBal = pt;
+          else                            patientBal = owed;
+          return sum + patientBal;
+        }, 0);
+
+        return {
+          ...fullInv,
+          id: fullInv.id || fullInv._id,
+          checked: false,
+          lineItems: items.map((item) => {
+            const itemId   = item.id || item._id;
+            const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
+            const ins      = Number(item.insPortion || item.insurancePortion || item.insAmt || item.insurance || 0);
+            const pt       = Number(item.ptPortion || item.patientPortion || item.ptAmt || 0);
+            const total    = Number(item.total || item.totalPrice || item.amount || 0);
+            const owed     = Math.max(0, total - writeoff);
+
+            let patientBal, insBal;
+            if (item.dbi === true) {
+              patientBal = owed;
+              insBal = 0;
+            } else if (item.dbi === false) {
+              patientBal = pt;
+              insBal = Math.max(0, owed - pt);
+            } else if (ins > 0 && pt > 0) {
+              patientBal = pt;
+              insBal = ins;
+            } else if (ins > 0 && pt === 0) {
+              patientBal = 0;
+              insBal = owed;
+            } else if (pt > 0 && ins === 0) {
+              patientBal = pt;
+              insBal = 0;
+            } else {
+              patientBal = owed;
+              insBal = 0;
+            }
+
+            const alreadyPaid  = Number(item.paidAmount || 0);
+
+            // Calculate sum of all items' alreadyPaid to detect backend void bugs
+            const sumAlreadyPaid = items.reduce((sum, i) => sum + Number(i.paidAmount || 0), 0);
+            const hasVoidedBug = sumAlreadyPaid > (totalPatientPaid + totalInsurancePaid + 0.01);
+
+            let netPatientBal;
+            if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
+              // If there are NO active payments, the patient owes the full balance regardless of buggy item.paidAmount
+              netPatientBal = patientBal;
+            } else if (totalInsurancePaid === 0 && !hasVoidedBug) {
+              // If insurance has never paid anything on this invoice, AND there are no void bugs,
+              // ALL payments are from the patient. This perfectly respects manual per-item allocations.
+              netPatientBal = Math.max(0, patientBal - alreadyPaid);
+            } else {
+              // Distribute patient payments proportionally across items by their gross patient balance.
+              // This is a safe fallback when insurance and patient payments are mixed, or when void bugs corrupt item.paidAmount.
+              const itemShare = totalGrossPatient > 0 ? (patientBal / totalGrossPatient) : 0;
+              const itemPatientPaid = itemShare * totalPatientPaid;
+              netPatientBal = Math.max(0, patientBal - itemPatientPaid);
+            }
+
+            // Fallback: if no ptPortion but there is remaining owed (e.g. insurance underpaid/denied),
+            // the residual falls to the patient.
+            let effectivePatientBal = netPatientBal > 0
+              ? netPatientBal
+              : (patientBal === 0 ? (owed - (hasVoidedBug ? 0 : alreadyPaid)) : 0);
+
+            // ALWAYS cap by remainingBal (unless there's a void bug, then we must recalculate remainingBal safely)
+            const safeRemainingBal = hasVoidedBug ? Math.max(0, owed - (totalInsurancePaid > 0 ? (insBal || 0) : 0)) : Math.max(0, owed - alreadyPaid);
+            effectivePatientBal = Math.min(Math.max(0, effectivePatientBal), safeRemainingBal);
+
+            // One final sanity check: if no active payments exist, the patient must owe exactly their ptPortion.
+            if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
+              effectivePatientBal = patientBal;
+            }
+
+            console.debug('[AddPayment] item:', {
+              itemId, total, writeoff, owed, pt, ins, patientBal, insBal,
+              totalPatientPaid, totalInsurancePaid, netPatientBal, effectivePatientBal, safeRemainingBal, alreadyPaid
+            });
+
+            return {
+              ...item,
+              id: itemId,
+              checked: false,
+              payAmount: effectivePatientBal.toFixed(2),
+              patientBalance: effectivePatientBal,
+              writeoffAmount: writeoff,
+              insuranceAmount: insBal,
+              totalAmount: total,
+              remainingBal: safeRemainingBal,
+            };
+          }),
+        };
+      });
+
+      // Keep invoices that have items with either remaining balances or patient balances.
+      // Also keep invoices where the invoice-level balance (BalTotal) is still positive —
+      // this catches cases where per-item paidAmount tracking doesn't perfectly match the
+      // ledger balance (e.g. insurance write-offs tracked at invoice level vs item level).
       const result = enrichedInvoices
-        .filter((inv) =>
-          (inv.lineItems || []).some(
+        .filter((inv) => {
+          const invoiceLevelBalance = Number(inv.balanceDue || inv.totalAmount || 0);
+          const hasItemBalance = (inv.lineItems || []).some(
             (item) =>
               Number(item.remainingBal) > 0 || Number(item.patientBalance) > 0,
-          ),
-        )
-        .map((inv) => ({
-          ...inv,
-          lineItems: (inv.lineItems || []).filter(
+          );
+          return hasItemBalance || invoiceLevelBalance > 0;
+        })
+        .map((inv) => {
+          const invoiceLevelBalance = Number(inv.balanceDue || inv.totalAmount || 0);
+          const filteredItems = (inv.lineItems || []).filter(
             (item) =>
               Number(item.remainingBal) > 0 || Number(item.patientBalance) > 0,
-          ),
-        }));
+          );
+          // If per-item filter wiped all items but invoice still has a balance,
+          // keep all items so the user can still see them and apply payment.
+          return {
+            ...inv,
+            lineItems: filteredItems.length > 0 ? filteredItems : (invoiceLevelBalance > 0 ? inv.lineItems : []),
+          };
+        });
 
       return { patientId, invoices: result };
     } catch (err) {
@@ -1509,6 +1572,28 @@ const billingSlice = createSlice({
   name: "billing",
   initialState,
   reducers: {
+    /**
+     * Update the manual payment amount for a specific line item in the Add Payment Dialog
+     */
+    updatePaymentLineItemAmount: (state, action) => {
+      const { patientId, invoiceId, procId, amount } = action.payload;
+      const cached = state.paymentInvoicesCache[patientId];
+      if (Array.isArray(cached)) {
+        const invoice = cached.find(inv => inv.id === invoiceId || inv._id === invoiceId);
+        if (invoice && invoice.lineItems) {
+          const item = invoice.lineItems.find(i => i.id === procId || i._id === procId);
+          if (item) {
+            item.payAmount = amount;
+            // Also ensure it is checked if they type an amount > 0
+            if (Number(amount) > 0) {
+              item.checked = true;
+              invoice.checked = true;
+            }
+          }
+        }
+      }
+    },
+
     /**
      * Set current invoice
      */
