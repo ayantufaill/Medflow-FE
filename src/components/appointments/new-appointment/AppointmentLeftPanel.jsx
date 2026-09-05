@@ -533,25 +533,27 @@ const AppointmentLeftPanel = ({
                 pointerEvents: "auto",
               }}
             >
-              <Button
-                onClick={onComputeNextVisit}
-                variant="contained"
-                disableElevation
-                sx={{
-                  fontFamily: "Inter",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: "6px",
-                  backgroundColor: "#2262ef",
-                  color: "#fff",
-                  px: "12px",
-                  py: "5px",
-                  "&:hover": { backgroundColor: "#1a50cc" },
-                }}
-              >
-                Compute next visit
-              </Button>
+              {visitType !== "treatment" && (
+                <Button
+                  onClick={onComputeNextVisit}
+                  variant="contained"
+                  disableElevation
+                  sx={{
+                    fontFamily: "Inter",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    borderRadius: "6px",
+                    backgroundColor: "#2262ef",
+                    color: "#fff",
+                    px: "12px",
+                    py: "5px",
+                    "&:hover": { backgroundColor: "#1a50cc" },
+                  }}
+                >
+                  Compute next visit
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 onClick={async () => {
