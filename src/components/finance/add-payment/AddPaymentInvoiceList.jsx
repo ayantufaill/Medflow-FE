@@ -87,9 +87,7 @@ const AddPaymentInvoiceList = ({
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 500, color: '#333' }}>
                       {proc.description || proc.name || proc.notes || 'Procedure'}
                     </Typography>
-                    <Box sx={{ fontSize: '0.65rem', color: '#888', fontFamily: 'monospace' }}>
-                      [RAW: pt:{proc.ptPortion || 0} ins:{proc.insPortion || 0} pd:{proc.paidAmount || 0} || CALC: pb:{proc.patientBalance} rem:{proc.remainingBal} eff:{proc.payAmount}]
-                    </Box>
+
                   </Box>
                   <Typography sx={{ fontSize: '0.75rem', color: '#555', ml: 2 }}>
                     {inv.provider?.firstName} {inv.provider?.lastName}

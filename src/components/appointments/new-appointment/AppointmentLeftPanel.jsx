@@ -143,7 +143,7 @@ const AppointmentLeftPanel = ({
         date: new Date().toISOString().split("T")[0],
         code: p.code,
         site: p.tooth || "",
-        treatment: p.desc || "Custom Procedure",
+        treatment: p.treatment || p.desc || p.description || "Custom Procedure",
         provider: providerName,
         writeoff: "$0.00",
         coveragePct: 0,
