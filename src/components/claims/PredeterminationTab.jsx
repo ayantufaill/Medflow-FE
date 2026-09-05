@@ -250,24 +250,25 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       />
 
       <StandardClaimsTable
-        activeTab={5} // Predetermination is index 5
-        filteredClaims={filteredClaims}
-        selectedClaims={selectedClaims}
-        handleSelectAll={handleSelectAll}
-        handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
-        isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
-        handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
-        handleSelectSubset={handleSelectSubset}
-        selectAllAnchorEl={selectAllAnchorEl}
-        handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
-        toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
-        expandedProcedures={expandedProcedures}
-        handleToggleHide={toggleHide}
-        handleDeletePredetermination={(id) => deleteClaim(id)}
-        handleOpenEdit={onOpenEdit}
-        handleOpenAttach={onOpenAttach}
-        handleOpenPreview={onOpenPreview}
-      />
+  activeTab={5} // Predetermination is index 5
+  filteredClaims={filteredClaims}
+  selectedClaims={selectedClaims}
+  handleSelectAll={handleSelectAll}
+  handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
+  isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
+  handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
+  handleSelectSubset={handleSelectSubset}
+  selectAllAnchorEl={selectAllAnchorEl}
+  handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
+  toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
+  expandedProcedures={expandedProcedures}
+  handleToggleHide={toggleHide}
+  handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'predetermination')}
+  handleDeletePredetermination={(id) => deleteClaim(id)}
+  handleOpenEdit={onOpenEdit}
+  handleOpenAttach={onOpenAttach}
+  handleOpenPreview={onOpenPreview}
+/>
     </Box>
   );
 };
