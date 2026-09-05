@@ -36,6 +36,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { authorizationService } from '../../services/authorization.service';
 import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
 
 const formatMoney = (val, fallback = '-') => {
@@ -107,6 +108,19 @@ const NewTreatmentPlanPage = () => {
   useEffect(() => {
     setCreatedPreAuthId(null);
     setCreatedPreAuthPatientId(null);
+
+    if (!currentPatientId) return;
+
+    authorizationService.getAllAuthorizations({ patientId: currentPatientId })
+      .then((result) => {
+        const list = result.authorizations || result.data || result || [];
+        const existing = Array.isArray(list) ? list[0] : null;
+        if (existing) {
+          setCreatedPreAuthId(existing._id || existing.id);
+          setCreatedPreAuthPatientId(currentPatientId);
+        }
+      })
+      .catch((err) => console.error('Failed to load existing pre-auth', err));
   }, [currentPatientId]);
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
