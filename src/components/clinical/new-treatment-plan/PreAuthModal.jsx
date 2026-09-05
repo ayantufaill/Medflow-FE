@@ -48,6 +48,7 @@ import dayjs from 'dayjs';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
 import { authorizationService } from '../../../services/authorization.service';
+import { documentService } from '../../../services/document.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { ICON_TAGS } from '../../appointments/new-appointment/constants';
 import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
@@ -62,6 +63,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [savedAuthorizationId, setSavedAuthorizationId] = useState(null);
   
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
@@ -79,17 +81,35 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setAttachments([...attachments, { name: file.name, size: file.size, date: dayjs().format('MM/DD/YYYY') }]);
-      setHistoryLogs([{
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const authorizationId = await ensureAuthorizationId();
+
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('patientId', patientId);
+      uploadData.append('documentType', 'preauth_attachment');
+      uploadData.append('documentName', file.name);
+      uploadData.append('authorizationId', authorizationId);
+
+      const uploadedDoc = await documentService.uploadDocument(uploadData);
+
+      setAttachments((prev) => [...prev, uploadedDoc]);
+      setHistoryLogs((prev) => [{
         id: Date.now(),
         action: `Added attachment: ${file.name}`,
         user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
         date: dayjs().format('MM/DD/YYYY h:mm A')
-      }, ...historyLogs]);
-      showSnackbar(`Document ${file.name} queued for upload`, 'success');
+      }, ...prev]);
+      showSnackbar(`Document ${file.name} uploaded`, 'success');
+    } catch (error) {
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to upload document', 'error');
+    } finally {
+      setIsUploading(false);
       e.target.value = null;
     }
   };
@@ -117,8 +137,10 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   });
 
   useEffect(() => {
-    setAttachments([]);
-    setSelectedTags([]);
+    if (!preAuthId) {
+      setAttachments([]);
+      setSelectedTags([]);
+    }
     setComments([]);
     setNewComment('');
     setTabValue(0);
@@ -129,7 +151,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
       date: dayjs().format('MM/DD/YYYY h:mm A')
     }]);
-  }, [open, patientId, currentUser]);
+  }, [open, patientId, currentUser, preAuthId]);
 
   useEffect(() => {
     setSavedAuthorizationId(preAuthId || null);
@@ -175,6 +197,14 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             ),
           });
           if (data.order) setOrder(data.order);
+
+          if (data.tags?.length) {
+            const matchedTags = ICON_TAGS.filter((tag) => data.tags.includes(tag.id));
+            setSelectedTags(matchedTags);
+          }
+
+          const docs = await documentService.getDocumentsByAuthorization(preAuthId);
+          setAttachments(docs);
         } else {
           setAuthData({
             id: 'NEW',
@@ -224,10 +254,12 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       : [...currentTags, tag]);
   };
 
-  const handleSubmit = async () => {
+   const handleSubmit = async () => {
     try {
+      const tagIds = selectedTags.map((tag) => tag.id);
+
       if (preAuthId) {
-        await authorizationService.updateAuthorization(preAuthId, { order });
+        await authorizationService.updateAuthorization(preAuthId, { order, tags: tagIds });
         showSnackbar('Authorization updated successfully', 'success');
         if (onSave) onSave(preAuthId);
       } else {
@@ -237,6 +269,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           order,
           serviceDate: authData.serviceDate,
           status: 'requested',
+          tags: tagIds,
           // map selected procedures
           procedures: (authData.procedures || []).map(p => p.id || p._id || p.procedureId || p.code)
         });
@@ -249,7 +282,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }
   };
 
-  const ensureAuthorizationId = async () => {
+    const ensureAuthorizationId = async () => {
     const existingId = preAuthId || savedAuthorizationId;
     if (existingId) return existingId;
 
@@ -258,6 +291,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       order,
       serviceDate: authData.serviceDate,
       status: 'requested',
+      tags: selectedTags.map((tag) => tag.id),
       procedures: (authData.procedures || []).map((procedure) => (
         procedure.id || procedure._id || procedure.procedureId || procedure.code
       )),
@@ -467,10 +501,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                     </Box>
                   ))}
                 </Box>
-                <Box sx={{ mt: 'auto' }}>
-                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
-                  <Typography onClick={() => fileInputRef.current?.click()} sx={{ fontFamily: 'Inter', color: '#2563eb', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-                    Add
+                                <Box sx={{ mt: 'auto' }}>
+                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} disabled={isUploading} />
+                  <Typography
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    sx={{ fontFamily: 'Inter', color: isUploading ? '#94a3b8' : '#2563eb', cursor: isUploading ? 'default' : 'pointer', fontWeight: 600, fontSize: '13px' }}
+                  >
+                    {isUploading ? 'Uploading…' : 'Add'}
                   </Typography>
                 </Box>
               </Paper>
@@ -631,27 +668,42 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                   )}
                 </Box>
               )}
-              {tabValue === 1 && (
+                            {tabValue === 1 && (
                 <Box>
                   {attachments.length > 0 ? (
                     <List sx={{ pt: 0 }}>
-                      {attachments.map((file, index) => (
-                        <ListItem key={index} secondaryAction={
-                          <IconButton edge="end" onClick={() => setAttachments(attachments.filter((_, i) => i !== index))} size="small">
-                            <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
-                          </IconButton>
-                        } sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mb: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: '#eff6ff', color: '#3b82f6' }}>
-                              <FileIcon fontSize="small" />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText 
-                            primary={<Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{file.name}</Typography>}
-                            secondary={<Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#64748b' }}>{file.date} • {(file.size / 1024).toFixed(2)} KB</Typography>}
-                          />
-                        </ListItem>
-                      ))}
+                      {attachments.map((file) => {
+                        const fileId = file._id || file.id;
+                        return (
+                          <ListItem key={fileId} secondaryAction={
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={async () => {
+                                try {
+                                  await documentService.deleteDocument(fileId);
+                                  setAttachments((prev) => prev.filter((f) => (f._id || f.id) !== fileId));
+                                  showSnackbar('Attachment removed', 'success');
+                                } catch {
+                                  showSnackbar('Failed to remove attachment', 'error');
+                                }
+                              }}
+                            >
+                              <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
+                            </IconButton>
+                          } sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mb: 1 }}>
+                            <ListItemAvatar>
+                              <Avatar sx={{ bgcolor: '#eff6ff', color: '#3b82f6' }}>
+                                <FileIcon fontSize="small" />
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText 
+                              primary={<Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{file.documentName}</Typography>}
+                              secondary={<Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#64748b' }}>{dayjs(file.createdAt).format('MM/DD/YYYY')} • {((file.fileSizeInBytes || 0) / 1024).toFixed(2)} KB</Typography>}
+                            />
+                          </ListItem>
+                        );
+                      })}
                     </List>
                   ) : (
                     <Typography sx={{ fontFamily: 'Inter', fontSize: '14px', color: '#64748b', textAlign: 'center', py: 4 }}>No attachments.</Typography>
