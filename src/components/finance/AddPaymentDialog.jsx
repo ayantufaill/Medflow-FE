@@ -98,7 +98,10 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   };
 
   const handleLineItemAmountChange = (invoiceId, procId, amount) => {
-    // Optional: Dispatch a Redux action to update the line item amount here
+    dispatch({
+      type: 'billing/updatePaymentLineItemAmount',
+      payload: { patientId, invoiceId, procId, amount }
+    });
   };
 
   const handleApplyAndPay = () => {
