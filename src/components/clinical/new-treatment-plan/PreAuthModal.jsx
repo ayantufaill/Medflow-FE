@@ -133,7 +133,8 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     ...procedure,
     code: procedure.code || procedure.procedureCode || procedure.ProcCode || '-',
     description: procedure.description || procedure.procedureDescription || procedure.treatment || procedure.name || procedure.Descript || '-',
-    fee: procedure.fee ?? procedure.amount ?? procedure.charge ?? '0.00',
+    fee: procedure.negRate ?? procedure.fee ?? procedure.amount ?? procedure.charge ?? '0.00',
+    tooth: procedure.site || procedure.tooth || procedure.surf || '-',
   });
 
   useEffect(() => {
@@ -169,10 +170,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         const primaryIns = patientInsurances.find(ins => ins.insuranceType === 'primary') || patientInsurances[0];
         
         let patientInsuranceName = 'No Primary Insurance';
+        let patientInsuranceId = null;
         if (primaryIns) {
           patientInsuranceName = primaryIns.insuranceCompanyId?.name || primaryIns.insuranceCompany?.name || primaryIns.insuranceCompany || primaryIns.planName || 'Unknown Insurance';
+          patientInsuranceId = primaryIns.insuranceCompanyId?._id || primaryIns.insuranceCompany?._id || primaryIns.insuranceCompanyId || primaryIns.insuranceCompany || null;
         } else if (currentPatient?.primaryInsurance?.insuranceCompany?.name) {
           patientInsuranceName = currentPatient.primaryInsurance.insuranceCompany.name;
+          patientInsuranceId = currentPatient.primaryInsurance.insuranceCompany._id || currentPatient.primaryInsurance.insuranceCompany.id || null;
         }
 
         const patientProviderName = currentPatient?.priProv?.name || currentPatient?.priProv || currentPatient?.provider?.name || currentPatient?.provider || currentPatient?.primaryProvider?.name;
@@ -184,10 +188,11 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           const data = await authorizationService.getAuthorizationById(preAuthId);
           setAuthData({
             ...data,
-            procedures: (data.procedures || selectedProcedures).map(normalizeProcedure),
+            procedures: (selectedProcedures?.length > 0 ? selectedProcedures : (data.procedures || [])).map(normalizeProcedure),
             billingProvider: data.billingProvider || primaryProvider,
             treatmentProvider: data.treatmentProvider || primaryProvider,
             insuranceCompany: data.insuranceCompany || data.insuranceCompanyId?.name || patientInsuranceName,
+            insuranceCompanyId: data.insuranceCompanyId || patientInsuranceId,
             attachments: data.attachments || 'None Required',
             serviceDate: data.serviceDate || data.requestedDate,
             latestActivity: data.latestActivity || (
@@ -225,6 +230,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             billingProvider: primaryProvider,
             treatmentProvider: primaryProvider,
             insuranceCompany: patientInsuranceName,
+            insuranceCompanyId: patientInsuranceId,
             attachments: 'None Required',
             latestActivity: `Created on ${dayjs().format('MM/DD/YYYY')}`,
             order: 'Primary'
@@ -286,8 +292,9 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           status: 'requested',
           tags: tagIds,
           notes: notesText,
-          // map selected procedures
-          procedures: (authData.procedures || []).map(p => p.id || p._id || p.procedureId || p.code)
+          insuranceCompanyId: authData.insuranceCompanyId,
+          // map selected procedures - use procedure code (e.g. D2392), not row ID
+          procedures: (authData.procedures || []).map(p => p.code || p.procedureCode || p.ProcCode || p.id || p._id)
         });
         showSnackbar('Authorization requested successfully', 'success');
         if (onSave) onSave(newAuth._id || newAuth.id);
@@ -308,11 +315,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       serviceDate: authData.serviceDate,
       status: 'requested',
       tags: selectedTags.map((tag) => tag.id),
+      insuranceCompanyId: authData.insuranceCompanyId,
       notes: comments.length > 0
         ? comments.map(c => `[${c.date}] ${c.author}: ${c.text}`).join('\n')
         : undefined,
+      // map selected procedures - use procedure code (e.g. D2392), not row ID
       procedures: (authData.procedures || []).map((procedure) => (
-        procedure.id || procedure._id || procedure.procedureId || procedure.code
+        procedure.code || procedure.procedureCode || procedure.ProcCode || procedure.id || procedure._id
       )),
     });
     const newId = newAuth._id || newAuth.id;
