@@ -48,12 +48,19 @@ export const SnackbarProvider = ({ children }) => {
         autoHideDuration={6000}
         onClose={hideSnackbar}
         anchorOrigin={snackbar.position || { vertical: 'bottom', horizontal: 'right' }}
+        sx={{ zIndex: 200000 }}
       >
         <Alert
           onClose={hideSnackbar}
           severity={snackbar.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{
+            width: '100%',
+            ...(snackbar.severity === 'success' && {
+              bgcolor: '#2e7d32',
+              '& .MuiAlert-icon': { color: '#fff' },
+            }),
+          }}
         >
           {snackbar.message}
         </Alert>

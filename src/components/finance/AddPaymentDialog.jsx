@@ -12,6 +12,7 @@ import AddPaymentAmountRow from './add-payment/AddPaymentAmountRow';
 import AddPaymentInvoiceList from './add-payment/AddPaymentInvoiceList';
 import AddPaymentFooter from './add-payment/AddPaymentFooter';
 import apiClient from '../../config/api';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Redux
 import {
@@ -39,6 +40,7 @@ const MENU_PROPS = {
 const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const dispatch  = useDispatch();
   const patientId = patient?._id || patient?.id;
+  const { showSnackbar } = useSnackbar();
 
   // ── Redux state ──────────────────────────────────────────────────────────
   const invoices = useSelector(selectPaymentInvoicesForPatient(patientId));
@@ -86,18 +88,78 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const overpayment     = '0.00';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleInvoiceToggle = (invoiceId) =>
+  const handleInvoiceToggle = (invoiceId) => {
+    if (paymentMethod === 'Account Credit') {
+      let invToToggle = invoices.find((inv) => inv.id === invoiceId);
+      if (invToToggle && !invToToggle.checked) {
+        let sumToAdd = 0;
+        invToToggle.lineItems?.forEach((i) => {
+          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+        });
+        if (totalChecked + sumToAdd > accountCredit) {
+          showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
+          return;
+        }
+      }
+    }
     dispatch(togglePaymentInvoiceChecked({ patientId, invoiceId }));
+  };
 
-  const handleProcedureToggle = (invoiceId, itemId) =>
+  const handleProcedureToggle = (invoiceId, itemId) => {
+    if (paymentMethod === 'Account Credit') {
+      let itemToToggle = null;
+      invoices.forEach((inv) => {
+        if (inv.id === invoiceId) {
+          inv.lineItems?.forEach((i) => {
+            if (i.id === itemId) itemToToggle = i;
+          });
+        }
+      });
+      if (itemToToggle && !itemToToggle.checked) {
+        if (totalChecked + Number(itemToToggle.payAmount || 0) > accountCredit) {
+          showSnackbar("Cannot select procedure. Total exceeds available deposit balance.", "error");
+          return;
+        }
+      }
+    }
     dispatch(togglePaymentLineItemChecked({ patientId, invoiceId, itemId }));
+  };
 
   const handleToggleAll = (checked) => {
+    if (checked && paymentMethod === 'Account Credit') {
+      let sumToAdd = 0;
+      invoices.forEach((inv) => {
+        inv.lineItems?.forEach((i) => {
+          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+        });
+      });
+      if (totalChecked + sumToAdd > accountCredit) {
+        showSnackbar("Cannot select all. Total exceeds available deposit balance.", "error");
+        return;
+      }
+    }
     setPatientAmountChecked(checked);
     dispatch(toggleAllPaymentInvoices({ patientId, checked }));
   };
 
   const handleLineItemAmountChange = (invoiceId, procId, amount) => {
+    if (paymentMethod === 'Account Credit') {
+      let itemToEdit = null;
+      invoices.forEach((inv) => {
+        if (inv.id === invoiceId) {
+          inv.lineItems?.forEach((i) => {
+            if (i.id === procId) itemToEdit = i;
+          });
+        }
+      });
+      if (itemToEdit && itemToEdit.checked) {
+        let diff = Number(amount || 0) - Number(itemToEdit.payAmount || 0);
+        if (totalChecked + diff > accountCredit) {
+          showSnackbar("Amount exceeds available deposit balance.", "error");
+          return;
+        }
+      }
+    }
     dispatch({
       type: 'billing/updatePaymentLineItemAmount',
       payload: { patientId, invoiceId, procId, amount }
