@@ -42,7 +42,7 @@ export const SocketProvider = ({ children }) => {
 
     socket.on('notification:new', (notification) => {
       dispatch(notificationReceived(notification));
-      showSnackbar(notification.title, 'info');
+      showSnackbar(notification.title, 'success');
     });
 
     socketRef.current = socket;

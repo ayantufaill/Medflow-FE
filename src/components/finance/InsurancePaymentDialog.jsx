@@ -67,6 +67,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       const dedNum = Number(value || 0);
       const allowedNum = Number(proc.allowed || 0);
       proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+    } else if (field === 'pay') {
+      const payNum = Number(value || 0);
+      const dedNum = Number(proc.ded || 0);
+      proc.wo = (submittedNum - (payNum + dedNum)).toFixed(2);
     }
     
     newProcedures[index] = proc;
