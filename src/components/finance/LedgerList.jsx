@@ -338,6 +338,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             isAdjustment: voidTarget.isAdjustment,
             isGrouped: voidTarget.isGrouped,
             isPayment: voidTarget.isPayment,
+            isDeposit: voidTarget.isPatientDeposit || voidTarget.depositType === "patient" || voidTarget.depositType === "insurance",
           }),
         ).unwrap();
         console.log("voidTransaction succeeded");

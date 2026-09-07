@@ -22,7 +22,7 @@ const LedgerSubRow = ({
   adjustmentType, onRefreshClick, refreshData, onMagicStickClick,
   onSettingsClick, onAdjustmentSelect, onPrintClick,
   onAttachClick, attachData, procedures,
-  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick, onEditClaimClick, onSendClaimClick, onVoidAndRecreateClick
+  claimStatus, statusResponse, isApproved, onEOBClick, eobData, onPrintClaimClick, onReopenClaimClick, onEditClaimClick, onSendClaimClick, onVoidAndRecreateClick, isPatientDeposit
 }) => {
   const [expanded, setExpanded] = useState(false);
   const hasProcedures = procedures && procedures.length > 0;
@@ -123,8 +123,17 @@ const LedgerSubRow = ({
       {initials || 'MAG'}
     </Typography>
     
-    <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', opacity: isClosedClaim ? 0.7 : 1 }}>
-      {isVoided ? null : isPayment ? (
+    <Stack direction="row" spacing={1} sx={{ minWidth: 120, justifyContent: 'flex-end', ml: 'auto', opacity: isClosedClaim ? 0.7 : 1 }}>
+      {isVoided ? null : isPatientDeposit ? (
+        <>
+          <Tooltip title="Print" placement="top">
+            <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onPrintClick?.(e); }} />
+          </Tooltip>
+          <Tooltip title="Void" placement="top">
+            <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onVoidClick?.(voidData); }} />
+          </Tooltip>
+        </>
+      ) : isPayment ? (
         <>
           <Tooltip title="Undo Payment" placement="top">
             <Box component="img" src={ButtonUndoIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onRefreshClick?.(refreshData); }} />

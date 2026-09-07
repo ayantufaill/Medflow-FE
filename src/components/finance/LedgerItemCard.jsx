@@ -8,6 +8,7 @@ import ButtonScheduleIcon from '../../assets/finance icons/Button - Schedule →
 import ButtonPaymentIcon from '../../assets/finance icons/Button - Payment → SVG.svg';
 import ButtonAdjustIcon from '../../assets/finance icons/Button - Adjust → SVG.svg';
 import ButtonPrintIcon from '../../assets/finance icons/Button - Print → SVG.svg';
+import ButtonVoidIcon from '../../assets/finance icons/Button - Void → SVG.svg';
 
 import LedgerSubRow from './LedgerSubRow';
 
@@ -38,6 +39,14 @@ const LedgerItemCard = ({
   onSendClaimClick,
   onVoidAndRecreateClick
 }) => {
+  const isPatientDeposit = Boolean(
+    displayItem?.isPatientDeposit ||
+    displayItem?.depositType === 'patient' ||
+    displayItem?.depositType === 'insurance' ||
+    ['Patient Deposit', 'PatientDeposit', 'Deposit'].includes(displayItem.method) ||
+    String(displayItem.method || '').toLowerCase().includes('deposit')
+  );
+
   const title = displayItem.method === 'Invoice'
     ? `Invoice #${displayItem.invoiceNumber || displayItem.id} (${displayItem.date})`
     : displayItem.method === 'Adjustment'
@@ -75,67 +84,77 @@ const LedgerItemCard = ({
           </Typography>
         </Box>
 
-        {/* Middle: Balances Grid */}
-        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', gap: 6 }}>
-          {/* Column 1 */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins WO:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insWo || '$0.00'}</Typography>
+        {!isPatientDeposit && (
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', gap: 6 }}>
+            {/* Column 1 */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins WO:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insWo || '$0.00'}</Typography>
 
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Applied WO:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.appliedWo || '$0.00'}</Typography>
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Applied WO:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.appliedWo || '$0.00'}</Typography>
+            </Box>
+
+            {/* Column 2 */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'flex-start' }}>
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Balance:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptBal || '$0.00'}</Typography>
+
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Paid:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptPaid || '$0.00'}</Typography>
+            </Box>
+
+            {/* Column 3 */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'flex-start' }}>
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Balance:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insBal || '$0.00'}</Typography>
+
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Paid:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insPaid || '$0.00'}</Typography>
+            </Box>
+
+            {/* Column 4: Invoice Balance & Claim */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
+              <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Invoice Balance:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                {displayItem.summary?.invBal || '$0.00'}
+              </Typography>
+
+              {displayItem.details?.some(d => d.isClaim) && (
+                <>
+                  <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Claim:</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                    {(() => {
+                      const st = displayItem.details.find(d => d.isClaim)?.status;
+                      if (st?.toLowerCase() === 'draft' || st?.toLowerCase() === 'readyforsubmission') return 'Ready for submission';
+                      if (st?.toLowerCase() === 'cancelled') return 'Cancelled';
+                      if (st?.toLowerCase() === 'paid') return 'Paid';
+                      return st || 'Claim in process';
+                    })()}
+                  </Typography>
+                </>
+              )}
+            </Box>
           </Box>
-
-          {/* Column 2 */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'flex-start' }}>
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Balance:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptBal || '$0.00'}</Typography>
-
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Pt Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.ptPaid || '$0.00'}</Typography>
-          </Box>
-
-          {/* Column 3 */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'flex-start' }}>
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Balance:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insBal || '$0.00'}</Typography>
-
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Ins Paid:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px' }}>{displayItem.summary?.insPaid || '$0.00'}</Typography>
-          </Box>
-
-          {/* Column 4: Invoice Balance & Claim */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 1, rowGap: 0.5, alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Invoice Balance:</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: displayItem.isVoided ? '#FFFFFF' : '#1A1A1A', fontSize: '11px', whiteSpace: 'nowrap' }}>
-              {displayItem.summary?.invBal || '$0.00'}
-            </Typography>
-
-            {displayItem.details?.some(d => d.isClaim) && (
-              <>
-                <Typography variant="caption" sx={{ color: displayItem.isVoided ? '#E0E0E0' : '#6B778C', textAlign: 'right', fontSize: '11px' }}>Claim:</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: '#f59e0b', fontSize: '11px', whiteSpace: 'nowrap' }}>
-                  {(() => {
-                    const st = displayItem.details.find(d => d.isClaim)?.status;
-                    if (st?.toLowerCase() === 'draft' || st?.toLowerCase() === 'readyforsubmission') return 'Ready for submission';
-                    if (st?.toLowerCase() === 'cancelled') return 'Cancelled';
-                    if (st?.toLowerCase() === 'paid') return 'Paid';
-                    return st || 'Claim in process';
-                  })()}
-                </Typography>
-              </>
-            )}
-          </Box>
-        </Box>
+        )}
 
         {/* Right: Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
           {displayItem.isVoided ? null : (
-            <Stack direction="row" spacing={2} sx={{ ml: 2, alignItems: 'center' }}>
-              <Box component="img" src={ButtonScheduleIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleCalendarClick(displayItem, e); }} />
-              <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); }} />
-              <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }} />
-              <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
+            <Stack direction="row" spacing={2} sx={{ ml: 'auto', alignItems: 'center', justifyContent: 'flex-end' }}>
+              {isPatientDeposit ? (
+                <>
+                  <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
+                  <Box component="img" src={ButtonVoidIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleVoidClick(displayItem); }} />
+                </>
+              ) : (
+                <>
+                  <Box component="img" src={ButtonScheduleIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleCalendarClick(displayItem, e); }} />
+                  <Box component="img" src={ButtonPaymentIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); }} />
+                  <Box component="img" src={ButtonAdjustIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setAdjAnchorEl(e.currentTarget); setAdjItem(displayItem); }} />
+                  <Box component="img" src={ButtonPrintIcon} sx={{ width: 18, height: 18, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPrintAnchorEl(e.currentTarget); setPrintItem(displayItem); }} />
+                </>
+              )}
             </Stack>
           )}
         </Box>
@@ -166,8 +185,9 @@ const LedgerItemCard = ({
                 isPayment={detail.isPayment}
                 isClaim={detail.isClaim}
                 isVoided={detail.isVoided}
-                showExtendedTools={!detail.isClaim && !detail.title.includes('(uncollected)')}
+                showExtendedTools={!isPatientDeposit && !detail.isClaim && !detail.title.includes('(uncollected)')}
                 adjustmentType={adjustmentTypeMap[`${displayItem.id}-${detail.id}`]}
+                isPatientDeposit={isPatientDeposit}
                 onVoidClick={handleVoidClick}
                 onEditClick={handleEditClick}
                 onRefreshClick={handleRefreshClick}

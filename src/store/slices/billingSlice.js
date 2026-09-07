@@ -408,12 +408,21 @@ export const fetchLedgerItems = createAsyncThunk(
           const isVoided =
             String(pay.status || "").toLowerCase() === "void" ||
             String(pay.status || "").toLowerCase() === "voided";
+          const isDeposit =
+            Boolean(pay.isDeposit) ||
+            Boolean(pay.depositType === "patient" || pay.depositType === "insurance") ||
+            String(pay.notes || "").toLowerCase().includes("prepayment deposit") ||
+            String(pay.paymentMethod || "").toLowerCase().includes("deposit") ||
+            String(pay.method || "").toLowerCase().includes("deposit");
+
           return {
             id: pay._id || pay.id,
             invoiceNumber: `Pay #${pay.receiptNumber || pay.id}${isVoided ? " (VOIDED)" : ""}`,
             date: pay.paidAt ? dayjs(pay.paidAt).format("MM/DD/YYYY") : "N/A",
             rawDate: pay.paidAt || "",
-            method: "Payment",
+            method: isDeposit ? "Patient Deposit" : "Payment",
+            depositType: pay.depositType || (isDeposit ? "patient" : undefined),
+            isPatientDeposit: isDeposit,
             amount: isVoided ? "(Voided)" : `$${amt.toFixed(2)}`,
             color: isVoided ? "#9e9e9e" : "#4caf50",
             isAdjustment: false,
@@ -424,11 +433,11 @@ export const fetchLedgerItems = createAsyncThunk(
             success: !isVoided,
             summary: {
               insWo: "$0.00",
-              ptBal: isVoided ? "$0.00" : `-$${amt.toFixed(2)}`,
+              ptBal: isVoided ? "$0.00" : isDeposit ? "$0.00" : `-$${amt.toFixed(2)}`,
               insBal: "$0.00",
               invBal: "$0.00",
               appliedWo: "$0.00",
-              ptPaid: isVoided ? "$0.00" : `$${amt.toFixed(2)}`,
+              ptPaid: isVoided ? "$0.00" : isDeposit ? "$0.00" : `$${amt.toFixed(2)}`,
               insPaid: "$0.00",
             },
             details: [
@@ -691,7 +700,7 @@ export const backdateTransaction = createAsyncThunk(
 export const voidTransaction = createAsyncThunk(
   "billing/voidTransaction",
   async (
-    { patientId, invoiceId, itemId, isAdjustment, isGrouped, isPayment },
+    { patientId, invoiceId, itemId, isAdjustment, isGrouped, isPayment, isDeposit },
     { dispatch, rejectWithValue },
   ) => {
     try {
@@ -699,6 +708,15 @@ export const voidTransaction = createAsyncThunk(
         await apiClient.delete(`/adjustments/${itemId || invoiceId}`);
       } else if (isPayment) {
         await paymentService.voidPayment(itemId, "Voided from Ledger");
+      } else if (isDeposit) {
+        try {
+          await apiClient.delete(`/deposits/${itemId}`);
+        } catch (depositErr) {
+          const status = depositErr?.response?.status;
+          if (status !== 404 && status !== 405) {
+            throw depositErr;
+          }
+        }
       } else if (isGrouped) {
         await apiClient.delete(`/admin-finance/invoices/${invoiceId}`);
       } else {
@@ -706,7 +724,7 @@ export const voidTransaction = createAsyncThunk(
       }
 
       // Recalculate invoice balances if we didn't just delete the whole invoice
-      if (invoiceId && !isGrouped) {
+      if (invoiceId && !isGrouped && !isDeposit) {
         await apiClient.post(`/invoices/${invoiceId}/recalculate`);
       }
 
