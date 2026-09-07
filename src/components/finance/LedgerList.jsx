@@ -222,7 +222,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
       });
       setExpandedItems(all);
     }
-  }, [expanded, ledgerItems, dispatch, patientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [expanded, ledgerItems, dispatch, patientId]);  
 
   useEffect(() => {
     if (location.state?.invoiceId && ledgerItems.length > 0) {

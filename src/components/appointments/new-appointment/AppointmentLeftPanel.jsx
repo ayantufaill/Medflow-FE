@@ -102,20 +102,12 @@ const AppointmentLeftPanel = ({
       unbilled = [];
     }
 
-    const totalPortionProcedures = procedures.reduce((sum, p) => {
-      const val = p.ptPart != null ? p.ptPart : p.charge != null ? p.charge : 0;
-      const num = Number(String(val).replace(/[$,]/g, ""));
-      return sum + (isNaN(num) ? 0 : num);
-    }, 0);
-
     const totalUnbilled = Array.isArray(unbilled)
       ? unbilled.reduce((s, u) => s + (Number(u.fee || u.amount || 0) || 0), 0)
       : 0;
 
-    const totalPortion = totalPortionProcedures + totalUnbilled;
-
-    if (totalPortion <= 0) {
-      showSnackbar("No procedure charges to collect payment for.", "warning");
+    if (procedures.length === 0 && (!Array.isArray(unbilled) || unbilled.length === 0)) {
+      showSnackbar("No procedures or products to collect payment for.", "warning");
       return;
     }
 
@@ -143,7 +135,7 @@ const AppointmentLeftPanel = ({
         date: new Date().toISOString().split("T")[0],
         code: p.code,
         site: p.tooth || "",
-        treatment: p.desc || "Custom Procedure",
+        treatment: p.treatment || p.desc || p.description || "Custom Procedure",
         provider: providerName,
         writeoff: "$0.00",
         coveragePct: 0,
@@ -283,6 +275,7 @@ const AppointmentLeftPanel = ({
           if (!isNaN(d.getTime())) parsedDate = d.toISOString();
         }
         return {
+          id: row.id || row.procNum || row._id || null,
           code: row.code,
           description: row.treatment,
           date: parsedDate,
@@ -533,25 +526,27 @@ const AppointmentLeftPanel = ({
                 pointerEvents: "auto",
               }}
             >
-              <Button
-                onClick={onComputeNextVisit}
-                variant="contained"
-                disableElevation
-                sx={{
-                  fontFamily: "Inter",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: "6px",
-                  backgroundColor: "#2262ef",
-                  color: "#fff",
-                  px: "12px",
-                  py: "5px",
-                  "&:hover": { backgroundColor: "#1a50cc" },
-                }}
-              >
-                Compute next visit
-              </Button>
+              {visitType !== "treatment" && (
+                <Button
+                  onClick={onComputeNextVisit}
+                  variant="contained"
+                  disableElevation
+                  sx={{
+                    fontFamily: "Inter",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    borderRadius: "6px",
+                    backgroundColor: "#2262ef",
+                    color: "#fff",
+                    px: "12px",
+                    py: "5px",
+                    "&:hover": { backgroundColor: "#1a50cc" },
+                  }}
+                >
+                  Compute next visit
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 onClick={async () => {

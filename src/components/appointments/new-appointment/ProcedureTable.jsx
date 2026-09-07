@@ -133,7 +133,25 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
             {fmt(ptPart)}
           </TableCell>
           <TableCell sx={{ ...cellSx, fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", textAlign: "right", whiteSpace: "nowrap" }}>
-            {fmt(totalCharge)}
+            {isEditing ? (
+              <TextField
+                size="small"
+                value={row.charge != null ? row.charge : (row.totalCharge != null ? row.totalCharge : "")}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, charge: val, totalCharge: val } : p));
+                  if (setIsRescheduling) setIsRescheduling(true);
+                }}
+                placeholder="0.00"
+                sx={{
+                  width: "70px",
+                  "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "4px", px: "6px", textAlign: "right", fontWeight: 700 },
+                  "& .MuiOutlinedInput-root": { borderRadius: "4px" }
+                }}
+              />
+            ) : (
+              fmt(totalCharge)
+            )}
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
             <Box onClick={handleToggleCompleted} sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>

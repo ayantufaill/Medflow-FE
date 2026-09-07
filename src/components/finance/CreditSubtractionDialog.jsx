@@ -71,7 +71,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
 
     let ptBalance = Number(p.patientBalance || p.ptBalance || parseFloat(String(p.ptPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
     let insBalance = Number(p.insuranceBalance || p.insBalance || parseFloat(String(p.insPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
-    let pay = Number(p.patientPaid || 0) + Number(p.insurancePaid || 0);
+    let pay = Number(p.paidAmount || p.payAmount || p.patientPaid || 0) + Number(p.insurancePaid || 0);
 
     // Only override with summary pro-ration if line items don't have their own balances defined
     // and there is an actual summary
