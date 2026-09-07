@@ -203,6 +203,17 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             setSelectedTags(matchedTags);
           }
 
+          // Load saved notes back as comments
+          if (data.notes) {
+            const parsedComments = data.notes.split('\n').filter(Boolean).map((line, idx) => {
+              const match = line.match(/^\[(.+?)\]\s*(.+?):\s*(.+)$/);
+              return match
+                ? { id: idx + 1, date: match[1], author: match[2], text: match[3] }
+                : { id: idx + 1, date: '', author: 'System', text: line };
+            });
+            setComments(parsedComments);
+          }
+
           const docs = await documentService.getDocumentsByAuthorization(preAuthId);
           setAttachments(docs);
         } else {
@@ -257,9 +268,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
    const handleSubmit = async () => {
     try {
       const tagIds = selectedTags.map((tag) => tag.id);
+      // Build notes string from all comments
+      const notesText = comments.length > 0
+        ? comments.map(c => `[${c.date}] ${c.author}: ${c.text}`).join('\n')
+        : undefined;
 
       if (preAuthId) {
-        await authorizationService.updateAuthorization(preAuthId, { order, tags: tagIds });
+        await authorizationService.updateAuthorization(preAuthId, { order, tags: tagIds, notes: notesText });
         showSnackbar('Authorization updated successfully', 'success');
         if (onSave) onSave(preAuthId);
       } else {
@@ -270,6 +285,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           serviceDate: authData.serviceDate,
           status: 'requested',
           tags: tagIds,
+          notes: notesText,
           // map selected procedures
           procedures: (authData.procedures || []).map(p => p.id || p._id || p.procedureId || p.code)
         });
@@ -292,6 +308,9 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       serviceDate: authData.serviceDate,
       status: 'requested',
       tags: selectedTags.map((tag) => tag.id),
+      notes: comments.length > 0
+        ? comments.map(c => `[${c.date}] ${c.author}: ${c.text}`).join('\n')
+        : undefined,
       procedures: (authData.procedures || []).map((procedure) => (
         procedure.id || procedure._id || procedure.procedureId || procedure.code
       )),
