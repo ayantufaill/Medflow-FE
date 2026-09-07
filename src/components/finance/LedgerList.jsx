@@ -92,6 +92,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [showTransferConfirmation, setShowTransferConfirmation] =
     useState(false);
   const [transferTarget, setTransferTarget] = useState(null);
+  const [isTransferRefreshing, setIsTransferRefreshing] = useState(false);
   const [showEditInvoice, setShowEditInvoice] = useState(false);
   const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -222,7 +223,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
       });
       setExpandedItems(all);
     }
-  }, [expanded, ledgerItems, dispatch, patientId]);  
+  }, [expanded, ledgerItems, dispatch, patientId]);
 
   useEffect(() => {
     if (location.state?.invoiceId && ledgerItems.length > 0) {
@@ -338,7 +339,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
             isAdjustment: voidTarget.isAdjustment,
             isGrouped: voidTarget.isGrouped,
             isPayment: voidTarget.isPayment,
-            isDeposit: voidTarget.isPatientDeposit || voidTarget.depositType === "patient" || voidTarget.depositType === "insurance",
+            isDeposit:
+              voidTarget.isPatientDeposit ||
+              voidTarget.depositType === "patient" ||
+              voidTarget.depositType === "insurance",
           }),
         ).unwrap();
         console.log("voidTransaction succeeded");
@@ -431,12 +435,22 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
 
   const handleTransferConfirm = async () => {
-    if (transferTarget) {
-      if (transferTarget.isGrouped && transferTarget.procedures) {
+    const target = transferTarget;
+    if (!target) {
+      setShowTransferConfirmation(false);
+      return;
+    }
+
+    setIsTransferRefreshing(true);
+    setShowTransferConfirmation(false);
+    setTransferTarget(null);
+
+    try {
+      if (target.isGrouped && target.procedures) {
         let successCount = 0;
         let skippedCount = 0;
-        for (let i = 0; i < transferTarget.procedures.length; i++) {
-          const proc = transferTarget.procedures[i];
+        for (let i = 0; i < target.procedures.length; i++) {
+          const proc = target.procedures[i];
           const procId = proc.ProcNum || proc._id || proc.id;
           const insRaw =
             (proc.insuranceAmount ??
@@ -456,12 +470,12 @@ const LedgerList = ({ patient, expanded, filters }) => {
             continue;
           }
           if (procId) {
-            const isLast = i === transferTarget.procedures.length - 1;
+            const isLast = i === target.procedures.length - 1;
             try {
               await dispatch(
                 transferOutstandingToPatient({
                   patientId,
-                  invoiceId: transferTarget.invoiceId,
+                  invoiceId: target.invoiceId,
                   procedureId: procId,
                   skipFetch: !isLast,
                 }),
@@ -476,16 +490,14 @@ const LedgerList = ({ patient, expanded, filters }) => {
             }
           }
         }
-        // Ensure ledger refresh after grouped transfers complete
         try {
           refreshLedger();
         } catch (e) {
           console.warn("refreshLedger failed after grouped transfer", e);
         }
-        if (successCount === 0 && transferTarget.procedures.length > 0) {
-          // If all failed, they might not have any outstanding balance
+        if (successCount === 0 && target.procedures.length > 0) {
           console.warn("No procedures had outstanding insurance to transfer");
-          if (skippedCount === transferTarget.procedures.length) {
+          if (skippedCount === target.procedures.length) {
             showSnackbar(
               "No outstanding insurance estimate to transfer for selected procedures",
               "warning",
@@ -494,17 +506,17 @@ const LedgerList = ({ patient, expanded, filters }) => {
         }
       } else {
         const insRaw =
-          (transferTarget.insuranceAmount ??
-            transferTarget.insPortion ??
-            transferTarget.insurancePortion ??
-            transferTarget.insAmt ??
-            transferTarget.insurance) ||
+          (target.insuranceAmount ??
+            target.insPortion ??
+            target.insurancePortion ??
+            target.insAmt ??
+            target.insurance) ||
           0;
         const insAmt = Number(String(insRaw).replace(/[^0-9.-]+/g, "")) || 0;
         if (insAmt <= 0) {
           console.warn(
             "No outstanding insurance to transfer for item:",
-            transferTarget,
+            target,
           );
           showSnackbar(
             "No outstanding insurance estimate to transfer for this item",
@@ -515,11 +527,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
             await dispatch(
               transferOutstandingToPatient({
                 patientId,
-                invoiceId: transferTarget.invoiceId,
-                procedureId: transferTarget.id,
+                invoiceId: target.invoiceId,
+                procedureId: target.id,
               }),
             ).unwrap();
-            // Force refresh after single-item transfer
             try {
               refreshLedger();
             } catch (e) {
@@ -534,9 +545,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
           }
         }
       }
+    } finally {
+      setIsTransferRefreshing(false);
     }
-    setShowTransferConfirmation(false);
-    setTransferTarget(null);
   };
 
   const handleCollapsedEditClick = (item) => {
@@ -706,7 +717,56 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ p: 1, bgcolor: "#FFFFFF" }}>
+    <Box sx={{ p: 1, bgcolor: "#FFFFFF", position: "relative" }}>
+      {(ledgerLoading || isTransferRefreshing) && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            px: 2,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1.5,
+              color: "#2362EF",
+            }}
+          >
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                border: "3px solid rgba(35, 98, 239, 0.2)",
+                borderTop: "3px solid #2362EF",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                "@keyframes spin": {
+                  "0%": { transform: "rotate(0deg)" },
+                  "100%": { transform: "rotate(360deg)" },
+                },
+              }}
+            />
+            <Typography
+              sx={{
+                fontSize: "20px",
+                color: "#1e293b",
+                fontWeight: 400,
+                lineHeight: 1.2,
+              }}
+            >
+              Refreshing ledger...
+            </Typography>
+          </Box>
+        </Box>
+      )}
       {ledgerItems.map((item, idx) => {
         // Apply voided filter
         if (item.isVoided && !filters?.includeVoided) {
