@@ -540,8 +540,11 @@ const OperatorySchedulePage = () => {
 
   const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-    const now = dayjs();
-    setInitialFormDateTime(dateTime || baseDate.hour(now.hour()).minute(now.minute()));
+    const defaultTime = dayjs().add(30, "minute");
+    const fallbackDateTime = baseDate.isSame(dayjs(), "day")
+      ? defaultTime
+      : baseDate.hour(defaultTime.hour()).minute(defaultTime.minute()).second(0);
+    setInitialFormDateTime(dateTime || fallbackDateTime);
     setInitialFormRoomId(roomId || null);
     setInitialShortlistData(null);
     setShowExtendedOptions(extendedOptions);
