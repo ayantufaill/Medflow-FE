@@ -71,6 +71,7 @@ const AppointmentLeftPanel = ({
   appointmentId,
   status,
   onStatusChange,
+  isPatientOccupied = false,
 }) => {
   const [previousStatus, setPreviousStatus] = useState("scheduled");
   const [showPastVisits, setShowPastVisits] = useState(false);
@@ -106,8 +107,14 @@ const AppointmentLeftPanel = ({
       ? unbilled.reduce((s, u) => s + (Number(u.fee || u.amount || 0) || 0), 0)
       : 0;
 
-    if (procedures.length === 0 && (!Array.isArray(unbilled) || unbilled.length === 0)) {
-      showSnackbar("No procedures or products to collect payment for.", "warning");
+    if (
+      procedures.length === 0 &&
+      (!Array.isArray(unbilled) || unbilled.length === 0)
+    ) {
+      showSnackbar(
+        "No procedures or products to collect payment for.",
+        "warning",
+      );
       return;
     }
 
@@ -385,14 +392,28 @@ const AppointmentLeftPanel = ({
             alignItems: "flex-end",
           }}
         >
-          <PatientSearchField
-            patients={patients}
-            loadingPatients={loadingPatients}
-            value={patient}
-            onChange={onPatientChange}
-            onSearch={onPatientSearch}
-            error={patientError}
-          />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <PatientSearchField
+              patients={patients}
+              loadingPatients={loadingPatients}
+              value={patient}
+              onChange={onPatientChange}
+              onSearch={onPatientSearch}
+              error={patientError}
+            />
+            {isPatientOccupied && (
+              <Typography
+                sx={{
+                  color: "#ef4444",
+                  fontSize: "12px",
+                  mt: "6px",
+                  fontFamily: "Inter",
+                }}
+              >
+                This patient is occupied at the selected time.
+              </Typography>
+            )}
+          </Box>
 
           <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -782,8 +803,10 @@ const AppointmentLeftPanel = ({
         <PastVisitProceduresSelector
           open={showPastVisits}
           onClose={() => setShowPastVisits(false)}
+          patient={patient}
           patientId={patient?.id || patient?._id || patient?.PatNum}
           onAdd={handleAddPastProcedure}
+          onAddProcedure={handleAddPastProcedure}
         />
 
         {/* Invoice Modal */}
