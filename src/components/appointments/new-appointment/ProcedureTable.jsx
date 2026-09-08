@@ -5,7 +5,7 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
@@ -168,7 +168,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
               onClick={() => setIsEditing(!isEditing)} 
               sx={{ p: "2px", color: isEditing ? "#2262ef" : "#9aa3ae", backgroundColor: isEditing ? "#eef2ff" : "transparent" }}
             >
-              <SettingsOutlinedIcon sx={{ fontSize: "16px" }} />
+              <EditOutlinedIcon sx={{ fontSize: "16px" }} />
             </IconButton>
           </TableCell>
         </>

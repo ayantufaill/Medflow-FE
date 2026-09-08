@@ -739,11 +739,14 @@ const AppointmentLeftPanel = ({
                   variant="contained"
                   disableElevation
                   onClick={() => {
+                    const allCompleted = procedures.length > 0 && procedures.every((p) => p.completed);
                     setProcedures((prev) =>
-                      prev.map((p) => ({ ...p, completed: true })),
+                      prev.map((p) => ({ ...p, completed: !allCompleted })),
                     );
-                    if (onStatusChange) onStatusChange("completed");
-                    if (setIsRescheduling) setIsRescheduling(true);
+                    if (!allCompleted) {
+                      if (onStatusChange) onStatusChange("completed");
+                      if (setIsRescheduling) setIsRescheduling(true);
+                    }
                   }}
                   sx={{
                     fontFamily: "Inter",
@@ -758,7 +761,13 @@ const AppointmentLeftPanel = ({
                     "&:hover": { backgroundColor: "#1a50cc" },
                   }}
                 >
-                  Complete All
+                  {(() => {
+                    const allCompleted = procedures.length > 0 && procedures.every((p) => p.completed);
+                    const someCompleted = procedures.some((p) => p.completed);
+                    if (allCompleted) return "Incomplete All";
+                    if (someCompleted) return "Complete";
+                    return "Complete All";
+                  })()}
                 </Button>
                 <Button
                   variant="contained"

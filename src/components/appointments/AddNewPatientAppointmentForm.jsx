@@ -78,6 +78,9 @@ const AddNewPatientAppointmentForm = ({
   const [isAddProcedureOpen, setIsAddProcedureOpen] = useState(false);
   const [procedureInput, setProcedureInput] = useState("");
   const nextId = useRef(10);
+  // Remembers the status that was active just before an auto-complete override,
+  // so we can revert back to it when procedures become incomplete again.
+  const preAutoCompleteStatusRef = useRef(null);
 
   /* ── Right panel state ── */
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -150,6 +153,18 @@ const AddNewPatientAppointmentForm = ({
   const [toastMessage, setToastMessage] = useState("");
   const [computedVisitType, setComputedVisitType] = useState("");
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
+
+  // Auto-revert status from "completed" when any checked procedure becomes incomplete.
+  useEffect(() => {
+    const checkedProcedures = procedures.filter((p) => p.checked);
+    const allCheckedCompleted =
+      checkedProcedures.length > 0 &&
+      checkedProcedures.every((p) => p.completed);
+    if (!allCheckedCompleted && status === "completed") {
+      const revertTo = preAutoCompleteStatusRef.current || "scheduled";
+      setStatus(revertTo);
+    }
+  }, [procedures]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedStart = useMemo(() => {
     const h = parseInt(timeHours, 10) % 12;
@@ -1259,7 +1274,18 @@ const AddNewPatientAppointmentForm = ({
     // so that's the row that actually needs to be filled in to submit.
     if (!patient || !providerRows[0]?.providerId) return;
     const payload = getAppointmentPayload();
-    if (payload) onSubmit(payload);
+    if (payload) {
+      // If every remaining (checked) procedure is marked complete, auto-complete the appointment.
+      const allCheckedCompleted =
+        checkedProcedures.length > 0 &&
+        checkedProcedures.every((p) => p.completed);
+      if (allCheckedCompleted && payload.status !== "completed") {
+        preAutoCompleteStatusRef.current = status;
+        payload.status = "completed";
+        setStatus("completed");
+      }
+      onSubmit(payload);
+    }
   };
 
   const handleSaveAsDraft = () => {
@@ -1599,6 +1625,7 @@ const AddNewPatientAppointmentForm = ({
           <AddNewProcedureDialog
             onClose={() => setIsAddProcedureOpen(false)}
             onSave={handleSaveNewProcedure}
+            existingProcedures={procedures}
           />
         </Dialog>
       )}
