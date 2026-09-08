@@ -68,33 +68,34 @@ const AgingReport = () => {
   const handleApplyFilters = (newFilters) => {
     setAppliedFilters(newFilters);
   };
-  
+
   const [batches, setBatches] = useState([]);
 
   const handleGenerateBatch = (config) => {
     setShowGenerateStatements(false);
     setIsGenerating(true);
-    
+
     const newBatchId = Date.now();
     const newBatch = {
       id: newBatchId,
       date: new Date().toLocaleDateString('en-US'),
       status: 'Pending',
-      totalCreated: selectedNames.length || 3,
+      totalCreated: selectedNames.length,
+      patients: [...selectedNames], // Store actual patient names
       sentViaMyChart: 0,
       manualCreated: 0,
       details: { withoutEmails: 0, withMcAccounts: 0, withEmails: 0 },
       myChartSent: null,
       manualPdfs: null,
     };
-    
+
     setBatches(prev => [newBatch, ...prev]);
 
     setTimeout(() => {
       setIsGenerating(false);
       setBatches(prev => prev.map(batch => {
         if (batch.id !== newBatchId) return batch;
-        
+
         const total = batch.totalCreated;
         let withoutEmails = Math.floor(total / 3);
         let withMcAccounts = Math.floor(total / 3);
@@ -149,7 +150,7 @@ const AgingReport = () => {
       }));
     }, 2500);
   };
-  
+
   const dispatch = useDispatch();
   const arAging = useSelector(selectArAging);
   const loading = useSelector(selectArAgingLoading);
@@ -158,7 +159,7 @@ const AgingReport = () => {
 
   const getProviderName = (p) => {
     const first = p.userId?.firstName || p.firstName || p.FName || '';
-    const last  = p.userId?.lastName  || p.lastName  || p.LName  || '';
+    const last = p.userId?.lastName || p.lastName || p.LName || '';
     return `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
   };
 
@@ -187,45 +188,22 @@ const AgingReport = () => {
     dispatch(fetchArAgingReport(appliedFilters));
   }, [dispatch, appliedFilters]);
 
-  useEffect(() => {
-    dispatch(fetchAllProvidersForDropdown());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (tabValue === 1) {
-      const fetchArchived = async () => {
-        setArchivedReportsLoading(true);
-        try {
-          const list = await reportingService.getArchivedReports();
-          setArchivedReportsList(list.filter(r => r.type === 'aging'));
-        } catch (error) {
-          console.error('Failed to fetch archived reports list', error);
-        } finally {
-          setArchivedReportsLoading(false);
-        }
-      };
-      fetchArchived();
-    }
-  }, [tabValue]);
-  const handleViewArchived = async (selectedId) => {
-    const reportItem = archivedReportsList.find(r => r.id === selectedId);
-    
-    if (!selectedId || !reportItem) {
+  const handleViewArchived = (selectedDateStr) => {
+    if (!selectedDateStr) {
       setArchivedDate('');
       setArchivedData([]);
       return;
     }
+
+    setArchivedDate(selectedDateStr);
     
-    setArchivedDate(new Date(reportItem.snapshotDate).toLocaleDateString() + ' ' + new Date(reportItem.snapshotDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    setArchivedLoading(true);
-    try {
-      const result = await reportingService.getArchivedReportById(selectedId);
-      setArchivedData(result.data);
-    } catch (error) {
-      console.error('Failed to fetch archived report', error);
-    } finally {
-      setArchivedLoading(false);
-    }
+    const filteredResult = filteredReportData.filter(row => {
+      if (!row.lastBilled) return false;
+      const billedDateStr = new Date(row.lastBilled).toLocaleDateString();
+      return billedDateStr === selectedDateStr;
+    });
+    
+    setArchivedData(filteredResult);
   };
 
   const handleTabChange = (event, newValue) => {
@@ -297,7 +275,7 @@ const AgingReport = () => {
 
   const handlePrint = (tableId = 'aging-report-all-tables', bucketName = null) => {
     let htmlToPrint = '';
-    
+
     if (tableId === 'aging-report-all-tables') {
       const containerEl = document.getElementById(tableId);
       if (!containerEl) {
@@ -353,7 +331,7 @@ const AgingReport = () => {
       totalIns: 0,
       totalCredit: 0
     };
-    
+
     agingBuckets.forEach(b => {
       sums.buckets[b] = { total: 0, pt: 0, ins: 0 };
     });
@@ -361,7 +339,7 @@ const AgingReport = () => {
     filteredReportData.forEach(row => {
       let rowPtTotal = 0;
       let rowInsTotal = 0;
-      
+
       agingBuckets.forEach(b => {
         const bData = row.buckets?.[b];
         if (bData) {
@@ -370,7 +348,7 @@ const AgingReport = () => {
           sums.buckets[b].pt += ptVal;
           sums.buckets[b].ins += insVal;
           sums.buckets[b].total += (ptVal + insVal);
-          
+
           rowPtTotal += ptVal;
           rowInsTotal += insVal;
         }
@@ -386,7 +364,7 @@ const AgingReport = () => {
   // dummyData is replaced by reportData from API
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       p: 0,
       '@media print': {
         '& .hide-on-print': {
@@ -399,10 +377,10 @@ const AgingReport = () => {
       </Typography>
 
       <Box className="hide-on-print" sx={{ borderBottom: 1, borderColor: '#f1f5f9', mb: 2 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
-          sx={{ 
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          sx={{
             minHeight: 36,
             '& .MuiTabs-indicator': {
               backgroundColor: '#3b82f6',
@@ -410,27 +388,27 @@ const AgingReport = () => {
             }
           }}
         >
-          <Tab 
-            label="Current Report" 
-            sx={{ 
-              textTransform: 'none', 
-              minHeight: 36, 
+          <Tab
+            label="Current Report"
+            sx={{
+              textTransform: 'none',
+              minHeight: 36,
               fontSize: '0.875rem',
               fontWeight: 600,
               color: '#64748b',
               '&.Mui-selected': { color: '#3b82f6' }
-            }} 
+            }}
           />
-          <Tab 
-            label="Archived Reports" 
-            sx={{ 
-              textTransform: 'none', 
-              minHeight: 36, 
+          <Tab
+            label="Archived Reports"
+            sx={{
+              textTransform: 'none',
+              minHeight: 36,
               fontSize: '0.875rem',
               fontWeight: 600,
               color: '#64748b',
               '&.Mui-selected': { color: '#3b82f6' }
-            }} 
+            }}
           />
         </Tabs>
       </Box>
@@ -440,22 +418,23 @@ const AgingReport = () => {
           <Box className="hide-on-print">
             <AgingReportFilters onApplyFilters={handleApplyFilters} />
           </Box>
-          
+
           <Box className="hide-on-print">
-            <AgingReportActions 
-              hidePatientNames={hidePatientNames} 
-              setHidePatientNames={setHidePatientNames} 
+            <AgingReportActions
+              hidePatientNames={hidePatientNames}
+              setHidePatientNames={setHidePatientNames}
               onExportCsv={() => handleExportCSV()}
               onPrint={() => handlePrint()}
               onGenerateStatements={() => setShowGenerateStatements(true)}
               onViewStatements={() => setShowViewGeneratedStatements(true)}
+              selectedCount={selectedNames.length}
             />
           </Box>
 
           <Box id="aging-report-all-tables">
             {appliedFilters.arRange === 'any' ? (
               filteredReportData.length === 0 ? (
-                <AgingReportTable 
+                <AgingReportTable
                   tableId="aging-report-table-empty"
                   loading={loading}
                   reportData={[]}
@@ -491,15 +470,15 @@ const AgingReport = () => {
                         {bucket} Group
                       </Typography>
                       <Box className="hide-on-print">
-                        <AgingReportActions 
-                          hidePatientNames={hidePatientNames} 
-                          setHidePatientNames={setHidePatientNames} 
+                        <AgingReportActions
+                          hidePatientNames={hidePatientNames}
+                          setHidePatientNames={setHidePatientNames}
                           onExportCsv={() => handleExportCSV(bucket, bucketData)}
                           onPrint={() => handlePrint(tableId, bucket)}
                           isSubTable={true}
                         />
                       </Box>
-                      <AgingReportTable 
+                      <AgingReportTable
                         tableId={tableId}
                         loading={loading}
                         reportData={bucketData}
@@ -516,8 +495,8 @@ const AgingReport = () => {
                   );
                 })
               )
-          ) : (
-              <AgingReportTable 
+            ) : (
+              <AgingReportTable
                 tableId="aging-report-table"
                 loading={loading}
                 reportData={filteredReportData}
@@ -543,20 +522,20 @@ const AgingReport = () => {
                   value={archiveFilterDate}
                   onChange={(v) => setArchiveFilterDate(v)}
                   format="MM/DD/YYYY"
-                  slotProps={{ 
+                  slotProps={{
                     popper: { sx: { zIndex: 1400 } },
-                    textField: { 
-                      size: 'small', 
-                      sx: { width: '165px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px', height: '40px', backgroundColor: '#fff' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+                    textField: {
+                      size: 'small',
+                      sx: { width: '165px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '8px', height: '40px', backgroundColor: '#fff' }, '& fieldset': { borderColor: '#e2e8f0' } }
                     }
                   }}
                 />
               </>
             )}
             {archiveFilterDate && (
-              <Button 
-                variant="outlined" 
-                size="small" 
+              <Button
+                variant="outlined"
+                size="small"
                 sx={{ textTransform: 'none', py: 0, height: 26, borderColor: '#e2e8f0', color: '#64748b', '&:hover': { bgcolor: '#f8fafc' } }}
                 onClick={() => {
                   setArchiveFilterDate(null);
@@ -577,34 +556,35 @@ const AgingReport = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {archivedReportsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">Loading archived reports...</Typography></TableCell>
-                    </TableRow>
-                  ) : archivedReportsList.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No archived reports available.</Typography></TableCell>
-                    </TableRow>
-                  ) : (() => {
-                    const visibleReports = archiveFilterDate && archiveFilterDate.isValid()
-                      ? archivedReportsList.filter(r => new Date(r.snapshotDate).toISOString().split('T')[0] === archiveFilterDate.format('YYYY-MM-DD'))
-                      : archivedReportsList;
-                      
-                    if (visibleReports.length === 0) {
+                  {(() => {
+                    const uniqueDates = new Set();
+                    filteredReportData.forEach(row => {
+                      if (row.lastBilled) {
+                        uniqueDates.add(new Date(row.lastBilled).toLocaleDateString());
+                      }
+                    });
+
+                    let visibleDates = Array.from(uniqueDates).sort((a, b) => new Date(b) - new Date(a));
+
+                    if (archiveFilterDate && archiveFilterDate.isValid()) {
+                      const filterDateStr = archiveFilterDate.toDate().toLocaleDateString();
+                      visibleDates = visibleDates.filter(d => d === filterDateStr);
+                    }
+
+                    if (visibleDates.length === 0) {
                       return (
                         <TableRow>
-                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports match the selected date.</Typography></TableCell>
+                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports available.</Typography></TableCell>
                         </TableRow>
                       );
                     }
 
-                    return visibleReports.map((report, idx) => {
-                      const dt = new Date(report.snapshotDate);
-                      const formattedName = `Report - ${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    return visibleDates.map((dateStr, idx) => {
+                      const formattedName = `Report - ${dateStr}`;
                       return (
-                        <TableRow 
-                          key={report.id} 
-                          sx={{ 
+                        <TableRow
+                          key={dateStr}
+                          sx={{
                             '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' },
                             backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff',
                             '&:hover': { backgroundColor: '#f1f5f9' }
@@ -614,20 +594,20 @@ const AgingReport = () => {
                             {formattedName}
                           </TableCell>
                           <TableCell align="right">
-                            <Button 
-                              variant="outlined" 
-                              size="small" 
-                              sx={{ 
-                                textTransform: 'none', 
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                textTransform: 'none',
                                 py: 0.25,
-                                px: 2, 
-                                height: 26, 
+                                px: 2,
+                                height: 26,
                                 fontSize: '0.75rem',
-                                borderColor: '#e2e8f0', 
-                                color: '#3b82f6', 
-                                '&:hover': { bgcolor: '#eff6ff', borderColor: '#3b82f6' } 
+                                borderColor: '#e2e8f0',
+                                color: '#3b82f6',
+                                '&:hover': { bgcolor: '#eff6ff', borderColor: '#3b82f6' }
                               }}
-                              onClick={() => handleViewArchived(report.id)}
+                              onClick={() => handleViewArchived(dateStr)}
                             >
                               Open
                             </Button>
@@ -645,9 +625,9 @@ const AgingReport = () => {
                 <Typography variant="subtitle2" sx={{ color: '#1e293b' }}>
                   Viewing Snapshot: <Box component="span" sx={{ fontWeight: 600, color: '#3b82f6' }}>{archivedDate}</Box>
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  size="small" 
+                <Button
+                  variant="outlined"
+                  size="small"
                   onClick={() => {
                     setArchivedDate('');
                     setArchivedData([]);
@@ -657,7 +637,7 @@ const AgingReport = () => {
                   ← Back to List
                 </Button>
               </Box>
-              <AgingReportTable 
+              <AgingReportTable
                 tableId="aging-report-table-archived"
                 loading={archivedLoading}
                 reportData={archivedData}
@@ -675,19 +655,20 @@ const AgingReport = () => {
         </Box>
       )}
 
-      <AccountNotesDialog 
+      <AccountNotesDialog
         patient={selectedPatientForNotes}
         onClose={() => setSelectedPatientForNotes(null)}
       />
 
-      <GenerateStatementsDialog 
+      <GenerateStatementsDialog
         open={showGenerateStatements}
         onClose={() => setShowGenerateStatements(false)}
         onGenerate={handleGenerateBatch}
+        selectedCount={selectedNames.length}
       />
 
       {showViewGeneratedStatements && (
-        <ViewGeneratedStatementsDialog 
+        <ViewGeneratedStatementsDialog
           batches={batches}
           onClose={() => setShowViewGeneratedStatements(false)}
         />
