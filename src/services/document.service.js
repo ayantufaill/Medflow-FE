@@ -38,6 +38,11 @@ export const documentService = {
     return response.data.data.documents;
   },
 
+  async getDocumentsByAuthorization(authorizationId) {
+    const response = await apiClient.get(`/documents/authorization/${authorizationId}`);
+    return response.data.data.documents;
+  },
+
   async createDocument(documentData) {
     const response = await apiClient.post('/documents', documentData);
     return response.data.data.document;

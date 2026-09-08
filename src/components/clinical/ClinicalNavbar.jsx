@@ -123,7 +123,7 @@ const ClinicalNavbar = () => {
   };
 
   const renderContextBanner = () => {
-    if (!selectedPatientId || !selectedAppointmentId) {
+    if (!selectedPatientId) {
       return (
         <Paper
           variant="outlined"
@@ -144,7 +144,7 @@ const ClinicalNavbar = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <WarningIcon color="warning" />
             <Typography variant="body2" color="warning.main" fontWeight={500}>
-              No active patient or appointment selected. Please select one from the Schedule to bind clinical exams.
+              No active patient selected. Please select one from the Patient Search or Schedule to view clinical records.
             </Typography>
           </Box>
           <Button

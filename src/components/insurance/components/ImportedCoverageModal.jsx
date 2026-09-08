@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogActions,
   Box,
   Typography,
   Button,
@@ -298,74 +300,69 @@ export default function ImportedCoverageModal({
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      sx={{ zIndex: 1400 }}
       PaperProps={{
         sx: {
-          borderRadius: 1.5,
+          borderRadius: '14px',
           overflow: 'hidden',
           boxShadow: 24,
           fontFamily: TYPO.fontFamily,
         },
       }}
     >
-      {/* Blue header */}
-      <Box
-        sx={{
-          bgcolor: 'primary.main',
-          color: 'white',
-          py: 1.5,
-          px: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {showCreateForm || showCreatePlanForm ? (
-            <UploadIcon sx={{ fontSize: 28 }} />
-          ) : (
-            <VolunteerActivismIcon sx={{ fontSize: 28 }} />
-          )}
-          <Typography
-            variant="h6"
-            sx={{
-              fontFamily: TYPO.fontFamily,
-              fontWeight: 700,
-              fontSize: '1.1rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            {showCreatePlanForm
-              ? 'Imported Coverage > Create New Policy > Create New Plan'
-              : showCreateForm
-                ? 'Imported Coverage > Create New Policy'
-                : 'Imported Coverage'}
-          </Typography>
+      {/* Modern header */}
+      <DialogTitle sx={{ 
+        m: 0, 
+        px: 3, 
+        py: 2,
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        backgroundColor: '#F1F5FD',
+        borderBottom: '1px solid #E5E7EB'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '50%',
+            backgroundColor: '#e2ebfc', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            {showCreateForm || showCreatePlanForm ? (
+              <UploadIcon sx={{ color: '#2563EB', fontSize: 20 }} />
+            ) : (
+              <VolunteerActivismIcon sx={{ color: '#2563EB', fontSize: 20 }} />
+            )}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px', color: '#111', lineHeight: '24px', letterSpacing: '-0.4px' }}>
+                {showCreatePlanForm
+                  ? 'Imported Coverage > Create New Policy > Create New Plan'
+                  : showCreateForm
+                    ? 'Imported Coverage > Create New Policy'
+                    : 'Imported Coverage'}
+              </Typography>
+            </Box>
+          </Box>
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ color: 'white' }}>
-          <CloseIcon />
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ color: '#6B7280' }}
+        >
+          <CloseIcon fontSize="small" />
         </IconButton>
-      </Box>
+      </DialogTitle>
 
-      <DialogContent sx={{ p: 0, bgcolor: 'white' }}>
+      <DialogContent sx={{ pt: '32px', px: '24px', pb: '24px', backgroundColor: '#ffffff' }}>
         {inactiveInsurances.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography sx={{ mb: 2, ...TYPO.value, color: '#757575' }}>
+          <Box sx={{ py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ mb: 2, width: 48, height: 48, borderRadius: '50%', backgroundColor: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <VolunteerActivismIcon sx={{ color: '#9CA3AF' }} />
+            </Box>
+            <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#4B5563', mb: 3, fontWeight: 500 }}>
               No imported coverage available.
             </Typography>
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              sx={{
-                fontFamily: TYPO.fontFamily,
-                textTransform: 'uppercase',
-                ...TYPO.button,
-                borderColor: '#9e9e9e',
-                color: '#616161',
-              }}
-            >
-              Cancel
-            </Button>
           </Box>
         ) : showCreateForm ? (
           showCreatePlanForm ? (
@@ -714,37 +711,6 @@ export default function ImportedCoverageModal({
                   </Box>
                 </Grid>
               </Grid>
-
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowCreateForm(false)}
-                  sx={{
-                    fontFamily: TYPO.fontFamily,
-                    textTransform: 'uppercase',
-                    ...TYPO.button,
-                    borderColor: '#9e9e9e',
-                    color: '#616161',
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleSavePolicy}
-                  disabled={creating}
-                  sx={{
-                    fontFamily: TYPO.fontFamily,
-                    textTransform: 'uppercase',
-                    ...TYPO.button,
-                    bgcolor: 'primary.main',
-                    '&:hover': { bgcolor: 'primary.dark' },
-                  }}
-                >
-                  {creating ? 'Saving...' : 'Save Policy'}
-                </Button>
-              </Box>
             </Box>
           </LocalizationProvider>
           )
@@ -827,41 +793,103 @@ export default function ImportedCoverageModal({
               );
             })}
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-                <Button
-                  variant="outlined"
-                  onClick={onClose}
-                  sx={{
-                    fontFamily: TYPO.fontFamily,
-                    textTransform: 'uppercase',
-                    ...TYPO.button,
-                    borderColor: '#9e9e9e',
-                    color: '#616161',
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleCreatePolicyClick}
-                  disabled={creating}
-                  sx={{
-                    fontFamily: TYPO.fontFamily,
-                    textTransform: 'uppercase',
-                    ...TYPO.button,
-                    bgcolor: 'primary.main',
-                    '&:hover': { bgcolor: 'primary.dark' },
-                  }}
-                >
-                  {creating ? 'Creating...' : `Create ${getPolicyTypeLabel(selectedInsurance || inactiveInsurances[0])} Policy`}
-                </Button>
-              </Box>
-            </Box>
           </Box>
         )}
       </DialogContent>
+      <DialogActions sx={{ p: '12px 24px', borderTop: '1px solid #E5E7EB', backgroundColor: '#FFFFFF', justifyContent: 'flex-end', gap: 1.5, flexShrink: 0 }}>
+        {inactiveInsurances.length === 0 ? (
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{
+              borderColor: '#D1D5DB',
+              color: '#374151',
+              backgroundColor: '#FFFFFF',
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: '6px',
+              px: 2,
+              '&:hover': { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }
+            }}
+          >
+            Cancel
+          </Button>
+        ) : showCreateForm ? (
+          <>
+            <Button
+              variant="outlined"
+              onClick={() => setShowCreateForm(false)}
+              sx={{
+                borderColor: '#D1D5DB',
+                color: '#374151',
+                backgroundColor: '#FFFFFF',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '6px',
+                px: 2,
+                '&:hover': { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleSavePolicy}
+              disabled={creating}
+              sx={{
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '6px',
+                px: 2.5,
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' }
+              }}
+            >
+              {creating ? 'Saving...' : 'Save Policy'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="outlined"
+              onClick={onClose}
+              sx={{
+                borderColor: '#D1D5DB',
+                color: '#374151',
+                backgroundColor: '#FFFFFF',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '6px',
+                px: 2,
+                '&:hover': { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleCreatePolicyClick}
+              disabled={creating}
+              sx={{
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '6px',
+                px: 2.5,
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' }
+              }}
+            >
+              {creating ? 'Creating...' : `Create ${getPolicyTypeLabel(selectedInsurance || inactiveInsurances[0])} Policy`}
+            </Button>
+          </>
+        )}
+      </DialogActions>
     </Dialog>
   );
 }

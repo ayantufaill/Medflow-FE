@@ -46,12 +46,8 @@ const PatientDetailPage = () => {
     fetchById(patientId);
     dispatch(fetchAllProvidersForDropdown());
 
-    return () => {
-      // Clear the patient when unmounting to prevent sparse data
-      // from showing if we navigate back from another page that
-      // set the currentPatient to a sparse object.
-      dispatch({ type: 'patient/clearCurrentPatient' });
-    };
+    // Do not clear the patient when unmounting so that the state persists globally
+    // across different sections like Clinical and Finance.
   }, [patientId, fetchById, dispatch]);
 
   useEffect(() => {
