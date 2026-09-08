@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { claimService } from '../services/claim.service';
+import { authorizationService } from '../services/authorization.service';
 
 export const useClaimActions = (onSuccess) => {
   const [loading, setLoading] = useState(false);
@@ -81,12 +82,12 @@ export const useClaimActions = (onSuccess) => {
     if (window.confirm("Are you sure you want to delete this predetermination?")) {
       try {
         setLoading(true);
-        await claimService.updateClaim(claimId, { status: "cancelled" });
-        showMessage("Claim cancelled successfully.");
+        await authorizationService.deleteAuthorization(claimId);
+        showMessage("Predetermination deleted successfully.");
         if (onSuccess) onSuccess();
       } catch (err) {
         console.error(err);
-        alert("Error cancelling claim: " + (err.message || err));
+        alert("Error deleting predetermination: " + (err.message || err));
       } finally {
         setLoading(false);
       }

@@ -33,7 +33,8 @@ import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveD
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectCurrentPatient } from '../../store/slices/patientSlice';
+// AFTER
+import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 import { authorizationService } from '../../services/authorization.service';
@@ -62,6 +63,7 @@ const mapPlanItems = (items, createdAt) => {
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
       scheduled: item.scheduled || '-',
       site: item.site || (item.tooth ? `#${item.tooth}` : '-'),
+      tooth: item.tooth || '',
       code: item.procedureCode || item.code || '-',
       description: item.description || '-',
       icd: item.icd || '-',
@@ -85,7 +87,7 @@ const INITIAL_MOCK_TREATMENT_PLANS = [
 const NewTreatmentPlanPage = () => {
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
-  
+
   useEffect(() => {
     const appointmentId = searchParams.get('appointmentId');
     if (appointmentId) {
@@ -104,24 +106,9 @@ const NewTreatmentPlanPage = () => {
 
   const currentPatient = useSelector(selectCurrentPatient);
   const currentPatientId = currentPatient?._id || currentPatient?.id;
+  const insurancesCache = useSelector(selectPatientInsurancesCache);
 
-  useEffect(() => {
-    setCreatedPreAuthId(null);
-    setCreatedPreAuthPatientId(null);
 
-    if (!currentPatientId) return;
-
-    authorizationService.getAllAuthorizations({ patientId: currentPatientId })
-      .then((result) => {
-        const list = result.authorizations || result.data || result || [];
-        const existing = Array.isArray(list) ? list[0] : null;
-        if (existing) {
-          setCreatedPreAuthId(existing._id || existing.id);
-          setCreatedPreAuthPatientId(currentPatientId);
-        }
-      })
-      .catch((err) => console.error('Failed to load existing pre-auth', err));
-  }, [currentPatientId]);
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -181,6 +168,32 @@ const NewTreatmentPlanPage = () => {
       setSelectedSurfaces([...selectedSurfaces, lbl]);
     }
   };
+  const handleOpenPreAuth = async () => {
+    if (!currentPatientId) return;
+
+    let insurances = insurancesCache?.[currentPatientId]?.data;
+
+    if (!insurances) {
+      try {
+        const result = await dispatch(fetchPatientInsurances({ patientId: currentPatientId })).unwrap();
+        insurances = result.insurances;
+      } catch (err) {
+        setToast({ open: true, message: 'Failed to verify insurance coverage.', type: 'error' });
+        return;
+      }
+    }
+
+    if (!insurances || insurances.length === 0) {
+      setToast({ open: true, message: 'This patient has no insurance on file. Add an insurance plan before creating a Pre-Auth.', type: 'error' });
+      return;
+    }
+    if (createdPreAuthPatientId !== currentPatientId) {
+      setCreatedPreAuthId(null);
+      setCreatedPreAuthPatientId(null);
+    }
+
+    setIsPreAuthModalOpen(true);
+  };
 
   const handleAddProcedure = async (procedure) => {
     if (!currentPatient) {
@@ -204,10 +217,11 @@ const NewTreatmentPlanPage = () => {
       created: dayjs().format('MM/DD/YYYY'),
       scheduled: '-',
       site: formattedSite,
+      tooth: selectedTeeth.length > 0 ? selectedTeeth.join(', ') : '',
       code: procedureCode,
       description: procedureDescription,
       icd: '-',
-      provider: procedure.provider || 'CB',
+      provider: procedure.provider || null,
       negRate: rawFee > 0 ? `$${rawFee.toFixed(2)}` : '$0.00',
       insEst: rawFee > 0 ? `$${estIns.toFixed(2)}` : '$0.00',
       ptEst: rawFee > 0 ? `$${estPt.toFixed(2)}` : '$0.00',
@@ -238,14 +252,14 @@ const NewTreatmentPlanPage = () => {
           return {
             procedureCode: item.code,
             description: item.description,
-            tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+            tooth: item.tooth || '',
             site: item.site,
             fee: itemFee,
             charge: itemFee,
             priority: item.priority,
             status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
             icd: item.icd,
-            provider: item.provider !== 'CB' ? item.provider : null,
+            provider: item.provider || null,
             preAuth: item.preAuth,
             labCase: item.labCase,
             insEst: item.insEst,
@@ -306,14 +320,14 @@ const NewTreatmentPlanPage = () => {
       const payloadItems = newTreatmentPlans.map(item => ({
         procedureCode: item.code,
         description: item.description,
-        tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+        tooth: item.tooth || '',
         site: item.site,
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
         status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
         icd: item.icd,
-        provider: item.provider !== 'CB' ? item.provider : null,
+        provider: item.provider || null,
         preAuth: item.preAuth,
         labCase: item.labCase,
         insEst: item.insEst,
@@ -351,14 +365,14 @@ const NewTreatmentPlanPage = () => {
       const payloadItems = newTreatmentPlans.map(item => ({
         procedureCode: item.code,
         description: item.description,
-        tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+        tooth: item.tooth || '',
         site: item.site,
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
         status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
         icd: item.icd,
-        provider: item.provider !== 'CB' ? item.provider : null,
+        provider: item.provider || null,
         preAuth: item.preAuth,
         labCase: item.labCase,
         insEst: item.insEst,
@@ -396,14 +410,14 @@ const NewTreatmentPlanPage = () => {
       const payloadItems = newTreatmentPlans.map(item => ({
         procedureCode: item.code,
         description: item.description,
-        tooth: item.site?.replace('#', '')?.split(' ')[0] || '',
+        tooth: item.tooth || '',
         site: item.site,
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
         status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
         icd: item.icd,
-        provider: item.provider !== 'CB' ? item.provider : null,
+        provider: item.provider || null,
         preAuth: item.preAuth,
         labCase: item.labCase,
         insEst: item.insEst,
@@ -463,9 +477,9 @@ const NewTreatmentPlanPage = () => {
           '@page': { margin: '10mm' },
           '.MuiTableContainer-root': { overflow: 'visible !important' },
           'table': { width: '100% !important', zoom: '0.65' },
-          '.MuiTableCell-root': { 
-            padding: '2px 4px !important', 
-            fontSize: '9px !important', 
+          '.MuiTableCell-root': {
+            padding: '2px 4px !important',
+            fontSize: '9px !important',
             lineHeight: '1.1 !important',
             whiteSpace: 'normal !important',
             minWidth: '0 !important',
@@ -560,7 +574,7 @@ const NewTreatmentPlanPage = () => {
                     </MenuItem>
                   </OutlinedSelect>
                 </Box>
-                
+
                 <IconButton size="small" onClick={handleAddMenuClick} sx={{ border: '1px solid #0f172a', borderRadius: '50%', width: 24, height: 24, p: 0, ml: 2 }}>
                   <Box component="img" src={plusSvg} alt="add" sx={{ width: 14, height: 14 }} />
                 </IconButton>
@@ -590,7 +604,7 @@ const NewTreatmentPlanPage = () => {
                     Duplicate draft
                   </MenuItem>
                 </Menu>
-                
+
                 <Divider orientation="vertical" flexItem sx={{ mx: 3, my: 0.5, borderColor: '#cbd5e1' }} />
 
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -603,7 +617,7 @@ const NewTreatmentPlanPage = () => {
                     <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
                   </IconButton>
                   <Tooltip title="Pre-Auth">
-                    <IconButton size="small" onClick={() => setIsPreAuthModalOpen(true)}>
+                    <IconButton size="small" onClick={handleOpenPreAuth}>
                       <Box component="img" src={addClaimSvg} alt="add claim" sx={{ width: 22, height: 22 }} />
                     </IconButton>
                   </Tooltip>
@@ -649,21 +663,21 @@ const NewTreatmentPlanPage = () => {
         {activeTab === 2 && (
           <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden', '@media print': { height: 'auto', overflow: 'visible' } }}>
             {showPerioChart ? (
-              <PeriodontalExamPage 
-                embedded={true} 
-                selectedTeethFromParent={selectedTeeth} 
-                onToothClickFromParent={handleToothClick} 
+              <PeriodontalExamPage
+                embedded={true}
+                selectedTeethFromParent={selectedTeeth}
+                onToothClickFromParent={handleToothClick}
               />
             ) : (
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   onClick={() => setShowPerioChart(true)}
-                  sx={{ 
-                    textTransform: 'none', 
-                    fontFamily: 'Inter, sans-serif', 
-                    fontWeight: 600, 
-                    borderRadius: '8px', 
+                  sx={{
+                    textTransform: 'none',
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 600,
+                    borderRadius: '8px',
                     boxShadow: 'none',
                     backgroundColor: COLORS.ACCENT,
                     '&:hover': {
@@ -697,6 +711,9 @@ const NewTreatmentPlanPage = () => {
         onSave={(newId) => {
           setCreatedPreAuthId(newId);
           setCreatedPreAuthPatientId(currentPatientId);
+        }}
+        onDelete={() => {
+          setCreatedPreAuthId(null);
         }}
         patientId={currentPatientId}
         selectedProcedures={treatmentPlans}
