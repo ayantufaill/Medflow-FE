@@ -54,19 +54,7 @@ const OPERATORY_COLORS = [
   "#ab47bc", "#29b6f6", "#66bb6a", "#ffa726", "#ec407a",
 ];
 
-// Status-based colors (background) for appointment cards
-const STATUS_COLORS = {
-  unconfirmed: "#9e9e9e",
-  preconfirmed: "#5c6bc0",
-  confirmed: "#1976d2",
-  seated: "#00796b",
-  call: "#6d4c41",
-  checked_out_incomplete: "#f9a825",
-  checked_out_complete: "#2e7d32",
-  no_show: "#616161",
-  rescheduled: "#6a1b9a",
-  cancelled: "#c62828",
-};
+// Status-based colors are now imported from COLORS.APPOINTMENT_STATUS
 
 // Uses UUID-like format to satisfy common ID validators
 const DUMMY_PROVIDER_ID = "01";
@@ -84,7 +72,7 @@ const providerLabel = (p) => {
 const getStatusColor = (status, fallback) => {
   if (!status) return fallback;
   const key = String(status).toLowerCase();
-  return STATUS_COLORS[key] || fallback;
+  return COLORS.APPOINTMENT_STATUS[key] || fallback;
 };
 
 // Utility functions

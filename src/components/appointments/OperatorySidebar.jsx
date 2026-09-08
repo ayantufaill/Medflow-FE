@@ -4,6 +4,7 @@ import { updateAppointmentThunk, fetchPatientHistory, selectPatientHistoryList, 
 import { fetchCurrentPracticeInfo, selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { usePatientInsurance } from "../../hooks/redux/usePatientInsurance";
 import dayjs from "dayjs";
+import { isCheckedOutStatus, isFutureDateTime } from "../../utils/statusRules";
 import {
   Autocomplete,
   Box,
@@ -1598,32 +1599,41 @@ const SidebarAppointmentCard = ({ appointment, onClick }) => {
       </Box>
       <Box sx={{ p: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Select
-            value={currentStatus}
-            onChange={(e) => {
-              const newStatus = e.target.value;
-              dispatch(updateAppointmentThunk({
-                appointmentId: appointment._id || appointment.id,
-                payload: { status: newStatus }
-              }));
-            }}
-            onClick={(e) => e.stopPropagation()}
-            size="small"
-            sx={{
-              height: 28,
-              fontSize: "0.75rem",
-              "& .MuiSelect-select": { py: 0.25, pl: 1 },
-              width: "145px",
-              borderRadius: "4px",
-              bgcolor: "#fff"
-            }}
-          >
-            {APPOINTMENT_STATUS_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.75rem" }}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </Select>
+          {(() => {
+            const isLocked = isCheckedOutStatus(currentStatus);
+            const isFuture = appointment.start || appointment.appointmentDate
+              ? isFutureDateTime(appointment.start || appointment.appointmentDate)
+              : false;
+            return (
+              <Select
+                value={currentStatus}
+                disabled={isLocked || isFuture}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  dispatch(updateAppointmentThunk({
+                    appointmentId: appointment._id || appointment.id,
+                    payload: { status: newStatus }
+                  }));
+                }}
+                onClick={(e) => e.stopPropagation()}
+                size="small"
+                sx={{
+                  height: 28,
+                  fontSize: "0.75rem",
+                  "& .MuiSelect-select": { py: 0.25, pl: 1 },
+                  width: "145px",
+                  borderRadius: "4px",
+                  bgcolor: (isLocked || isFuture) ? "#f1f5f9" : "#fff"
+                }}
+              >
+                {APPOINTMENT_STATUS_OPTIONS.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.75rem" }}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            );
+          })()}
           <Typography sx={{ fontSize: '0.75rem', color: '#999', fontWeight: 700 }}>P1 V{appointment.id?.toString().slice(-1) || '1'}</Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1, mb: 1 }}>

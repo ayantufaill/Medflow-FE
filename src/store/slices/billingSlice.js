@@ -62,6 +62,14 @@ const isDbiProcedure = (item = {}) =>
   item.dbi === 1 ||
   String(item.dbi).toLowerCase() === "true";
 
+const isPatientPenaltyItem = (item = {}) =>
+  Boolean(
+    item.isPatientPenalty ||
+    item.isAccountPenalty ||
+    item.patientOnly ||
+    item.accountPenalty,
+  );
+
 export const createInvoice = createAsyncThunk(
   "billing/createInvoice",
   async (invoiceData, { rejectWithValue }) => {
@@ -110,6 +118,15 @@ export const fetchLedgerItems = createAsyncThunk(
         const rawPt = Number(invoice.patientPortion || 0);
         const rawIns = Number(invoice.insurancePortion || 0);
         const originalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
+        const penaltyItems = (invoice.lineItems || []).filter(
+          isPatientPenaltyItem,
+        );
+        const penaltyTotal = penaltyItems.reduce((sum, item) => {
+          const charge = Number(
+            item.charge || item.total || item.totalPrice || item.amount || 0,
+          );
+          return sum + charge;
+        }, 0);
 
         // Map payments and claims associated with this invoice
         const invoicePms = payments.filter(
@@ -324,11 +341,11 @@ export const fetchLedgerItems = createAsyncThunk(
 
         const adjustedPtBal = Math.max(
           0,
-          rawPt - effectivePtPaid - insOverpayment,
+          rawPt + penaltyTotal - effectivePtPaid - insOverpayment,
         );
         const adjustedInsBal = Math.max(
           0,
-          rawIns - totalInsPaidAmt - ptOverpayment,
+          rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
         );
         const adjustedInvBal = Math.max(
           0,

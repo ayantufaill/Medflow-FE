@@ -1,3 +1,5 @@
+import { COLORS } from '../../../constants/colors';
+
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export const TIME_LABEL_WIDTH = 52;   // px — width of the time gutter on the left
@@ -19,19 +21,7 @@ export const OPERATORY_COLORS = [
 ];
 
 // Maps appointment status (lowercase) → card accent colour used in the grid.
-export const STATUS_COLORS = {
-  unconfirmed:           '#9e9e9e',
-  preconfirmed:          '#5c6bc0',
-  confirmed:             '#2362EF',
-  scheduled:             '#2362EF',
-  seated:                '#00796b',
-  'checkout incomplete': '#f9a825',
-  'checkout complete':   '#2e7d32',
-  'no show':             '#616161',
-  rescheduled:           '#6a1b9a',
-  cancelled:             '#c62828',
-  completed:             '#2e7d32',
-};
+export const STATUS_COLORS = COLORS.APPOINTMENT_STATUS;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

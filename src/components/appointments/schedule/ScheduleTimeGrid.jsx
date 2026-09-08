@@ -196,7 +196,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     durationMinutes,
     roomId: appt.roomId || null,
     provider: providerName,
-    headerColor: STATUS_COLORS[statusKey] || "#2262ef",
+    headerColor: mappedProvider?.color || appt.providerColor || "#2262ef",
     procedures: procString,
     description: appt.notes || appt.reason || "",
     tags: tagsArray,
