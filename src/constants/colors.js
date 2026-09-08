@@ -27,6 +27,24 @@ export const COLORS = {
   STATUS_SUCCESS:      '#16a34a',
   STATUS_WARNING:      '#ea580c',
 
+  /* ── Appointment Statuses ───────────────────────────── */
+  APPOINTMENT_STATUS: {
+    unconfirmed:            '#9e9e9e', // Gray
+    preconfirmed:           '#7c3aed', // Purple
+    confirmed:              '#1976d2', // Blue
+    arrived:                '#0ea5e9', // Light Blue
+    seated:                 '#00796b', // Teal
+    completed:              '#10b981', // Emerald Green
+    checked_out_complete:   '#2e7d32', // Dark Green
+    checked_out_incomplete: '#f9a825', // Yellow/Orange
+    call:                   '#6d4c41', // Brown
+    no_show:                '#616161', // Dark Gray
+    rescheduled:            '#6a1b9a', // Deep Purple
+    cancelled:              '#c62828', // Red
+    draft:                  '#cbd5e1', // Slate 300
+    scheduled:              '#d6c71eff', // Same as unconfirmed
+  },
+
   /* ── Surfaces ───────────────────────────────────────── */
   SURFACE_PAGE:   '#f0f2f5',   // page background
   SURFACE_CARD:   '#ffffff',   // card background
