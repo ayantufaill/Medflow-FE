@@ -48,38 +48,28 @@ const InfoRow = ({ label, labelSuffix, children }) => (
 
 /* ── status badge ────────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
-  const styles = {
-    SCHEDULED:               { dot: "#64748b", bg: "#f1f5f9", color: "#475569" },
-    UNCONFIRMED:             { dot: COLORS.STATUS_UNCONFIRMED, bg: "#fef3c7", color: COLORS.STATUS_UNCONFIRMED },
-    PRECONFIRMED:            { dot: COLORS.STATUS_PRECONFIRMED, bg: "#ede9fe", color: COLORS.STATUS_PRECONFIRMED },
-    CONFIRMED:               { dot: COLORS.STATUS_CONFIRMED, bg: "#dcfce7", color: COLORS.STATUS_CONFIRMED },
-    ARRIVED:                 { dot: "#0284c7", bg: "#e0f2fe", color: "#0369a1" },
-    READY_TO_BE_SEATED:      { dot: "#0891b2", bg: "#cffafe", color: "#0e7490" },
-    SEATED:                  { dot: "#2563eb", bg: "#dbeafe", color: "#1d4ed8" },
-    READY_FOR_DOCTOR:        { dot: "#7c3aed", bg: "#ede9fe", color: "#6d28d9" },
-    IN_TREATMENT:            { dot: "#0d9488", bg: "#ccfbf1", color: "#0f766e" },
-    READY_FOR_CHECKOUT:      { dot: "#16a34a", bg: "#dcfce7", color: "#15803d" },
-    CHECKED_OUT_INCOMPLETE:  { dot: "#ea580c", bg: "#ffedd5", color: "#c2410c" },
-    CHECKED_OUT_COMPLETE:    { dot: "#22c55e", bg: "#dcfce7", color: "#15803d" },
-    COMPLETED:               { dot: "#22c55e", bg: "#dcfce7", color: "#15803d" },
-    NO_SHOW:                 { dot: "#dc2626", bg: "#fee2e2", color: "#b91c1c" },
-    CANCELLED:               { dot: "#dc2626", bg: "#fee2e2", color: "#b91c1c" },
-    RESCHEDULED:             { dot: "#9333ea", bg: "#f3e8ff", color: "#7e22ce" },
-    RUNNING_LATE:            { dot: "#d97706", bg: "#fef3c7", color: "#b45309" },
-    LATE:                    { dot: "#d97706", bg: "#fef3c7", color: "#b45309" },
-    CALL:                    { dot: "#2563eb", bg: "#dbeafe", color: "#1d4ed8" },
-    LEFT_MESSAGE:            { dot: "#64748b", bg: "#f1f5f9", color: "#475569" },
-    SENT_EMAIL_OR_TEXT:      { dot: "#0891b2", bg: "#cffafe", color: "#0e7490" },
+  const normalizedStatus = String(status || 'UNCONFIRMED').toUpperCase();
+  const s = normalizedStatus.toLowerCase();
+  const baseColor = COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed;
+  
+  // Create a light background version of the base color by using opacity
+  const style = {
+    dot: baseColor,
+    color: baseColor,
+    bg: `${baseColor}20` // 20 hex is ~12% opacity
   };
-  const key = String(status || "").toUpperCase();
-  const label = key
-    ? key.toLowerCase().split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
-    : "Unknown";
-  const s = styles[key] || { dot: "#64748b", bg: "#f1f5f9", color: "#475569" };
+
   return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: s.bg, borderRadius: "20px", px: "8px", py: "2px" }}>
-      <Box sx={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: s.dot, flexShrink: 0 }} />
-      <Typography sx={{ fontSize: fontSize.sm, color: s.color }}>{label}</Typography>
+    <Box sx={{
+      display: "inline-flex", alignItems: "center", gap: "6px",
+      backgroundColor: style.bg,
+      borderRadius: "12px",
+      px: "8px", py: "2px"
+    }}>
+      <Box sx={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: style.dot, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: fontSize.sm, fontWeight: 700, color: style.color, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+        {normalizedStatus.replace(/_/g, ' ')}
+      </Typography>
     </Box>
   );
 };

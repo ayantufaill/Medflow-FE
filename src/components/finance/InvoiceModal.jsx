@@ -23,6 +23,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
@@ -38,6 +40,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [addClaim, setAddClaim] = useState(false);
+  const [dupWarning, setDupWarning] = useState("");
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
 
@@ -960,6 +963,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             <AddNewProcedureDialog
               onClose={() => setShowAddProcedure(false)}
               onSave={handleSaveProcedure}
+              existingProcedures={procedures}
             />
           </Box>
         </Box>

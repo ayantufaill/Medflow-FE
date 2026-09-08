@@ -118,13 +118,24 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const [localClaimEobs, setLocalClaimEobs] = useState(attachingClaim?.eobs || []);
   const [previewDialog, setPreviewDialog] = useState({ open: false, title: '', html: '' });
 
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
+
   useEffect(() => {
-    if (attachingClaim) {
-      setExistingAttachments(attachingClaim.attachments || []);
-      setUploadedFiles([]);
-      setLocalClaimEobs(attachingClaim.eobs || []);
-    }
-  }, [attachingClaim]);
+  const claimId = attachingClaim?._id || attachingClaim?.id;
+  if (!claimId) return;
+
+  setUploadedFiles([]);
+  setLocalClaimEobs(attachingClaim.eobs || []);
+  setLoadingAttachments(true);
+
+  claimService.getClaimDocuments(claimId)
+    .then((docs) => setExistingAttachments(docs || []))
+    .catch((err) => {
+      console.error('Failed to load claim attachments', err);
+      setExistingAttachments([]);
+    })
+    .finally(() => setLoadingAttachments(false));
+}, [attachingClaim]);
 
   const hasAnyAttachments = existingAttachments.length > 0 || uploadedFiles.length > 0;
 
@@ -251,25 +262,47 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
           </Typography>
 
           <Typography sx={{ fontWeight: 600, color: COLORS.TEXT_PRIMARY, fontSize: '0.95rem', mb: 1, fontFamily: 'Inter, sans-serif' }}>
-            Previously Attached Files
-          </Typography>
-          {existingAttachments.length > 0 ? (
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              {existingAttachments.map((attachment, index) => (
+  Previously Attached Files
+</Typography>
+{loadingAttachments ? (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+    <CircularProgress size={16} />
+    <Typography sx={{ fontSize: '0.8125rem', color: COLORS.TEXT_SECONDARY, fontFamily: 'Inter, sans-serif' }}>
+      Loading attachments...
+    </Typography>
+  </Box>
+) : existingAttachments.length > 0 ? (
+  <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+    {existingAttachments.map((attachment, index) => (
                 <Box key={index} sx={{ position: 'relative', width: 80, height: 100, border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
                   <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#f1f5f9', color: '#64748b' }}>
                     <DescriptionIcon sx={{ fontSize: 32 }} />
                     <Typography sx={{ fontSize: '0.6rem', mt: 0.5, textAlign: 'center', px: 0.5, wordBreak: 'break-word', lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {attachment.name || 'Doc'}
-                    </Typography>
+  {attachment.name || attachment.documentName || 'Doc'}
+</Typography>
                   </Box>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => setExistingAttachments(prev => prev.filter((_, i) => i !== index))}
-                    sx={{ position: 'absolute', top: -5, right: -5, bgcolor: '#fff', p: 0.2, '&:hover': { bgcolor: '#fff' } }}
-                  >
-                    <CancelIcon sx={{ fontSize: 16, color: '#666' }} />
-                  </IconButton>
+                  <IconButton
+  size="small"
+  onClick={async () => {
+    const claimId = attachingClaim?._id || attachingClaim?.id;
+    const docId = attachment._id || attachment.id;
+    if (!claimId || !docId) {
+      // Fallback for any legacy/local-only entries without a real document id
+      setExistingAttachments(prev => prev.filter((_, i) => i !== index));
+      return;
+    }
+    try {
+      await claimService.removeClaimDocument(claimId, docId);
+      setExistingAttachments(prev => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      console.error('Failed to remove attachment', err);
+      alert('Failed to remove attachment. Please try again.');
+    }
+  }}
+  sx={{ position: 'absolute', top: -5, right: -5, bgcolor: '#fff', p: 0.2, '&:hover': { bgcolor: '#fff' } }}
+>
+  <CancelIcon sx={{ fontSize: 16, color: '#666' }} />
+</IconButton>
                   <SearchIcon sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: '#333', bgcolor: 'rgba(255,255,255,0.7)', borderRadius: '50%' }} />
                 </Box>
               ))}

@@ -10,22 +10,18 @@ import { STATUS_OPTIONS } from '../new-appointment/constants';
 import { appointmentService } from '../../../services/appointment.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 
-const STATUS_CONFIG = {
-  PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
-  UNCONFIRMED: { bg: COLORS.STATUS_UNCONFIRMED },
-  CONFIRMED: { bg: COLORS.STATUS_CONFIRMED },
-};
+// Removed STATUS_CONFIG as it's now handled by COLORS.APPOINTMENT_STATUS
 
 
 
 // Single-color status stripe to match AppointmentCard
 const StatusBanner = ({ status }) => {
-  const s = String(status || 'UNCONFIRMED').toUpperCase();
-  const statusCfg = STATUS_CONFIG[s] ?? STATUS_CONFIG.CONFIRMED;
+  const s = String(status || 'UNCONFIRMED').toLowerCase();
+  const bgColor = COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed;
   return (
-    <Box sx={{ backgroundColor: statusCfg.bg, py: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Box sx={{ backgroundColor: bgColor, py: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Typography sx={{ fontSize: '9px', fontWeight: fontWeight.bold, color: '#fff', letterSpacing: '0.7px' }}>
-        {s.replace(/_/g, ' ')}
+        {s.toUpperCase().replace(/_/g, ' ')}
       </Typography>
     </Box>
   );

@@ -109,4 +109,14 @@ export const authorizationService = {
     });
     return response.data;
   },
+
+  /**
+   * Delete authorization
+   * @param {string} authorizationId - Authorization ID
+   * @returns {Promise<Object>} Deletion response
+   */
+  async deleteAuthorization(authorizationId) {
+    const response = await apiClient.delete(`/authorizations/${authorizationId}`);
+    return response.data;
+  },
 };

@@ -2,10 +2,14 @@ import React from 'react';
 import { Box, Typography, Select, MenuItem, Avatar, TextField } from '@mui/material';
 import { AccessTimeOutlined, InsertDriveFileOutlined } from '@mui/icons-material';
 import { STATUS_OPTIONS } from '../../new-appointment/constants';
+import { isCheckedOutStatus } from '../../../../utils/statusRules';
 
 const AppointmentDetailStatus = ({ 
-  status, setStatus, durationMinutes, provider, notes, isRescheduling 
+  status, setStatus, durationMinutes, provider, notes, isRescheduling,
+  isFuture = false, isStatusLocked = false,
 }) => {
+  const locked = isStatusLocked || isCheckedOutStatus(status);
+
   return (
     <Box sx={{ width: '260px', height: '330px', border: '1px solid #e2e8f0', borderRadius: '12px', p: '20px', flexShrink: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <Box>
@@ -33,13 +37,14 @@ const AppointmentDetailStatus = ({
             }}
             fullWidth
             size="small" 
+            disabled={locked || isFuture}
             value={status} 
             onChange={(e) => setStatus(e.target.value)}
             sx={{ 
               fontFamily: 'Inter', fontSize: '13px',
               height: '36px', borderRadius: '8px',
               '& .MuiOutlinedInput-notchedOutline': { borderWidth: '1px' },
-              bgcolor: '#ffffff'
+              bgcolor: (locked || isFuture) ? '#f8fafc' : '#ffffff'
             }}
           >
             {STATUS_OPTIONS.map((o) => (

@@ -71,6 +71,9 @@ const AppointmentLeftPanel = ({
   appointmentId,
   status,
   onStatusChange,
+  isFuture = false,
+  isStatusLocked = false,
+  isPatientOccupied = false,
 }) => {
   const [previousStatus, setPreviousStatus] = useState("scheduled");
   const [showPastVisits, setShowPastVisits] = useState(false);
@@ -106,8 +109,14 @@ const AppointmentLeftPanel = ({
       ? unbilled.reduce((s, u) => s + (Number(u.fee || u.amount || 0) || 0), 0)
       : 0;
 
-    if (procedures.length === 0 && (!Array.isArray(unbilled) || unbilled.length === 0)) {
-      showSnackbar("No procedures or products to collect payment for.", "warning");
+    if (
+      procedures.length === 0 &&
+      (!Array.isArray(unbilled) || unbilled.length === 0)
+    ) {
+      showSnackbar(
+        "No procedures or products to collect payment for.",
+        "warning",
+      );
       return;
     }
 
@@ -382,17 +391,31 @@ const AppointmentLeftPanel = ({
             display: "flex",
             gap: "12px",
             mb: "20px",
-            alignItems: "flex-end",
+            alignItems: "flex-start",
           }}
         >
-          <PatientSearchField
-            patients={patients}
-            loadingPatients={loadingPatients}
-            value={patient}
-            onChange={onPatientChange}
-            onSearch={onPatientSearch}
-            error={patientError}
-          />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <PatientSearchField
+              patients={patients}
+              loadingPatients={loadingPatients}
+              value={patient}
+              onChange={onPatientChange}
+              onSearch={onPatientSearch}
+              error={patientError}
+            />
+            {isPatientOccupied && (
+              <Typography
+                sx={{
+                  color: "#ef4444",
+                  fontSize: "12px",
+                  mt: "6px",
+                  fontFamily: "Inter",
+                }}
+              >
+                This patient is occupied at the selected time.
+              </Typography>
+            )}
+          </Box>
 
           <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -663,6 +686,7 @@ const AppointmentLeftPanel = ({
           providers={providers}
           showExtendedOptions={showExtendedOptions}
           setIsRescheduling={setIsRescheduling}
+          isFuture={isFuture}
         />
 
         {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
@@ -681,6 +705,7 @@ const AppointmentLeftPanel = ({
                 control={
                   <Checkbox
                     size="small"
+                    disabled={isFuture || isStatusLocked}
                     checked={status === "checked_out_complete"}
                     onChange={(e) => {
                       const isChecked = e.target.checked;
@@ -696,6 +721,7 @@ const AppointmentLeftPanel = ({
                     sx={{
                       color: "#d1d5db",
                       "&.Mui-checked": { color: "#2262ef" },
+                      "&.Mui-disabled": { color: "#e5e7eb" },
                     }}
                   />
                 }
@@ -704,7 +730,7 @@ const AppointmentLeftPanel = ({
                     sx={{
                       fontFamily: "Inter",
                       fontSize: "12px",
-                      color: "#374151",
+                      color: isFuture || isStatusLocked ? "#9ca3af" : "#374151",
                       mr: 1,
                     }}
                   >
@@ -717,12 +743,16 @@ const AppointmentLeftPanel = ({
                 <Button
                   variant="contained"
                   disableElevation
+                  disabled={isFuture || isStatusLocked}
                   onClick={() => {
+                    const allCompleted = procedures.length > 0 && procedures.every((p) => p.completed);
                     setProcedures((prev) =>
-                      prev.map((p) => ({ ...p, completed: true })),
+                      prev.map((p) => ({ ...p, completed: !allCompleted })),
                     );
-                    if (onStatusChange) onStatusChange("completed");
-                    if (setIsRescheduling) setIsRescheduling(true);
+                    if (!allCompleted) {
+                      if (onStatusChange) onStatusChange("completed");
+                      if (setIsRescheduling) setIsRescheduling(true);
+                    }
                   }}
                   sx={{
                     fontFamily: "Inter",
@@ -735,13 +765,21 @@ const AppointmentLeftPanel = ({
                     px: "12px",
                     py: "5px",
                     "&:hover": { backgroundColor: "#1a50cc" },
+                    "&.Mui-disabled": { backgroundColor: "#e2e8f0", color: "#94a3b8" },
                   }}
                 >
-                  Complete All
+                  {(() => {
+                    const allCompleted = procedures.length > 0 && procedures.every((p) => p.completed);
+                    const someCompleted = procedures.some((p) => p.completed);
+                    if (allCompleted) return "Incomplete All";
+                    if (someCompleted) return "Complete";
+                    return "Complete All";
+                  })()}
                 </Button>
                 <Button
                   variant="contained"
                   disableElevation
+                  disabled={isFuture}
                   onClick={handleCollectPayment}
                   sx={{
                     fontFamily: "Inter",
@@ -754,6 +792,7 @@ const AppointmentLeftPanel = ({
                     px: "12px",
                     py: "5px",
                     "&:hover": { backgroundColor: "#ea6c00" },
+                    "&.Mui-disabled": { backgroundColor: "#fed7aa", color: "#9a3412" },
                   }}
                 >
                   Collect Payments
@@ -782,8 +821,10 @@ const AppointmentLeftPanel = ({
         <PastVisitProceduresSelector
           open={showPastVisits}
           onClose={() => setShowPastVisits(false)}
+          patient={patient}
           patientId={patient?.id || patient?._id || patient?.PatNum}
           onAdd={handleAddPastProcedure}
+          onAddProcedure={handleAddPastProcedure}
         />
 
         {/* Invoice Modal */}

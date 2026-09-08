@@ -4,21 +4,12 @@ import { EventBusy as EventBusyIcon } from "@mui/icons-material";
 import dayjs from "dayjs";
 import { COLORS } from "../../../../constants/colors";
 
-const STATUS_COLOR_MAP = {
-  scheduled:              { bg: '#dbeafe', text: '#2563eb', label: 'Scheduled' },
-  completed:              { bg: '#dcfce7', text: '#16a34a', label: 'Completed' },
-  confirmed:              { bg: '#dcfce7', text: '#16a34a', label: 'Confirmed' },
-  unconfirmed:            { bg: '#fef9c3', text: '#ca8a04', label: 'Unconfirmed' },
-  preconfirmed:           { bg: '#dbeafe', text: '#2563eb', label: 'Preconfirmed' },
-  seated:                 { bg: '#ede9fe', text: '#7c3aed', label: 'Seated' },
-  no_show:                { bg: '#fee2e2', text: '#dc2626', label: 'No Show' },
-  cancelled:              { bg: '#fee2e2', text: '#dc2626', label: 'Cancelled' },
-  checked_out_complete:   { bg: '#dcfce7', text: '#16a34a', label: 'Checked Out' },
-  checked_out_incomplete: { bg: '#fef9c3', text: '#ca8a04', label: 'Incomplete' },
+const getStatusColor = (status) => {
+  const s = String(status || '').toLowerCase();
+  const bg = COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed;
+  const label = s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return { bg, text: '#fff', label: label || 'Unknown' };
 };
-
-const getStatusColor = (status) =>
-  STATUS_COLOR_MAP[status] || { bg: COLORS.SURFACE_TINT, text: COLORS.TEXT_SECONDARY, label: status || 'Unknown' };
 
 const FamilyAppointmentsDueTab = ({ dueAppointments, getPatientName }) => {
   return (

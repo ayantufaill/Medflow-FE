@@ -7,7 +7,7 @@ import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading 
 import { COLORS } from '../../constants/colors';
 import { NoteAdd as NoteAddIcon } from '@mui/icons-material';
 
-const AddNewProcedureDialog = ({ onClose, onSave }) => {
+const AddNewProcedureDialog = ({ onClose, onSave, existingProcedures = [] }) => {
   const maxillaryUR = [1, 2, 3, 4, 5];
   const maxillaryUA = [6, 7, 8, 'Q1', '', 'Q2', 9, 10, 11];
   const maxillaryUL = [12, 13, 14, 15, 16];
@@ -488,9 +488,32 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
             label="Don't Change Code"
             sx={{ '& .MuiTypography-root': { fontSize: '13px', fontWeight: 'bold', color: '#374151' } }}
           />
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button
-              variant="contained"
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            {(() => {
+              let proc = selectedProcedure;
+              if (!proc && inputValue) {
+                const match = (allCodes || []).find(c => 
+                  (c.ProcCode && c.ProcCode.toLowerCase() === inputValue.toLowerCase()) || 
+                  (c.code && c.code.toLowerCase() === inputValue.toLowerCase()) ||
+                  (c.Descript && c.Descript.toLowerCase() === inputValue.toLowerCase())
+                );
+                proc = match || { ProcCode: inputValue };
+              }
+              const currentCode = typeof proc === 'string' ? proc : proc?.ProcCode || proc?.code;
+              const isDuplicate = currentCode && existingProcedures.some(
+                p => p.code && p.code.toLowerCase() === currentCode.toLowerCase()
+              );
+
+              return (
+                <>
+                  {isDuplicate && (
+                    <Typography sx={{ color: '#d32f2f', fontSize: '13px', fontWeight: 'bold' }}>
+                      Procedure "{currentCode}" already added.
+                    </Typography>
+                  )}
+                  <Button
+                    variant="contained"
+                    disabled={isDuplicate}
               onClick={() => {
                 let proc = selectedProcedure;
                 if (!proc && inputValue) {
@@ -522,11 +545,15 @@ const AddNewProcedureDialog = ({ onClose, onSave }) => {
                 textTransform: 'none',
                 boxShadow: 'none',
                 px: 4,
-                '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' }
+                '&:hover': { bgcolor: '#1565c0', boxShadow: 'none' },
+                '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
               }}
             >
               Save
             </Button>
+            </>
+          );
+        })()}
             <Button
               variant="outlined"
               onClick={onClose}

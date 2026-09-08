@@ -5,12 +5,12 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, setIsRescheduling }) => {
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, setIsRescheduling, isFuture = false }) => {
   const [isEditing, setIsEditing] = useState(!showExtendedOptions);
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
 
@@ -32,10 +32,11 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
   const handleToggleCompleted = useCallback(
     () => {
+      if (isFuture) return;
       setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, completed: !p.completed } : p));
       if (setIsRescheduling) setIsRescheduling(true);
     },
-    [row.id, setProcedures, setIsRescheduling],
+    [row.id, setProcedures, setIsRescheduling, isFuture],
   );
 
   const parseCharge = (v) => {
@@ -154,9 +155,19 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
             )}
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
-            <Box onClick={handleToggleCompleted} sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Box
+              onClick={isFuture ? undefined : handleToggleCompleted}
+              title={isFuture ? "Cannot complete procedure for a future appointment" : undefined}
+              sx={{
+                cursor: isFuture ? "not-allowed" : "pointer",
+                opacity: isFuture ? 0.4 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               {row.completed ? (
-                <CheckCircleIcon sx={{ fontSize: "18px", color: "#4ade80" }} />
+                <CheckCircleIcon sx={{ fontSize: "18px", color: isFuture ? "#9ca3af" : "#4ade80" }} />
               ) : (
                 <CheckCircleOutlineIcon sx={{ fontSize: "18px", color: "#d1d5db" }} />
               )}
@@ -168,7 +179,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
               onClick={() => setIsEditing(!isEditing)} 
               sx={{ p: "2px", color: isEditing ? "#2262ef" : "#9aa3ae", backgroundColor: isEditing ? "#eef2ff" : "transparent" }}
             >
-              <SettingsOutlinedIcon sx={{ fontSize: "16px" }} />
+              <EditOutlinedIcon sx={{ fontSize: "16px" }} />
             </IconButton>
           </TableCell>
         </>
@@ -184,7 +195,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
 });
 
-const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, setIsRescheduling }) => {
+const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, setIsRescheduling, isFuture = false }) => {
   const baseHeaders = [
     { label: "PROCEDURE", width: showExtendedOptions ? "72px" : "88px" },
     { label: "SITE",      width: "18%"  },
@@ -225,6 +236,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
                 setProcedures={setProcedures}
                 showExtendedOptions={showExtendedOptions}
                 setIsRescheduling={setIsRescheduling}
+                isFuture={isFuture}
               />
             ))}
             {procedures.length === 0 && (

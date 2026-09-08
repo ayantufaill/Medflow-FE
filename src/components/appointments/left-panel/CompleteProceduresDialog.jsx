@@ -38,6 +38,8 @@ const CompleteProceduresDialog = ({
   onCompleteAll,
   onCollectPayments,
   onDone,
+  isFuture = false,
+  isStatusLocked = false,
 }) => {
   const [completedMap, setCompletedMap] = useState({});
 
@@ -219,9 +221,19 @@ const CompleteProceduresDialog = ({
                     {row.charge}
                   </TableCell>
                   <TableCell align="center" sx={{ py: 1 }}>
-                    <Box onClick={() => toggleCompleted(index)} sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box
+                      onClick={() => !isFuture && toggleCompleted(index)}
+                      title={isFuture ? "Cannot complete procedure for a future appointment" : undefined}
+                      sx={{
+                        cursor: isFuture ? "not-allowed" : "pointer",
+                        opacity: isFuture ? 0.4 : 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
                       {completedMap[index] ? (
-                        <CheckCircleIcon sx={{ fontSize: "18px", color: "#4ade80" }} />
+                        <CheckCircleIcon sx={{ fontSize: "18px", color: isFuture ? "#9ca3af" : "#4ade80" }} />
                       ) : (
                         <CheckCircleOutlineIcon sx={{ fontSize: "18px", color: "#d1d5db" }} />
                       )}
@@ -236,6 +248,7 @@ const CompleteProceduresDialog = ({
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Button
             onClick={onAddProcedure}
+            disabled={isFuture || isStatusLocked}
             sx={{
               color: "#1976d2",
               textTransform: "none",
@@ -249,14 +262,14 @@ const CompleteProceduresDialog = ({
           <Button
             variant="contained"
             disableElevation
+            disabled={isFuture || isStatusLocked}
             onClick={() => {
-              if (onCompleteAll) {
-                // Check all internally and pass all
-                const allMap = {};
-                proceduresData.forEach((_, idx) => { allMap[idx] = true; });
-                setCompletedMap(allMap);
-                onCompleteAll(proceduresData);
-              }
+              if (onCompleteAll) onCompleteAll();
+              const allDone = {};
+              (proceduresData || []).forEach((_, idx) => {
+                allDone[idx] = true;
+              });
+              setCompletedMap(allDone);
             }}
             sx={{
               fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
@@ -264,6 +277,7 @@ const CompleteProceduresDialog = ({
               backgroundColor: "#2262ef", color: "#fff",
               height: "36px", px: "20px",
               "&:hover": { backgroundColor: "#1e53cc" },
+              "&.Mui-disabled": { backgroundColor: "#e2e8f0", color: "#94a3b8" },
             }}
           >
             Complete All
@@ -275,9 +289,10 @@ const CompleteProceduresDialog = ({
           <input
             type="checkbox"
             id="checkout-appointment"
-            style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#1976d2" }}
+            disabled={isFuture || isStatusLocked}
+            style={{ width: 14, height: 14, cursor: isFuture || isStatusLocked ? "not-allowed" : "pointer", accentColor: "#1976d2" }}
           />
-          <label htmlFor="checkout-appointment" style={{ ...DIALOG_FONT_SM, color: "#475569", cursor: "pointer" }}>
+          <label htmlFor="checkout-appointment" style={{ ...DIALOG_FONT_SM, color: isFuture || isStatusLocked ? "#9ca3af" : "#475569", cursor: isFuture || isStatusLocked ? "not-allowed" : "pointer" }}>
             check out appointment
           </label>
         </Box>
@@ -303,6 +318,7 @@ const CompleteProceduresDialog = ({
         <Button
           variant="contained"
           disableElevation
+          disabled={isFuture}
           onClick={() => {
             if (onCollectPayments) onCollectPayments(getFilteredProcedures());
           }}
@@ -312,6 +328,7 @@ const CompleteProceduresDialog = ({
             backgroundColor: "#2262ef", color: "#fff",
             height: "36px", px: "20px",
             "&:hover": { backgroundColor: "#1e53cc" },
+            "&.Mui-disabled": { backgroundColor: "#e2e8f0", color: "#94a3b8" },
           }}
         >
           Collect Payments

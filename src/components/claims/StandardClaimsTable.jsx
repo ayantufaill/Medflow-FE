@@ -1213,7 +1213,7 @@ export const StandardClaimsTable = ({
                                     {proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : (claim.createdDate ? new Date(claim.createdDate).toLocaleDateString() : '-')}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
-                                    {proc.tooth || '-'}
+                                    {proc.tooth || proc.toothNum || proc.site || '-'}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
                                     {proc.surface || '-'}
@@ -1225,7 +1225,7 @@ export const StandardClaimsTable = ({
                                     {proc.name || proc.description || '-'}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
-                                    {proc.providerName || (claim.treatingProvider ? `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim() : null) || '-'}
+                                    {proc.providerName || proc.provider || (claim.treatingProvider ? (typeof claim.treatingProvider === 'string' ? claim.treatingProvider : `${claim.treatingProvider.firstName || ''} ${claim.treatingProvider.lastName || ''}`.trim()) : null) || '-'}
                                   </TableCell>
                                   <TableCell align="center" sx={{ fontSize: "0.75rem", py: 1 }}>
                                     ${proc.fee ? Number(proc.fee).toFixed(2) : '0.00'}

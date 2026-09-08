@@ -641,7 +641,7 @@ const AddCoveragePage = () => {
               }
             }}
           >
-            <Box sx={{ flex: '0 0 33%', width: '35%', minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <Box sx={{ flex: '0 0 31.5%', width: '32%', minWidth: '350px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <InsuranceInformation
                 formData={{
                   ...formData,

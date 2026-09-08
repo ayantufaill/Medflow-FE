@@ -48,25 +48,27 @@ import dayjs from 'dayjs';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
 import { authorizationService } from '../../../services/authorization.service';
+import { documentService } from '../../../services/document.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { ICON_TAGS } from '../../appointments/new-appointment/constants';
 import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
-const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures = [], onSave }) => {
+const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures = [], onSave, onDelete }) => {
   const currentPatient = useSelector(selectCurrentPatient);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const currentUser = useSelector((state) => state.auth?.user);
 
   const [tabValue, setTabValue] = useState(0);
   const [order, setOrder] = useState('Primary');
-  
+
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [savedAuthorizationId, setSavedAuthorizationId] = useState(null);
-  
+
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
-  
+
   const [attachments, setAttachments] = useState([]);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -79,17 +81,35 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setAttachments([...attachments, { name: file.name, size: file.size, date: dayjs().format('MM/DD/YYYY') }]);
-      setHistoryLogs([{
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const authorizationId = await ensureAuthorizationId();
+
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('patientId', patientId);
+      uploadData.append('documentType', 'preauth_attachment');
+      uploadData.append('documentName', file.name);
+      uploadData.append('authorizationId', authorizationId);
+
+      const uploadedDoc = await documentService.uploadDocument(uploadData);
+
+      setAttachments((prev) => [...prev, uploadedDoc]);
+      setHistoryLogs((prev) => [{
         id: Date.now(),
         action: `Added attachment: ${file.name}`,
         user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
         date: dayjs().format('MM/DD/YYYY h:mm A')
-      }, ...historyLogs]);
-      showSnackbar(`Document ${file.name} queued for upload`, 'success');
+      }, ...prev]);
+      showSnackbar(`Document ${file.name} uploaded`, 'success');
+    } catch (error) {
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to upload document', 'error');
+    } finally {
+      setIsUploading(false);
       e.target.value = null;
     }
   };
@@ -106,19 +126,46 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }, ...historyLogs]);
     setNewComment('');
   };
-  
+
   const { showSnackbar } = useSnackbar();
 
-  const normalizeProcedure = (procedure) => ({
-    ...procedure,
-    code: procedure.code || procedure.procedureCode || procedure.ProcCode || '-',
-    description: procedure.description || procedure.procedureDescription || procedure.treatment || procedure.name || procedure.Descript || '-',
-    fee: procedure.fee ?? procedure.amount ?? procedure.charge ?? '0.00',
-  });
+  const parseCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    if (typeof val === 'number') return val;
+    const num = Number(String(val).replace(/[^0-9.-]+/g, ''));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const normalizeProcedure = (procedure) => {
+    let toothVal = procedure.tooth || procedure.toothNum || '';
+    let surfVal = procedure.surface || procedure.surf || '';
+
+    // If site has a format like "#1 OD", extract tooth and surface
+    if (procedure.site) {
+      const parts = procedure.site.replace('#', '').split(' ');
+      if (!toothVal && parts[0]) toothVal = parts[0];
+      if (!surfVal && parts[1]) surfVal = parts[1];
+      // If site is just a surface (no tooth)
+      if (!procedure.site.startsWith('#') && !surfVal) {
+        surfVal = procedure.site;
+      }
+    }
+
+    return {
+      ...procedure,
+      code: procedure.code || procedure.procedureCode || procedure.ProcCode || '-',
+      description: procedure.description || procedure.procedureDescription || procedure.treatment || procedure.name || procedure.Descript || '-',
+      fee: parseCurrency(procedure.negRate ?? procedure.fee ?? procedure.amount ?? procedure.charge),
+      tooth: toothVal || '-',
+      surface: surfVal || '-'
+    };
+  };
 
   useEffect(() => {
-    setAttachments([]);
-    setSelectedTags([]);
+    if (!preAuthId) {
+      setAttachments([]);
+      setSelectedTags([]);
+    }
     setComments([]);
     setNewComment('');
     setTabValue(0);
@@ -129,7 +176,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       user: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : 'System',
       date: dayjs().format('MM/DD/YYYY h:mm A')
     }]);
-  }, [open, patientId, currentUser]);
+  }, [open, patientId, currentUser, preAuthId]);
 
   useEffect(() => {
     setSavedAuthorizationId(preAuthId || null);
@@ -140,17 +187,20 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       if (!open) return;
       setIsLoading(true);
       setAuthData(null);
-      
+
       try {
         // Get dynamic fallbacks
         const patientInsurances = insurancesCache?.[patientId]?.data || [];
         const primaryIns = patientInsurances.find(ins => ins.insuranceType === 'primary') || patientInsurances[0];
-        
+
         let patientInsuranceName = 'No Primary Insurance';
+        let patientInsuranceId = null;
         if (primaryIns) {
           patientInsuranceName = primaryIns.insuranceCompanyId?.name || primaryIns.insuranceCompany?.name || primaryIns.insuranceCompany || primaryIns.planName || 'Unknown Insurance';
+          patientInsuranceId = primaryIns.insuranceCompanyId?._id || primaryIns.insuranceCompany?._id || primaryIns.insuranceCompanyId || primaryIns.insuranceCompany || null;
         } else if (currentPatient?.primaryInsurance?.insuranceCompany?.name) {
           patientInsuranceName = currentPatient.primaryInsurance.insuranceCompany.name;
+          patientInsuranceId = currentPatient.primaryInsurance.insuranceCompany._id || currentPatient.primaryInsurance.insuranceCompany.id || null;
         }
 
         const patientProviderName = currentPatient?.priProv?.name || currentPatient?.priProv || currentPatient?.provider?.name || currentPatient?.provider || currentPatient?.primaryProvider?.name;
@@ -162,10 +212,11 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           const data = await authorizationService.getAuthorizationById(preAuthId);
           setAuthData({
             ...data,
-            procedures: (data.procedures || selectedProcedures).map(normalizeProcedure),
+            procedures: (selectedProcedures?.length > 0 ? selectedProcedures : (data.procedures || [])).map(normalizeProcedure),
             billingProvider: data.billingProvider || primaryProvider,
             treatmentProvider: data.treatmentProvider || primaryProvider,
             insuranceCompany: data.insuranceCompany || data.insuranceCompanyId?.name || patientInsuranceName,
+            insuranceCompanyId: data.insuranceCompanyId || patientInsuranceId,
             attachments: data.attachments || 'None Required',
             serviceDate: data.serviceDate || data.requestedDate,
             latestActivity: data.latestActivity || (
@@ -175,6 +226,25 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             ),
           });
           if (data.order) setOrder(data.order);
+
+          if (data.tags?.length) {
+            const matchedTags = ICON_TAGS.filter((tag) => data.tags.includes(tag.id));
+            setSelectedTags(matchedTags);
+          }
+
+          // Load saved notes back as comments
+          if (data.notes) {
+            const parsedComments = data.notes.split('\n').filter(Boolean).map((line, idx) => {
+              const match = line.match(/^\[(.+?)\]\s*(.+?):\s*(.+)$/);
+              return match
+                ? { id: idx + 1, date: match[1], author: match[2], text: match[3] }
+                : { id: idx + 1, date: '', author: 'System', text: line };
+            });
+            setComments(parsedComments);
+          }
+
+          const docs = await documentService.getDocumentsByAuthorization(preAuthId);
+          setAttachments(docs);
         } else {
           setAuthData({
             id: 'NEW',
@@ -184,6 +254,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
             billingProvider: primaryProvider,
             treatmentProvider: primaryProvider,
             insuranceCompany: patientInsuranceName,
+            insuranceCompanyId: patientInsuranceId,
             attachments: 'None Required',
             latestActivity: `Created on ${dayjs().format('MM/DD/YYYY')}`,
             order: 'Primary'
@@ -196,7 +267,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         setIsLoading(false);
       }
     };
-    
+
     fetchAuthData();
   }, [
     open,
@@ -226,19 +297,28 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
   const handleSubmit = async () => {
     try {
-      if (preAuthId) {
-        await authorizationService.updateAuthorization(preAuthId, { order });
+      const tagIds = selectedTags.map((tag) => tag.id);
+      const notesText = comments.length > 0
+        ? comments.map(c => `[${c.date}] ${c.author}: ${c.text}`).join('\n')
+        : undefined;
+
+      const existingId = preAuthId || savedAuthorizationId;
+
+      if (existingId) {
+        await authorizationService.updateAuthorization(existingId, { order, tags: tagIds, notes: notesText });
         showSnackbar('Authorization updated successfully', 'success');
-        if (onSave) onSave(preAuthId);
+        if (onSave) onSave(existingId);
       } else {
         // Create new authorization logic here
-        const newAuth = await authorizationService.requestAuthorization({ 
+        const newAuth = await authorizationService.requestAuthorization({
           patientId,
           order,
           serviceDate: authData.serviceDate,
           status: 'requested',
-          // map selected procedures
-          procedures: (authData.procedures || []).map(p => p.id || p._id || p.procedureId || p.code)
+          tags: tagIds,
+          notes: notesText,
+          insuranceCompanyId: authData.insuranceCompanyId,
+          procedures: authData.procedures || []
         });
         showSnackbar('Authorization requested successfully', 'success');
         if (onSave) onSave(newAuth._id || newAuth.id);
@@ -251,16 +331,27 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
   const ensureAuthorizationId = async () => {
     const existingId = preAuthId || savedAuthorizationId;
-    if (existingId) return existingId;
+    const notesText = comments.length > 0
+      ? comments.map(c => `[${c.date}] ${c.author}: ${c.text}`).join('\n')
+      : undefined;
+
+    if (existingId) {
+      // Sync latest comments to the backend before generating the PDF
+      await authorizationService.updateAuthorization(existingId, { notes: notesText });
+      return existingId;
+    }
+
 
     const newAuth = await authorizationService.requestAuthorization({
       patientId,
       order,
       serviceDate: authData.serviceDate,
       status: 'requested',
-      procedures: (authData.procedures || []).map((procedure) => (
-        procedure.id || procedure._id || procedure.procedureId || procedure.code
-      )),
+      tags: selectedTags.map((tag) => tag.id),
+      insuranceCompanyId: authData.insuranceCompanyId,
+      notes: notesText,
+      // map selected procedures - pass full procedure objects so backend can save details
+      procedures: authData.procedures || [],
     });
     const newId = newAuth._id || newAuth.id;
     setSavedAuthorizationId(newId);
@@ -290,12 +381,16 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       printFrame.style.border = '0';
       printFrame.style.opacity = '0';
       printFrame.onload = () => {
-        printFrame.contentWindow?.focus();
-        printFrame.contentWindow?.print();
+        // Give the embedded PDF viewer time to fully render before printing,
+        // otherwise the print dialog can flash and close on the first click.
+        window.setTimeout(() => {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+        }, 400);
         window.setTimeout(() => {
           printFrame.remove();
           window.URL.revokeObjectURL(url);
-        }, 1000);
+        }, 2000);
       };
       printFrame.src = url;
       document.body.appendChild(printFrame);
@@ -325,33 +420,49 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     showSnackbar('Form submitted manually', 'success');
   };
 
-  const handleDeletePreAuth = () => {
-    showSnackbar('Pre-Auth deleted', 'success');
-    onClose();
+  const handleDeletePreAuth = async () => {
+    const existingId = preAuthId || savedAuthorizationId;
+
+    if (!existingId) {
+      showSnackbar('Pre-Auth deleted', 'success');
+      if (onDelete) onDelete();
+      onClose();
+      return;
+    }
+
+    try {
+      await authorizationService.deleteAuthorization(existingId);
+      window.dispatchEvent(new CustomEvent('refresh-claims'));
+      showSnackbar('Pre-Auth deleted successfully', 'success');
+      if (onDelete) onDelete();
+      onClose();
+    } catch (error) {
+      showSnackbar(error?.response?.data?.error?.message || 'Failed to delete pre-auth', 'error');
+    }
   };
 
   if (!authData && !isLoading) return null;
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
-      fullWidth 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
       sx={{ zIndex: 1400 }}
-      PaperProps={{ 
-        sx: { 
+      PaperProps={{
+        sx: {
           borderRadius: '12px',
-          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)' 
-        } 
+          boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)'
+        }
       }}
     >
-      <DialogTitle sx={{ 
-        m: 0, 
-        px: 3, 
+      <DialogTitle sx={{
+        m: 0,
+        px: 3,
         py: 2,
-        display: 'flex', 
-        alignItems: 'center', 
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: '#F1F5FD',
         borderBottom: '1px solid #E5E7EB'
@@ -383,7 +494,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent sx={{ pt: '32px', px: '24px', pb: '24px', backgroundColor: '#ffffff' }}>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -399,13 +510,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                   <FlagIcon fontSize="small" sx={{ color: '#64748b', fontSize: '16px' }} />
                 </Box>
                 <Box sx={{ mt: 'auto' }}>
-                  <Typography sx={{ 
+                  <Typography sx={{
                     fontFamily: 'Inter',
-                    backgroundColor: '#f1f5f9', 
+                    backgroundColor: '#f1f5f9',
                     color: '#0f172a',
-                    display: 'inline-block', 
-                    px: '8px', 
-                    py: '4px', 
+                    display: 'inline-block',
+                    px: '8px',
+                    py: '4px',
                     borderRadius: '4px',
                     fontWeight: 600,
                     fontSize: '12px',
@@ -415,43 +526,43 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                   </Typography>
                 </Box>
               </Paper>
-              
+
               <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: 'none' }}>
                 <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', mb: 1, color: '#0f172a' }}>Tags</Typography>
-                  <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                    {selectedTags.map((tag) => (
-                      <Tooltip key={tag.id} title={tag.label} arrow placement="top" disableInteractive>
-                        <Box sx={{ width: 26, height: 26, borderRadius: '6px', backgroundColor: '#e0e7ff', border: '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Box component="img" src={tag.src} alt={tag.label} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        </Box>
-                      </Tooltip>
-                    ))}
-                    <IconButton size="small" onClick={(event) => setTagAnchorEl(event.currentTarget)} sx={{ p: 0, color: '#64748b' }}>
-                      <AddIcon fontSize="small" />
-                    </IconButton>
-                    <Menu
-                      anchorEl={tagAnchorEl}
-                      open={Boolean(tagAnchorEl)}
-                      onClose={() => setTagAnchorEl(null)}
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                      sx={{ zIndex: 1700 }}
-                      MenuListProps={{ dense: true }}
-                      PaperProps={{ sx: { mt: 1, maxHeight: 320, minWidth: 210, zIndex: 1600, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', border: '1px solid #e2e8f0', borderRadius: '8px' } }}
-                    >
-                      {ICON_TAGS.map((tag) => {
-                        const isSelected = selectedTags.some((selectedTag) => selectedTag.id === tag.id);
-                        return (
-                          <MenuItem key={tag.id} selected={isSelected} onClick={() => handleTagToggle(tag)} sx={{ gap: 1, fontFamily: 'Inter', fontSize: 13 }}>
-                            <Box component="img" src={tag.src} alt="" sx={{ width: 22, height: 22, objectFit: 'contain' }} />
-                            {tag.label}
-                          </MenuItem>
-                        );
-                      })}
-                    </Menu>
+                <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                  {selectedTags.map((tag) => (
+                    <Tooltip key={tag.id} title={tag.label} arrow placement="top" disableInteractive>
+                      <Box sx={{ width: 26, height: 26, borderRadius: '6px', backgroundColor: '#e0e7ff', border: '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box component="img" src={tag.src} alt={tag.label} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      </Box>
+                    </Tooltip>
+                  ))}
+                  <IconButton size="small" onClick={(event) => setTagAnchorEl(event.currentTarget)} sx={{ p: 0, color: '#64748b' }}>
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                  <Menu
+                    anchorEl={tagAnchorEl}
+                    open={Boolean(tagAnchorEl)}
+                    onClose={() => setTagAnchorEl(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    sx={{ zIndex: 1700 }}
+                    MenuListProps={{ dense: true }}
+                    PaperProps={{ sx: { mt: 1, maxHeight: 320, minWidth: 210, zIndex: 1600, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', border: '1px solid #e2e8f0', borderRadius: '8px' } }}
+                  >
+                    {ICON_TAGS.map((tag) => {
+                      const isSelected = selectedTags.some((selectedTag) => selectedTag.id === tag.id);
+                      return (
+                        <MenuItem key={tag.id} selected={isSelected} onClick={() => handleTagToggle(tag)} sx={{ gap: 1, fontFamily: 'Inter', fontSize: 13 }}>
+                          <Box component="img" src={tag.src} alt="" sx={{ width: 22, height: 22, objectFit: 'contain' }} />
+                          {tag.label}
+                        </MenuItem>
+                      );
+                    })}
+                  </Menu>
                 </Box>
               </Paper>
-              
+
               <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: 'none' }}>
                 <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', mb: 1, color: '#0f172a' }}>Documents</Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
@@ -468,13 +579,16 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                   ))}
                 </Box>
                 <Box sx={{ mt: 'auto' }}>
-                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
-                  <Typography onClick={() => fileInputRef.current?.click()} sx={{ fontFamily: 'Inter', color: '#2563eb', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-                    Add
+                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} disabled={isUploading} />
+                  <Typography
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    sx={{ fontFamily: 'Inter', color: isUploading ? '#94a3b8' : '#2563eb', cursor: isUploading ? 'default' : 'pointer', fontWeight: 600, fontSize: '13px' }}
+                  >
+                    {isUploading ? 'Uploading…' : 'Add'}
                   </Typography>
                 </Box>
               </Paper>
-              
+
               <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: 'none' }}>
                 <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#2563eb', mb: 0.5 }}>
                   Latest activity
@@ -530,7 +644,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                   </Box>
                 </Box>
               </Grid>
-              
+
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Box sx={{ display: 'flex' }}>
@@ -571,22 +685,22 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
 
             {/* Tabs */}
             <Box sx={{ borderBottom: '1px solid #e2e8f0' }}>
-              <Tabs 
-                value={tabValue} 
-                onChange={handleTabChange} 
+              <Tabs
+                value={tabValue}
+                onChange={handleTabChange}
                 aria-label="pre-auth tabs"
                 sx={{
                   minHeight: '40px',
-                  '& .MuiTabs-indicator': { 
+                  '& .MuiTabs-indicator': {
                     backgroundColor: '#3b82f6',
                     height: '3px',
                     borderTopLeftRadius: '3px',
                     borderTopRightRadius: '3px'
                   },
-                  '& .MuiTab-root': { 
+                  '& .MuiTab-root': {
                     fontFamily: 'Inter',
-                    color: '#64748b', 
-                    textTransform: 'none', 
+                    color: '#64748b',
+                    textTransform: 'none',
                     fontWeight: 600,
                     minHeight: '40px',
                     p: '8px 16px',
@@ -635,23 +749,38 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                 <Box>
                   {attachments.length > 0 ? (
                     <List sx={{ pt: 0 }}>
-                      {attachments.map((file, index) => (
-                        <ListItem key={index} secondaryAction={
-                          <IconButton edge="end" onClick={() => setAttachments(attachments.filter((_, i) => i !== index))} size="small">
-                            <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
-                          </IconButton>
-                        } sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mb: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: '#eff6ff', color: '#3b82f6' }}>
-                              <FileIcon fontSize="small" />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText 
-                            primary={<Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{file.name}</Typography>}
-                            secondary={<Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#64748b' }}>{file.date} • {(file.size / 1024).toFixed(2)} KB</Typography>}
-                          />
-                        </ListItem>
-                      ))}
+                      {attachments.map((file) => {
+                        const fileId = file._id || file.id;
+                        return (
+                          <ListItem key={fileId} secondaryAction={
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={async () => {
+                                try {
+                                  await documentService.deleteDocument(fileId);
+                                  setAttachments((prev) => prev.filter((f) => (f._id || f.id) !== fileId));
+                                  showSnackbar('Attachment removed', 'success');
+                                } catch {
+                                  showSnackbar('Failed to remove attachment', 'error');
+                                }
+                              }}
+                            >
+                              <Box component="img" src={deleteSvg} alt="delete document" sx={{ width: 16, height: 16 }} />
+                            </IconButton>
+                          } sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', mb: 1 }}>
+                            <ListItemAvatar>
+                              <Avatar sx={{ bgcolor: '#eff6ff', color: '#3b82f6' }}>
+                                <FileIcon fontSize="small" />
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={<Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{file.documentName}</Typography>}
+                              secondary={<Typography sx={{ fontFamily: 'Inter', fontSize: '12px', color: '#64748b' }}>{dayjs(file.createdAt).format('MM/DD/YYYY')} • {((file.fileSizeInBytes || 0) / 1024).toFixed(2)} KB</Typography>}
+                            />
+                          </ListItem>
+                        );
+                      })}
                     </List>
                   ) : (
                     <Typography sx={{ fontFamily: 'Inter', fontSize: '14px', color: '#64748b', textAlign: 'center', py: 4 }}>No attachments.</Typography>
@@ -676,10 +805,10 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                     )}
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <TextField 
-                      fullWidth 
-                      size="small" 
-                      placeholder="Add a comment..." 
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Add a comment..."
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handlePostComment()}
@@ -697,7 +826,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
                     {historyLogs.map((log, index) => (
                       <React.Fragment key={log.id}>
                         <ListItem alignItems="flex-start" sx={{ px: 1, py: 1.5 }}>
-                          <ListItemText 
+                          <ListItemText
                             primary={<Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>{log.action}</Typography>}
                             secondary={
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
@@ -718,20 +847,20 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         )}
       </DialogContent>
 
-      <DialogActions sx={{ 
-        px: 3, 
-        py: 2, 
-        backgroundColor: '#FFFFFF', 
-        borderTop: '1px solid #E5E7EB', 
+      <DialogActions sx={{
+        px: 3,
+        py: 2,
+        backgroundColor: '#FFFFFF',
+        borderTop: '1px solid #E5E7EB',
         gap: 1.5,
         justifyContent: 'flex-end'
       }}>
-        <Button 
-          onClick={onClose} 
-          variant="outlined" 
+        <Button
+          onClick={onClose}
+          variant="outlined"
           disabled={isLoading}
-          sx={{ 
-            borderColor: '#D1D5DB', 
+          sx={{
+            borderColor: '#D1D5DB',
             color: '#374151',
             backgroundColor: '#FFFFFF',
             textTransform: 'none',
@@ -743,13 +872,13 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         >
           Cancel
         </Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           disableElevation
           onClick={handleSubmit}
           disabled={isLoading}
-          sx={{ 
-            backgroundColor: '#2563EB', 
+          sx={{
+            backgroundColor: '#2563EB',
             color: '#FFFFFF',
             textTransform: 'none',
             fontWeight: 500,
