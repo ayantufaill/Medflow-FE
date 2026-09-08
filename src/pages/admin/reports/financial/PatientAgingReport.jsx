@@ -46,7 +46,9 @@ const PatientAgingReport = () => {
     paymentPlanOwing: true,
     resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
     resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
-    customArRange: { start: null, end: null }
+    customArRange: { start: null, end: null },
+    billingBeforeDate: null,
+    billingDaysSince: 30
   });
 
   const [appliedFilters, setAppliedFilters] = useState({ ...draftFilters });
@@ -74,7 +76,9 @@ const PatientAgingReport = () => {
       paymentPlanOwing: true,
       resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
       resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
-      customArRange: { start: null, end: null }
+      customArRange: { start: null, end: null },
+      billingBeforeDate: null,
+      billingDaysSince: 30
     };
     setDraftFilters(defaultFilters);
     setAppliedFilters(defaultFilters);

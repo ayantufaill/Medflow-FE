@@ -61,6 +61,8 @@ const AgingReport = () => {
     paymentPlanOwing: true,
     resetOnPatientPayment: 'dont_reset',
     resetOnInsurancePayment: 'dont_reset',
+    billingBeforeDate: null,
+    billingDaysSince: 30,
   });
 
   const handleApplyFilters = (newFilters) => {

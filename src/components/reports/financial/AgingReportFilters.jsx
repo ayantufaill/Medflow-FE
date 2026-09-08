@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, TextField } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useDispatch, useSelector } from 'react-redux';
@@ -41,7 +41,9 @@ const AgingReportFilters = ({ onApplyFilters }) => {
     paymentPlanOwing: true,
     resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
     resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
-    customArRange: { start: null, end: null }
+    customArRange: { start: null, end: null },
+    billingBeforeDate: null,
+    billingDaysSince: 30
   });
 
   const handleFilterChange = (field, value) => {
@@ -65,7 +67,9 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       paymentPlanOwing: true,
       resetOnPatientPayment: ON_PATIENT_PAYMENT_OPTIONS[0].value,
       resetOnInsurancePayment: ON_INSURANCE_PAYMENT_OPTIONS[0].value,
-      customArRange: { start: null, end: null }
+      customArRange: { start: null, end: null },
+      billingBeforeDate: null,
+      billingDaysSince: 30
     };
     setDraftFilters(cleared);
     if (onApplyFilters) onApplyFilters(cleared);
@@ -83,10 +87,67 @@ const AgingReportFilters = ({ onApplyFilters }) => {
     return [...PROVIDER_OPTIONS, ...backendProviders];
   }, [providersData]);
 
+  const handleApplyClick = () => {
+    if (draftFilters.billingDate === 'pt_last_statement_before' && !draftFilters.billingBeforeDate) {
+      alert("Please select a valid date for 'Patient last statement before'");
+      return;
+    }
+    if (onApplyFilters) onApplyFilters(draftFilters);
+  };
+
   const topFilters = (
     <>
       <ReportSelect label="BALANCE" options={BALANCE_OPTIONS} value={draftFilters.balance} onChange={(e) => handleFilterChange('balance', e.target.value)} />
       <ReportSelect label="BILLING DATE" options={BILLING_DATE_OPTIONS} value={draftFilters.billingDate} onChange={(e) => handleFilterChange('billingDate', e.target.value)} />
+      {draftFilters.billingDate === 'pt_last_statement_before' && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0, minWidth: 140 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+            before date
+          </Typography>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              value={draftFilters.billingBeforeDate}
+              onChange={(newValue) => handleFilterChange('billingBeforeDate', newValue)}
+              slotProps={{ 
+                textField: { 
+                  size: 'small',
+                  placeholder: 'MM/DD/YYYY',
+                  sx: { 
+                    width: '100%',
+                    backgroundColor: '#fafbfe',
+                    '& .MuiOutlinedInput-root': {
+                      width: '100%',
+                      height: 36,
+                      fontSize: '13px',
+                      fontFamily: 'Inter',
+                      fontWeight: 500,
+                      color: '#09121f',
+                      backgroundColor: '#fafbfe',
+                      borderRadius: '4px',
+                      '&:hover': { backgroundColor: '#fafbfe' },
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      py: 1,
+                      pl: 2,
+                      pr: 0,
+                      backgroundColor: 'transparent',
+                    },
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e2e8f0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e2e8f0',
+                    },
+                    '& .MuiIconButton-root': { padding: '4px' },
+                    '& .MuiSvgIcon-root': { fontSize: '20px', color: '#4a5568' }
+                  }
+                } 
+              }}
+            />
+          </LocalizationProvider>
+        </Box>
+      )}
+
       <ReportSelect label="CLAIMS" options={CLAIMS_OPTIONS} value={draftFilters.claims} onChange={(e) => handleFilterChange('claims', e.target.value)} />
       <ReportSelect label="PATIENTS" options={PATIENTS_OPTIONS} value={draftFilters.patients} onChange={(e) => handleFilterChange('patients', e.target.value)} />
       <ReportSelect label="PROVIDER" options={dynamicProviderOptions} value={draftFilters.provider} onChange={(e) => handleFilterChange('provider', e.target.value)} />
@@ -234,7 +295,7 @@ const AgingReportFilters = ({ onApplyFilters }) => {
       topRowFilters={topFilters}
       middleRowFilters={middleFilters}
       bottomRowFilters={bottomFilters}
-      onApplyFilters={() => onApplyFilters && onApplyFilters(draftFilters)}
+      onApplyFilters={handleApplyClick}
       onCreateTemplate={() => console.log('create')}
       onClearAll={handleClearAll}
     />

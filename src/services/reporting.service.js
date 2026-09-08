@@ -46,7 +46,18 @@ export const reportingService = {
    * @param {Object} params - Query params like date, range
    */
   async getFinancialReport(reportName, params = {}) {
-    const response = await apiClient.get(`/reports/financial/${reportName}`, { params });
+    // Serialize dayjs/Date objects to ISO strings for query params
+    const serializedParams = { ...params };
+    if (serializedParams.billingBeforeDate && serializedParams.billingBeforeDate.toISOString) {
+      serializedParams.billingBeforeDate = serializedParams.billingBeforeDate.toISOString();
+    }
+    if (serializedParams.customArRange) {
+      const { start, end } = serializedParams.customArRange;
+      serializedParams.customArRangeStart = start?.toISOString?.() || start;
+      serializedParams.customArRangeEnd = end?.toISOString?.() || end;
+      delete serializedParams.customArRange;
+    }
+    const response = await apiClient.get(`/reports/financial/${reportName}`, { params: serializedParams });
     return response.data.data;
   },
 
