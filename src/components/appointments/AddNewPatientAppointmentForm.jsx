@@ -150,6 +150,8 @@ const AddNewPatientAppointmentForm = ({
   // Tracks whether the user has tried to submit at least once — required-field
   // borders only turn red after a failed attempt, not while the form is still empty on open.
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const initialApptIdsRef = useRef(new Set());
   const [errorMessage, setErrorMessage] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const [computedVisitType, setComputedVisitType] = useState("");
@@ -166,6 +168,28 @@ const AddNewPatientAppointmentForm = ({
       setStatus(revertTo);
     }
   }, [procedures]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-clear procedure validation error when at least one procedure is selected/checked.
+  useEffect(() => {
+    if (
+      errorMessage ===
+        "Please select at least one procedure to create an appointment." &&
+      procedures.some((p) => p.checked)
+    ) {
+      setErrorMessage("");
+    }
+  }, [procedures, errorMessage]);
+
+  // Auto-clear duration validation error when duration is valid.
+  useEffect(() => {
+    if (
+      errorMessage ===
+        "Please enter a valid appointment duration (greater than 0 minutes)." &&
+      durationMins > 0
+    ) {
+      setErrorMessage("");
+    }
+  }, [durationMins, errorMessage]);
 
   const selectedStart = useMemo(() => {
     const h = parseInt(timeHours, 10) % 12;
@@ -194,6 +218,7 @@ const AddNewPatientAppointmentForm = ({
   }, [isExistingAppointment, initialAppointment?.status]);
 
   const occupiedRoomIds = useMemo(() => {
+    if (isSubmitting || loading) return new Set();
     const occupied = new Set();
     appointments.forEach((appt) => {
       if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
@@ -204,6 +229,11 @@ const AddNewPatientAppointmentForm = ({
           initialAppointment.id || initialAppointment._id,
         ).replace("appt-", "");
         if (apptId === editId) return;
+      } else {
+        const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
+        if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
+          return;
+        }
       }
 
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
@@ -235,6 +265,8 @@ const AddNewPatientAppointmentForm = ({
 
     return occupied;
   }, [
+    isSubmitting,
+    loading,
     appointments,
     scheduleBlocks,
     apptDate,
@@ -244,6 +276,7 @@ const AddNewPatientAppointmentForm = ({
   ]);
 
   const occupiedProviderIds = useMemo(() => {
+    if (isSubmitting || loading) return new Set();
     const occupied = new Set();
     const selectedProviderIds = new Set(
       providerRows
@@ -263,6 +296,11 @@ const AddNewPatientAppointmentForm = ({
           initialAppointment.id || initialAppointment._id,
         ).replace("appt-", "");
         if (apptId === editId) return;
+      } else {
+        const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
+        if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
+          return;
+        }
       }
 
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
@@ -294,6 +332,8 @@ const AddNewPatientAppointmentForm = ({
 
     return occupied;
   }, [
+    isSubmitting,
+    loading,
     appointments,
     providerRows,
     apptDate,
@@ -302,7 +342,7 @@ const AddNewPatientAppointmentForm = ({
     initialAppointment,
   ]);
 
-  const isProviderOccupied = providerRows.some(
+  const isProviderOccupied = !isSubmitting && !loading && providerRows.some(
     (row) => row.providerId && occupiedProviderIds.has(String(row.providerId)),
   );
 
@@ -318,6 +358,7 @@ const AddNewPatientAppointmentForm = ({
     : "";
 
   const isPatientOccupied = useMemo(() => {
+    if (isSubmitting || loading) return false;
     if (!patientIdForConflict) return false;
 
     return appointments.some((appt) => {
@@ -329,6 +370,11 @@ const AddNewPatientAppointmentForm = ({
           initialAppointment.id || initialAppointment._id,
         ).replace("appt-", "");
         if (apptId === editId) return false;
+      } else {
+        const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
+        if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
+          return false;
+        }
       }
 
       const apptDateStr = String(appt.appointmentDate).slice(0, 10);
@@ -357,6 +403,8 @@ const AddNewPatientAppointmentForm = ({
       return selectedStart.isBefore(apptEnd) && selectedEnd.isAfter(apptStart);
     });
   }, [
+    isSubmitting,
+    loading,
     appointments,
     patientIdForConflict,
     apptDate,
@@ -367,6 +415,12 @@ const AddNewPatientAppointmentForm = ({
 
   useEffect(() => {
     if (open) {
+      setIsSubmitting(false);
+      initialApptIdsRef.current = new Set(
+        (appointments || [])
+          .map((a) => String(a.id || a._id || a.AptNum || "").replace("appt-", ""))
+          .filter(Boolean),
+      );
       setIsRescheduling(false);
       setSubmitAttempted(false);
       setErrorMessage("");
@@ -1257,8 +1311,8 @@ const AddNewPatientAppointmentForm = ({
     };
   };
 
-  const handleSubmit = () => {
-    if (!onSubmit) return;
+  const handleSubmit = async () => {
+    if (!onSubmit || isSubmitting || loading) return;
     setSubmitAttempted(true);
 
     const checkedProcedures = procedures.filter((p) => p.checked);
@@ -1298,12 +1352,17 @@ const AddNewPatientAppointmentForm = ({
         payload.status = "completed";
         setStatus("completed");
       }
-      onSubmit(payload);
+      try {
+        setIsSubmitting(true);
+        await onSubmit(payload);
+      } catch (err) {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const handleSaveAsDraft = () => {
-    if (!onSubmit) return;
+  const handleSaveAsDraft = async () => {
+    if (!onSubmit || isSubmitting || loading) return;
     setSubmitAttempted(true);
 
     const checkedProcedures = procedures.filter((p) => p.checked);
@@ -1325,7 +1384,12 @@ const AddNewPatientAppointmentForm = ({
     const payload = getAppointmentPayload();
     if (payload) {
       payload.status = "draft";
-      onSubmit(payload);
+      try {
+        setIsSubmitting(true);
+        await onSubmit(payload);
+      } catch (err) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -1567,7 +1631,7 @@ const AddNewPatientAppointmentForm = ({
             onStatusChange={setStatus}
             isFuture={isFuture}
             isStatusLocked={isStatusLocked}
-            isPatientOccupied={isPatientOccupied}
+            isPatientOccupied={!isSubmitting && !loading && isPatientOccupied}
           />
 
           <AppointmentRightPanel
@@ -1581,13 +1645,13 @@ const AddNewPatientAppointmentForm = ({
             roomId={roomId}
             onRoomChange={setRoomId}
             rooms={branchRooms}
-            isRoomOccupied={roomId && occupiedRoomIds.has(String(roomId))}
+            isRoomOccupied={!isSubmitting && !loading && Boolean(roomId && occupiedRoomIds.has(String(roomId)))}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
             providerRows={providerRows}
             setProviderRows={setProviderRows}
             providerError={submitAttempted && !providerRows[0]?.providerId}
-            isProviderOccupied={isProviderOccupied}
+            isProviderOccupied={!isSubmitting && !loading && isProviderOccupied}
             preferredDentist={preferredDentist}
             onPreferredDentistChange={setPreferredDentist}
             preferredHygienist={preferredHygienist}
@@ -1615,7 +1679,7 @@ const AddNewPatientAppointmentForm = ({
           onCancel={onCancel}
           onSubmit={handleSubmit}
           onSaveAsDraft={handleSaveAsDraft}
-          loading={loading}
+          loading={loading || isSubmitting}
           showExtendedOptions={showExtendedOptions}
           isEditMode={isEditMode}
           readOnly={isEditMode && !isRescheduling}
