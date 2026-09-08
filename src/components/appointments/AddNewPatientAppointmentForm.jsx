@@ -534,8 +534,10 @@ const AddNewPatientAppointmentForm = ({
           );
 
           let vType =
+            sourceAppt.customFields?.visitType ||
             sourceAppt.appointmentType ||
             sourceAppt.visitType ||
+            initialAppointment.customFields?.visitType ||
             initialAppointment.appointmentType ||
             initialAppointment.visitType ||
             "recare";
@@ -1044,9 +1046,9 @@ const AddNewPatientAppointmentForm = ({
         setPreferredDentist("");
         setPreferredHygienist("");
         setSelectedColorTags(new Set());
+        setVisitType("treatment"); // Default to treatment for new appointments
       }
 
-      setVisitType("treatment");
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
       setAddingProcedure(false);
