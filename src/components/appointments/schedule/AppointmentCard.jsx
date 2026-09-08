@@ -37,11 +37,7 @@ const getAge = (dob) => {
   return Number.isNaN(age) ? "" : `(${age})`;
 };
 
-const STATUS_CONFIG = {
-  PRECONFIRMED: { bg: COLORS.STATUS_PRECONFIRMED },
-  UNCONFIRMED: { bg: COLORS.STATUS_UNCONFIRMED },
-  CONFIRMED: { bg: COLORS.STATUS_CONFIRMED },
-};
+// STATUS_CONFIG removed in favor of COLORS.APPOINTMENT_STATUS
 
 const getTagLabel = (tag) =>
   typeof tag === "object" && tag !== null ? tag.label : tag;
@@ -187,8 +183,8 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
   if (appointment.type === "block")
     return <BlockCard title={appointment.title} blockId={appointment.id} block={appointment} />;
 
-  const statusCfg =
-    STATUS_CONFIG[appointment.status] ?? STATUS_CONFIG.CONFIRMED;
+  const s = String(appointment.status || '').toLowerCase();
+  const statusCfg = { bg: COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed };
   const tier = getSizeTier(appointment.durationMinutes);
   const colorTags = Array.isArray(appointment.colorTags)
     ? appointment.colorTags.filter(
