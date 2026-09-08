@@ -71,6 +71,8 @@ const AppointmentLeftPanel = ({
   appointmentId,
   status,
   onStatusChange,
+  isFuture = false,
+  isStatusLocked = false,
   isPatientOccupied = false,
 }) => {
   const [previousStatus, setPreviousStatus] = useState("scheduled");
@@ -389,7 +391,7 @@ const AppointmentLeftPanel = ({
             display: "flex",
             gap: "12px",
             mb: "20px",
-            alignItems: "flex-end",
+            alignItems: "flex-start",
           }}
         >
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -684,6 +686,7 @@ const AppointmentLeftPanel = ({
           providers={providers}
           showExtendedOptions={showExtendedOptions}
           setIsRescheduling={setIsRescheduling}
+          isFuture={isFuture}
         />
 
         {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
@@ -702,6 +705,7 @@ const AppointmentLeftPanel = ({
                 control={
                   <Checkbox
                     size="small"
+                    disabled={isFuture || isStatusLocked}
                     checked={status === "checked_out_complete"}
                     onChange={(e) => {
                       const isChecked = e.target.checked;
@@ -717,6 +721,7 @@ const AppointmentLeftPanel = ({
                     sx={{
                       color: "#d1d5db",
                       "&.Mui-checked": { color: "#2262ef" },
+                      "&.Mui-disabled": { color: "#e5e7eb" },
                     }}
                   />
                 }
@@ -725,7 +730,7 @@ const AppointmentLeftPanel = ({
                     sx={{
                       fontFamily: "Inter",
                       fontSize: "12px",
-                      color: "#374151",
+                      color: isFuture || isStatusLocked ? "#9ca3af" : "#374151",
                       mr: 1,
                     }}
                   >
@@ -738,6 +743,7 @@ const AppointmentLeftPanel = ({
                 <Button
                   variant="contained"
                   disableElevation
+                  disabled={isFuture || isStatusLocked}
                   onClick={() => {
                     const allCompleted = procedures.length > 0 && procedures.every((p) => p.completed);
                     setProcedures((prev) =>
@@ -759,6 +765,7 @@ const AppointmentLeftPanel = ({
                     px: "12px",
                     py: "5px",
                     "&:hover": { backgroundColor: "#1a50cc" },
+                    "&.Mui-disabled": { backgroundColor: "#e2e8f0", color: "#94a3b8" },
                   }}
                 >
                   {(() => {
@@ -772,6 +779,7 @@ const AppointmentLeftPanel = ({
                 <Button
                   variant="contained"
                   disableElevation
+                  disabled={isFuture}
                   onClick={handleCollectPayment}
                   sx={{
                     fontFamily: "Inter",
@@ -784,6 +792,7 @@ const AppointmentLeftPanel = ({
                     px: "12px",
                     py: "5px",
                     "&:hover": { backgroundColor: "#ea6c00" },
+                    "&.Mui-disabled": { backgroundColor: "#fed7aa", color: "#9a3412" },
                   }}
                 >
                   Collect Payments

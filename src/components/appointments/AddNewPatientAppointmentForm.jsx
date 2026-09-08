@@ -16,6 +16,7 @@ import AppointmentLeftPanel from "./new-appointment/AppointmentLeftPanel";
 import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
 import LabOrderModal from "./new-appointment/LabOrderModal";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
+import { isCheckedOutStatus } from "../../utils/statusRules";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -178,6 +179,19 @@ const AddNewPatientAppointmentForm = ({
     () => selectedStart.add(durationMins || 60, "minute"),
     [selectedStart, durationMins],
   );
+
+  const isExistingAppointment = Boolean(initialAppointment);
+
+  const isFuture = useMemo(() => {
+    if (!isExistingAppointment) return false;
+    if (!selectedStart || !selectedStart.isValid()) return false;
+    return dayjs().isBefore(selectedStart);
+  }, [isExistingAppointment, selectedStart]);
+
+  const isStatusLocked = useMemo(() => {
+    if (!isExistingAppointment) return false;
+    return isCheckedOutStatus(initialAppointment?.status);
+  }, [isExistingAppointment, initialAppointment?.status]);
 
   const occupiedRoomIds = useMemo(() => {
     const occupied = new Set();
@@ -1551,6 +1565,8 @@ const AddNewPatientAppointmentForm = ({
             }
             status={status}
             onStatusChange={setStatus}
+            isFuture={isFuture}
+            isStatusLocked={isStatusLocked}
             isPatientOccupied={isPatientOccupied}
           />
 
@@ -1560,6 +1576,8 @@ const AddNewPatientAppointmentForm = ({
             branches={branches}
             status={status}
             onStatusChange={setStatus}
+            isFuture={isFuture}
+            isStatusLocked={isStatusLocked}
             roomId={roomId}
             onRoomChange={setRoomId}
             rooms={branchRooms}

@@ -27,6 +27,7 @@ import {
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import { isCheckedOutStatus } from "../../utils/statusRules";
 
 const FONT_XS = { fontSize: "0.75rem" };
 const FONT_SM = { fontSize: "0.8125rem" };
@@ -81,6 +82,9 @@ const AppointmentDetailsDialog = ({
   const durationMins = end.diff(start, "minute");
   const operatoryLabel =
     OPERATORY_COLUMNS?.find((c) => c.id === selectedAppointment.columnId)?.label || selectedAppointment.columnId || "—";
+
+  const isLocked = isCheckedOutStatus(selectedAppointment?.status);
+  const isFuture = selectedAppointment?.start ? dayjs().isBefore(dayjs(selectedAppointment.start)) : false;
 
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
@@ -228,7 +232,7 @@ const AppointmentDetailsDialog = ({
                 onChange={handleStatusChange}
                 label="Appointment Status"
                 sx={FONT_XS}
-                disabled={isRescheduling}
+                disabled={isRescheduling || isLocked || isFuture}
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value} sx={FONT_XS}>
