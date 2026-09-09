@@ -362,35 +362,33 @@ const DepositSlips = () => {
 
       <Grid container spacing={3} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
         <Grid item xs={12} md={8}>
-          <Paper elevation={0} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-            <DepositSlipFilters 
-              filterMode={filterMode}
-              handleFilterModeChange={handleFilterModeChange}
-              startDate={startDate}
-              setStartDate={setStartDate}
-              endDate={endDate}
-              setEndDate={setEndDate}
-              paymentTypes={paymentTypes}
-              patientPayTypes={patientPayTypes}
-              patPayAll={patPayAll}
-              insPayTypes={insPayTypes}
-              insPayAll={insPayAll}
-              refPayTypes={refPayTypes}
-              refPayAll={refPayAll}
-              incDepTypes={incDepTypes}
-              incDepAll={incDepAll}
-              handleToggleAll={handleToggleAll}
-              handleToggleItem={handleToggleItem}
-              showTemplateForm={showTemplateForm}
-              setShowTemplateForm={setShowTemplateForm}
-              templateName={templateName}
-              setTemplateName={setTemplateName}
-              savingTemplate={savingTemplate}
-              handleSaveTemplate={handleSaveTemplate}
-              handleCreateDepositClick={handleCreateDepositClick}
-              loading={loading}
-            />
-          </Paper>
+          <DepositSlipFilters 
+            filterMode={filterMode}
+            handleFilterModeChange={handleFilterModeChange}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            paymentTypes={paymentTypes}
+            patientPayTypes={patientPayTypes}
+            patPayAll={patPayAll}
+            insPayTypes={insPayTypes}
+            insPayAll={insPayAll}
+            refPayTypes={refPayTypes}
+            refPayAll={refPayAll}
+            incDepTypes={incDepTypes}
+            incDepAll={incDepAll}
+            handleToggleAll={handleToggleAll}
+            handleToggleItem={handleToggleItem}
+            showTemplateForm={showTemplateForm}
+            setShowTemplateForm={setShowTemplateForm}
+            templateName={templateName}
+            setTemplateName={setTemplateName}
+            savingTemplate={savingTemplate}
+            handleSaveTemplate={handleSaveTemplate}
+            handleCreateDepositClick={handleCreateDepositClick}
+            loading={loading}
+          />
         </Grid>
 
         <Grid item xs={12} md={4} sx={{ minWidth: 0 }}>
