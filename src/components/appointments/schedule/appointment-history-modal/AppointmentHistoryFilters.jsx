@@ -36,7 +36,10 @@ const AppointmentHistoryFilters = ({
             <ReportSelect 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)} 
-              options={uniqueStatuses.map(s => ({ label: s === 'all' ? 'All Status' : s, value: s }))} 
+              options={uniqueStatuses.map(s => ({
+                label: s === 'all' ? 'All Status' : s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                value: s
+              }))} 
               sx={{ width: 150 }} 
             />
           </>

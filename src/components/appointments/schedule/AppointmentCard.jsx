@@ -379,7 +379,9 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                   letterSpacing: "0.7px",
                 }}
               >
-                {appointment.status}
+                {String(appointment.status || 'unconfirmed')
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, c => c.toUpperCase())}
               </Typography>
             </Box>
           )}

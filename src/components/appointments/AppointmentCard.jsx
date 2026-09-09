@@ -11,6 +11,14 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import PersonIcon from "@mui/icons-material/Person";
 import linkedIconSrc from "../../assets/Tags/linked-icon.svg";
 
+// Converts "checked_out_complete" → "Checked Out Complete"
+const formatStatus = (status) => {
+  if (!status) return "Unconfirmed";
+  return status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 /**
  * AppointmentCard Component
  * Renders an individual appointment card with all its content and actions
@@ -296,7 +304,7 @@ const AppointmentCard = ({
                   textTransform: "uppercase",
                 }}
               >
-                {appointment.status || "unconfirmed"}
+                {formatStatus(appointment.status)}
               </Box>
               <Typography sx={{ fontSize: "11px", color: "#64748b", fontWeight: 500 }}>
                 {appointment.customFields?.visitType === "recare" ? "Recare" : "Treatment"}
@@ -513,7 +521,7 @@ const AppointmentStatusBand = ({
           position: "relative",
         }}
       >
-        {(status || "unconfirmed").toUpperCase()}
+        {formatStatus(status).toUpperCase()}
       </Typography>
     </Box>
   );

@@ -16,7 +16,11 @@ import { useDropdownData } from '../../../../hooks/redux/useDropdownData';
 
 const capitalizeFirst = (str) => {
   if (typeof str !== 'string' || !str) return str;
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  // Replace underscores with spaces and title-case each word
+  // e.g. "checked_out_complete" → "Checked Out Complete"
+  return str
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 const getProviderId = (provider) => {
