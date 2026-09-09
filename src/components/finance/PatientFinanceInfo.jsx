@@ -8,6 +8,7 @@ import {
   invalidatePaymentInvoices,
   fetchLedgerItems,
 } from "../../store/slices/billingSlice";
+import { useBranch } from "../../hooks/redux/useBranch";
 import {
   Box,
   Typography,
@@ -72,6 +73,7 @@ const PatientFinanceInfo = forwardRef(
     ref,
   ) => {
     const dispatch = useDispatch();
+    const { currentBranchId } = useBranch();
     const [showShare, setShowShare] = useState(false);
     const [shareAnchorEl, setShareAnchorEl] = useState(null);
     const [showQuickPayment, setShowQuickPayment] = useState(false);
@@ -132,6 +134,7 @@ const PatientFinanceInfo = forwardRef(
       try {
         const payload = {
           patientId: parseInt(patientId, 10) || 1,
+          branchId: currentBranchId,
           notes: savePayload.description,
           items: data.map((row) => {
             let parsedDate = new Date().toISOString();
@@ -334,7 +337,8 @@ const PatientFinanceInfo = forwardRef(
       try {
         const payload = {
           patientId: parseInt(patientId, 10) || patientId,
-          notes: notesText,
+          branchId: currentBranchId,
+          notes: notesText || "Automated Adjustment Invoice",
           items: [
             {
               code: `ACC-${Date.now().toString().slice(-6)}`,

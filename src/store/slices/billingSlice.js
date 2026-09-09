@@ -1492,6 +1492,13 @@ export const fetchArAgingReport = createAsyncThunk(
       return rejectWithValue(error.response?.data || error.message);
     }
   },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.arAgingLoading) return false;
+      return true;
+    },
+  }
 );
 
 export const fetchPatientAgingReport = createAsyncThunk(
@@ -1507,6 +1514,13 @@ export const fetchPatientAgingReport = createAsyncThunk(
       return rejectWithValue(error.response?.data || error.message);
     }
   },
+  {
+    condition: (_, { getState }) => {
+      const { billing } = getState();
+      if (billing.patientAgingLoading) return false;
+      return true;
+    },
+  }
 );
 
 export const fetchModificationsReport = createAsyncThunk(
@@ -2076,6 +2090,7 @@ const billingSlice = createSlice({
       })
       .addCase(fetchArAgingReport.pending, (state) => {
         state.arAgingLoading = true;
+        state.arAging = null;
       })
       .addCase(fetchArAgingReport.fulfilled, (state, action) => {
         state.arAgingLoading = false;
@@ -2087,6 +2102,7 @@ const billingSlice = createSlice({
       })
       .addCase(fetchPatientAgingReport.pending, (state) => {
         state.patientAgingLoading = true;
+        state.patientAging = null;
       })
       .addCase(fetchPatientAgingReport.fulfilled, (state, action) => {
         state.patientAgingLoading = false;

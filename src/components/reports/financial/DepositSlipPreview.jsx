@@ -13,7 +13,7 @@ import {
   Paper,
   TextField,
 } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
 
 const DepositSlipPreview = ({
@@ -33,10 +33,10 @@ const DepositSlipPreview = ({
   if (!createdSlipDetails) {
     return (
       <Box className="no-print">
-        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: '#2563eb' }}>
+        <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '14px', lineHeight: '20px', letterSpacing: '0px', color: '#2362ef', mb: 2 }}>
           Deposit slip preview:
         </Typography>
-        
+
         {previewPayments.length === 0 ? (
           <Box>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>No payments match filters.</Typography>
@@ -67,22 +67,22 @@ const DepositSlipPreview = ({
                 </Grid>
               </Grid>
             </Paper>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#000000' }}>Included Items:</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button startIcon={<DownloadIcon fontSize="small" />} variant="outlined" size="small" sx={{ textTransform: 'none', color: '#000000', borderColor: '#cbd5e1', borderRadius: '6px', px: 2, fontWeight: 600, '&:hover': { bgcolor: '#f8fafc' } }}>
-                  CSV
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}>
+                  Export as CSV
                 </Button>
-                <Button startIcon={<PrintIcon fontSize="small" />} variant="outlined" size="small" sx={{ textTransform: 'none', color: '#000000', borderColor: '#cbd5e1', borderRadius: '6px', px: 2, fontWeight: 600, '&:hover': { bgcolor: '#f8fafc' } }}>
+                <Button onClick={handlePrint} variant="outlined" size="small" startIcon={<PrintIcon />} sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600 }}>
                   Print
                 </Button>
               </Box>
             </Box>
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #cbd5e1', borderRadius: '12px', maxHeight: 350, overflowY: 'auto' }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: 350, overflowY: 'auto' }}>
               <Table size="small" stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ '& th': { backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.85rem', fontWeight: 500, py: 2, borderBottom: '1px solid #cbd5e1' } }}>
+                  <TableRow sx={{ '& th': { backgroundColor: '#f8fafc', color: '#64748b', fontSize: '0.8rem', fontWeight: 600, py: 1.5, borderBottom: '1px solid #e2e8f0' } }}>
                     <TableCell>Patient/Carrier</TableCell>
                     <TableCell>Method</TableCell>
                     <TableCell>Date</TableCell>
@@ -91,11 +91,11 @@ const DepositSlipPreview = ({
                 </TableHead>
                 <TableBody>
                   {previewPayments.map((p, idx) => (
-                    <TableRow key={idx} sx={{ '& td': { fontSize: '0.85rem', py: 2, verticalAlign: 'middle', borderBottom: '1px solid #cbd5e1', color: '#0f172a' }, backgroundColor: '#ffffff' }}>
+                    <TableRow key={idx} sx={{ '& td': { fontSize: '0.85rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#334155' }, backgroundColor: '#ffffff' }}>
                       <TableCell>{p.patientName || p.carrierName || 'Unknown Carrier'}</TableCell>
                       <TableCell>{formatMethodLabel(p.method)}</TableCell>
                       <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>${p.amount.toFixed(2)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: '#1e293b' }}>${p.amount.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -115,7 +115,7 @@ const DepositSlipPreview = ({
         <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 2 }}>
           Deposit slip:
         </Typography>
-        
+
         <Grid container spacing={2}>
           <Grid item xs={6}>
             <Typography variant="body1" sx={{ fontWeight: 700, color: '#d32f2f', mb: 1 }}>
@@ -150,33 +150,33 @@ const DepositSlipPreview = ({
                 <TableContainer sx={{ overflowX: 'auto', mb: 1, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                   <Table size="small">
                     <TableHead>
-                    <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Pay Type</TableCell>
-                      <TableCell>Pay Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((p, idx) => (
-                      <TableRow key={p.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
-                        <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{p.patientName}</TableCell>
-                        <TableCell>{p.method}</TableCell>
-                        <TableCell>${p.amount.toFixed(2)}</TableCell>
+                      <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Pay Type</TableCell>
+                        <TableCell>Pay Amount</TableCell>
                       </TableRow>
-                    ))}
-                    {/* Group Total */}
-                    <TableRow sx={{ backgroundColor: '#ffffff' }}>
-                      <TableCell colSpan={3} sx={{ borderBottom: 'none' }} />
-                      <TableCell colSpan={1} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
-                          Total: ${groupTotal.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {items.map((p, idx) => (
+                        <TableRow key={p.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                          <TableCell>{p.date ? new Date(p.date).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{p.patientName}</TableCell>
+                          <TableCell>{p.method}</TableCell>
+                          <TableCell>${p.amount.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Group Total */}
+                      <TableRow sx={{ backgroundColor: '#ffffff' }}>
+                        <TableCell colSpan={3} sx={{ borderBottom: 'none' }} />
+                        <TableCell colSpan={1} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
+                            Total: ${groupTotal.toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </TableContainer>
               </Box>
             );
@@ -201,35 +201,35 @@ const DepositSlipPreview = ({
                 <TableContainer sx={{ overflowX: 'auto', mb: 1, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                   <Table size="small">
                     <TableHead>
-                    <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Ins. Name</TableCell>
-                      <TableCell>Pay Type</TableCell>
-                      <TableCell>Pay Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((ins, idx) => (
-                      <TableRow key={ins.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
-                        <TableCell>{ins.date ? new Date(ins.date).toLocaleDateString() : '-'}</TableCell>
-                        <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{ins.patientName || 'Unknown'}</TableCell>
-                        <TableCell>{ins.carrierName || 'Unknown'}</TableCell>
-                        <TableCell>{ins.method}</TableCell>
-                        <TableCell>${ins.amount.toFixed(2)}</TableCell>
+                      <TableRow sx={{ '& th': { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, py: 1 } }}>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Ins. Name</TableCell>
+                        <TableCell>Pay Type</TableCell>
+                        <TableCell>Pay Amount</TableCell>
                       </TableRow>
-                    ))}
-                    {/* Group Total */}
-                    <TableRow sx={{ backgroundColor: '#ffffff' }}>
-                      <TableCell colSpan={4} sx={{ borderBottom: 'none' }} />
-                      <TableCell colSpan={1} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
-                          Total: ${groupTotal.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {items.map((ins, idx) => (
+                        <TableRow key={ins.id} sx={{ '& td': { fontSize: '0.75rem', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                          <TableCell>{ins.date ? new Date(ins.date).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell sx={{ color: '#3b82f6', fontWeight: 600 }}>{ins.patientName || 'Unknown'}</TableCell>
+                          <TableCell>{ins.carrierName || 'Unknown'}</TableCell>
+                          <TableCell>{ins.method}</TableCell>
+                          <TableCell>${ins.amount.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Group Total */}
+                      <TableRow sx={{ backgroundColor: '#ffffff' }}>
+                        <TableCell colSpan={4} sx={{ borderBottom: 'none' }} />
+                        <TableCell colSpan={1} sx={{ pt: 1.5, pb: 1.5, borderTop: '2px solid #e2e8f0', borderBottom: 'none' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', textAlign: 'right', color: '#1e293b' }}>
+                            Total: ${groupTotal.toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </TableContainer>
               </Box>
             );
@@ -249,7 +249,7 @@ const DepositSlipPreview = ({
           value={depositNote}
           onChange={(e) => setDepositNote(e.target.value)}
           placeholder="Enter note details here..."
-          sx={{ 
+          sx={{
             bgcolor: '#ffffff',
             '& .MuiOutlinedInput-root': {
               borderRadius: '8px',
@@ -264,36 +264,38 @@ const DepositSlipPreview = ({
 
       {/* Print and Clear Action Buttons */}
       <Box className="no-print" sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           size="small"
           onClick={handleClear}
-          sx={{ 
-            textTransform: "none", 
-            borderRadius: "8px", 
-            px: 2, 
-            height: 30, 
-            fontSize: "12px", 
+          sx={{
+            textTransform: "none",
+            borderRadius: "8px",
+            px: 2,
+            height: 30,
+            fontSize: "12px",
             fontWeight: 600,
-            borderColor: '#cbd5e1', 
+            borderColor: '#cbd5e1',
             color: '#475569',
             '&:hover': { bgcolor: '#f1f5f9', borderColor: '#cbd5e1' }
           }}
         >
           Clear
         </Button>
-        <Button 
+        <Button
           startIcon={<PrintIcon sx={{ fontSize: '14px' }} />}
-          variant="outlined" 
+          variant="outlined"
           size="small"
           onClick={handlePrint}
-          sx={{ 
-            textTransform: "none", 
-            borderRadius: "8px", 
-            px: 2, 
-            height: 30, 
-            fontSize: "12px", 
-            fontWeight: 600
+          sx={{
+            textTransform: "none",
+            borderRadius: "8px",
+            px: 2,
+            height: 30,
+            fontSize: "12px",
+            fontWeight: 600,
+            borderColor: '#3b82f6',
+            color: '#3b82f6'
           }}
         >
           Print

@@ -116,6 +116,30 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
     }));
   };
 
+  const handleDownload = (batch, type) => {
+    let content = `Batch Date: ${batch.date}\n`;
+    content += `Total Statements: ${batch.totalCreated}\n`;
+    content += `Type: ${type}\n\n`;
+    
+    if (batch.patients && batch.patients.length > 0) {
+      content += `Patients Included in this Batch:\n`;
+      batch.patients.forEach(pt => {
+        content += `- ${pt}\n`;
+      });
+    } else {
+      content += `No specific patients recorded.\n`;
+    }
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `statements_${type.replace(/\s+/g, '_').toLowerCase()}_${batch.date.replace(/\//g, '_')}.txt`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const headerBackground = '#3b5f9a';
   const downloadButtonBg = '#3b5f9a';
   const createSendButtonBg = '#d4c197';
@@ -196,7 +220,7 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                   <Typography sx={{ fontSize: '0.75rem', color: '#666', mb: 0.25 }}>
                     manual statement/s created
                   </Typography>
-                  <Box sx={{ pl: 1.5, borderLeft: '1px solid #ccc', mt: 0.5 }}>
+                  <Box sx={{ pl: 1.5, borderLeft: '1px solid #ccc', mt: 0.5, mb: 1 }}>
                     <Typography sx={{ fontSize: '0.75rem', color: '#888', mb: 0.25 }}>
                       {batch.details.withoutEmails} statement/s for pts without emails
                     </Typography>
@@ -207,6 +231,20 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                       {batch.details.withEmails} statement/s for pts with emails
                     </Typography>
                   </Box>
+                  {batch.patients && batch.patients.length > 0 && (
+                    <Box sx={{ mt: 1, p: 1, bgcolor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#475569', mb: 0.5 }}>
+                        Generated for:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {batch.patients.map((pt, idx) => (
+                          <Typography key={idx} sx={{ fontSize: '0.7rem', color: '#3b82f6', bgcolor: '#eff6ff', px: 0.75, py: 0.25, borderRadius: '4px' }}>
+                            {pt}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
                 </>
               )}
             </Box>
@@ -238,6 +276,7 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                   <Button
                     variant="contained"
                     size="small"
+                    onClick={() => handleDownload(batch, 'MyChart_Statements')}
                     sx={{
                       bgcolor: downloadButtonBg,
                       color: '#fff',
@@ -297,6 +336,7 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                       <Button
                         variant="contained"
                         size="small"
+                        onClick={() => handleDownload(batch, 'Manual_PDFs')}
                         sx={{
                           bgcolor: downloadButtonBg,
                           color: '#fff',

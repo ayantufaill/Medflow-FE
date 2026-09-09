@@ -21,11 +21,15 @@ import {
   MenuItem,
   Divider
 } from '@mui/material';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PrintIcon from '@mui/icons-material/Print';
 import { depositService } from '../../../../services/deposit.service';
 import { useLocation } from 'react-router-dom';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
 import { reportingService } from '../../../../services/reporting.service';
-import { ReportLayout } from '../../../../components/reports/ui';
+import dayjs from 'dayjs';
+import DepositSlipFilters from '../../../../components/reports/financial/DepositSlipFilters';
+import DepositSummaryPreview from '../../../../components/reports/financial/DepositSummaryPreview';
 
 const PAYMENT_TYPES = [
   'EFT', 'Debit Card', 'Visa Card', 'Credit Card', 'Master Card', 'Amex', 
@@ -383,154 +387,81 @@ const DepositSummary = () => {
     : 0;
 
   return (
-    <ReportLayout title="Deposit Summary:">
-      <Grid container spacing={4}>
-        {/* Left Column */}
-        <Grid item xs={12} md={7}>
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', mb: 1, borderBottom: '1px solid #e0e0e0', pb: 0.5 }}>
-            Create new deposit summary:
-          </Typography>
+    <Box sx={{ p: 0 }}>
+      <Typography variant="h6" className="no-print" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
+        Deposit Summary:
+      </Typography>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Export CSV</Button>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>Print</Button>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Transactions Date Range:</Typography>
-              <Select
-                value={dateRangeType}
-                onChange={(e) => setDateRangeType(e.target.value)}
-                size="small"
-                variant="standard"
-                sx={{ fontSize: '0.85rem', minWidth: 100, backgroundColor: '#fff' }}
-              >
-                <MenuItem value="Daily">Daily</MenuItem>
-                <MenuItem value="Weekly">Weekly</MenuItem>
-              </Select>
-            </Box>
-            <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-              <Button variant="contained" size="small" sx={{ backgroundColor: '#00BBAB', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#009b8e' } }}>Apply Filters</Button>
-              <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>Create Template</Button>
-            </Box>
-          </Box>
-
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 2 }}>Include payment types</Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <CheckboxGroup title="Patient payment types" items={PAYMENT_TYPES} selected={patientTypes} setSelected={setPatientTypes} />
-            </Grid>
-            <Grid item xs={4}>
-              <CheckboxGroup title="Insurance payment types" items={PAYMENT_TYPES.slice(0, 15)} selected={insuranceTypes} setSelected={setInsuranceTypes} />
-            </Grid>
-            <Grid item xs={4}>
-              <CheckboxGroup title="Include refund payment types" items={PAYMENT_TYPES.slice(0, 15)} selected={refundTypes} setSelected={setRefundTypes} />
-            </Grid>
-          </Grid>
-
-          <Box sx={{ mt: 2 }}>
-            <CheckboxGroup title="Include Deposits" items={PAYMENT_TYPES.slice(0, 5)} selected={depositTypes} setSelected={setDepositTypes} />
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#4a89dc', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto' }}>
-              Preview Deposit
-            </Button>
-            <Button variant="contained" size="small" sx={{ backgroundColor: '#d9a366', textTransform: 'none', fontSize: '0.72rem', py: 0.3, px: 1.5, minWidth: 'auto', '&:hover': { backgroundColor: '#c89255' } }}>
-              Print Slip
-            </Button>
-          </Box>
-        </Grid>
-
-        {/* Divider */}
-        <Grid item xs={false} md={0.5} sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
-          <Divider orientation="vertical" flexItem sx={{ borderRightWidth: 1, borderColor: '#e0e0e0' }} />
-        </Grid>
-
-        {/* Right Column */}
-        <Grid item xs={12} md={4.5}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-             <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#337ab7', borderBottom: '1px solid #337ab7', pb: 0.5 }}>
-              Deposit summary:
-            </Typography>
-             <Button
-              variant="contained"
-              sx={{
-                backgroundColor: '#d9a366',
-                textTransform: 'none',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                minWidth: 60,
-                height: 30,
-                '&:hover': { bgcolor: '#c99f54' }
-              }}
-              onClick={() => window.print()}
-            >
-              Print
-            </Button>
-          </Box>
-          
-          <Box sx={{ mt: 2 }}>
-            {!groupedPayments ? (
+      <Grid container spacing={3} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+        {/* Left Column - Filters */}
+        <Grid item xs={12} md={8}>
+          <DepositSlipFilters
+            title="Create new deposit summary:"
+            buttonText="Apply Filters"
+            extraButtons={
               <>
-                <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#333', mb: 1, display: 'block' }}>
-                  No summary create.
-                </Typography>
-                <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#666', display: 'block' }}>
-                  Create a deposit summary by editing the left side options and clicking 'Create Deposit'.
-                </Typography>
+                <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { bgcolor: '#2E8CCC', boxShadow: 'none' } }}>Export CSV</Button>
+                <Button variant="outlined" size="small" startIcon={<PrintIcon sx={{ color: '#3b82f6' }} />} sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap', boxShadow: 'none' }}>Print</Button>
+                <Button variant="outlined" size="small" sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap', boxShadow: 'none' }}>Preview Deposit</Button>
               </>
-            ) : (
-              <Box>
-                <TableContainer component={Paper} elevation={0}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, p: 1 }}>date</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, p: 1 }}>payment type</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, p: 1 }}>amount</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, p: 1 }}>daily total</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {groupedPayments.map((group, gIdx) => {
-                        const typesEntries = Object.entries(group.types);
-                        return typesEntries.map(([type, amount], tIdx) => (
-                          <TableRow key={`${gIdx}-${tIdx}`}>
-                            <TableCell sx={{ fontSize: '0.75rem', p: 1, borderBottom: 'none' }}>
-                              {tIdx === 0 ? group.date : ''}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '0.75rem', p: 1, borderBottom: 'none' }}>
-                              {type}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '0.75rem', p: 1, borderBottom: 'none' }}>
-                              ${amount.toFixed(2)}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '0.75rem', p: 1, borderBottom: 'none' }}>
-                              {tIdx === 0 ? `$${group.dailyTotal.toFixed(2)}` : ''}
-                            </TableCell>
-                          </TableRow>
-                        ));
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+            }
+            filterMode={dateRangeType.toLowerCase()}
+            handleFilterModeChange={(e) => {
+              setDateRangeType(e.target.value);
+              applyModeDates(e.target.value);
+            }}
+            startDate={fromDate ? dayjs(fromDate) : null}
+            setStartDate={(v) => setFromDate(v ? v.format('YYYY-MM-DD') : '')}
+            endDate={toDate ? dayjs(toDate) : null}
+            setEndDate={(v) => setToDate(v ? v.format('YYYY-MM-DD') : '')}
+            paymentTypes={PAYMENT_TYPES}
+            patientPaymentTypesOptions={PAYMENT_TYPES}
+            insurancePaymentTypesOptions={PAYMENT_TYPES.slice(0, 15)}
+            refundPaymentTypesOptions={PAYMENT_TYPES.slice(0, 15)}
+            includeDepositTypesOptions={PAYMENT_TYPES.slice(0, 5)}
+            patientPayTypes={patientTypes}
+            patPayAll={patientTypes.length === PAYMENT_TYPES.length}
+            insPayTypes={insuranceTypes}
+            insPayAll={insuranceTypes.length === PAYMENT_TYPES.slice(0, 15).length}
+            refPayTypes={refundTypes}
+            refPayAll={refundTypes.length === PAYMENT_TYPES.slice(0, 15).length}
+            incDepTypes={depositTypes}
+            incDepAll={depositTypes.length === PAYMENT_TYPES.slice(0, 5).length}
+            handleToggleAll={(type, checked) => {
+              if (type === 'patient') setPatientTypes(checked ? PAYMENT_TYPES : []);
+              else if (type === 'insurance') setInsuranceTypes(checked ? PAYMENT_TYPES.slice(0, 15) : []);
+              else if (type === 'refund') setRefundTypes(checked ? PAYMENT_TYPES.slice(0, 15) : []);
+              else if (type === 'include') setDepositTypes(checked ? PAYMENT_TYPES.slice(0, 5) : []);
+            }}
+            handleToggleItem={(type, item, checked) => {
+              if (type === 'patient') setPatientTypes(checked ? [...patientTypes, item] : patientTypes.filter(x => x !== item));
+              else if (type === 'insurance') setInsuranceTypes(checked ? [...insuranceTypes, item] : insuranceTypes.filter(x => x !== item));
+              else if (type === 'refund') setRefundTypes(checked ? [...refundTypes, item] : refundTypes.filter(x => x !== item));
+              else if (type === 'include') setDepositTypes(checked ? [...depositTypes, item] : depositTypes.filter(x => x !== item));
+            }}
+            showTemplateForm={false}
+            setShowTemplateForm={() => {}}
+            templateName=""
+            setTemplateName={() => {}}
+            savingTemplate={false}
+            handleSaveTemplate={() => {}}
+            handleCreateDepositClick={handleApplyFilters}
+            loading={loading}
+          />
+        </Grid>
 
-                {groupedPayments.length > 0 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, mb: 2 }}>
-                    <Typography sx={{ bgcolor: '#2196f3', color: '#fff', px: 1, py: 0.5, fontSize: '0.8rem', fontWeight: 600 }}>
-                      Total: ${overallTotal.toFixed(2)}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-          </Box>
+        {/* Right Column - Preview */}
+        <Grid item xs={12} md={4} sx={{ minWidth: 0 }}>
+          <Paper elevation={0} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: '8px', height: '100%' }}>
+            <DepositSummaryPreview
+              groupedPayments={groupedPayments}
+              overallTotal={overallTotal}
+              handlePrint={() => window.print()}
+            />
+          </Paper>
         </Grid>
       </Grid>
-    </ReportLayout>
+    </Box>
   );
 };
 
