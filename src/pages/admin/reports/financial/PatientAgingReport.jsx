@@ -15,9 +15,12 @@ import {
   CARRIER_OPTIONS,
   BRANCH_OPTIONS
 } from '../constants/reportFilters';
+import { useBranch } from '../../../../hooks/redux/useBranch';
 import AgingReportTable from '../../../../components/reports/financial/AgingReportTable';
 import AgingReportFilters from '../../../../components/reports/financial/AgingReportFilters';
 import AgingReportActions from '../../../../components/reports/financial/AgingReportActions';
+import GenerateStatementsDialog from '../../../../components/finance/GenerateStatementsDialog';
+import ViewGeneratedStatementsDialog from '../../../../components/finance/ViewGeneratedStatementsDialog';
 
 const PatientAgingReport = () => {
   const [hidePatientNames, setHidePatientNames] = useState(false);
@@ -53,9 +56,81 @@ const PatientAgingReport = () => {
 
   const [appliedFilters, setAppliedFilters] = useState({ ...draftFilters });
 
+  const { branches, fetchBranches } = useBranch();
+  const [carrierOptions, setCarrierOptions] = React.useState(CARRIER_OPTIONS);
+  const [branchOptions, setBranchOptions] = React.useState(BRANCH_OPTIONS);
+
+  const [selectedNames, setSelectedNames] = useState([]);
+  const [showGenerateStatements, setShowGenerateStatements] = useState(false);
+  const [showViewGeneratedStatements, setShowViewGeneratedStatements] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [batches, setBatches] = useState([]);
+
+  const handleGenerateBatch = (config) => {
+    setShowGenerateStatements(false);
+    setIsGenerating(true);
+
+    const newBatchId = Date.now();
+    const newBatch = {
+      id: newBatchId,
+      date: new Date().toLocaleDateString('en-US'),
+      status: 'Pending',
+      totalCreated: selectedNames.length,
+      patients: [...selectedNames],
+      sentViaMyChart: 0,
+      manualCreated: 0,
+      details: { withoutEmails: 0, withMcAccounts: 0, withEmails: 0 },
+      myChartSent: null,
+      manualPdfs: null,
+    };
+
+    setBatches(prev => [newBatch, ...prev]);
+
+    setTimeout(() => {
+      setIsGenerating(false);
+      setBatches(prev => prev.map(batch => {
+        if (batch.id !== newBatchId) return batch;
+
+        const total = batch.totalCreated;
+        let withoutEmails = Math.floor(total / 3);
+        let withMcAccounts = Math.floor(total / 2);
+        let withEmails = total - withoutEmails - withMcAccounts;
+
+        if (total > 0 && withoutEmails === 0 && withMcAccounts === 0 && withEmails === 0) {
+          withEmails = total;
+        }
+
+        return {
+          ...batch,
+          status: 'Completed',
+          sentViaMyChart: withMcAccounts + withEmails,
+          manualCreated: withoutEmails,
+          details: { withoutEmails, withMcAccounts, withEmails },
+          myChartSent: withMcAccounts + withEmails,
+          manualPdfs: withoutEmails,
+        };
+      }));
+    }, 2000);
+  };
+
   useEffect(() => {
     dispatch(fetchPatientAgingReport(appliedFilters));
   }, [dispatch, appliedFilters]);
+
+  useEffect(() => {
+    fetchBranches();
+    reportingService.getCarriers().then(carriers => {
+      const dynamicCarriers = carriers.map(c => ({ value: c.id, label: c.name }));
+      setCarrierOptions([{ value: 'all', label: 'All Carriers' }, ...dynamicCarriers]);
+    }).catch(err => console.error('Failed to load carriers', err));
+  }, [fetchBranches]);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      const dynamicBranches = branches.map(b => ({ value: b.id?.toString(), label: b.name }));
+      setBranchOptions([{ value: 'all', label: 'All Branches' }, ...dynamicBranches]);
+    }
+  }, [branches]);
 
   const handleFilterChange = (key, value) => {
     setDraftFilters(prev => ({ ...prev, [key]: value }));
@@ -91,7 +166,7 @@ const PatientAgingReport = () => {
     agingBuckets.forEach(bucket => {
       bucketsTotals[bucket] = { pt: 0, ins: 0, total: 0 };
     });
-    
+
     let totalOutstanding = 0;
     let totalPt = 0;
     let totalIns = 0;
@@ -100,7 +175,7 @@ const PatientAgingReport = () => {
     filteredReportData.forEach(row => {
       totalOutstanding += row.totalOwings || 0;
       totalCredit += row.credit || 0;
-      
+
       agingBuckets.forEach(bucket => {
         if (row.buckets && row.buckets[bucket]) {
           const pt = row.buckets[bucket].pt || 0;
@@ -128,7 +203,7 @@ const PatientAgingReport = () => {
 
   const handlePrint = (tableId = 'patient-aging-all-tables', bucketName = null) => {
     let htmlToPrint = '';
-    
+
     if (tableId === 'patient-aging-all-tables') {
       const containerEl = document.getElementById(tableId);
       if (!containerEl) {
@@ -236,27 +311,27 @@ const PatientAgingReport = () => {
                 <DatePicker
                   value={draftFilters.customArRange?.start || null}
                   onChange={(newValue) => handleFilterChange('customArRange', { ...draftFilters.customArRange, start: newValue })}
-                  slotProps={{ 
-                    textField: { 
-                      size: 'small', 
-                      sx: { 
-                        width: 150, 
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: {
+                        width: 150,
                         backgroundColor: '#fafbfe',
                         borderRadius: '4px',
                         '& .MuiInputBase-root': {
-                           height: 36,
-                           fontSize: '13px',
-                           fontFamily: 'Inter',
-                           fontWeight: 500,
-                           color: '#09121f',
+                          height: 36,
+                          fontSize: '13px',
+                          fontFamily: 'Inter',
+                          fontWeight: 500,
+                          color: '#09121f',
                         },
                         '& .MuiInputBase-input': {
-                           padding: '8px 14px',
-                           boxSizing: 'border-box',
-                           '&::placeholder': {
-                             color: '#94a3b8',
-                             opacity: 1
-                           }
+                          padding: '8px 14px',
+                          boxSizing: 'border-box',
+                          '&::placeholder': {
+                            color: '#94a3b8',
+                            opacity: 1
+                          }
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#e2e8f0'
@@ -271,8 +346,8 @@ const PatientAgingReport = () => {
                           fontSize: '20px',
                           color: '#4a5568'
                         }
-                      } 
-                    } 
+                      }
+                    }
                   }}
                 />
               </Box>
@@ -284,27 +359,27 @@ const PatientAgingReport = () => {
                 <DatePicker
                   value={draftFilters.customArRange?.end || null}
                   onChange={(newValue) => handleFilterChange('customArRange', { ...draftFilters.customArRange, end: newValue })}
-                  slotProps={{ 
-                    textField: { 
-                      size: 'small', 
-                      sx: { 
-                        width: 150, 
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: {
+                        width: 150,
                         backgroundColor: '#fafbfe',
                         borderRadius: '4px',
                         '& .MuiInputBase-root': {
-                           height: 36,
-                           fontSize: '13px',
-                           fontFamily: 'Inter',
-                           fontWeight: 500,
-                           color: '#09121f',
+                          height: 36,
+                          fontSize: '13px',
+                          fontFamily: 'Inter',
+                          fontWeight: 500,
+                          color: '#09121f',
                         },
                         '& .MuiInputBase-input': {
-                           padding: '8px 14px',
-                           boxSizing: 'border-box',
-                           '&::placeholder': {
-                             color: '#94a3b8',
-                             opacity: 1
-                           }
+                          padding: '8px 14px',
+                          boxSizing: 'border-box',
+                          '&::placeholder': {
+                            color: '#94a3b8',
+                            opacity: 1
+                          }
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#e2e8f0'
@@ -319,8 +394,8 @@ const PatientAgingReport = () => {
                           fontSize: '20px',
                           color: '#4a5568'
                         }
-                      } 
-                    } 
+                      }
+                    }
                   }}
                 />
               </Box>
@@ -330,8 +405,8 @@ const PatientAgingReport = () => {
       </Box>
       <ReportSelect label="PTS FLAGS" value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} options={FLAGS_OPTIONS} width="180px" />
       <ReportSelect label="SORT REPORT BY" value={draftFilters.sortReport} onChange={(e) => handleFilterChange('sortReport', e.target.value)} options={SORT_REPORT_OPTIONS} width="180px" />
-      <ReportSelect label="CARRIER" value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} options={CARRIER_OPTIONS} width="180px" />
-      <ReportSelect label="BRANCH" value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} options={BRANCH_OPTIONS} width="180px" />
+      <ReportSelect label="CARRIER" value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} options={carrierOptions} width="180px" />
+      <ReportSelect label="BRANCH" value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} options={branchOptions} width="180px" />
     </Box>
   );
 
@@ -341,10 +416,10 @@ const PatientAgingReport = () => {
       <ReportCheckbox label="Show Payment Plan Owing" checked={draftFilters.paymentPlanOwing} onChange={(e) => handleFilterChange('paymentPlanOwing', e.target.checked)} />
       <Box sx={{ borderLeft: '1px solid #e2e8f0', height: 24, mx: 1 }} />
       <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
-        RESET AGE ON 
+        RESET AGE ON
         <Box component="span" sx={{ ml: 0.5, color: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', verticalAlign: 'middle' }}>i</Box>
       </Typography>
-      
+
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Pt</Typography>
         <ReportSelect value={draftFilters.resetOnPatientPayment} onChange={(e) => handleFilterChange('resetOnPatientPayment', e.target.value)} options={ON_PATIENT_PAYMENT_OPTIONS} width="120px" />
@@ -353,7 +428,7 @@ const PatientAgingReport = () => {
   );
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       p: 0,
       '@media print': {
         '& .hide-on-print': {
@@ -366,7 +441,7 @@ const PatientAgingReport = () => {
       </Typography>
 
       <Box className="hide-on-print" sx={{ mb: 2 }}>
-        <ReportFilterBar 
+        <ReportFilterBar
           topRowFilters={topFilters}
           bottomRowFilters={bottomFilters}
           onApplyFilters={handleApplyFilters}
@@ -376,80 +451,86 @@ const PatientAgingReport = () => {
       </Box>
 
       <Box className="hide-on-print">
-        <AgingReportActions 
-          hidePatientNames={hidePatientNames} 
-          setHidePatientNames={setHidePatientNames} 
+        <AgingReportActions
+          hidePatientNames={hidePatientNames}
+          setHidePatientNames={setHidePatientNames}
           onExportCsv={() => handleExportCSV()}
           onPrint={() => handlePrint()}
+          onGenerateStatements={() => setShowGenerateStatements(true)}
+          onViewStatements={() => setShowViewGeneratedStatements(true)}
+          selectedCount={selectedNames.length}
         />
       </Box>
 
       <Box id="patient-aging-all-tables">
         {appliedFilters.arRange === 'any' ? (
           filteredReportData.length === 0 ? (
-            <AgingReportTable 
-              tableId="patient-aging-table-empty"
-              loading={loading}
-              reportData={[]}
-              hidePatientNames={hidePatientNames}
-              agingBuckets={agingBuckets}
-              totals={null}
-              showFlags={appliedFilters.showFlags}
-              showPaymentPlan={appliedFilters.paymentPlanOwing}
-              setSelectedPatientForNotes={() => {}}
-              selectedNames={[]}
-              setSelectedNames={() => {}}
-            />
+              <AgingReportTable
+                tableId="patient-aging-table-empty"
+                loading={loading}
+                reportData={[]}
+                hidePatientNames={hidePatientNames}
+                agingBuckets={agingBuckets}
+                totals={null}
+                showFlags={appliedFilters.showFlags}
+                showPaymentPlan={appliedFilters.paymentPlanOwing}
+                setSelectedPatientForNotes={() => { }}
+                selectedNames={selectedNames}
+                setSelectedNames={setSelectedNames}
+              />
           ) : (
-          agingBuckets.map((bucket, index) => {
-            const bucketData = filteredReportData.filter((r) => {
-              let oldest = null;
-              for (let i = agingBuckets.length - 1; i >= 0; i--) {
-                if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
-                  oldest = agingBuckets[i];
-                  break;
+            agingBuckets.map((bucket, index) => {
+              const bucketData = filteredReportData.filter((r) => {
+                let oldest = null;
+                for (let i = agingBuckets.length - 1; i >= 0; i--) {
+                  if (r.buckets && r.buckets[agingBuckets[i]] && (r.buckets[agingBuckets[i]].pt > 0 || r.buckets[agingBuckets[i]].ins > 0)) {
+                    oldest = agingBuckets[i];
+                    break;
+                  }
                 }
-              }
-              if (!oldest) oldest = agingBuckets[0];
-              return oldest === bucket;
-            });
+                if (!oldest) oldest = agingBuckets[0];
+                return oldest === bucket;
+              });
 
-            if (bucketData.length === 0) return null;
-            const tableId = `patient-aging-table-${index}`;
+              if (bucketData.length === 0) return null;
+              const tableId = `patient-aging-table-${index}`;
 
-            return (
-              <Box key={bucket} sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
-                  {bucket} Group
-                </Typography>
-                <Box className="hide-on-print">
-                  <AgingReportActions 
-                    hidePatientNames={hidePatientNames} 
-                    setHidePatientNames={setHidePatientNames} 
-                    onExportCsv={() => handleExportCSV(bucket, bucketData)}
-                    onPrint={() => handlePrint(tableId, bucket)}
-                    isSubTable={true}
+              return (
+                <Box key={bucket} sx={{ mb: 4 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
+                    {bucket} Group
+                  </Typography>
+                  <Box className="hide-on-print">
+                    <AgingReportActions
+                      hidePatientNames={hidePatientNames}
+                      setHidePatientNames={setHidePatientNames}
+                      onExportCsv={() => handleExportCSV(bucket, bucketData)}
+                      onPrint={() => handlePrint(tableId, bucket)}
+                      onGenerateStatements={() => setShowGenerateStatements(true)}
+                      onViewStatements={() => setShowViewGeneratedStatements(true)}
+                      selectedCount={selectedNames.length}
+                      isSubTable={true}
+                    />
+                  </Box>
+                  <AgingReportTable
+                    tableId={tableId}
+                    loading={loading}
+                    reportData={bucketData}
+                    agingBuckets={agingBuckets}
+                    hidePatientNames={hidePatientNames}
+                    totals={totals}
+                    showFlags={appliedFilters.showFlags}
+                    showPaymentPlan={appliedFilters.paymentPlanOwing}
+                    setSelectedPatientForNotes={() => { }}
+                    selectedNames={selectedNames}
+                    setSelectedNames={setSelectedNames}
                   />
                 </Box>
-                <AgingReportTable 
-                  tableId={tableId}
-                  loading={loading}
-                  reportData={bucketData}
-                  agingBuckets={agingBuckets}
-                  hidePatientNames={hidePatientNames}
-                  totals={totals}
-                  showFlags={appliedFilters.showFlags}
-                  showPaymentPlan={appliedFilters.paymentPlanOwing}
-                  setSelectedPatientForNotes={() => {}}
-                  selectedNames={[]}
-                  setSelectedNames={() => {}}
-                />
-              </Box>
-            );
-          })
+              );
+            })
           )
-          ) : (
-          <AgingReportTable 
+        ) : (
+          <AgingReportTable
             tableId="patient-aging-table"
             loading={loading}
             reportData={filteredReportData}
@@ -458,9 +539,26 @@ const PatientAgingReport = () => {
             totals={totals}
             showFlags={appliedFilters.showFlags}
             showPaymentPlan={appliedFilters.paymentPlanOwing}
+            setSelectedPatientForNotes={() => { }}
+            selectedNames={selectedNames}
+            setSelectedNames={setSelectedNames}
           />
         )}
       </Box>
+
+      <GenerateStatementsDialog
+        open={showGenerateStatements}
+        onClose={() => setShowGenerateStatements(false)}
+        onGenerate={handleGenerateBatch}
+        selectedCount={selectedNames.length}
+      />
+
+      {showViewGeneratedStatements && (
+        <ViewGeneratedStatementsDialog
+          batches={batches}
+          onClose={() => setShowViewGeneratedStatements(false)}
+        />
+      )}
     </Box>
   );
 };
