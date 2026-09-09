@@ -199,15 +199,26 @@ const toSliderShape = (patient, globalFlags = []) => {
     [];
   const derivedAppointments = deriveNextAppointments(appointments);
 
-  const dynamicTags = (patient.patientFlags || [])
-    .map(flagId => {
-      const found = globalFlags.find(f => f.id === flagId);
-      if (found) {
-        return { label: found.name, bg: found.color + '20', color: found.color, border: found.color };
-      }
-      return null;
-    })
-    .filter(Boolean);
+const dynamicTags = (patient.patientFlags || [])
+  .map(flag => {
+    // patientFlags might be strings (names) or objects with { name, color, ... }
+    const flagName = typeof flag === 'string' ? flag : (flag.name || flag.label || String(flag));
+    const existingColor = typeof flag === 'object' ? flag.color : null;
+    
+    // ✅ ALWAYS look up in globalFlags first (source of truth from Redux)
+    const found = globalFlags.find(f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase());
+    if (found && found.color) {
+      return { label: found.name || found.label, bg: found.color + '20', color: found.color, border: found.color };
+    }
+    
+    // Fallback to existing color only if NOT found in globalFlags
+    if (existingColor) {
+      return { label: flagName, bg: existingColor + '20', color: existingColor, border: existingColor };
+    }
+    
+    return null;
+  })
+  .filter(Boolean);
 
   return {
     name,

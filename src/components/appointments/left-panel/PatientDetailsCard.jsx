@@ -2,12 +2,23 @@ import { useState, useEffect } from 'react';
 import { usePatient, useDropdownData } from '../../../hooks/redux';
 import { usePatientInsurance } from '../../../hooks/redux/usePatientInsurance';
 import { providerLabel } from '../new-appointment/helpers';
-import { Box, Typography, Tooltip } from '@mui/material';
+import { Box, Typography, Tooltip, Skeleton } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp, Assignment, PeopleAlt, InfoOutlined } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
 import { fontSize, fontWeight, radius, spacing, headingPrimarySx, headingSecondarySx, avatarSize } from '../../../constants/styles';
+import {
+  fetchPatientBalance,
+  fetchInsuranceUsage,
+  invalidatePatientBalance,
+  invalidateInsuranceUsage,
+  selectPatientBalanceCache,
+  selectPatientBalanceLoading,
+  selectInsuranceUsageCache,
+  selectInsuranceUsageLoading,
+} from '../../../store/slices/patientSlice';
+import { resolveFlagColor as getFlagColorFromAdmin } from '../../patient-flags/constants';
 
 /* ── Reusable sub-section row ────────────────────────────────────── */
 const SubSection = ({ label, chevronSide = null, open, onToggle, children }) => (
@@ -109,20 +120,39 @@ export const PatientDetails = () => {
   const { providers = [] } = useDropdownData({ providers: true });
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
+  const dispatch = useDispatch();
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal || f.name.toLowerCase() === flagVal.toLowerCase());
-    return found ? found.color : '#cbd5e1'; 
+    return getFlagColorFromAdmin(flagVal, globalFlags);
   };
 
   const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
   const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
+
+  // ── Billing data from Redux ──────────────────────────────────────
+  const balanceCache = useSelector(selectPatientBalanceCache);
+  const balanceLoading = useSelector(selectPatientBalanceLoading);
+  const insuranceUsageCache = useSelector(selectInsuranceUsageCache);
+  const insuranceUsageLoading = useSelector(selectInsuranceUsageLoading);
+
+  const cachedBalance = patientId ? balanceCache[patientId]?.data : null;
+  const cachedUsage = patientId ? insuranceUsageCache[patientId]?.data : null;
 
   useEffect(() => {
     if (patientId && (!insurances || insurances.length === 0)) {
       fetchInsurances();
     }
   }, [patientId, fetchInsurances, insurances]);
+
+  // Fetch balance and insurance usage whenever the patient changes
+  // Always invalidate cache first so we never show stale data
+  useEffect(() => {
+    if (!patientId) return;
+    dispatch(invalidatePatientBalance(patientId));
+    dispatch(invalidateInsuranceUsage(patientId));
+    dispatch(fetchPatientBalance(patientId));
+    dispatch(fetchInsuranceUsage(patientId));
+  }, [patientId, dispatch]);
 
   if (!currentPatient) return null;
 
@@ -162,10 +192,22 @@ export const PatientDetails = () => {
   const flags = currentPatient.patientFlags || currentPatient.flags || [];
   const flagsList = Array.isArray(flags) ? flags : (flags ? [flags] : []);
 
+  // ── Balance: prefer live API data, fall back to patient object fields ──
+  const liveBalance = cachedBalance?.balance ?? cachedBalance?.totalBalance ?? null;
+  const displayBalance = liveBalance !== null
+    ? liveBalance
+    : (currentPatient.totalBalance ?? currentPatient.BalTotal ?? 0);
+
+  // ── Insurance usage: prefer live API data, fall back to coverage limits ──
+  const primaryUsage = cachedUsage?.primaryInsurance ?? null;
+  const liveUsedAmount = primaryUsage?.usedAmount ?? null;
+  const liveAnnualMax = primaryUsage?.annualMax ?? null;
+
+  // Fallback: derive from insurance coverage limits already in cache
   const parseAmount = (val) => {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'number') return isNaN(val) ? null : val;
-    const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+    const cleaned = String(val).replace(/[^0-9.-]+/g, '');
     if (!cleaned) return null;
     const num = parseFloat(cleaned);
     return isNaN(num) ? null : num;
@@ -175,38 +217,21 @@ export const PatientDetails = () => {
     if (!ins) return { usedAmount: 0, maxAmount: 0 };
     let coverageLimits = ins?.coverageLimits;
     if (typeof coverageLimits === 'string') {
-      try {
-        coverageLimits = JSON.parse(coverageLimits);
-      } catch (e) {
-        coverageLimits = null;
-      }
+      try { coverageLimits = JSON.parse(coverageLimits); } catch (e) { coverageLimits = null; }
     }
     const limitsInd = coverageLimits?.individual;
-    
-    const rawUsed = 
-      limitsInd?.usedAmount ?? 
-      ins?.usedAmount ?? 
-      ins?.copayAmount;
-
-    const rawMax = 
-      limitsInd?.annualMax ?? 
-      ins?.individualAnnualMax ?? 
-      ins?.deductibleAmount;
-
-    return {
-      usedAmount: parseAmount(rawUsed) ?? 0,
-      maxAmount: parseAmount(rawMax) ?? 0,
-    };
+    const rawUsed = limitsInd?.usedAmount ?? ins?.usedAmount ?? ins?.copayAmount;
+    const rawMax = limitsInd?.annualMax ?? ins?.individualAnnualMax ?? ins?.deductibleAmount;
+    return { usedAmount: parseAmount(rawUsed) ?? 0, maxAmount: parseAmount(rawMax) ?? 0 };
   };
 
   const activeInsurances = (insurances || []).filter(ins => ins.isActive !== false);
   const targetIns = activeInsurances[0] || insurances?.[0];
-  const { usedAmount: insUsedAmount, maxAmount: insMaxAmount } = getCoverageAmounts(targetIns);
+  const { usedAmount: fallbackUsed, maxAmount: fallbackMax } = getCoverageAmounts(targetIns);
 
-  const totalBalance = currentPatient.totalBalance || currentPatient.BalTotal || 0;
-  const usedAmount = insUsedAmount || currentPatient.usedAmount || currentPatient.PriInsUsed || 0;
-  const maxAmount = insMaxAmount || 0;
-  const calculatedBalance = maxAmount > 0 ? (maxAmount - usedAmount) : totalBalance;
+  const usedAmount = liveUsedAmount !== null ? liveUsedAmount : (fallbackUsed || currentPatient.usedAmount || currentPatient.PriInsUsed || 0);
+  const maxAmount = liveAnnualMax !== null ? liveAnnualMax : fallbackMax;
+  const planName = primaryUsage?.planName ?? targetIns?.planName ?? null;
 
   return (
     <DetailCard icon={<Assignment sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Patient Details">
@@ -272,16 +297,53 @@ export const PatientDetails = () => {
 
       {/* Bills */}
       <SubSection label="Bills" open>
-        <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, pl: '8px' }}>
-          Balance: ${Number(calculatedBalance).toFixed(2)}
-        </Typography>
+        {balanceLoading && !cachedBalance ? (
+          <Skeleton variant="text" width={120} height={20} sx={{ ml: '8px' }} />
+        ) : (
+          <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, pl: '8px' }}>
+            Balance:{' '}
+            <span style={{ fontWeight: fontWeight.bold, color: displayBalance > 0 ? '#dc2626' : COLORS.TEXT_PRIMARY }}>
+              ${Number(displayBalance).toFixed(2)}
+            </span>
+          </Typography>
+        )}
       </SubSection>
 
       {/* Used Amount */}
       <SubSection label="Used Amount:" open>
-        <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, pl: '8px' }}>
-          ${Number(usedAmount).toFixed(2)}{maxAmount > 0 ? ` / $${Number(maxAmount).toFixed(2)}` : ''}
-        </Typography>
+        {insuranceUsageLoading && !cachedUsage ? (
+          <Skeleton variant="text" width={140} height={24} sx={{ ml: '8px' }} />
+        ) : (
+          <>
+            <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, pl: '8px' }}>
+              ${Number(usedAmount).toFixed(2)}
+              {maxAmount > 0 ? ` / $${Number(maxAmount).toFixed(2)}` : ''}
+            </Typography>
+            {planName && (
+              <Typography sx={{ fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, pl: '8px' }}>
+                {planName}
+              </Typography>
+            )}
+            {maxAmount > 0 && (
+              <Box sx={{ pl: '8px', pr: '8px', mt: '4px' }}>
+                <Box sx={{ height: '4px', borderRadius: '2px', bgcolor: '#e5e7eb', overflow: 'hidden' }}>
+                  <Box
+                    sx={{
+                      height: '100%',
+                      borderRadius: '2px',
+                      bgcolor: usedAmount / maxAmount > 0.85 ? '#dc2626' : usedAmount / maxAmount > 0.6 ? '#f59e0b' : COLORS.ACCENT,
+                      width: `${Math.min(100, (usedAmount / maxAmount) * 100).toFixed(1)}%`,
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </Box>
+                <Typography sx={{ fontSize: fontSize.xs, color: COLORS.TEXT_MUTED, mt: '2px' }}>
+                  ${Number(maxAmount - usedAmount).toFixed(2)} remaining
+                </Typography>
+              </Box>
+            )}
+          </>
+        )}
       </SubSection>
 
     </DetailCard>
@@ -291,13 +353,18 @@ export const PatientDetails = () => {
 /* ── Family Details ──────────────────────────────────────────────── */
 export const FamilyDetails = () => {
   const { currentPatient } = usePatient();
+  const balanceCache = useSelector(selectPatientBalanceCache);
   
   if (!currentPatient) return null;
 
+  const patientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
+  const cachedBalance = patientId ? balanceCache[patientId]?.data : null;
+
   const household = currentPatient.household || [];
-  const famBalance = currentPatient.familyBalance || currentPatient.FamBalTotal || 0;
-  const indBalance = currentPatient.totalBalance || currentPatient.BalTotal || 0;
-  const insBalance = currentPatient.insEst || currentPatient.InsEst || 0;
+  // Prefer live balance API data; fall back to patient object fields
+  const famBalance = cachedBalance?.familyBalance ?? currentPatient.familyBalance ?? currentPatient.FamBalTotal ?? 0;
+  const indBalance = cachedBalance?.balance ?? currentPatient.totalBalance ?? currentPatient.BalTotal ?? 0;
+  const insBalance = cachedBalance?.insuranceEstimate ?? currentPatient.insEst ?? currentPatient.InsEst ?? 0;
 
   const BillRow = ({ label, value }) => (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>

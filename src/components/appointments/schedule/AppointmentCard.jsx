@@ -23,6 +23,7 @@ import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
 import { ICON_TAGS } from "../new-appointment/constants";
+import linkedIconSrc from "../../../assets/Tags/linked-icon.svg";
 
 const getPrivacyName = (fullName) => {
   if (!fullName) return "";
@@ -131,7 +132,7 @@ const getSizeTier = (durationMinutes = 60) => {
   return "lg";
 };
 
-const AppointmentCard = ({ appointment, privacyMode }) => {
+const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false }) => {
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
@@ -378,7 +379,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                   letterSpacing: "0.7px",
                 }}
               >
-                {appointment.status}
+                {String(appointment.status || 'unconfirmed')
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, c => c.toUpperCase())}
               </Typography>
             </Box>
           )}
@@ -620,7 +623,34 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                     {appointment.price}
                   </Typography>
                 </Box>
-                {colorTags.length > 0 &&
+                {isLinkedToShortlist ? (
+                  <Tooltip title="Copied to shortlist" arrow placement="top" disableInteractive>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        px: "6px",
+                        py: "2px",
+                        borderRadius: "6px",
+                        bgcolor: "#e0f4fb",
+                        border: "1px solid #b3e5f5",
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={linkedIconSrc}
+                        alt="Linked to shortlist"
+                        sx={{ width: "13px", height: "13px" }}
+                      />
+                      <Typography
+                        sx={{ fontSize: "11px", fontWeight: 700, color: "#009edb" }}
+                      >
+                        Shortlist
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                ) : colorTags.length > 0 &&
                   (() => {
                     const visibleColorTags = colorTags.slice(0, 3);
                     const hiddenCount = colorTags.length - visibleColorTags.length;

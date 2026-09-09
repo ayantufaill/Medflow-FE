@@ -754,6 +754,16 @@ const OperatorySchedulePage = () => {
     }
   }, [fetchStartDate, fetchEndDate, fetchApptsMain]);
 
+  // Re-fetch appointments whenever a shortlist operation mutates appointment data
+  // (e.g. copy-to-shortlist writes linkedToShortlist flag back to the appointment)
+  useEffect(() => {
+    const handleShortlistUpdated = () => {
+      if (refreshAppointments) refreshAppointments();
+    };
+    window.addEventListener('shortlist-updated', handleShortlistUpdated);
+    return () => window.removeEventListener('shortlist-updated', handleShortlistUpdated);
+  }, [refreshAppointments]);
+
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
     if (!reduxAppointments) return [];

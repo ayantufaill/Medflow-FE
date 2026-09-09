@@ -588,20 +588,38 @@ const AddNewPatientAppointmentForm = ({
           )
             provId = initialAppointment.provider;
 
-          setProviderRows(
-            provId
-              ? [
-                  {
-                    id: Date.now(),
-                    providerId: String(provId),
-                    time:
-                      sourceAppt.durationMinutes ||
-                      initialAppointment.durationMinutes ||
-                      60,
-                  },
-                ]
-              : [{ id: Date.now(), providerId: "", time: 60 }],
-          );
+          // Restore all provider rows from customFields if available,
+          // otherwise fall back to the single primary provider
+          const savedProviderRows =
+            Array.isArray(customFields.providerRows) &&
+            customFields.providerRows.length > 0
+              ? customFields.providerRows
+              : null;
+
+          if (savedProviderRows) {
+            setProviderRows(
+              savedProviderRows.map((r, i) => ({
+                id: Date.now() + i,
+                providerId: String(r.providerId),
+                time: r.time || sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60,
+              })),
+            );
+          } else {
+            setProviderRows(
+              provId
+                ? [
+                    {
+                      id: Date.now(),
+                      providerId: String(provId),
+                      time:
+                        sourceAppt.durationMinutes ||
+                        initialAppointment.durationMinutes ||
+                        60,
+                    },
+                  ]
+                : [{ id: Date.now(), providerId: "", time: 60 }],
+            );
+          }
 
           setNotes(
             sourceAppt.notes ||
@@ -1312,6 +1330,13 @@ const AddNewPatientAppointmentForm = ({
         colorTags: [...selectedColorTags],
         procedureTags: selectedProcedureTags,
         operatoryId: roomId || undefined,
+        // Save all provider rows so additional providers/assistants are persisted
+        providerRows: providerRows
+          .filter((r) => r.providerId)
+          .map((r) => ({
+            providerId: r.providerId,
+            time: r.time,
+          })),
       },
       isNewRecall: !!computedVisitType,
     };
@@ -1402,6 +1427,18 @@ const AddNewPatientAppointmentForm = ({
   const isShortlistEditMode = Boolean(initialShortlistData);
   const isEditMode = Boolean(initialAppointment || initialShortlistData);
 
+  // Seed from the appointment's persisted customFields so it shows correctly on re-open
+  const [isCopiedToShortlist, setIsCopiedToShortlist] = useState(
+    Boolean(initialAppointment?.customFields?.linkedToShortlist),
+  );
+
+  // Re-sync when a different appointment is loaded into the form
+  useEffect(() => {
+    setIsCopiedToShortlist(
+      Boolean(initialAppointment?.customFields?.linkedToShortlist),
+    );
+  }, [initialAppointment]);
+
   const handleConvertToShortlist = async () => {
     if (!patient) {
       setErrorMessage("Please select a patient first.");
@@ -1445,6 +1482,17 @@ const AddNewPatientAppointmentForm = ({
       return;
     }
     const payload = getAppointmentPayload();
+
+    // Embed the source appointment ID so deleting the shortlist item can clear the flag
+    const apptId = initialAppointment?._id || initialAppointment?.id || initialAppointment?.AptNum;
+    const realApptId = apptId ? String(apptId).replace("appt-", "") : null;
+    if (realApptId) {
+      payload.customFields = {
+        ...(payload.customFields || {}),
+        linkedAppointmentId: realApptId,
+      };
+    }
+
     try {
       if (isShortlistEditMode) {
         await shortlistService.updateShortlistItem(
@@ -1456,7 +1504,27 @@ const AddNewPatientAppointmentForm = ({
         await shortlistService.createShortlistItem(payload);
         setToastMessage("Successfully copied to shortlist!");
       }
+
+      // Persist the linked flag on the appointment so it survives a page refresh,
+      // then fire shortlist-updated so the page re-fetches and the card updates immediately
+      if (realApptId) {
+        try {
+          const { appointmentService } = await import("../../services/appointment.service");
+          await appointmentService.updateAppointment(realApptId, {
+            customFields: {
+              ...(payload.customFields || {}),
+              linkedToShortlist: true,
+            },
+          });
+        } catch (e) {
+          console.warn("Could not persist linkedToShortlist flag:", e);
+        }
+      }
+
+      // Fire after the flag is persisted so the re-fetch picks up the updated data
       window.dispatchEvent(new Event("shortlist-updated"));
+      setIsCopiedToShortlist(true);
+
       setTimeout(() => {
         if (onCancel) onCancel();
       }, 1000);
@@ -1572,6 +1640,7 @@ const AddNewPatientAppointmentForm = ({
           timeMins={timeMins}
           amPm={amPm}
           visitType={visitType}
+          isCopiedToShortlist={isCopiedToShortlist}
         />
 
         {errorMessage && (

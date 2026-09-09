@@ -215,6 +215,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       appt.createdByName ||
       "",
     price: priceStr,
+    linkedToShortlist: Boolean(cf.linkedToShortlist),
     rawAppointment: appt,
   };
 };
@@ -734,7 +735,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 zIndex: isGhosted ? 3 : 2,
               }}
             >
-              <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
+              <AppointmentCard
+                appointment={gridItem}
+                privacyMode={privacyMode}
+                isLinkedToShortlist={Boolean(gridItem.linkedToShortlist)}
+              />
             </Box>
           );
         });

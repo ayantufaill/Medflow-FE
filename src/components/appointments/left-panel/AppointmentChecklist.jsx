@@ -12,6 +12,7 @@ import CompleteProceduresDialog from './CompleteProceduresDialog';
 import { DUMMY_PROCEDURE_OPTIONS } from '../new-appointment/constants';
 import { useDispatch } from 'react-redux';
 import { createInvoice } from '../../../store/slices/billingSlice';
+import { invalidatePatientBalance, invalidateInsuranceUsage } from '../../../store/slices/patientSlice';
 import { updateAppointmentThunk } from '../../../store/slices/appointmentSlice';
 import { claimService } from '../../../services/claim.service';
 import InvoiceModal from '../../finance/InvoiceModal';
@@ -307,6 +308,12 @@ const AppointmentChecklist = ({ patientId, appointment }) => {
       
       setShowInvoiceModal(false);
       showSnackbar("Invoice saved successfully!", "success");
+
+      // Invalidate balance cache so PatientDetailsCard re-fetches immediately
+      if (patientId) {
+        dispatch(invalidatePatientBalance(String(patientId)));
+        dispatch(invalidateInsuranceUsage(String(patientId)));
+      }
       
       if (shouldAddClaim && claimRows.length > 0 && createdInvoiceId) {
         try {
