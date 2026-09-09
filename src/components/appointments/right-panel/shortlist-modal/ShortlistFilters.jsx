@@ -5,16 +5,14 @@ import { FilterLabel, FilterInput, FilterSelect } from "./helpers";
 import PatientFlagsDialog from "../../../patient-flags/PatientFlagsDialog";
 import { useSelector } from 'react-redux';
 import { selectPracticeInfo } from '../../../../store/slices/practiceInfoSlice';
+import { resolveFlagColor } from '../../../patient-flags/constants';
 
 const ShortlistFilters = ({ filters, onChange, providersList = [], onClear, onPrint }) => {
   const [flagsDialogOpen, setFlagsDialogOpen] = useState(false);
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
 
-  const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal || f.name.toLowerCase() === flagVal.toLowerCase());
-    return found ? found.color : '#cbd5e1'; 
-  };
+  const getColor = (flagVal) => resolveFlagColor(flagVal, globalFlags);
   const handleSearchChange = (e) => onChange("searchName", e.target.value);
   const handleProviderChange = (e) => onChange("providerId", e.target.value);
   const handleMaxDurChange = (e) => onChange("maxDuration", e.target.value);
@@ -188,7 +186,7 @@ const ShortlistFilters = ({ filters, onChange, providersList = [], onClear, onPr
                     width: 12, 
                     height: 12, 
                     borderRadius: '2px', 
-                    bgcolor: resolveFlagColor(flag), 
+                    bgcolor: getColor(flag),
                     flexShrink: 0,
                     cursor: 'pointer'
                   }} 

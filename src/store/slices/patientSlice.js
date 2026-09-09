@@ -129,6 +129,31 @@ export const fetchPatientBalance = createAsyncThunk(
   }
 );
 
+export const fetchInsuranceUsage = createAsyncThunk(
+  'patient/fetchInsuranceUsage',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const data = await patientService.getInsuranceUsage(patientId);
+      return { patientId, data };
+    } catch (err) {
+      // 404 means the endpoint isn't implemented yet — fail silently
+      if (err.response?.status === 404 || err.response?.status === 501) {
+        return { patientId, data: null };
+      }
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch insurance usage');
+    }
+  },
+  {
+    condition: (patientId, { getState }) => {
+      const { patient } = getState();
+      if (patient.insuranceUsageLoading) return false;
+      const cached = patient.insuranceUsageCache?.[patientId];
+      if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) return false;
+      return true;
+    }
+  }
+);
+
 export const createPatientInsuranceThunk = createAsyncThunk(
   'patient/createPatientInsurance',
   async ({ patientId, payload }, { dispatch, rejectWithValue }) => {
@@ -341,6 +366,10 @@ const initialState = {
   balanceCache: {}, // { [patientId]: { data, timestamp } }
   balanceLoading: false,
 
+  // Insurance usage cache
+  insuranceUsageCache: {}, // { [patientId]: { data, timestamp } }
+  insuranceUsageLoading: false,
+
   // Global Insurances
   globalInsurances: [],
   globalInsurancesLoading: false,
@@ -406,6 +435,14 @@ const patientSlice = createSlice({
         delete state.balanceCache[patientId];
       } else {
         state.balanceCache = {};
+      }
+    },
+    invalidateInsuranceUsage: (state, action) => {
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.insuranceUsageCache[patientId];
+      } else {
+        state.insuranceUsageCache = {};
       }
     },
     // Update a patient in the list after edit
@@ -501,6 +538,21 @@ const patientSlice = createSlice({
       .addCase(fetchPatientBalance.rejected, (state) => {
         state.balanceLoading = false;
       })
+      // Fetch Insurance Usage
+      .addCase(fetchInsuranceUsage.pending, (state) => {
+        state.insuranceUsageLoading = true;
+      })
+      .addCase(fetchInsuranceUsage.fulfilled, (state, action) => {
+        const { patientId, data } = action.payload;
+        state.insuranceUsageCache[patientId] = {
+          data,
+          timestamp: Date.now(),
+        };
+        state.insuranceUsageLoading = false;
+      })
+      .addCase(fetchInsuranceUsage.rejected, (state) => {
+        state.insuranceUsageLoading = false;
+      })
       // fetchMedicalHistoryThunk
       .addCase(fetchMedicalHistoryThunk.pending, (state) => {
         state.medicalHistoryLoading = true;
@@ -541,6 +593,7 @@ export const {
   invalidatePatientDetail,
   invalidatePatientInsurances,
   invalidatePatientBalance,
+  invalidateInsuranceUsage,
   updatePatientInList,
   removePatientFromList,
 } = patientSlice.actions;
@@ -566,6 +619,9 @@ export const selectCurrentDentalHistory = (state) => state.patient.currentDental
 export const selectDentalHistoryLoading = (state) => state.patient.dentalHistoryLoading;
 export const selectDentalHistoryError = (state) => state.patient.dentalHistoryError;
 export const selectPatientBalanceCache = (state) => state.patient.balanceCache;
+export const selectPatientBalanceLoading = (state) => state.patient.balanceLoading;
+export const selectInsuranceUsageCache = (state) => state.patient.insuranceUsageCache;
+export const selectInsuranceUsageLoading = (state) => state.patient.insuranceUsageLoading;
 
 // Check if cache is valid
 export const selectIsCacheValid = (state) => {

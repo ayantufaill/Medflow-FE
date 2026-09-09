@@ -29,6 +29,7 @@ import { useSnackbar } from "../../../contexts/SnackbarContext";
 import InvoiceModal from "../../finance/InvoiceModal";
 import { useDispatch } from "react-redux";
 import { createInvoice } from "../../../store/slices/billingSlice";
+import { invalidatePatientBalance, invalidateInsuranceUsage } from "../../../store/slices/patientSlice";
 import { claimService } from "../../../services/claim.service";
 
 const AppointmentLeftPanel = ({
@@ -329,6 +330,13 @@ const AppointmentLeftPanel = ({
 
       setShowInvoiceModal(false);
       showSnackbar("Invoice saved successfully!", "success");
+
+      // Invalidate balance cache so PatientDetailsCard re-fetches immediately
+      const pid = patient?.id || patient?._id || patient?.PatNum;
+      if (pid) {
+        dispatch(invalidatePatientBalance(String(pid)));
+        dispatch(invalidateInsuranceUsage(String(pid)));
+      }
 
       if (shouldAddClaim && claimRows.length > 0 && createdInvoiceId) {
         try {

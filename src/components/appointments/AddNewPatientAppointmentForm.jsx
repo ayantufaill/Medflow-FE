@@ -588,20 +588,38 @@ const AddNewPatientAppointmentForm = ({
           )
             provId = initialAppointment.provider;
 
-          setProviderRows(
-            provId
-              ? [
-                  {
-                    id: Date.now(),
-                    providerId: String(provId),
-                    time:
-                      sourceAppt.durationMinutes ||
-                      initialAppointment.durationMinutes ||
-                      60,
-                  },
-                ]
-              : [{ id: Date.now(), providerId: "", time: 60 }],
-          );
+          // Restore all provider rows from customFields if available,
+          // otherwise fall back to the single primary provider
+          const savedProviderRows =
+            Array.isArray(customFields.providerRows) &&
+            customFields.providerRows.length > 0
+              ? customFields.providerRows
+              : null;
+
+          if (savedProviderRows) {
+            setProviderRows(
+              savedProviderRows.map((r, i) => ({
+                id: Date.now() + i,
+                providerId: String(r.providerId),
+                time: r.time || sourceAppt.durationMinutes || initialAppointment.durationMinutes || 60,
+              })),
+            );
+          } else {
+            setProviderRows(
+              provId
+                ? [
+                    {
+                      id: Date.now(),
+                      providerId: String(provId),
+                      time:
+                        sourceAppt.durationMinutes ||
+                        initialAppointment.durationMinutes ||
+                        60,
+                    },
+                  ]
+                : [{ id: Date.now(), providerId: "", time: 60 }],
+            );
+          }
 
           setNotes(
             sourceAppt.notes ||
@@ -1312,6 +1330,13 @@ const AddNewPatientAppointmentForm = ({
         colorTags: [...selectedColorTags],
         procedureTags: selectedProcedureTags,
         operatoryId: roomId || undefined,
+        // Save all provider rows so additional providers/assistants are persisted
+        providerRows: providerRows
+          .filter((r) => r.providerId)
+          .map((r) => ({
+            providerId: r.providerId,
+            time: r.time,
+          })),
       },
       isNewRecall: !!computedVisitType,
     };

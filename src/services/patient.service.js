@@ -451,4 +451,28 @@ export const patientService = {
     );
     return response.data.data;
   },
+
+  // ---------------- Patient Balance ----------------
+
+  /**
+   * Get patient outstanding balance (calculated on-the-fly from raw transactions)
+   * @param {string} patientId - Patient ID
+   * @returns {Promise<{ balance: number, overdueAmount: number, lastPaymentDate: string|null }>}
+   */
+  async getPatientBalance(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/balance`);
+    return response.data?.data ?? response.data;
+  },
+
+  // ---------------- Insurance Usage ----------------
+
+  /**
+   * Get patient's YTD insurance benefit usage
+   * @param {string} patientId - Patient ID
+   * @returns {Promise<{ primaryInsurance: { planName, usedAmount, annualMax, remaining, renewalMonth }, secondaryInsurance: null|Object }>}
+   */
+  async getInsuranceUsage(patientId) {
+    const response = await apiClient.get(`/patients/${patientId}/insurance-usage`);
+    return response.data?.data ?? response.data;
+  },
 };

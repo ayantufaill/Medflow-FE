@@ -24,3 +24,22 @@ export const getFlagColor = (label) => {
   const flag = PATIENT_FLAGS_DATA.find(f => f.label === label);
   return flag ? flag.color : '#cbd5e1';
 };
+
+/**
+ * Resolve a flag's color using the live admin-defined flags from Redux (practiceInfo.patientFlags).
+ * Falls back to the hardcoded PATIENT_FLAGS_DATA list, then to a neutral grey.
+ *
+ * @param {string} flagName - The flag name/label to look up
+ * @param {Array}  globalFlags - practiceInfo?.patientFlags from Redux (pass [] if unavailable)
+ * @returns {string} hex color
+ */
+export const resolveFlagColor = (flagName, globalFlags = []) => {
+  if (!flagName) return '#cbd5e1';
+  // 1. Check the live admin-defined list first
+  const live = globalFlags.find(
+    f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase()
+  );
+  if (live?.color) return live.color;
+  // 2. Fall back to the hardcoded list
+  return getFlagColor(flagName);
+};
