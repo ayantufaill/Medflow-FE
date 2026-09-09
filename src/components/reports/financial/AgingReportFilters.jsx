@@ -3,7 +3,8 @@ import { Box, Typography, TextField } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProviders, selectProviderList } from '../../../store/slices/providerSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { reportingService } from '../../../services/reporting.service';
 import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportDivider } from '../ui';
 import {
   BALANCE_OPTIONS,
@@ -20,10 +21,14 @@ import {
   CARRIER_OPTIONS,
   BRANCH_OPTIONS
 } from '../../../pages/admin/reports/constants/reportFilters';
+import { useBranch } from '../../../hooks/redux/useBranch';
 
 const AgingReportFilters = ({ onApplyFilters }) => {
   const dispatch = useDispatch();
-  const providersData = useSelector(selectProviderList) || [];
+  const providersData = useSelector(selectProviderDropdownList) || [];
+  const { branches, fetchBranches } = useBranch();
+  const [carrierOptions, setCarrierOptions] = React.useState(CARRIER_OPTIONS);
+  const [branchOptions, setBranchOptions] = React.useState(BRANCH_OPTIONS);
 
   const [draftFilters, setDraftFilters] = React.useState({
     balance: BALANCE_OPTIONS[0].value,
@@ -76,8 +81,20 @@ const AgingReportFilters = ({ onApplyFilters }) => {
   };
 
   useEffect(() => {
-    dispatch(fetchProviders({ page: 1, limit: 100 }));
-  }, [dispatch]);
+    dispatch(fetchAllProvidersForDropdown());
+    fetchBranches();
+    reportingService.getCarriers().then(carriers => {
+      const dynamicCarriers = carriers.map(c => ({ value: c.id, label: c.name }));
+      setCarrierOptions([{ value: 'all', label: 'All Carriers' }, ...dynamicCarriers]);
+    }).catch(err => console.error('Failed to load carriers', err));
+  }, [dispatch, fetchBranches]);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      const dynamicBranches = branches.map(b => ({ value: b.id?.toString(), label: b.name }));
+      setBranchOptions([{ value: 'all', label: 'All Branches' }, ...dynamicBranches]);
+    }
+  }, [branches]);
 
   const dynamicProviderOptions = useMemo(() => {
     const backendProviders = providersData.map(p => {
@@ -262,8 +279,8 @@ const AgingReportFilters = ({ onApplyFilters }) => {
         )}
       </Box>
       <ReportSelect label="PTS FLAGS" options={FLAGS_OPTIONS} value={draftFilters.flags} onChange={(e) => handleFilterChange('flags', e.target.value)} />
-      <ReportSelect label="CARRIER" options={CARRIER_OPTIONS} value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} />
-      <ReportSelect label="BRANCH" options={BRANCH_OPTIONS} value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} />
+      <ReportSelect label="CARRIER" options={carrierOptions} value={draftFilters.carrier} onChange={(e) => handleFilterChange('carrier', e.target.value)} />
+      <ReportSelect label="BRANCH" options={branchOptions} value={draftFilters.branch} onChange={(e) => handleFilterChange('branch', e.target.value)} />
     </Box>
   );
 

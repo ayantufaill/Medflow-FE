@@ -110,6 +110,14 @@ export const reportingService = {
   },
 
   /**
+   * Get list of carriers for reporting filters
+   */
+  async getCarriers() {
+    const response = await apiClient.get('/reports/carriers');
+    return response.data.data;
+  },
+
+  /**
    * Get archived report by ID
    * @param {string} id 
    */

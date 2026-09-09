@@ -178,7 +178,7 @@ const AgingReport = () => {
   const filteredReportData = enrichedReportData;
 
   const [archivedDate, setArchivedDate] = useState('');
-  const [archivedReportsList, setArchivedReportsList] = useState([]);
+  const [archivedBaseData, setArchivedBaseData] = useState([]);
   const [archivedReportsLoading, setArchivedReportsLoading] = useState(false);
   const [archivedData, setArchivedData] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
@@ -187,6 +187,25 @@ const AgingReport = () => {
   useEffect(() => {
     dispatch(fetchArAgingReport(appliedFilters));
   }, [dispatch, appliedFilters]);
+
+  useEffect(() => {
+    if (tabValue === 1) {
+      setArchivedReportsLoading(true);
+      const defaultFilters = {
+        provider: 'all',
+        flags: 'with_or_without',
+        codeFilter: 'filter',
+        carrier: 'all',
+        sortBy: 'default'
+      };
+      reportingService.getFinancialReport('aging', defaultFilters)
+        .then(data => {
+          setArchivedBaseData(data || []);
+        })
+        .catch(err => console.error('Failed to fetch unfiltered aging data', err))
+        .finally(() => setArchivedReportsLoading(false));
+    }
+  }, [tabValue]);
 
   const handleViewArchived = (selectedDateStr) => {
     if (!selectedDateStr) {
@@ -197,7 +216,7 @@ const AgingReport = () => {
 
     setArchivedDate(selectedDateStr);
     
-    const filteredResult = filteredReportData.filter(row => {
+    const filteredResult = archivedBaseData.filter(row => {
       if (!row.lastBilled) return false;
       const billedDateStr = new Date(row.lastBilled).toLocaleDateString();
       return billedDateStr === selectedDateStr;
@@ -558,7 +577,7 @@ const AgingReport = () => {
                 <TableBody>
                   {(() => {
                     const uniqueDates = new Set();
-                    filteredReportData.forEach(row => {
+                    archivedBaseData.forEach(row => {
                       if (row.lastBilled) {
                         uniqueDates.add(new Date(row.lastBilled).toLocaleDateString());
                       }
@@ -571,10 +590,18 @@ const AgingReport = () => {
                       visibleDates = visibleDates.filter(d => d === filterDateStr);
                     }
 
+                    if (archivedReportsLoading) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">Loading data...</Typography></TableCell>
+                        </TableRow>
+                      );
+                    }
+
                     if (visibleDates.length === 0) {
                       return (
                         <TableRow>
-                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No reports available.</Typography></TableCell>
+                          <TableCell colSpan={2} align="center" sx={{ py: 3 }}><Typography variant="body2" color="text.secondary">No dates available.</Typography></TableCell>
                         </TableRow>
                       );
                     }
