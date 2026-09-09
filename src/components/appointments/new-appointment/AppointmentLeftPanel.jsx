@@ -460,7 +460,7 @@ const AppointmentLeftPanel = ({
                 }}
                 minTime={
                   apptDate && dayjs(apptDate).isSame(dayjs(), "day")
-                    ? dayjs()
+                    ? dayjs().startOf("minute")
                     : undefined
                 }
                 slotProps={{

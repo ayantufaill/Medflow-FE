@@ -55,7 +55,8 @@ const AddNewPatientAppointmentForm = ({
   );
 
   // Parse shortlist date/time if available
-  let parsedDate = initialDateTime || dayjs();
+  const defaultInitialDateTime = initialDateTime || dayjs().add(30, "minute");
+  let parsedDate = defaultInitialDateTime;
   if (initialShortlistData?.AppointmentDate) {
     let d = dayjs(initialShortlistData.AppointmentDate);
     if (initialShortlistData.StartTime) {
@@ -413,6 +414,14 @@ const AddNewPatientAppointmentForm = ({
     initialAppointment,
   ]);
 
+  const isRoomOccupied = Boolean(
+    !isSubmitting && !loading && roomId && occupiedRoomIds.has(String(roomId)),
+  );
+
+  const hasOccupancyConflict = Boolean(
+    isPatientOccupied || isRoomOccupied || isProviderOccupied,
+  );
+
   useEffect(() => {
     if (open) {
       setIsSubmitting(false);
@@ -525,8 +534,10 @@ const AddNewPatientAppointmentForm = ({
           );
 
           let vType =
+            sourceAppt.customFields?.visitType ||
             sourceAppt.appointmentType ||
             sourceAppt.visitType ||
+            initialAppointment.customFields?.visitType ||
             initialAppointment.appointmentType ||
             initialAppointment.visitType ||
             "recare";
@@ -822,7 +833,7 @@ const AddNewPatientAppointmentForm = ({
 
         setPatient(fullPatient || mockPatient);
 
-        let parsedDate = dayjs();
+        let parsedDate = dayjs().add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
           let d = dayjs(initialShortlistData.AppointmentDate);
           if (initialShortlistData.StartTime) {
@@ -1020,17 +1031,12 @@ const AddNewPatientAppointmentForm = ({
           setSelectedColorTags(new Set());
         }
       } else {
+        const defaultDate = initialDateTime || dayjs().add(30, "minute");
         setPatient(initialPatient || null);
-        setApptDate(initialDateTime || dayjs());
-        setTimeHours(
-          initialDateTime ? initialDateTime.format("hh") : dayjs().format("hh"),
-        );
-        setTimeMins(
-          initialDateTime ? initialDateTime.format("mm") : dayjs().format("mm"),
-        );
-        setAmPm(
-          initialDateTime ? initialDateTime.format("A") : dayjs().format("A"),
-        );
+        setApptDate(defaultDate);
+        setTimeHours(defaultDate.format("hh"));
+        setTimeMins(defaultDate.format("mm"));
+        setAmPm(defaultDate.format("A"));
         setRoomId(initialRoomId != null ? String(initialRoomId) : "");
         setStatus("scheduled");
         setDurationMins(60);
@@ -1040,9 +1046,9 @@ const AddNewPatientAppointmentForm = ({
         setPreferredDentist("");
         setPreferredHygienist("");
         setSelectedColorTags(new Set());
+        setVisitType("treatment"); // Default to treatment for new appointments
       }
 
-      setVisitType("treatment");
       setSelectedTagLabels(new Set());
       setTagProcedureIds({});
       setAddingProcedure(false);
@@ -1312,7 +1318,7 @@ const AddNewPatientAppointmentForm = ({
   };
 
   const handleSubmit = async () => {
-    if (!onSubmit || isSubmitting || loading) return;
+    if (!onSubmit || isSubmitting || loading || hasOccupancyConflict) return;
     setSubmitAttempted(true);
 
     const checkedProcedures = procedures.filter((p) => p.checked);
@@ -1645,7 +1651,7 @@ const AddNewPatientAppointmentForm = ({
             roomId={roomId}
             onRoomChange={setRoomId}
             rooms={branchRooms}
-            isRoomOccupied={!isSubmitting && !loading && Boolean(roomId && occupiedRoomIds.has(String(roomId)))}
+            isRoomOccupied={isRoomOccupied}
             durationMins={durationMins}
             onDurationChange={setDurationMins}
             providerRows={providerRows}
@@ -1685,6 +1691,7 @@ const AddNewPatientAppointmentForm = ({
           readOnly={isEditMode && !isRescheduling}
           onLabOrderClick={() => setIsLabOrderOpen(true)}
           computedVisitType={computedVisitType}
+          hasConflict={hasOccupancyConflict}
         />
       </Box>
 
