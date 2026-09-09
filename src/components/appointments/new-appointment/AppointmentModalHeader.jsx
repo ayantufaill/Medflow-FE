@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Typography } from "@mui/material";
-import { CalendarMonthOutlined, AutoAwesome, Close, EventRepeatOutlined, ContentCopyOutlined } from "@mui/icons-material";
+import { CalendarMonthOutlined, AutoAwesome, Close, EventRepeatOutlined, ContentCopyOutlined, CheckCircleOutline } from "@mui/icons-material";
 
 const AppointmentModalHeader = ({ 
   onCancel, 
@@ -13,7 +13,8 @@ const AppointmentModalHeader = ({
   amPm,
   visitType,
   isRescheduling,
-  onReschedule
+  onReschedule,
+  isCopiedToShortlist = false,
 }) => {
   const formattedDate = apptDate ? (typeof apptDate.format === 'function' ? apptDate.format("MM/DD/YYYY") : apptDate) : "";
   const formattedTime = `${timeHours || ""}:${timeMins || ""} ${amPm || ""}`;
@@ -101,10 +102,29 @@ const AppointmentModalHeader = ({
           <Button
             variant="outlined"
             onClick={onCopyToShortlist}
-            startIcon={<ContentCopyOutlined sx={{ fontSize: "14px" }} />}
-            sx={actionBtnStyle}
+            disabled={isCopiedToShortlist}
+            startIcon={
+              isCopiedToShortlist
+                ? <CheckCircleOutline sx={{ fontSize: "14px" }} />
+                : <ContentCopyOutlined sx={{ fontSize: "14px" }} />
+            }
+            sx={{
+              ...actionBtnStyle,
+              ...(isCopiedToShortlist && {
+                borderColor: "#86efac",
+                color: "#16a34a",
+                bgcolor: "#f0fdf4",
+                "&:hover": { borderColor: "#86efac", backgroundColor: "#f0fdf4" },
+                "&.Mui-disabled": {
+                  borderColor: "#86efac",
+                  color: "#16a34a",
+                  bgcolor: "#f0fdf4",
+                  opacity: 1,
+                },
+              }),
+            }}
           >
-            Copy to shortlist
+            {isCopiedToShortlist ? "Copied to shortlist" : "Copy to shortlist"}
           </Button>
         </Box>
       ) : (

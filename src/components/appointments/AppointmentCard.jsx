@@ -9,6 +9,7 @@ import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import EmergencyIcon from "@mui/icons-material/Emergency";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import PersonIcon from "@mui/icons-material/Person";
+import linkedIconSrc from "../../assets/Tags/linked-icon.svg";
 
 /**
  * AppointmentCard Component
@@ -40,6 +41,7 @@ const AppointmentCard = ({
   onAppointmentClick,
   isNewAppointment = false,
   privacyMode = false,
+  isLinkedToShortlist = false,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -236,6 +238,7 @@ const AppointmentCard = ({
             isCompactAppointment={isCompactAppointment}
             statusColor={statusColor}
             sizing={sizing}
+            isLinkedToShortlist={isLinkedToShortlist}
           />
         </Box>
 
@@ -527,6 +530,7 @@ const AppointmentContent = ({
   isCompactAppointment,
   statusColor,
   sizing,
+  isLinkedToShortlist = false,
 }) => {
   return (
     <>
@@ -624,7 +628,7 @@ const AppointmentContent = ({
         </Box>
       </Box>
 
-      {/* Appointment Status Tags */}
+      {/* Tags row — shows linked icon when copied to shortlist, otherwise standard status tags */}
       <Box
         sx={{
           display: "flex",
@@ -635,10 +639,48 @@ const AppointmentContent = ({
           px: sizing.padding,
         }}
       >
-        <StatusTag label="EXM" bgColor="#fff3e0" borderColor="#ffe0b2" textColor="#e65100" fontSize={sizing.fontSize.tags} />
-        <StatusTag label="HYG" bgColor="#e3f2fd" borderColor="#bbdefb" textColor="#1565c0" fontSize={sizing.fontSize.tags} />
-        <StatusTag label="ASAP" bgColor="#ffebee" borderColor="#ffcdd2" textColor="#c62828" fontSize={sizing.fontSize.tags} bold />
-        <StatusTag label="PRE" bgColor="#f3e5f5" borderColor="#e1bee7" textColor="#6a1b9a" fontSize={sizing.fontSize.tags} />
+        {isLinkedToShortlist ? (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.4,
+              px: 0.5,
+              py: 0.15,
+              bgcolor: "#e0f4fb",
+              borderRadius: "3px",
+              border: "1px solid #b3e5f5",
+            }}
+            title="Copied to shortlist"
+          >
+            <Box
+              component="img"
+              src={linkedIconSrc}
+              alt="Linked to shortlist"
+              sx={{
+                width: isUltraCompact ? 10 : isCompactAppointment ? 11 : 13,
+                height: isUltraCompact ? 10 : isCompactAppointment ? 11 : 13,
+              }}
+            />
+            <Typography
+              sx={{
+                fontSize: sizing.fontSize.tags,
+                fontWeight: 700,
+                color: "#009edb",
+                lineHeight: 1,
+              }}
+            >
+              Shortlist
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            <StatusTag label="EXM" bgColor="#fff3e0" borderColor="#ffe0b2" textColor="#e65100" fontSize={sizing.fontSize.tags} />
+            <StatusTag label="HYG" bgColor="#e3f2fd" borderColor="#bbdefb" textColor="#1565c0" fontSize={sizing.fontSize.tags} />
+            <StatusTag label="ASAP" bgColor="#ffebee" borderColor="#ffcdd2" textColor="#c62828" fontSize={sizing.fontSize.tags} bold />
+            <StatusTag label="PRE" bgColor="#f3e5f5" borderColor="#e1bee7" textColor="#6a1b9a" fontSize={sizing.fontSize.tags} />
+          </>
+        )}
       </Box>
 
       {/* Emergency Icon Row */}

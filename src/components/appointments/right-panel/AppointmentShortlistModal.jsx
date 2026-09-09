@@ -158,7 +158,34 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
     if (!window.confirm("Are you sure you want to remove this item from the shortlist?")) return;
     try {
       setLoading(true);
+
+      // Find the shortlist item before deleting so we can clear the linked flag
+      const itemToDelete = patients.find(p => (p.ShortlistNum || p.id || p._id) === id);
+      let linkedAppointmentId = null;
+      if (itemToDelete) {
+        let cf = itemToDelete.CustomFields || itemToDelete.customFields || {};
+        if (typeof cf === "string") {
+          try { cf = JSON.parse(cf); } catch (e) { cf = {}; }
+        }
+        linkedAppointmentId = cf.linkedAppointmentId || null;
+      }
+
       await shortlistService.deleteShortlistItem(id);
+
+      // Clear the linkedToShortlist flag on the source appointment
+      if (linkedAppointmentId) {
+        try {
+          const { appointmentService } = await import("../../../services/appointment.service");
+          const fullAppt = await appointmentService.getAppointmentById(linkedAppointmentId);
+          const existingCf = fullAppt?.customFields || {};
+          await appointmentService.updateAppointment(linkedAppointmentId, {
+            customFields: { ...existingCf, linkedToShortlist: false },
+          });
+        } catch (e) {
+          console.warn("Could not clear linkedToShortlist flag:", e);
+        }
+      }
+
       setPatients(prev => prev.filter(p => (p.ShortlistNum || p.id || p._id) !== id));
       window.dispatchEvent(new Event('shortlist-updated'));
     } catch (err) {
