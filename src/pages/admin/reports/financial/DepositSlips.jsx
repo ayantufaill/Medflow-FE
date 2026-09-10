@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
@@ -13,8 +13,11 @@ import {
   fetchDepositSlips,
   fetchUnDepositedPayments,
   createDepositSlip,
+  fetchPaymentMethodsConfig,
 } from '../../../../store/slices/depositSlice';
 import { reportingService } from '../../../../services/reporting.service';
+import { useSnackbar } from '../../../../contexts/SnackbarContext';
+import { PAYMENT_METHODS } from '../../../../constants/financeConstants';
 
 import DepositSlipFilters from '../../../../components/reports/financial/DepositSlipFilters';
 import DepositSlipPreview from '../../../../components/reports/financial/DepositSlipPreview';
@@ -23,32 +26,18 @@ import PreviousDepositSlipsTable from '../../../../components/reports/financial/
 const DepositSlips = () => {
   const dispatch = useDispatch();
   const location = useLocation();
+  const { showSnackbar } = useSnackbar();
   const templateData = location.state?.templateData;
-  const { slips, unDeposited, loading } = useSelector((state) => state.deposits || { slips: [], unDeposited: { patientPayments: [], insurancePayments: [] }, loading: false });
+  const { slips, unDeposited, paymentMethodsConfig, loading } = useSelector((state) => state.deposits || { slips: [], unDeposited: { patientPayments: [], insurancePayments: [], depositPayments: [] }, paymentMethodsConfig: { patient: [], insurance: [], refund: [], deposit: [] }, loading: false });
   const [isSlipsExpanded, setIsSlipsExpanded] = useState(true);
 
-  const paymentTypes = [
-    'Do not use', 'Check', 'Debit Card', 'EFT', 'Cash', 'Care Credit', 
-    'Master Card', 'Visa Card', 'ACH Payment', 'American Express', 
-    'Discover', 'Card on File', 'Online Card', 'Sunbit', 'Cherry', 'HFD', 'VCC'
-  ];
+  const [patientPayTypes, setPatientPayTypes] = useState([]);
+  const [insPayTypes, setInsPayTypes] = useState([]);
+  const [refPayTypes, setRefPayTypes] = useState([]);
+  const [incDepTypes, setIncDepTypes] = useState([]);
 
-  const defaultSelectedTypes = [
-    'Check', 'Patient Check', 'Insurance Check', 'Debit Card', 'EFT', 'Cash', 
-    'Care Credit', 'Master Card', 'Visa Card', 'ACH Payment', 'American Express', 
-    'Discover', 'Card on File', 'Online Card', 'Sunbit', 'Cherry', 'HFD', 'VCC',
-    'Courtesy Credit', 'Account Correction'
-  ];
-
-  const [patientPayTypes, setPatientPayTypes] = useState(defaultSelectedTypes);
-  const [insPayTypes, setInsPayTypes] = useState(defaultSelectedTypes);
-  const [refPayTypes, setRefPayTypes] = useState(defaultSelectedTypes);
-  const [incDepTypes, setIncDepTypes] = useState(defaultSelectedTypes);
-
-  const [patPayAll, setPatPayAll] = useState(true);
-  const [insPayAll, setInsPayAll] = useState(true);
-  const [refPayAll, setRefPayAll] = useState(true);
-  const [incDepAll, setIncDepAll] = useState(true);
+  // Bug 6 fix: prevent auto-date override after user manually changes filter mode
+  const hasUserChangedFilter = useRef(false);
 
   const formatMethodLabel = (method) => {
     if (!method) return 'Check';
@@ -57,26 +46,36 @@ const DepositSlips = () => {
     if (lower === 'cash') return 'Cash';
     if (lower === 'ach' || lower === 'eft') return 'EFT';
     if (lower === 'check') return 'Check';
-    return method; 
+    return method;
+  };
+
+  const METHOD_ALIASES = {
+    'card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'credit_card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'credit card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'ach': ['eft'],
+    'eft': ['eft', 'ach'],
+    'check': ['patient check', 'insurance check', 'check'],
+    'patient check': ['patient check', 'check'],
+    'insurance check': ['insurance check', 'check'],
+    'cash': ['cash'],
   };
 
   const isMethodSelected = (method, selectedTypes) => {
     if (!method) return false;
     const lowerMethod = method.toLowerCase().trim();
-    
-    return selectedTypes.some(t => {
-      const lowerT = t.toLowerCase().trim();
-      if (lowerT === lowerMethod) return true;
-      if (lowerMethod === 'card' && lowerT.includes('card')) return true;
-      if (lowerMethod === 'ach' && (lowerT === 'eft' || lowerT === 'ach payment')) return true;
-      if ((lowerT === 'check' && lowerMethod === 'patient check') ||
-          (lowerT === 'check' && lowerMethod === 'insurance check') ||
-          (lowerT === 'patient check' && lowerMethod === 'check') ||
-          (lowerT === 'insurance check' && lowerMethod === 'check')) {
-        return true;
-      }
-      return false;
-    });
+    const lowerSelected = selectedTypes.map(t => t.toLowerCase().trim());
+
+    // Direct match
+    if (lowerSelected.includes(lowerMethod)) return true;
+
+    // Check aliases
+    const aliases = METHOD_ALIASES[lowerMethod];
+    if (aliases) {
+      return aliases.some(alias => lowerSelected.includes(alias));
+    }
+
+    return false;
   };
 
   const getLocalDateOnly = (dateVal) => {
@@ -101,6 +100,9 @@ const DepositSlips = () => {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const templateTitle = templateData?.name;
 
+  const [includeArchived, setIncludeArchived] = useState(true);
+  const [groupByProvider, setGroupByProvider] = useState(true);
+
   useEffect(() => {
     if (templateData && templateData.filters) {
       templateData.filters.forEach(f => {
@@ -119,10 +121,24 @@ const DepositSlips = () => {
   useEffect(() => {
     dispatch(fetchDepositSlips({ page: 1, limit: 50 }));
     dispatch(fetchUnDepositedPayments());
+    dispatch(fetchPaymentMethodsConfig());
   }, [dispatch]);
 
+  // Sync state once config loads, if not overridden by template
   useEffect(() => {
-    if (templateData) return; 
+    if (templateData && templateData.filters) return;
+    if (paymentMethodsConfig && paymentMethodsConfig.insurance?.length > 0) {
+      if (patientPayTypes.length === 0) setPatientPayTypes(paymentMethodsConfig.patient || []);
+      if (insPayTypes.length === 0) setInsPayTypes(paymentMethodsConfig.insurance || []);
+      if (refPayTypes.length === 0) setRefPayTypes(paymentMethodsConfig.refund || []);
+      if (incDepTypes.length === 0) setIncDepTypes(paymentMethodsConfig.deposit || []);
+    }
+  }, [paymentMethodsConfig, templateData]);
+
+  // Bug 6 fix: don't override user's manual filter changes
+  useEffect(() => {
+    if (templateData) return;
+    if (hasUserChangedFilter.current) return;
 
     const pts = unDeposited.patientPayments || [];
     const inss = unDeposited.insurancePayments || [];
@@ -157,58 +173,64 @@ const DepositSlips = () => {
   };
 
   const handleFilterModeChange = (e) => {
+    setCreatedSlipDetails(null);
     const newMode = e.target.value;
+    hasUserChangedFilter.current = true; // Bug 6 fix
     setFilterMode(newMode);
     applyModeDates(newMode);
   };
 
+  // Bug 1 + 8 fix: handleToggleAll now correctly uses the specific config lists
   const handleToggleAll = (type, checked) => {
-    const list = checked ? [...paymentTypes] : [];
+    setCreatedSlipDetails(null);
     if (type === 'patient') {
-      setPatPayAll(checked);
-      setPatientPayTypes(list);
+      setPatientPayTypes(checked ? [...(paymentMethodsConfig.patient || [])] : []);
     } else if (type === 'insurance') {
-      setInsPayAll(checked);
-      setInsPayTypes(list);
+      setInsPayTypes(checked ? [...(paymentMethodsConfig.insurance || [])] : []);
     } else if (type === 'refund') {
-      setRefPayAll(checked);
-      setRefPayTypes(list);
+      setRefPayTypes(checked ? [...(paymentMethodsConfig.refund || [])] : []);
     } else if (type === 'include') {
-      setIncDepAll(checked);
-      setIncDepTypes(list);
+      setIncDepTypes(checked ? [...(paymentMethodsConfig.deposit || [])] : []);
     }
   };
 
   const handleToggleItem = (type, item, checked) => {
+    setCreatedSlipDetails(null);
     let list;
     if (type === 'patient') {
       list = checked ? [...patientPayTypes, item] : patientPayTypes.filter(x => x !== item);
       setPatientPayTypes(list);
-      setPatPayAll(list.length === paymentTypes.length);
     } else if (type === 'insurance') {
       list = checked ? [...insPayTypes, item] : insPayTypes.filter(x => x !== item);
       setInsPayTypes(list);
-      setInsPayAll(list.length === paymentTypes.length);
     } else if (type === 'refund') {
       list = checked ? [...refPayTypes, item] : refPayTypes.filter(x => x !== item);
       setRefPayTypes(list);
-      setRefPayAll(list.length === paymentTypes.length);
     } else if (type === 'include') {
       list = checked ? [...incDepTypes, item] : incDepTypes.filter(x => x !== item);
       setIncDepTypes(list);
-      setIncDepAll(list.length === paymentTypes.length);
     }
   };
 
-  const { filteredPatientPayments, filteredInsurancePayments } = useMemo(() => {
+  // Bug 8 fix: derive "all" state from actual data instead of separate state variables
+  const patPayAll = patientPayTypes.length > 0 && patientPayTypes.length === (paymentMethodsConfig.patient?.length || 0);
+  const insPayAll = insPayTypes.length > 0 && insPayTypes.length === (paymentMethodsConfig.insurance?.length || 0);
+  const refPayAll = refPayTypes.length > 0 && refPayTypes.length === (paymentMethodsConfig.refund?.length || 0);
+  const incDepAll = incDepTypes.length > 0 && incDepTypes.length === (paymentMethodsConfig.deposit?.length || 0);
+
+  // Bug 2 fix: incDepTypes is now included in the filtering dependency and logic
+  const { filteredPatientPayments, filteredInsurancePayments, filteredDepositPayments } = useMemo(() => {
     const startStr = startDate ? startDate.format('YYYY-MM-DD') : '';
     const endStr = endDate ? endDate.format('YYYY-MM-DD') : '';
 
+    const combinedPatientTypes = [...patientPayTypes];
+    const combinedInsTypes = [...insPayTypes];
+
     const pts = (unDeposited.patientPayments || []).filter((p) => {
-      const isSelected = p.amount < 0 
+      const isSelected = p.amount < 0
         ? isMethodSelected(p.method, refPayTypes)
-        : isMethodSelected(p.method, patientPayTypes);
-      
+        : isMethodSelected(p.method, combinedPatientTypes);
+
       if (!isSelected) return false;
 
       if (p.date && startStr && endStr) {
@@ -219,9 +241,9 @@ const DepositSlips = () => {
     });
 
     const inss = (unDeposited.insurancePayments || []).filter((ins) => {
-      const isSelected = ins.amount < 0 
+      const isSelected = ins.amount < 0
         ? isMethodSelected(ins.method, refPayTypes)
-        : isMethodSelected(ins.method, insPayTypes);
+        : isMethodSelected(ins.method, combinedInsTypes);
 
       if (!isSelected) return false;
 
@@ -232,12 +254,24 @@ const DepositSlips = () => {
       return true;
     });
 
-    return { filteredPatientPayments: pts, filteredInsurancePayments: inss };
-  }, [unDeposited, patientPayTypes, insPayTypes, refPayTypes, startDate, endDate]);
+    // Filter deposit (prepayment) payments using the "Include Deposit" checkboxes
+    const deps = (unDeposited.depositPayments || []).filter((dep) => {
+      const isSelected = isMethodSelected(dep.method, incDepTypes);
+      if (!isSelected) return false;
+
+      if (dep.date && startStr && endStr) {
+        const depDate = getLocalDateOnly(dep.date);
+        if (depDate < startStr || depDate > endStr) return false;
+      }
+      return true;
+    });
+
+    return { filteredPatientPayments: pts, filteredInsurancePayments: inss, filteredDepositPayments: deps };
+  }, [unDeposited, patientPayTypes, insPayTypes, refPayTypes, incDepTypes, startDate, endDate]);
 
   const previewPayments = useMemo(() => {
-    return [...filteredPatientPayments, ...filteredInsurancePayments];
-  }, [filteredPatientPayments, filteredInsurancePayments]);
+    return [...filteredPatientPayments, ...filteredInsurancePayments, ...filteredDepositPayments];
+  }, [filteredPatientPayments, filteredInsurancePayments, filteredDepositPayments]);
 
   const previewTotal = useMemo(() => {
     return previewPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -247,30 +281,30 @@ const DepositSlips = () => {
     if (!createdSlipDetails) return {};
     const groups = {};
     createdSlipDetails.patientPayments.forEach((p) => {
-      const method = formatMethodLabel(p.method);
-      if (!groups[method]) groups[method] = [];
-      groups[method].push(p);
+      const groupKey = groupByProvider ? (p.providerName || p.provider || 'Unassigned Provider') : formatMethodLabel(p.method);
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(p);
     });
     return groups;
-  }, [createdSlipDetails]);
+  }, [createdSlipDetails, groupByProvider]);
 
   const insuranceGroups = useMemo(() => {
     if (!createdSlipDetails) return {};
     const groups = {};
     createdSlipDetails.insurancePayments.forEach((ins) => {
-      const method = formatMethodLabel(ins.method);
-      if (!groups[method]) groups[method] = [];
-      groups[method].push(ins);
+      const groupKey = groupByProvider ? (ins.providerName || ins.provider || 'Unassigned Provider') : formatMethodLabel(ins.method);
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(ins);
     });
     return groups;
-  }, [createdSlipDetails]);
+  }, [createdSlipDetails, groupByProvider]);
 
   const handleCreateDepositClick = async () => {
-    const patientPaymentIds = filteredPatientPayments.map((p) => p.id);
+    const patientPaymentIds = [...filteredPatientPayments, ...filteredDepositPayments].map((p) => p.id);
     const insurancePaymentIds = filteredInsurancePayments.map((ins) => ins.id);
 
     if (patientPaymentIds.length === 0 && insurancePaymentIds.length === 0) {
-      alert('No un-deposited payments found matching the selected filters.');
+      showSnackbar('No un-deposited payments found matching the selected filters.', 'warning');
       return;
     }
 
@@ -285,14 +319,14 @@ const DepositSlips = () => {
 
       setCreatedSlipDetails({
         slip: res,
-        patientPayments: [...filteredPatientPayments],
+        patientPayments: [...filteredPatientPayments, ...filteredDepositPayments],
         insurancePayments: [...filteredInsurancePayments],
       });
 
-      alert('Deposit slip created successfully!');
+      showSnackbar('Deposit slip created successfully!', 'success');
       dispatch(fetchUnDepositedPayments());
     } catch (err) {
-      alert(err || 'Failed to create deposit slip.');
+      showSnackbar(err || 'Failed to create deposit slip.', 'error');
     }
   };
 
@@ -307,7 +341,7 @@ const DepositSlips = () => {
 
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      alert("Please enter a template name.");
+      showSnackbar("Please enter a template name.", 'warning');
       return;
     }
 
@@ -334,20 +368,18 @@ const DepositSlips = () => {
         ],
         columns: []
       });
-      alert('Template saved successfully! It will now appear in Saved Reports.');
+      showSnackbar('Template saved successfully! It will now appear in Saved Reports.', 'success');
       setShowTemplateForm(false);
       setTemplateName('');
     } catch (err) {
-      alert(err || 'Failed to save template.');
+      showSnackbar(err || 'Failed to save template.', 'error');
     } finally {
       setSavingTemplate(false);
     }
   };
 
-  const displaySlips = slips && slips.length > 0 ? slips : [
-    { date: '02/01/2022', amount: '29,243.17', memo: 'Mock: Deposit slip 1' },
-    { date: '03/06/2022', amount: '11,009.60', memo: 'Mock: Deposit slip 2' },
-  ];
+  // Bug 7 fix: show actual data (or empty state), no mock fallback
+  const displaySlips = slips || [];
 
   return (
     <Box sx={{ p: 0 }}>
@@ -366,10 +398,13 @@ const DepositSlips = () => {
             filterMode={filterMode}
             handleFilterModeChange={handleFilterModeChange}
             startDate={startDate}
-            setStartDate={setStartDate}
+            setStartDate={(v) => { setCreatedSlipDetails(null); setStartDate(v); }}
             endDate={endDate}
-            setEndDate={setEndDate}
-            paymentTypes={paymentTypes}
+            setEndDate={(v) => { setCreatedSlipDetails(null); setEndDate(v); }}
+            patientPaymentTypesOptions={paymentMethodsConfig.patient || []}
+            insurancePaymentTypesOptions={paymentMethodsConfig.insurance || []}
+            refundPaymentTypesOptions={paymentMethodsConfig.refund || []}
+            includeDepositTypesOptions={paymentMethodsConfig.deposit || []}
             patientPayTypes={patientPayTypes}
             patPayAll={patPayAll}
             insPayTypes={insPayTypes}
@@ -388,6 +423,10 @@ const DepositSlips = () => {
             handleSaveTemplate={handleSaveTemplate}
             handleCreateDepositClick={handleCreateDepositClick}
             loading={loading}
+            includeArchived={includeArchived}
+            onIncludeArchivedChange={setIncludeArchived}
+            groupByProvider={groupByProvider}
+            onGroupByProviderChange={setGroupByProvider}
           />
         </Grid>
 
