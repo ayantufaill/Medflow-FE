@@ -12,21 +12,46 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { COLORS } from '../../constants/colors';
-import { useSelector } from 'react-redux';
-import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
+import { useSelector, useDispatch } from 'react-redux';
+import { selectPracticeInfo, fetchCurrentPracticeInfo } from '../../store/slices/practiceInfoSlice';
 import FlagOption from './FlagOption';
+import { resolveFlagColor } from './constants';
+
+const DEFAULT_FLAG_GROUPS = [
+  { id: '1', category: 'Patient Communication', name: 'Send appointment reminder earlier than scheduled time', color: '#22c55e' },
+  { id: '2', category: 'Billing', name: 'alert', color: '#3b82f6' },
+  { id: '3', category: 'Billing', name: 'old patient', color: '#8b5cf6' },
+  { id: '4', category: 'Billing', name: 'family & friends', color: '#ef4444' },
+  { id: '5', category: 'Billing', name: 'late payment', color: '#ef4444' },
+  { id: '6', category: 'Billing', name: 'needs special care', color: '#3b82f6' },
+  { id: '7', category: 'Billing', name: 'TDS Member', color: '#22c55e' },
+  { id: '8', category: 'Billing', name: 'Botox/Filler', color: '#eef681' },
+  { id: '9', category: 'Patient', name: 'Bioclear Patient', color: '#cf5dbd' },
+  { id: '10', category: 'Patient', name: 'Ortho Patient', color: '#4d39c0' },
+  { id: '11', category: 'Patient', name: 'Balance Owed', color: '#d3562f' },
+];
 
 const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
   const [flags, setFlags] = useState({});
+  const dispatch = useDispatch();
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
+
+  useEffect(() => {
+    if (open && (!globalFlags || globalFlags.length === 0)) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [open, globalFlags, dispatch]);
 
   useEffect(() => {
     if (open) {
       const initialMap = {};
       if (Array.isArray(initialFlags)) {
         initialFlags.forEach(flag => {
-          initialMap[flag] = true;
+          const name = typeof flag === 'string' ? flag : (flag?.name || flag?.label);
+          if (name) {
+            initialMap[name] = true;
+          }
         });
       }
       setFlags(initialMap);
@@ -37,8 +62,19 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
 
   const handleSave = () => {
     if (onSave) {
-      // Pass the array of true flag labels
-      const selectedFlags = Object.keys(flags).filter(key => flags[key]);
+      const selectedFlagNames = Object.keys(flags).filter(key => flags[key]);
+      const effectiveList = (globalFlags && globalFlags.length > 0) ? globalFlags : DEFAULT_FLAG_GROUPS;
+      const selectedFlags = selectedFlagNames.map(name => {
+        const found = effectiveList.find(
+          f => (f.name || f.label || '').toLowerCase() === String(name).toLowerCase()
+        );
+        return {
+          id: found?.id || Date.now().toString(),
+          name: found?.name || found?.label || name,
+          color: found?.color || resolveFlagColor(name, effectiveList),
+          category: found?.category || 'General'
+        };
+      });
       onSave(selectedFlags);
     }
     onClose();
@@ -82,8 +118,9 @@ const PatientFlagsDialog = ({ open, onClose, onSave, initialFlags = [] }) => {
 
       <DialogContent sx={{ px: '20px', pt: '16px !important', pb: '16px', bgcolor: '#f8fafc', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
         {(() => {
+          const effectiveFlags = (globalFlags && globalFlags.length > 0) ? globalFlags : DEFAULT_FLAG_GROUPS;
           // Group global flags by category
-          const grouped = globalFlags.reduce((acc, flag) => {
+          const grouped = effectiveFlags.reduce((acc, flag) => {
             const cat = flag.category || 'Uncategorized';
             if (!acc[cat]) acc[cat] = [];
             acc[cat].push(flag);

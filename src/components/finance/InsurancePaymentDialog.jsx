@@ -298,6 +298,18 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       dispatch(fetchPatientBalance(pId));
       dispatch(fetchInsuranceUsage(pId));
 
+      const eventPayload = {
+        patientId: pId,
+        amount: Number(paymentAmount) || 0,
+      };
+      window.dispatchEvent(new CustomEvent('payment-completed', { detail: eventPayload }));
+      window.dispatchEvent(new CustomEvent('appointment-financials-updated', { detail: eventPayload }));
+      try {
+        const bc = new BroadcastChannel('medflow-payments');
+        bc.postMessage(eventPayload);
+        bc.close();
+      } catch (e) {}
+
       showSnackbar('Insurance payment applied successfully', 'success');
 
       if (onSave) {

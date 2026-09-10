@@ -620,10 +620,11 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     borderRadius: "20px",
                     px: "8px",
                     py: "3px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
                     {paymentDisplay}
                   </Typography>
@@ -729,10 +730,11 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     borderRadius: "20px",
                     px: "8px",
                     py: "2px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
                     {paymentDisplay}
                   </Typography>

@@ -1,11 +1,12 @@
 export const PATIENT_FLAGS_DATA = [
-  { color: '#94bc74', label: 'appointment_reminder' },
-  { color: '#7dab9f', label: 'alert' },
-  { color: '#5e5ba8', label: 'old patient' },
-  { color: '#bc6c73', label: 'family & friends' },
-  { color: '#d9975b', label: 'late payment' },
-  { color: '#88b7d6', label: 'needs special care' },
-  { color: '#a6f272', label: 'TDS Member' },
+  { color: '#22c55e', label: 'Send appointment reminder earlier than scheduled time' },
+  { color: '#22c55e', label: 'appointment_reminder' },
+  { color: '#3b82f6', label: 'alert' },
+  { color: '#8b5cf6', label: 'old patient' },
+  { color: '#ef4444', label: 'family & friends' },
+  { color: '#ef4444', label: 'late payment' },
+  { color: '#3b82f6', label: 'needs special care' },
+  { color: '#22c55e', label: 'TDS Member' },
   { color: '#eef681', label: 'Botox/Filler' },
   { color: '#cf5dbd', label: 'Bioclear Patient' },
   { color: '#4d39c0', label: 'Ortho Patient' },
@@ -21,25 +22,40 @@ export const PATIENT_FLAGS = PATIENT_FLAGS_DATA.filter(flag =>
 );
 
 export const getFlagColor = (label) => {
-  const flag = PATIENT_FLAGS_DATA.find(f => f.label === label);
+  if (!label) return '#cbd5e1';
+  const flag = PATIENT_FLAGS_DATA.find(
+    f => (f.label || '').toLowerCase() === String(label).toLowerCase()
+  );
   return flag ? flag.color : '#cbd5e1';
 };
 
 /**
- * Resolve a flag's color using the live admin-defined flags from Redux (practiceInfo.patientFlags).
- * Falls back to the hardcoded PATIENT_FLAGS_DATA list, then to a neutral grey.
+ * Resolve a flag's color using:
+ * 1. Live admin-defined flags from Redux (practiceInfo.patientFlags)
+ * 2. Embedded color if the flag is an object ({ name, color })
+ * 3. Fallback to default PATIENT_FLAGS_DATA list
+ * 4. Fallback to neutral grey
  *
- * @param {string} flagName - The flag name/label to look up
- * @param {Array}  globalFlags - practiceInfo?.patientFlags from Redux (pass [] if unavailable)
+ * @param {string|object} flag - The flag name or object
+ * @param {Array}         globalFlags - practiceInfo?.patientFlags from Redux (pass [] if unavailable)
  * @returns {string} hex color
  */
-export const resolveFlagColor = (flagName, globalFlags = []) => {
-  if (!flagName) return '#cbd5e1';
+export const resolveFlagColor = (flag, globalFlags = []) => {
+  if (!flag) return '#cbd5e1';
+  const flagName = typeof flag === 'string' ? flag : (flag.name || flag.label || '');
+  const objectColor = typeof flag === 'object' ? flag.color : null;
+
   // 1. Check the live admin-defined list first
-  const live = globalFlags.find(
-    f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase()
-  );
-  if (live?.color) return live.color;
-  // 2. Fall back to the hardcoded list
+  if (Array.isArray(globalFlags) && globalFlags.length > 0) {
+    const live = globalFlags.find(
+      f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase()
+    );
+    if (live?.color) return live.color;
+  }
+
+  // 2. If the flag object itself carries a color, preserve it
+  if (objectColor) return objectColor;
+
+  // 3. Fall back to the hardcoded list with updated admin colors
   return getFlagColor(flagName);
 };

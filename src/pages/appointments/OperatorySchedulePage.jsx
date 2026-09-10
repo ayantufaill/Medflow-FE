@@ -19,8 +19,15 @@ import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
+import { appointmentService } from "../../services/appointment.service";
 import { useDispatch } from "react-redux";
-import { setSelectedAppointmentId, fetchAppointments } from "../../store/slices/appointmentSlice";
+import {
+  setSelectedAppointmentId,
+  fetchAppointments,
+  updateAppointmentInList,
+  invalidateAppointmentDetail,
+  setCurrentAppointment,
+} from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
@@ -720,6 +727,8 @@ const OperatorySchedulePage = () => {
         customFields: a.customFields,
         checklists: a.checklists,
         procedures: procString,
+        totalAmount: Number(a.totalAmount ?? 0),
+        paidAmount: Number(a.paidAmount ?? 0),
       };
     } catch {
       return null;
@@ -773,19 +782,52 @@ const OperatorySchedulePage = () => {
   }, [fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
 
   useEffect(() => {
-    const handleAppointmentFinancialsUpdated = () => {
-      if (fetchApptsMain) {
-        fetchApptsMain({
-          startDate: fetchStartDate,
-          endDate: fetchEndDate,
-          limit: 500,
-        });
+    const handlePaymentCompleted = async (e) => {
+      const detail = e?.detail || e?.data;
+      const appointmentIds = detail?.appointmentIds;
+
+      if (Array.isArray(appointmentIds) && appointmentIds.length > 0) {
+        for (const aptId of appointmentIds) {
+          if (!aptId) continue;
+          dispatch(invalidateAppointmentDetail(String(aptId)));
+          try {
+            const freshApt = await appointmentService.getAppointmentById(String(aptId));
+            if (freshApt) {
+              dispatch(updateAppointmentInList(freshApt));
+              dispatch(setCurrentAppointment(freshApt));
+            }
+          } catch (err) {
+            console.error(`Failed to refresh appointment ${aptId}:`, err);
+          }
+        }
+      } else {
+        if (fetchApptsMain) {
+          fetchApptsMain({
+            startDate: fetchStartDate,
+            endDate: fetchEndDate,
+            limit: 500,
+          });
+        } else if (refreshAppointments) {
+          refreshAppointments();
+        }
       }
     };
 
-    window.addEventListener('appointment-financials-updated', handleAppointmentFinancialsUpdated);
-    return () => window.removeEventListener('appointment-financials-updated', handleAppointmentFinancialsUpdated);
-  }, [fetchApptsMain, fetchEndDate, fetchStartDate]);
+    window.addEventListener('payment-completed', handlePaymentCompleted);
+    window.addEventListener('appointment-financials-updated', handlePaymentCompleted);
+
+    let bc;
+    try {
+      bc = new BroadcastChannel('medflow-payments');
+      bc.onmessage = handlePaymentCompleted;
+    } catch (err) {}
+
+    return () => {
+      window.removeEventListener('payment-completed', handlePaymentCompleted);
+      window.removeEventListener('appointment-financials-updated', handlePaymentCompleted);
+      if (bc) bc.close();
+    };
+  }, [dispatch, fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {

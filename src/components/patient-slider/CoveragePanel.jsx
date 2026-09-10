@@ -7,7 +7,7 @@ import { usePatientInsurances } from "../../hooks/redux/usePatient";
 import { fetchPatientById } from "../../store/slices/patientSlice";
 import { selectCurrentPatient } from "../../store/slices/patientSlice";
 import { patientService } from "../../services/patient.service";
-import { selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { SL } from "./helpers";
 import PatientFlagsDialog from "../patient-flags/PatientFlagsDialog";
 import { resolveFlagColor } from "../patient-flags/constants";
@@ -26,6 +26,13 @@ const CoveragePanel = ({ pt }) => {
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
   const reduxFlags = currentPatient?.patientFlags || currentPatient?._raw?.patientFlags || [];
+
+  // Ensure practiceInfo is fetched if not already loaded in Redux
+  useEffect(() => {
+    if (!globalFlags || globalFlags.length === 0) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [globalFlags, dispatch]);
 
   // Keep localFlags in sync with the Redux store value; this also reflects
   // optimistic updates after saving flags
@@ -179,23 +186,24 @@ const CoveragePanel = ({ pt }) => {
       
       {localFlags.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1, mt: 0.5 }}>
-          {localFlags.map((flag, idx) => (
-            <Tooltip key={idx} title={flag === 'appointment_reminder' ? 'Appt Reminder' : flag} arrow placement="top">
-              <Box 
-                sx={{ 
-                  width: 12, 
-                  height: 12, 
-                  borderRadius: '2px', 
-                  bgcolor: resolveFlagColor(
-                    typeof flag === 'string' ? flag : (flag?.name || flag?.label),
-                    globalFlags,
-                  ),
-                  flexShrink: 0,
-                  cursor: 'pointer'
-                }} 
-              />
-            </Tooltip>
-          ))}
+          {localFlags.map((flag, idx) => {
+            const flagName = typeof flag === 'string' ? flag : (flag?.name || flag?.label || 'Flag');
+            const displayTitle = flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName;
+            return (
+              <Tooltip key={idx} title={displayTitle} arrow placement="top">
+                <Box 
+                  sx={{ 
+                    width: 12, 
+                    height: 12, 
+                    borderRadius: '2px', 
+                    bgcolor: resolveFlagColor(flag, globalFlags),
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }} 
+                />
+              </Tooltip>
+            );
+          })}
         </Box>
       )}
 
