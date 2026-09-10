@@ -772,6 +772,21 @@ const OperatorySchedulePage = () => {
     return () => window.removeEventListener('shortlist-updated', handleShortlistUpdated);
   }, [fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
 
+  useEffect(() => {
+    const handleAppointmentFinancialsUpdated = () => {
+      if (fetchApptsMain) {
+        fetchApptsMain({
+          startDate: fetchStartDate,
+          endDate: fetchEndDate,
+          limit: 500,
+        });
+      }
+    };
+
+    window.addEventListener('appointment-financials-updated', handleAppointmentFinancialsUpdated);
+    return () => window.removeEventListener('appointment-financials-updated', handleAppointmentFinancialsUpdated);
+  }, [fetchApptsMain, fetchEndDate, fetchStartDate]);
+
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
     if (!reduxAppointments) return [];
