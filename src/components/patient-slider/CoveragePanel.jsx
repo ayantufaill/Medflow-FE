@@ -7,9 +7,10 @@ import { usePatientInsurances } from "../../hooks/redux/usePatient";
 import { fetchPatientById } from "../../store/slices/patientSlice";
 import { selectCurrentPatient } from "../../store/slices/patientSlice";
 import { patientService } from "../../services/patient.service";
+import { selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { SL } from "./helpers";
 import PatientFlagsDialog from "../patient-flags/PatientFlagsDialog";
-import { getFlagColor } from "../patient-flags/constants";
+import { resolveFlagColor } from "../patient-flags/constants";
 
 const CoveragePanel = ({ pt }) => {
   const hasCoverage = pt.coverage && pt.coverage !== "No active coverage";
@@ -22,6 +23,8 @@ const CoveragePanel = ({ pt }) => {
   // Read patientFlags directly from the live Redux store so they update
   // automatically once fetchPatientById resolves (avoids stale prop issue)
   const currentPatient = useSelector(selectCurrentPatient);
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
   const reduxFlags = currentPatient?.patientFlags || currentPatient?._raw?.patientFlags || [];
 
   // Keep localFlags in sync with the Redux store value; this also reflects
@@ -183,7 +186,10 @@ const CoveragePanel = ({ pt }) => {
                   width: 12, 
                   height: 12, 
                   borderRadius: '2px', 
-                  bgcolor: getFlagColor(flag), 
+                  bgcolor: resolveFlagColor(
+                    typeof flag === 'string' ? flag : (flag?.name || flag?.label),
+                    globalFlags,
+                  ),
                   flexShrink: 0,
                   cursor: 'pointer'
                 }} 
@@ -217,4 +223,3 @@ const CoveragePanel = ({ pt }) => {
 };
 
 export default CoveragePanel;
-
