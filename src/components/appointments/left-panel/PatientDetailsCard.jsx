@@ -13,8 +13,10 @@ import {
   fetchInsuranceUsage,
   invalidatePatientBalance,
   invalidateInsuranceUsage,
+  selectPatientBalance,
   selectPatientBalanceCache,
   selectPatientBalanceLoading,
+  selectInsuranceUsage,
   selectInsuranceUsageCache,
   selectInsuranceUsageLoading,
 } from '../../../store/slices/patientSlice';
@@ -130,8 +132,10 @@ export const PatientDetails = () => {
   const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
 
   // ── Billing data from Redux ──────────────────────────────────────
+  const patientBalance = useSelector(selectPatientBalance);
   const balanceCache = useSelector(selectPatientBalanceCache);
   const balanceLoading = useSelector(selectPatientBalanceLoading);
+  const insuranceUsage = useSelector(selectInsuranceUsage);
   const insuranceUsageCache = useSelector(selectInsuranceUsageCache);
   const insuranceUsageLoading = useSelector(selectInsuranceUsageLoading);
 
@@ -192,46 +196,14 @@ export const PatientDetails = () => {
   const flags = currentPatient.patientFlags || currentPatient.flags || [];
   const flagsList = Array.isArray(flags) ? flags : (flags ? [flags] : []);
 
-  // ── Balance: prefer live API data, fall back to patient object fields ──
-  const liveBalance = cachedBalance?.balance ?? cachedBalance?.totalBalance ?? null;
-  const displayBalance = liveBalance !== null
-    ? liveBalance
-    : (currentPatient.totalBalance ?? currentPatient.BalTotal ?? 0);
+  // ── Balance: read from Redux ──
+  const displayBalance = cachedBalance?.balance ?? patientBalance?.balance ?? 0;
 
-  // ── Insurance usage: prefer live API data, fall back to coverage limits ──
-  const primaryUsage = cachedUsage?.primaryInsurance ?? null;
-  const liveUsedAmount = primaryUsage?.usedAmount ?? null;
-  const liveAnnualMax = primaryUsage?.annualMax ?? null;
-
-  // Fallback: derive from insurance coverage limits already in cache
-  const parseAmount = (val) => {
-    if (val === null || val === undefined || val === '') return null;
-    if (typeof val === 'number') return isNaN(val) ? null : val;
-    const cleaned = String(val).replace(/[^0-9.-]+/g, '');
-    if (!cleaned) return null;
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
-  };
-
-  const getCoverageAmounts = (ins) => {
-    if (!ins) return { usedAmount: 0, maxAmount: 0 };
-    let coverageLimits = ins?.coverageLimits;
-    if (typeof coverageLimits === 'string') {
-      try { coverageLimits = JSON.parse(coverageLimits); } catch (e) { coverageLimits = null; }
-    }
-    const limitsInd = coverageLimits?.individual;
-    const rawUsed = limitsInd?.usedAmount ?? ins?.usedAmount ?? ins?.copayAmount;
-    const rawMax = limitsInd?.annualMax ?? ins?.individualAnnualMax ?? ins?.deductibleAmount;
-    return { usedAmount: parseAmount(rawUsed) ?? 0, maxAmount: parseAmount(rawMax) ?? 0 };
-  };
-
-  const activeInsurances = (insurances || []).filter(ins => ins.isActive !== false);
-  const targetIns = activeInsurances[0] || insurances?.[0];
-  const { usedAmount: fallbackUsed, maxAmount: fallbackMax } = getCoverageAmounts(targetIns);
-
-  const usedAmount = liveUsedAmount !== null ? liveUsedAmount : (fallbackUsed || currentPatient.usedAmount || currentPatient.PriInsUsed || 0);
-  const maxAmount = liveAnnualMax !== null ? liveAnnualMax : fallbackMax;
-  const planName = primaryUsage?.planName ?? targetIns?.planName ?? null;
+  // ── Insurance usage: read from Redux ──
+  const primaryUsage = cachedUsage?.primaryInsurance ?? insuranceUsage?.primaryInsurance ?? null;
+  const usedAmount = primaryUsage?.usedAmount ?? 0;
+  const maxAmount = primaryUsage?.annualMax ?? 0;
+  const planName = primaryUsage?.planName ?? null;
 
   return (
     <DetailCard icon={<Assignment sx={{ fontSize: '20px', color: COLORS.ACCENT }} />} title="Patient Details">
@@ -297,7 +269,7 @@ export const PatientDetails = () => {
 
       {/* Bills */}
       <SubSection label="Bills" open>
-        {balanceLoading && !cachedBalance ? (
+        {balanceLoading ? (
           <Skeleton variant="text" width={120} height={20} sx={{ ml: '8px' }} />
         ) : (
           <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, pl: '8px' }}>
@@ -311,7 +283,7 @@ export const PatientDetails = () => {
 
       {/* Used Amount */}
       <SubSection label="Used Amount:" open>
-        {insuranceUsageLoading && !cachedUsage ? (
+        {insuranceUsageLoading ? (
           <Skeleton variant="text" width={140} height={24} sx={{ ml: '8px' }} />
         ) : (
           <>
@@ -338,7 +310,7 @@ export const PatientDetails = () => {
                   />
                 </Box>
                 <Typography sx={{ fontSize: fontSize.xs, color: COLORS.TEXT_MUTED, mt: '2px' }}>
-                  ${Number(maxAmount - usedAmount).toFixed(2)} remaining
+                  ${Number(Math.max(0, maxAmount - usedAmount)).toFixed(2)} remaining
                 </Typography>
               </Box>
             )}

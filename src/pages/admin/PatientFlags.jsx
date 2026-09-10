@@ -6,6 +6,7 @@ import {
   updatePatientFlags,
   selectPracticeInfo,
 } from '../../store/slices/practiceInfoSlice';
+import { selectCurrentBranchId } from '../../store/slices/branchSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { Box, Grid } from '@mui/material';
 import PatientFlagsHeader from '../../components/admin/patient-flags/PatientFlagsHeader';
@@ -13,8 +14,6 @@ import PatientFlagCategorySection from '../../components/admin/patient-flags/Pat
 import PatientFlagsDialog from '../../components/admin/patient-flags/PatientFlagsDialog';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import SyncOfficesDialog from '../../components/admin/clinical-management/products/SyncOfficesDialog';
-
-
 
 const defaultFlags = [
   { id: '1', category: 'Patient Communication', name: 'Send appointment reminder earlier than scheduled time', color: '#22c55e' },
@@ -34,42 +33,53 @@ const PatientFlags = () => {
   const [editFlagId, setEditFlagId] = useState(null);
   const [deleteFlagId, setDeleteFlagId] = useState(null);
   const [formData, setFormData] = useState({ categoryName: '', name: '', color: '#3b82f6' });
+  const [isSaving, setIsSaving] = useState(false);
 
+  const currentBranchId = useSelector(selectCurrentBranchId);
   const practiceInfo = useSelector(selectPracticeInfo);
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
   const [isSyncDialogOpen, setSyncDialogOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchCurrentPracticeInfo());
-  }, [dispatch]);
+    dispatch(fetchCurrentPracticeInfo({ branchId: currentBranchId || null, force: true }));
+  }, [dispatch, currentBranchId]);
 
   useEffect(() => {
-    if (practiceInfo?.patientFlags && practiceInfo.patientFlags.length > 0) {
+    if (practiceInfo?.patientFlags && Array.isArray(practiceInfo.patientFlags) && practiceInfo.patientFlags.length > 0) {
       setFlags(practiceInfo.patientFlags);
     }
   }, [practiceInfo?.patientFlags]);
 
-  const handleSave = async () => {
+  const saveFlagsToBackend = async (newFlags) => {
+    setIsSaving(true);
     try {
-      let id = practiceInfo?._id || practiceInfo?.id;
+      let id = practiceInfo?._id || practiceInfo?.id || currentBranchId;
       if (!id) {
-        const newPractice = await dispatch(createPracticeInfo({
-          practiceName: 'Default Practice',
-          phone: '555-000-0000',
-          email: 'info@defaultpractice.com',
-          address: { line1: '123 St', city: 'Metropolis', state: 'NY', postalCode: '10001', country: 'US' },
-        })).unwrap();
-        id = newPractice._id || newPractice.id;
+        const res = await dispatch(fetchCurrentPracticeInfo({ branchId: currentBranchId || null, force: true })).unwrap();
+        id = res?.data?.practiceInfo?._id || res?.data?._id || res?._id || res?.id;
+      }
+      if (!id) {
+        throw new Error('Practice info ID not found');
       }
       await dispatch(updatePatientFlags({
-        practiceInfoId: id,
-        patientFlagsData: flags,
+        practiceInfoId: id.toString(),
+        patientFlagsData: newFlags,
       })).unwrap();
-      showSnackbar('Patient Flags saved successfully', 'success');
+      return true;
     } catch (error) {
-      console.error(error);
-      showSnackbar(error || 'Failed to save flags', 'error');
+      console.error('Failed to save patient flags:', error);
+      showSnackbar(error?.message || error || 'Failed to save flags to database', 'error');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const saved = await saveFlagsToBackend(flags);
+    if (saved) {
+      showSnackbar('Patient Flags saved successfully', 'success');
     }
   };
 
@@ -93,36 +103,59 @@ const PatientFlags = () => {
     setDialogOpen(true);
   };
 
-  const handleDialogSubmit = () => {
+  const handleDialogSubmit = async () => {
+    let updatedFlags = [...flags];
     if (dialogMode === 'addCategory') {
       if (!formData.categoryName) return;
-      setFlags((prev) => [
-        ...prev,
+      updatedFlags = [
+        ...flags,
         { id: Date.now().toString(), category: formData.categoryName, name: 'New Flag', color: '#3b82f6' },
-      ]);
+      ];
+      setFlags(updatedFlags);
+      setDialogOpen(false);
+      const saved = await saveFlagsToBackend(updatedFlags);
+      if (saved) {
+        showSnackbar('Category and flag added successfully', 'success');
+      }
     } else if (dialogMode === 'addFlag') {
       if (!formData.name || !formData.color) return;
-      setFlags((prev) => [
-        ...prev,
+      updatedFlags = [
+        ...flags,
         { id: Date.now().toString(), category: activeCategory, name: formData.name, color: formData.color },
-      ]);
+      ];
+      setFlags(updatedFlags);
+      setDialogOpen(false);
+      const saved = await saveFlagsToBackend(updatedFlags);
+      if (saved) {
+        showSnackbar('Patient flag added successfully', 'success');
+      }
     } else if (dialogMode === 'editFlag') {
       if (!formData.name || !formData.color) return;
-      setFlags((prev) => prev.map((f) =>
+      updatedFlags = flags.map((f) =>
         f.id === editFlagId ? { ...f, name: formData.name, color: formData.color } : f
-      ));
+      );
+      setFlags(updatedFlags);
+      setDialogOpen(false);
+      const saved = await saveFlagsToBackend(updatedFlags);
+      if (saved) {
+        showSnackbar('Patient flag updated successfully', 'success');
+      }
     }
-    setDialogOpen(false);
   };
 
   const handleDeleteFlag = (id) => {
     setDeleteFlagId(id);
   };
 
-  const confirmDeleteFlag = () => {
+  const confirmDeleteFlag = async () => {
     if (deleteFlagId) {
-      setFlags((prev) => prev.filter((f) => f.id !== deleteFlagId));
+      const updatedFlags = flags.filter((f) => f.id !== deleteFlagId);
+      setFlags(updatedFlags);
       setDeleteFlagId(null);
+      const saved = await saveFlagsToBackend(updatedFlags);
+      if (saved) {
+        showSnackbar('Patient flag deleted', 'success');
+      }
     }
   };
 
