@@ -40,11 +40,31 @@ export const createDepositSlip = createAsyncThunk(
   }
 );
 
+export const fetchPaymentMethodsConfig = createAsyncThunk(
+  'deposits/fetchPaymentMethodsConfig',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { paymentService } = await import('../../services/payment.service');
+      const result = await paymentService.getPaymentMethodsConfig();
+      return result;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch payment methods config');
+    }
+  }
+);
+
 const initialState = {
   slips: [],
   unDeposited: {
     patientPayments: [],
     insurancePayments: [],
+    depositPayments: [],
+  },
+  paymentMethodsConfig: {
+    insurance: [],
+    patient: [],
+    deposit: [],
+    refund: [],
   },
   pagination: {
     page: 1,
@@ -87,11 +107,15 @@ const depositSlice = createSlice({
       })
       .addCase(fetchUnDepositedPayments.fulfilled, (state, action) => {
         state.loading = false;
-        state.unDeposited = action.payload || { patientPayments: [], insurancePayments: [] };
+        state.unDeposited = action.payload || { patientPayments: [], insurancePayments: [], depositPayments: [] };
       })
       .addCase(fetchUnDepositedPayments.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // fetchPaymentMethodsConfig
+      .addCase(fetchPaymentMethodsConfig.fulfilled, (state, action) => {
+        state.paymentMethodsConfig = action.payload;
       })
       // createDepositSlip
       .addCase(createDepositSlip.pending, (state) => {

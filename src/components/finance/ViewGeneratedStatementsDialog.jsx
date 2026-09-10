@@ -17,6 +17,7 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import generatedStatementsIcon from '../../assets/reportsicon/generated statements.svg';
 import sentIcon from '../../assets/reportsicon/sent.svg';
 import statementIcon from '../../assets/reportsicon/statement.svg';
+import arrowIcon from '../../assets/reportsicon/arrow.svg';
 
 const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => {
   const [searchDate, setSearchDate] = useState('');
@@ -423,9 +424,7 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Typography sx={{ color: '#3b82f6', fontSize: '0.8rem', transform: 'rotate(45deg)' }}>
-                          ◆
-                        </Typography>
+                        <Box component="img" src={arrowIcon} alt="Arrow" sx={{ width: 14, height: 14 }} />
                         <Typography sx={{ fontSize: '0.8rem', color: '#0f172a', fontWeight: 600 }}>
                           {batch.myChartSent.successMessage}
                         </Typography>
@@ -498,9 +497,7 @@ const ViewGeneratedStatementsDialog = ({ onClose, batches: initialBatches }) => 
                           }}
                         >
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Typography sx={{ color: '#3b82f6', fontSize: '0.8rem', transform: 'rotate(45deg)' }}>
-                              ◆
-                            </Typography>
+                            <Box component="img" src={arrowIcon} alt="Arrow" sx={{ width: 14, height: 14 }} />
                             <Typography sx={{ fontSize: '0.8rem', color: '#0f172a', fontWeight: 600 }}>
                               {pdf.label}
                             </Typography>

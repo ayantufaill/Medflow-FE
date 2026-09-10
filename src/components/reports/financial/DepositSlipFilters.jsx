@@ -44,7 +44,13 @@ const DepositSlipFilters = ({
   loading,
   title = "Create new deposit slip:",
   buttonText = "Generate Deposit Slip",
-  extraButtons = null
+  extraButtons = null,
+  // Bug 3 fix: optional callback for archived payment types toggle
+  includeArchived,
+  onIncludeArchivedChange,
+  // Bug 4 fix: optional callback for group by provider toggle
+  groupByProvider,
+  onGroupByProviderChange,
 }) => {
   const renderCheckboxList = (title, items = [], type, selectedList = [], isAllChecked) => (
     <Box sx={{ mb: 2 }}>
@@ -116,7 +122,13 @@ const DepositSlipFilters = ({
 
           <Box sx={{ ml: 4 }}>
             <FormControlLabel
-              control={<Radio size="small" defaultChecked />}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={groupByProvider !== undefined ? groupByProvider : true}
+                  onChange={(e) => onGroupByProviderChange && onGroupByProviderChange(e.target.checked)}
+                />
+              }
               label={<Typography variant="body2" sx={{ color: '#1e293b' }}>Group by provider</Typography>}
             />
           </Box>
@@ -184,7 +196,13 @@ const DepositSlipFilters = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>Include payment types</Typography>
           <FormControlLabel
-            control={<Checkbox size="small" defaultChecked />}
+            control={
+              <Checkbox
+                size="small"
+                checked={includeArchived !== undefined ? includeArchived : true}
+                onChange={(e) => onIncludeArchivedChange && onIncludeArchivedChange(e.target.checked)}
+              />
+            }
             label={<Typography variant="caption">Include Archived Payment Types</Typography>}
           />
         </Box>
