@@ -254,11 +254,13 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
                       '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
                     }}
                   >
+                    <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
                     <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
                     <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
                     <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
                     <MenuItem value="Existing Other" sx={{ fontSize: '0.8rem' }}>Existing Other</MenuItem>
                     <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
+                    <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
                   </Select>
                 </TableCell>
                 <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.created}</TableCell>

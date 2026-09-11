@@ -24,6 +24,7 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
     minDuration: "",
     prefDay: "",
     prefTimeHour: "",
+    prefTimeMinute: "",
     prefTimeAmpm: "AM",
     flags: [],
   };
@@ -104,18 +105,22 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
       }
 
       // 5. Pref Time
-      if (filters.prefTimeHour) {
+      if (filters.prefTimeHour || filters.prefTimeMinute) {
         const startTime = p.StartTime || p.startTime || p.PreferredTime || p.prefTime;
         if (startTime && startTime !== "Any") {
           let hour = parseInt(filters.prefTimeHour, 10);
           if (filters.prefTimeAmpm === "PM" && hour !== 12) hour += 12;
           if (filters.prefTimeAmpm === "AM" && hour === 12) hour = 0;
-          
+
           let prmHour = -1;
+          let prmMinute = -1;
           if (startTime.includes(":")) {
-            prmHour = parseInt(startTime.split(":")[0], 10);
+            const [startHour, startMinute] = startTime.split(":");
+            prmHour = parseInt(startHour, 10);
+            prmMinute = parseInt(startMinute, 10);
           }
-          if (prmHour !== -1 && prmHour !== hour) return false;
+          if (filters.prefTimeHour && prmHour !== -1 && prmHour !== hour) return false;
+          if (filters.prefTimeMinute && prmMinute !== -1 && prmMinute !== parseInt(filters.prefTimeMinute, 10)) return false;
         }
       }
 

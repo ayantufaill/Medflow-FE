@@ -207,6 +207,27 @@ const AddNewPatientAppointmentForm = ({
 
   const isExistingAppointment = Boolean(initialAppointment);
 
+  const conflictExcludedAppointmentId = useMemo(() => {
+    if (initialAppointment) {
+      return String(initialAppointment.id || initialAppointment._id || "").replace("appt-", "");
+    }
+
+    if (!initialShortlistData) return "";
+
+    const rawCustomFields =
+      initialShortlistData.CustomFields || initialShortlistData.customFields;
+    let customFields = rawCustomFields;
+    if (typeof rawCustomFields === "string") {
+      try {
+        customFields = JSON.parse(rawCustomFields);
+      } catch {
+        customFields = {};
+      }
+    }
+
+    return String(customFields?.linkedAppointmentId || "").replace("appt-", "");
+  }, [initialAppointment, initialShortlistData]);
+
   const isFuture = useMemo(() => {
     if (!isExistingAppointment) return false;
     if (!selectedStart || !selectedStart.isValid()) return false;
@@ -224,12 +245,9 @@ const AddNewPatientAppointmentForm = ({
     appointments.forEach((appt) => {
       if (!appt.appointmentDate || !appt.roomId || !appt.startTime) return;
 
-      if (initialAppointment) {
+      if (conflictExcludedAppointmentId) {
         const apptId = String(appt.id || appt._id).replace("appt-", "");
-        const editId = String(
-          initialAppointment.id || initialAppointment._id,
-        ).replace("appt-", "");
-        if (apptId === editId) return;
+        if (apptId === conflictExcludedAppointmentId) return;
       } else {
         const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
         if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
@@ -273,7 +291,7 @@ const AddNewPatientAppointmentForm = ({
     apptDate,
     selectedStart,
     selectedEnd,
-    initialAppointment,
+    conflictExcludedAppointmentId,
   ]);
 
   const occupiedProviderIds = useMemo(() => {
@@ -291,12 +309,9 @@ const AddNewPatientAppointmentForm = ({
     appointments.forEach((appt) => {
       if (!appt.appointmentDate || !appt.startTime) return;
 
-      if (initialAppointment) {
+      if (conflictExcludedAppointmentId) {
         const apptId = String(appt.id || appt._id).replace("appt-", "");
-        const editId = String(
-          initialAppointment.id || initialAppointment._id,
-        ).replace("appt-", "");
-        if (apptId === editId) return;
+        if (apptId === conflictExcludedAppointmentId) return;
       } else {
         const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
         if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
@@ -340,7 +355,7 @@ const AddNewPatientAppointmentForm = ({
     apptDate,
     selectedStart,
     selectedEnd,
-    initialAppointment,
+    conflictExcludedAppointmentId,
   ]);
 
   const isProviderOccupied = !isSubmitting && !loading && providerRows.some(
@@ -365,12 +380,9 @@ const AddNewPatientAppointmentForm = ({
     return appointments.some((appt) => {
       if (!appt.appointmentDate || !appt.startTime) return false;
 
-      if (initialAppointment) {
+      if (conflictExcludedAppointmentId) {
         const apptId = String(appt.id || appt._id).replace("appt-", "");
-        const editId = String(
-          initialAppointment.id || initialAppointment._id,
-        ).replace("appt-", "");
-        if (apptId === editId) return false;
+        if (apptId === conflictExcludedAppointmentId) return false;
       } else {
         const apptId = String(appt.id || appt._id || appt.AptNum || "").replace("appt-", "");
         if (apptId && initialApptIdsRef.current.size > 0 && !initialApptIdsRef.current.has(apptId)) {
@@ -411,7 +423,7 @@ const AddNewPatientAppointmentForm = ({
     apptDate,
     selectedStart,
     selectedEnd,
-    initialAppointment,
+    conflictExcludedAppointmentId,
   ]);
 
   const isRoomOccupied = Boolean(
@@ -1632,6 +1644,7 @@ const AddNewPatientAppointmentForm = ({
           onConvertToShortlist={handleConvertToShortlist}
           onCopyToShortlist={handleCopyToShortlist}
           isEditMode={isEditMode}
+          isShortlistEditMode={isShortlistEditMode}
           isRescheduling={isRescheduling}
           onReschedule={() => setIsRescheduling(true)}
           patientDisplayName={patientDisplayName}

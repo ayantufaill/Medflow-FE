@@ -18,15 +18,26 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import WarningIcon from '@mui/icons-material/Warning';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { useDispatch } from 'react-redux';
 import { claimService } from '../../services/claim.service';
 import { paymentService } from '../../services/payment.service';
+import {
+  invalidatePatientBalance,
+  invalidateInsuranceUsage,
+  fetchPatientBalance,
+  fetchInsuranceUsage
+} from '../../store/slices/patientSlice';
 import { COLORS } from '../../constants/colors';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 import InsurancePaymentTopRow from './insurance-payment/InsurancePaymentTopRow';
 import InsurancePaymentTable from './insurance-payment/InsurancePaymentTable';
 import InsurancePaymentFooter from './insurance-payment/InsurancePaymentFooter';
 
 const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
+  const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
   const [paymentMethod, setPaymentMethod] = useState('EFT');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
@@ -217,10 +228,11 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     const selectedClaimObj = claims.find(c => c.id === selectedClaim);
     
     if (!patientId || !selectedClaimObj) {
-      console.error('Missing patient ID or claim object');
+      showSnackbar('Please select a valid claim before proceeding.', 'warning');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       let finalInvoiceId = selectedClaimObj.invoiceId;
       if (typeof finalInvoiceId === 'object' && finalInvoiceId !== null) {
@@ -279,14 +291,41 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         });
       }
 
+      // Invalidate and refresh patient balance and insurance usage across Redux
+      const pId = patientId.toString();
+      dispatch(invalidatePatientBalance(pId));
+      dispatch(invalidateInsuranceUsage(pId));
+      dispatch(fetchPatientBalance(pId));
+      dispatch(fetchInsuranceUsage(pId));
+
+      const eventPayload = {
+        patientId: pId,
+        amount: Number(paymentAmount) || 0,
+      };
+      window.dispatchEvent(new CustomEvent('payment-completed', { detail: eventPayload }));
+      window.dispatchEvent(new CustomEvent('appointment-financials-updated', { detail: eventPayload }));
+      try {
+        const bc = new BroadcastChannel('medflow-payments');
+        bc.postMessage(eventPayload);
+        bc.close();
+      } catch (e) {}
+
+      showSnackbar('Insurance payment applied successfully', 'success');
+
       if (onSave) {
         onSave(paymentData);
       }
+
+      setShowPaymentOptions(false);
+      onClose?.();
     } catch (err) {
       console.error('Error applying insurance payment:', err);
+      const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to apply insurance payment';
+      showSnackbar(errorMsg, 'error');
+      setShowPaymentOptions(false);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setShowPaymentOptions(false);
   };
 
   const handleCancelPayment = () => {
@@ -485,9 +524,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             <Button 
               onClick={handleProceedPayment}
               variant="contained"
+              disabled={isSubmitting}
               sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
             >
-              Proceed
+              {isSubmitting ? 'Processing...' : 'Proceed'}
             </Button>
             <Button 
               onClick={handleCancelPayment}

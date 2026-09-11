@@ -296,6 +296,9 @@ const PatientFinanceInfo = forwardRef(
 
         dispatch(invalidatePaymentInvoices(patientId));
         dispatch(fetchLedgerItems(patientId));
+        window.dispatchEvent(new CustomEvent("appointment-financials-updated", {
+          detail: { patientId },
+        }));
         window.dispatchEvent(new CustomEvent("add-ledger-item"));
         setShowAddPayment(false);
         if (typeof fetchPatientData === "function") fetchPatientData();
@@ -306,6 +309,9 @@ const PatientFinanceInfo = forwardRef(
 
     const handleInsurancePaymentSave = (paymentData) => {
       console.log("Insurance payment saved:", paymentData);
+      window.dispatchEvent(new CustomEvent("appointment-financials-updated", {
+        detail: { patientId: patient?._id || patient?.id },
+      }));
       window.dispatchEvent(new CustomEvent("add-ledger-item"));
       setShowInsurancePayment(false);
     };

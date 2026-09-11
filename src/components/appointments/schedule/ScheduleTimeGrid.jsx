@@ -167,7 +167,19 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
         ? appt.colorTags
         : [];
 
-  const priceStr = computedPrice > 0 ? `$${computedPrice.toFixed(2)}` : "$0.00";
+  const totalAmount = Number.isFinite(Number(appt.totalAmount))
+    ? Number(appt.totalAmount)
+    : computedPrice;
+  const paidAmount = Number.isFinite(Number(appt.paidAmount))
+    ? Number(appt.paidAmount)
+    : 0;
+
+  const formatCurrency = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? `$${num.toFixed(2)}` : "$0.00";
+  };
+
+  const priceStr = `${formatCurrency(paidAmount)} / ${formatCurrency(totalAmount)}`;
 
   return {
     id: appt._id || appt.id,
@@ -215,6 +227,8 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       appt.createdByName ||
       "",
     price: priceStr,
+    totalAmount,
+    paidAmount,
     linkedToShortlist: Boolean(cf.linkedToShortlist),
     rawAppointment: appt,
   };

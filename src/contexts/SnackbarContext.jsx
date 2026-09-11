@@ -53,14 +53,7 @@ export const SnackbarProvider = ({ children }) => {
         <Alert
           onClose={hideSnackbar}
           severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            width: '100%',
-            ...(snackbar.severity === 'success' && {
-              bgcolor: '#2e7d32',
-              '& .MuiAlert-icon': { color: '#fff' },
-            }),
-          }}
+          sx={{ width: '100%' }}
         >
           {snackbar.message}
         </Alert>

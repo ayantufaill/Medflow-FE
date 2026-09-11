@@ -129,7 +129,7 @@ const FinancePage = () => {
       await apiClient.post("/deposits", {
         patientId: patientId.toString(),
         amount: parseFloat(depositData.depositAmount) || 0,
-        paymentMethod: mappedMethod,
+        paymentMethod: depositData.paymentMethod,
         depositType: mappedType,
         date: new Date().toISOString(),
         notes: `Prepayment Deposit - Method: ${depositData.paymentMethod}. Account: ${depositData.toAccount || "None"}. Policy: ${depositData.policy || "None"}`,

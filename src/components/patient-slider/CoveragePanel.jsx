@@ -7,9 +7,10 @@ import { usePatientInsurances } from "../../hooks/redux/usePatient";
 import { fetchPatientById } from "../../store/slices/patientSlice";
 import { selectCurrentPatient } from "../../store/slices/patientSlice";
 import { patientService } from "../../services/patient.service";
+import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { SL } from "./helpers";
 import PatientFlagsDialog from "../patient-flags/PatientFlagsDialog";
-import { getFlagColor } from "../patient-flags/constants";
+import { resolveFlagColor } from "../patient-flags/constants";
 
 const CoveragePanel = ({ pt }) => {
   const hasCoverage = pt.coverage && pt.coverage !== "No active coverage";
@@ -22,7 +23,16 @@ const CoveragePanel = ({ pt }) => {
   // Read patientFlags directly from the live Redux store so they update
   // automatically once fetchPatientById resolves (avoids stale prop issue)
   const currentPatient = useSelector(selectCurrentPatient);
+  const practiceInfo = useSelector(selectPracticeInfo);
+  const globalFlags = practiceInfo?.patientFlags || [];
   const reduxFlags = currentPatient?.patientFlags || currentPatient?._raw?.patientFlags || [];
+
+  // Ensure practiceInfo is fetched if not already loaded in Redux
+  useEffect(() => {
+    if (!globalFlags || globalFlags.length === 0) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [globalFlags, dispatch]);
 
   // Keep localFlags in sync with the Redux store value; this also reflects
   // optimistic updates after saving flags
@@ -176,20 +186,24 @@ const CoveragePanel = ({ pt }) => {
       
       {localFlags.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1, mt: 0.5 }}>
-          {localFlags.map((flag, idx) => (
-            <Tooltip key={idx} title={flag === 'appointment_reminder' ? 'Appt Reminder' : flag} arrow placement="top">
-              <Box 
-                sx={{ 
-                  width: 12, 
-                  height: 12, 
-                  borderRadius: '2px', 
-                  bgcolor: getFlagColor(flag), 
-                  flexShrink: 0,
-                  cursor: 'pointer'
-                }} 
-              />
-            </Tooltip>
-          ))}
+          {localFlags.map((flag, idx) => {
+            const flagName = typeof flag === 'string' ? flag : (flag?.name || flag?.label || 'Flag');
+            const displayTitle = flagName === 'appointment_reminder' ? 'Appt Reminder' : flagName;
+            return (
+              <Tooltip key={idx} title={displayTitle} arrow placement="top">
+                <Box 
+                  sx={{ 
+                    width: 12, 
+                    height: 12, 
+                    borderRadius: '2px', 
+                    bgcolor: resolveFlagColor(flag, globalFlags),
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }} 
+                />
+              </Tooltip>
+            );
+          })}
         </Box>
       )}
 
@@ -217,4 +231,3 @@ const CoveragePanel = ({ pt }) => {
 };
 
 export default CoveragePanel;
-

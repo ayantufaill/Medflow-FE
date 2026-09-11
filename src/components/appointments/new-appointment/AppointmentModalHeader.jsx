@@ -6,6 +6,7 @@ const AppointmentModalHeader = ({
   onConvertToShortlist, 
   onCopyToShortlist,
   isEditMode,
+  isShortlistEditMode = false,
   patientDisplayName,
   apptDate,
   timeHours,
@@ -91,41 +92,45 @@ const AppointmentModalHeader = ({
               Re-schedule
             </Button>
           )}
-          <Button
-            variant="outlined"
-            onClick={onConvertToShortlist}
-            startIcon={<AutoAwesome sx={{ fontSize: "14px" }} />}
-            sx={actionBtnStyle}
-          >
-            Convert to shortlist
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={onCopyToShortlist}
-            disabled={isCopiedToShortlist}
-            startIcon={
-              isCopiedToShortlist
-                ? <CheckCircleOutline sx={{ fontSize: "14px" }} />
-                : <ContentCopyOutlined sx={{ fontSize: "14px" }} />
-            }
-            sx={{
-              ...actionBtnStyle,
-              ...(isCopiedToShortlist && {
-                borderColor: "#86efac",
-                color: "#16a34a",
-                bgcolor: "#f0fdf4",
-                "&:hover": { borderColor: "#86efac", backgroundColor: "#f0fdf4" },
-                "&.Mui-disabled": {
-                  borderColor: "#86efac",
-                  color: "#16a34a",
-                  bgcolor: "#f0fdf4",
-                  opacity: 1,
-                },
-              }),
-            }}
-          >
-            {isCopiedToShortlist ? "Copied to shortlist" : "Copy to shortlist"}
-          </Button>
+          {!isShortlistEditMode && (
+            <>
+              <Button
+                variant="outlined"
+                onClick={onConvertToShortlist}
+                startIcon={<AutoAwesome sx={{ fontSize: "14px" }} />}
+                sx={actionBtnStyle}
+              >
+                Convert to shortlist
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={onCopyToShortlist}
+                disabled={isCopiedToShortlist}
+                startIcon={
+                  isCopiedToShortlist
+                    ? <CheckCircleOutline sx={{ fontSize: "14px" }} />
+                    : <ContentCopyOutlined sx={{ fontSize: "14px" }} />
+                }
+                sx={{
+                  ...actionBtnStyle,
+                  ...(isCopiedToShortlist && {
+                    borderColor: "#86efac",
+                    color: "#16a34a",
+                    bgcolor: "#f0fdf4",
+                    "&:hover": { borderColor: "#86efac", backgroundColor: "#f0fdf4" },
+                    "&.Mui-disabled": {
+                      borderColor: "#86efac",
+                      color: "#16a34a",
+                      bgcolor: "#f0fdf4",
+                      opacity: 1,
+                    },
+                  }),
+                }}
+              >
+                {isCopiedToShortlist ? "Copied to shortlist" : "Copy to shortlist"}
+              </Button>
+            </>
+          )}
         </Box>
       ) : (
         <Button

@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import dayjs from "dayjs";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import SliderHeader from "./SliderHeader";
 import DemographicsPanel from "./DemographicsPanel";
 import ContactPanel from "./ContactPanel";
@@ -13,7 +13,8 @@ import HygienistPanel from "./HygienistPanel";
 import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
 import { appointmentService } from "../../services/appointment.service";
-import { selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { resolveFlagColor } from "../patient-flags/constants";
 
 const EMPTY_APPT = { date: "", time: "", provider: "" };
 
@@ -202,21 +203,18 @@ const toSliderShape = (patient, globalFlags = []) => {
 const dynamicTags = (patient.patientFlags || [])
   .map(flag => {
     // patientFlags might be strings (names) or objects with { name, color, ... }
-    const flagName = typeof flag === 'string' ? flag : (flag.name || flag.label || String(flag));
-    const existingColor = typeof flag === 'object' ? flag.color : null;
+    const flagName = typeof flag === 'string' ? flag : (flag?.name || flag?.label || String(flag));
+    const existingColor = typeof flag === 'object' ? flag?.color : null;
     
-    // ✅ ALWAYS look up in globalFlags first (source of truth from Redux)
-    const found = globalFlags.find(f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase());
-    if (found && found.color) {
-      return { label: found.name || found.label, bg: found.color + '20', color: found.color, border: found.color };
+    // Look up in globalFlags first (source of truth from Redux/Admin)
+    const found = (globalFlags || []).find(f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase());
+    const finalColor = found?.color || existingColor || resolveFlagColor(flag, globalFlags);
+    const displayName = found?.name || found?.label || flagName;
+
+    if (finalColor && finalColor !== '#cbd5e1') {
+      return { label: displayName, bg: finalColor + '20', color: finalColor, border: finalColor };
     }
-    
-    // Fallback to existing color only if NOT found in globalFlags
-    if (existingColor) {
-      return { label: flagName, bg: existingColor + '20', color: existingColor, border: existingColor };
-    }
-    
-    return null;
+    return { label: displayName, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
   })
   .filter(Boolean);
 
@@ -256,10 +254,18 @@ const dynamicTags = (patient.patientFlags || [])
 };
 
 const PatientSlider = ({ open, onClose, patient }) => {
+  const dispatch = useDispatch();
   const { currentPatient } = usePatient();
   const sourcePatient = patient || currentPatient;
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
+
+  useEffect(() => {
+    if (open && (!globalFlags || globalFlags.length === 0)) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [open, globalFlags, dispatch]);
+
   const basePt = useMemo(() => toSliderShape(sourcePatient, globalFlags), [sourcePatient, globalFlags]);
   const [fetchedAppointments, setFetchedAppointments] = useState({
     patientId: null,

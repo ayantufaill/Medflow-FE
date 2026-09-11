@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Select, MenuItem, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Select, MenuItem, Button, CircularProgress, Alert } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -16,9 +16,11 @@ const ProductivityPanel = () => {
   const [date, setDate] = useState(dayjs());
   const [panelData, setPanelData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchPanelData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get('/productivity/panel-summary', {
         params: {
@@ -27,9 +29,23 @@ const ProductivityPanel = () => {
         }
       });
       setPanelData(response.data?.data || null);
-    } catch (error) {
-      console.error('Failed to fetch productivity panel data:', error);
-      // Fallback empty data structure if the API fails or doesn't exist yet
+    } catch (err) {
+      console.error('Failed to fetch productivity panel data:', err);
+      let errorMsg = 'Failed to load productivity metrics.';
+      if (err.response?.status === 404) {
+        errorMsg = 'Productivity summary endpoint not found (/api/productivity/panel-summary).';
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        errorMsg = 'Unauthorized to access productivity metrics.';
+      } else if (err.response?.data?.error?.message) {
+        errorMsg = err.response.data.error.message;
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
+
+      // Fallback empty data structure if the API fails
       const emptyRows = [
         { id: 'P', label: 'P', value: 0, goal: 0, color: '#7cb342' },
         { id: 'C', label: 'C', value: 0, goal: 0, color: '#7cb342' },
@@ -125,6 +141,13 @@ const ProductivityPanel = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2, fontSize: '12px', borderRadius: radius.sm }}>
+          {error}
+        </Alert>
+      )}
 
       {/* Cards */}
       {loading && !panelData ? (

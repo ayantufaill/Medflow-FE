@@ -106,7 +106,7 @@ export const fetchPatientBalance = createAsyncThunk(
   'patient/fetchBalance',
   async (patientId, { rejectWithValue }) => {
     try {
-      const balance = await invoiceService.getPatientBalance(patientId);
+      const balance = await patientService.getPatientBalance(patientId);
       return { patientId, balance };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch balance');
@@ -362,11 +362,13 @@ const initialState = {
   insurancesCache: {}, // { [patientId]: { data, timestamp } }
   patientInsurancesLoading: false,
 
-  // Balance cache
+  // Balance state & cache
+  patientBalance: { balance: 0, overdueAmount: 0, lastPaymentDate: null, loading: false },
   balanceCache: {}, // { [patientId]: { data, timestamp } }
   balanceLoading: false,
 
-  // Insurance usage cache
+  // Insurance usage state & cache
+  insuranceUsage: { primaryInsurance: null, secondaryInsurance: null, loading: false },
   insuranceUsageCache: {}, // { [patientId]: { data, timestamp } }
   insuranceUsageLoading: false,
 
@@ -412,6 +414,8 @@ const patientSlice = createSlice({
       localStorage.removeItem('selectedPatientId');
       state.currentMedicalHistory = null;
       state.currentDentalHistory = null;
+      state.patientBalance = { balance: 0, overdueAmount: 0, lastPaymentDate: null, loading: false };
+      state.insuranceUsage = { primaryInsurance: null, secondaryInsurance: null, loading: false };
     },
     clearPatientScopedData: (state) => {
       state.currentMedicalHistory = null;
@@ -526,6 +530,7 @@ const patientSlice = createSlice({
       // Fetch Patient Balance
       .addCase(fetchPatientBalance.pending, (state) => {
         state.balanceLoading = true;
+        state.patientBalance.loading = true;
       })
       .addCase(fetchPatientBalance.fulfilled, (state, action) => {
         const { patientId, balance } = action.payload;
@@ -533,14 +538,22 @@ const patientSlice = createSlice({
           data: balance,
           timestamp: Date.now(),
         };
+        state.patientBalance = {
+          balance: balance?.balance ?? 0,
+          overdueAmount: balance?.overdueAmount ?? 0,
+          lastPaymentDate: balance?.lastPaymentDate ?? null,
+          loading: false,
+        };
         state.balanceLoading = false;
       })
       .addCase(fetchPatientBalance.rejected, (state) => {
         state.balanceLoading = false;
+        state.patientBalance.loading = false;
       })
       // Fetch Insurance Usage
       .addCase(fetchInsuranceUsage.pending, (state) => {
         state.insuranceUsageLoading = true;
+        state.insuranceUsage.loading = true;
       })
       .addCase(fetchInsuranceUsage.fulfilled, (state, action) => {
         const { patientId, data } = action.payload;
@@ -548,10 +561,16 @@ const patientSlice = createSlice({
           data,
           timestamp: Date.now(),
         };
+        state.insuranceUsage = {
+          primaryInsurance: data?.primaryInsurance ?? null,
+          secondaryInsurance: data?.secondaryInsurance ?? null,
+          loading: false,
+        };
         state.insuranceUsageLoading = false;
       })
       .addCase(fetchInsuranceUsage.rejected, (state) => {
         state.insuranceUsageLoading = false;
+        state.insuranceUsage.loading = false;
       })
       // fetchMedicalHistoryThunk
       .addCase(fetchMedicalHistoryThunk.pending, (state) => {
@@ -618,8 +637,10 @@ export const selectMedicalHistoryError = (state) => state.patient.medicalHistory
 export const selectCurrentDentalHistory = (state) => state.patient.currentDentalHistory;
 export const selectDentalHistoryLoading = (state) => state.patient.dentalHistoryLoading;
 export const selectDentalHistoryError = (state) => state.patient.dentalHistoryError;
+export const selectPatientBalance = (state) => state.patient.patientBalance;
 export const selectPatientBalanceCache = (state) => state.patient.balanceCache;
 export const selectPatientBalanceLoading = (state) => state.patient.balanceLoading;
+export const selectInsuranceUsage = (state) => state.patient.insuranceUsage;
 export const selectInsuranceUsageCache = (state) => state.patient.insuranceUsageCache;
 export const selectInsuranceUsageLoading = (state) => state.patient.insuranceUsageLoading;
 

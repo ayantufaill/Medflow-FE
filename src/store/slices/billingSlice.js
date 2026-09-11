@@ -1096,21 +1096,14 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               netPatientBal = Math.max(0, patientBal - itemPatientPaid);
             }
 
-            // Fallback: if no ptPortion but there is remaining owed (e.g. insurance underpaid/denied),
-            // the residual falls to the patient.
-            let effectivePatientBal =
-              netPatientBal > 0
-                ? netPatientBal
-                : patientBal === 0
-                  ? owed - (hasVoidedBug ? 0 : alreadyPaid)
-                  : 0;
-
             // ALWAYS cap by remainingBal (unless there's a void bug, then we must recalculate remainingBal safely)
             const safeRemainingBal = hasVoidedBug
               ? Math.max(0, owed - (totalInsurancePaid > 0 ? insBal || 0 : 0))
               : Math.max(0, owed - alreadyPaid);
-            effectivePatientBal = Math.min(
-              Math.max(0, effectivePatientBal),
+
+            // Patient balance is simply the remaining net patient balance, capped by total remaining owed
+            let effectivePatientBal = Math.min(
+              Math.max(0, netPatientBal),
               safeRemainingBal,
             );
 
@@ -1839,7 +1832,7 @@ const billingSlice = createSlice({
 
     // ── AddPaymentDialog checkbox reducers ──────────────────────────────────
 
-    /** Toggle an entire payment invoice's checked state (and all its line items). */
+    /** Toggle an entire payment invoice's checked state (and all its line items with a patient balance). */
     togglePaymentInvoiceChecked: (state, action) => {
       const { patientId, invoiceId } = action.payload;
       const invoices = state.paymentInvoicesCache[patientId];
@@ -1848,7 +1841,11 @@ const billingSlice = createSlice({
       if (!inv) return;
       inv.checked = !inv.checked;
       inv.lineItems.forEach((item) => {
-        item.checked = inv.checked;
+        if (!inv.checked) {
+          item.checked = false;
+        } else if (Number(item.patientBalance) > 0) {
+          item.checked = true;
+        }
       });
     },
 

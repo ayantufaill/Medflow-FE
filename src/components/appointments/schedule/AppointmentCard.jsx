@@ -187,6 +187,11 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
   const s = String(appointment.status || '').toLowerCase();
   const statusCfg = { bg: COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed };
   const tier = getSizeTier(appointment.durationMinutes);
+  const paidAmount = Number(appointment.paidAmount) || 0;
+  const totalAmount = Number.isFinite(Number(appointment.totalAmount))
+    ? Number(appointment.totalAmount)
+    : Number(String(appointment.price || '').replace(/[^0-9.-]/g, '')) || 0;
+  const paymentDisplay = `$${paidAmount.toFixed(2)} / $${totalAmount.toFixed(2)}`;
   const colorTags = Array.isArray(appointment.colorTags)
     ? appointment.colorTags.filter(
         (color) => typeof color === "string" && color.trim(),
@@ -615,12 +620,13 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     borderRadius: "20px",
                     px: "8px",
                     py: "3px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
-                    {appointment.price}
+                    {paymentDisplay}
                   </Typography>
                 </Box>
                 {isLinkedToShortlist ? (
@@ -724,12 +730,13 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     borderRadius: "20px",
                     px: "8px",
                     py: "2px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
-                    {appointment.price}
+                    {paymentDisplay}
                   </Typography>
                 </Box>
               </Box>
