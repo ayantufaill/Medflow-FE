@@ -1,22 +1,18 @@
 import React from 'react';
 import { Box, TextField, Typography } from "@mui/material";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight } from "../../constants/styles";
+import { fontSize } from "../../constants/styles";
 import { SectionHeader, HistoryRow } from "./DentalHistoryFullView";
 
 const SummarySection = ({ 
   title, 
   sectionKey, 
-  summaryData, 
   historyItems = [], 
   sectionSummaries, 
   onUpdateSectionSummary,
+  onUpdateItem,
   isFirst 
 }) => {
-  const handleInfoChange = (e) => {
-    onUpdateSectionSummary(sectionKey, { ...summaryData, additionalInfo: e.target.value });
-  };
-
   // Only show positive findings or items with a scale/note
   const answeredItems = historyItems.filter(
     (item) => (item.answer && item.answer !== 'No' && item.answer !== 'not answered') || 
@@ -34,44 +30,54 @@ const SummarySection = ({
         isFirst={isFirst}
       />
       
-      <Box className="print-stack" sx={{ px: { xs: 1, sm: 2 }, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '7fr 3fr' }, gap: 4, alignItems: 'start' }}>
-        <Box>
-          {answeredItems.length > 0 ? (
-            answeredItems.map((item) => (
-              <HistoryRow 
-                key={item.id} 
-                item={item} 
-                sectionKey={sectionKey} 
-                readOnly={true} 
-              />
-            ))
-          ) : (
-            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, py: 2, borderBottom: "1px solid #e0e0e0" }}>
-              No positive findings reported.
-            </Typography>
-          )}
-        </Box>
-
-        <Box sx={{ mt: { xs: 2, md: 0 } }}>
-          <TextField
-            variant="outlined"
-            fullWidth
-            multiline
-            minRows={3}
-            size="small"
-            value={summaryData?.additionalInfo || ''}
-            onChange={handleInfoChange}
-            placeholder="Additional information"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                fontFamily: "Inter",
-                fontSize: fontSize.sm,
-                color: COLORS.TEXT_PRIMARY,
-                bgcolor: '#f8f9fa',
-              },
-            }}
-          />
-        </Box>
+      <Box className="print-stack" sx={{ px: { xs: 1, sm: 2 } }}>
+        {answeredItems.length > 0 ? (
+          answeredItems.map((item) => (
+            <Box
+              key={item.id}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '7fr 3fr' },
+                gap: 4,
+                alignItems: 'start',
+                borderBottom: "1px solid #e0e0e0",
+                py: 2,
+              }}
+            >
+              <Box sx={{ '& > div': { borderBottom: 0, py: 0 } }}>
+                <HistoryRow
+                  item={item}
+                  sectionKey={sectionKey}
+                  readOnly={true}
+                />
+              </Box>
+              <Box>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  size="small"
+                  value={item.additionalInfo || ''}
+                  onChange={(e) => onUpdateItem(sectionKey, item.id, 'additionalInfo', e.target.value)}
+                  placeholder="Additional information"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      fontFamily: "Inter",
+                      fontSize: fontSize.sm,
+                      color: COLORS.TEXT_PRIMARY,
+                      bgcolor: '#f8f9fa',
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+          ))
+        ) : (
+          <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, py: 2, borderBottom: "1px solid #e0e0e0" }}>
+            No positive findings reported.
+          </Typography>
+        )}
       </Box>
     </Box>
   );
@@ -80,6 +86,7 @@ const SummarySection = ({
 const DentalHistorySummaryTab = ({ 
   sectionSummaries, 
   onUpdateSectionSummary,
+  onUpdateItem,
   personalHistory = [],
   gumAndBone = [],
   biteAndJawJoint = [],
@@ -97,6 +104,7 @@ const DentalHistorySummaryTab = ({
         historyItems={personalHistory}
         sectionSummaries={summaries}
         onUpdateSectionSummary={onUpdateSectionSummary}
+        onUpdateItem={onUpdateItem}
         isFirst={true}
       />
       <SummarySection
@@ -106,6 +114,7 @@ const DentalHistorySummaryTab = ({
         historyItems={gumAndBone}
         sectionSummaries={summaries}
         onUpdateSectionSummary={onUpdateSectionSummary}
+        onUpdateItem={onUpdateItem}
       />
       <SummarySection
         title="Tooth Structure"
@@ -114,6 +123,7 @@ const DentalHistorySummaryTab = ({
         historyItems={toothStructure}
         sectionSummaries={summaries}
         onUpdateSectionSummary={onUpdateSectionSummary}
+        onUpdateItem={onUpdateItem}
       />
       <SummarySection
         title="Bite and Jaw Joint"
@@ -122,6 +132,7 @@ const DentalHistorySummaryTab = ({
         historyItems={biteAndJawJoint}
         sectionSummaries={summaries}
         onUpdateSectionSummary={onUpdateSectionSummary}
+        onUpdateItem={onUpdateItem}
       />
       <SummarySection
         title="Smile Characteristics"
@@ -130,6 +141,7 @@ const DentalHistorySummaryTab = ({
         historyItems={smileCharacteristics}
         sectionSummaries={summaries}
         onUpdateSectionSummary={onUpdateSectionSummary}
+        onUpdateItem={onUpdateItem}
       />
     </Box>
   );
