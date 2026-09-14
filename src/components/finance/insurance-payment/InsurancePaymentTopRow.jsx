@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Select, MenuItem, Checkbox } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
 import { PAYMENT_METHODS } from '../../../constants/financeConstants';
 
@@ -29,7 +30,7 @@ const InsurancePaymentTopRow = ({
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.8125rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-        07/15/2022
+        {dayjs().format('MM/DD/YYYY')}
       </Typography>
       <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.8125rem', fontWeight: 500, ml: 1, whiteSpace: 'nowrap' }}>
         Payment claim:
