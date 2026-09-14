@@ -44,6 +44,8 @@ import {
   Cancel as CancelIcon,
 } from "@mui/icons-material";
 import { claimService } from "../../services/claim.service";
+import { useSnackbar } from "../../contexts/SnackbarContext";
+import { getClaimTypeLabel } from "../../utils/claimUtils";
 import notesIcon from "../../assets/claimicons/notesicon.svg";
 import deleteIcon from "../../assets/claimicons/deleteicon.svg";
 import { COLORS } from "../../constants/colors";
@@ -81,6 +83,29 @@ export const StandardClaimsTable = ({
   const [editingDescField, setEditingDescField] = React.useState("description");
   const [isSavingDesc, setIsSavingDesc] = React.useState(false);
   const [descPopoverAnchor, setDescPopoverAnchor] = React.useState(null);
+  const [exporting837Id, setExporting837Id] = React.useState(null);
+  const { showSnackbar } = useSnackbar();
+
+  const handleExport837 = async (claimId) => {
+    try {
+      setExporting837Id(claimId);
+      await claimService.generate837D(claimId);
+      const blob = await claimService.export837D(claimId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `claim_${claimId}.837`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSnackbar("837D file exported successfully", "success");
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || "Failed to export 837D file", "error");
+    } finally {
+      setExporting837Id(null);
+    }
+  };
 
   const handleDescDoubleClick = (id, currentDesc, event, field = "description") => {
     setEditingDescId(id);
@@ -531,12 +556,9 @@ export const StandardClaimsTable = ({
                           fontWeight: 600,
                           color: isError && activeTab === 0 ? "#e53e3e" : "#1e293b",
                           fontSize: "0.75rem",
-                          "&:hover": { textDecoration: "underline" },
                         }}
                       >
-                        <Link to={`/claims/${claim.id}`} style={{ color: "inherit", textDecoration: "inherit" }}>
-                          {claim.claimNumber}
-                        </Link>
+                        {claim.claimNumber}
                       </Typography>
                       {activeTab === 4 && claim.createdDate && (
                         <Typography
@@ -565,10 +587,10 @@ export const StandardClaimsTable = ({
                         }}
                       >
                         <span style={{ fontWeight: 600 }}>
-                          {claim.claimType.split(" ")[0]}
+                          {getClaimTypeLabel(claim.claimType).split(" ")[0]}
                         </span>
                         <span>
-                          {claim.claimType.split(" ").slice(1).join(" ")}
+                          {getClaimTypeLabel(claim.claimType).split(" ").slice(1).join(" ")}
                         </span>
                       </Typography>
                     </TableCell>
@@ -1149,6 +1171,20 @@ export const StandardClaimsTable = ({
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <Tooltip title="Export 837D">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleExport837(claim.id)}
+                                disabled={exporting837Id === claim.id}
+                                sx={{ color: "#7d9cc4", p: 0.2 }}
+                              >
+                                {exporting837Id === claim.id ? (
+                                  <CircularProgress size={14} />
+                                ) : (
+                                  <DownloadIcon sx={{ fontSize: 14 }} />
+                                )}
+                              </IconButton>
+                            </Tooltip>
                           </>
                         )}
                       </Box>

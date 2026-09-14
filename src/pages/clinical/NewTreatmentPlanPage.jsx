@@ -716,6 +716,7 @@ const NewTreatmentPlanPage = () => {
           setCreatedPreAuthId(null);
         }}
         patientId={currentPatientId}
+        treatmentPlanId={activePlanId}
         selectedProcedures={treatmentPlans}
       />
 

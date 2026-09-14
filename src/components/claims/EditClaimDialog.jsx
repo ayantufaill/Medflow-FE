@@ -12,9 +12,11 @@ import {
   IconButton
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { Receipt as ReceiptIcon } from '@mui/icons-material';
+import { Receipt as ReceiptIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { COLORS } from '../../constants/colors';
 import { fetchProviders, selectProviderList } from '../../store/slices/providerSlice';
+import { claimService } from '../../services/claim.service';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import EditClaimLeftColumn from './edit-claim/EditClaimLeftColumn';
 import EditClaimMiddleColumn from './edit-claim/EditClaimMiddleColumn';
 import EditClaimRightColumn from './edit-claim/EditClaimRightColumn';
@@ -32,7 +34,7 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
     treatmentRequiredForOrtho: false,
     estimatedTreatmentStartDate: '',
     initialPayment: '',
-    
+
     accidentIndicator: 'Non Accident',
     autoAccidentState: '',
     referralDate: '',
@@ -43,7 +45,7 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
     remittanceDate: '',
     dateOrthoAppliancePlaced: '',
     srpLastDate: '',
-    
+
     attachmentIndicator: 'No',
     attachmentType: 'None',
     attachmentTransmissionCode: 'None',
@@ -56,6 +58,8 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
 
   const dispatch = useDispatch();
   const providersData = useSelector(selectProviderList) || [];
+  const { showSnackbar } = useSnackbar();
+  const [exporting837, setExporting837] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProviders({ page: 1, limit: 100 }));
@@ -123,11 +127,36 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
     }
   };
 
+  const handleExport837D = async () => {
+    if (!claim?._id && !claim?.id) return;
+    const claimId = claim._id || claim.id;
+    try {
+      setExporting837(true);
+      await claimService.generate837D(claimId);
+      
+      const blob = await claimService.export837D(claimId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `claim_${claimId}.837`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSnackbar('837D file exported successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to export 837D file', 'error');
+    } finally {
+      setExporting837(false);
+    }
+  };
+
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="lg" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
       fullWidth
       sx={{ zIndex: 15000 }}
       PaperProps={{
@@ -137,7 +166,7 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
         }
       }}
     >
-      <DialogTitle sx={{ 
+      <DialogTitle sx={{
         boxSizing: "border-box",
         px: "25px",
         py: "12px",
@@ -157,10 +186,10 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent sx={{ p: 4, pt: '24px !important' }}>
         <Grid container spacing={4}>
-          
+
           {/* LEFT COLUMN */}
           <Grid size={{ xs: 12, md: 4 }}>
             <EditClaimLeftColumn formData={formData} handleChange={handleChange} />
@@ -175,17 +204,39 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
           <Grid size={{ xs: 12, md: 4 }}>
             <EditClaimRightColumn formData={formData} handleChange={handleChange} providerOptions={providerOptions} />
           </Grid>
-          
+
         </Grid>
       </DialogContent>
-      
-      <DialogActions sx={{ p: 2, px: 3, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-        <Button 
-          variant="contained" 
+
+      <DialogActions sx={{ p: 2, px: 3, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+        <Box>
+          {claim && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon />}
+              onClick={handleExport837D}
+              disabled={exporting837}
+              sx={{
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER,
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 2,
+              }}
+            >
+              {exporting837 ? 'Exporting...' : 'Export 837D'}
+            </Button>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+          variant="contained"
           onClick={handleSave}
           disabled={isSaving}
-          sx={{ 
-            backgroundColor: COLORS.ACCENT, 
+          sx={{
+            backgroundColor: COLORS.ACCENT,
             color: '#ffffff',
             borderRadius: '8px',
             fontFamily: 'Inter',
@@ -201,11 +252,11 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
         >
           {isSaving ? 'Saving...' : 'Edit Claim'}
         </Button>
-        <Button 
+        <Button
           onClick={onClose}
-          variant="outlined" 
+          variant="outlined"
           size="small"
-          sx={{ 
+          sx={{
             color: '#64748b',
             borderColor: '#cbd5e1',
             borderRadius: '8px',
@@ -218,6 +269,7 @@ const EditClaimDialog = ({ open, claim, onClose, onSave }) => {
         >
           Cancel
         </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );
