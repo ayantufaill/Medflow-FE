@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Autocomplete, TextField } from '@mui/material';
 import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportSearchInput, ReportDivider } from '../ui';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 
-const ProductionReportFilters = ({ dropdownProviders, onApplyFilters, onClearAll }) => {
+const ProductionReportFilters = ({ dropdownProviders, reportData, onApplyFilters, onClearAll }) => {
   const [draftFilters, setDraftFilters] = useState({
     dateRange: 'daily',
     startDate: new Date().toISOString().split('T')[0],
@@ -21,6 +21,17 @@ const ProductionReportFilters = ({ dropdownProviders, onApplyFilters, onClearAll
   const handleFilterChange = (key, value) => {
     setDraftFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  const uniqueCodes = React.useMemo(() => {
+    if (!reportData) return [];
+    const map = new Map();
+    reportData.forEach(r => {
+      if (r.code) {
+        map.set(r.code, { code: r.code, desc: r.procedure || '' });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }, [reportData]);
 
   const getLocalDateString = (d) => {
     const offset = d.getTimezoneOffset() * 60000;
@@ -260,11 +271,33 @@ const ProductionReportFilters = ({ dropdownProviders, onApplyFilters, onClearAll
         onChange={(e) => handleFilterChange('codeFilter', e.target.value)}
       />
       <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2.5 }}>
-        <ReportSearchInput 
-          placeholder="Enter code or procedure" 
-          value={draftFilters.codeText}
-          onChange={(e) => handleFilterChange('codeText', e.target.value)}
-          width="250px"
+        <Autocomplete
+          multiple
+          size="small"
+          options={uniqueCodes}
+          getOptionLabel={(opt) => `${opt.code} - ${opt.desc}`}
+          value={uniqueCodes.filter(c => (draftFilters.codeText || '').includes(c.code))}
+          onChange={(e, newVal) => {
+            const str = newVal.map(v => v.code).join(', ');
+            handleFilterChange('codeText', str);
+          }}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              placeholder={!draftFilters.codeText ? "Select codes" : ""} 
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  minHeight: 36,
+                  padding: '2px 8px',
+                  borderRadius: '8px',
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }
+              }}
+            />
+          )}
+          sx={{ width: '250px' }}
+          disableCloseOnSelect
         />
       </Box>
       <ReportDivider />

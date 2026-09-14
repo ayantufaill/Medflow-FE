@@ -19,6 +19,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useSelector } from 'react-redux';
 import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
+import { getFlagColor } from '../../patient-flags/constants';
 const ProductionReportTable = ({
   sortedReportData,
   grouping,
@@ -32,9 +33,23 @@ const ProductionReportTable = ({
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal);
-    if (found) return { color: found.color, name: found.name };
-    return { color: flagVal, name: 'Flag' }; // fallback if it's already a hex color
+    if (typeof flagVal === 'object' && flagVal !== null) {
+      return { color: flagVal.color || '#cbd5e1', name: flagVal.name || 'Flag' };
+    }
+    const strVal = String(flagVal);
+    const found = globalFlags.find(f => 
+      f.id === strVal || 
+      (f.name || '').toLowerCase() === strVal.toLowerCase() || 
+      (f.label || '').toLowerCase() === strVal.toLowerCase()
+    );
+    if (found) return { color: found.color, name: found.name || found.label || strVal };
+    
+    const fallbackColor = getFlagColor(strVal);
+    if (fallbackColor !== '#cbd5e1') {
+      return { color: fallbackColor, name: strVal };
+    }
+    
+    return { color: '#cbd5e1', name: strVal };
   };
   const baseColSpan = 8;
   const leftOffset = baseColSpan - (!showDOB ? 1 : 0) - (!showProvider ? 2 : 0);

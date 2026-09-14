@@ -164,10 +164,8 @@ const AgingReport = () => {
   };
 
   const enrichedReportData = useMemo(() => {
-    return reportData.map((row, idx) => {
-      const flags = (row.flags && row.flags.length > 0)
-        ? row.flags
-        : (idx % 3 === 0 ? ['#f5a623'] : (idx % 5 === 0 ? ['#e11d48', '#4a90e2'] : []));
+    return reportData.map((row) => {
+      const flags = (row.flags && row.flags.length > 0) ? row.flags : [];
       return {
         ...row,
         flags

@@ -42,6 +42,7 @@ const DepositSlips = () => {
   const formatMethodLabel = (method) => {
     if (!method) return 'Check';
     const lower = method.toLowerCase().trim();
+    if (lower === 'debit_card' || lower === 'debit card (debit)') return 'Debit Card (debit)';
     if (lower === 'card' || lower === 'credit_card') return 'Credit Card';
     if (lower === 'cash') return 'Cash';
     if (lower === 'ach' || lower === 'eft') return 'EFT';

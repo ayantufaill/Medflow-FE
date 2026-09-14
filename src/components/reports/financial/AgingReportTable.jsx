@@ -132,9 +132,11 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant="caption" color="primary" sx={{ fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem', color: '#3b82f6' }}>{row.name}</Typography>
-                          <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.65rem' }}>
-                            (Delta Dental Ins. Co. - Utah + Delta Dental of Arkansas)
-                          </Typography>
+                          {row.insuranceName && (
+                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.65rem' }}>
+                              ({row.insuranceName})
+                            </Typography>
+                          )}
                         </Box>
                       </TableCell>
                     )}
