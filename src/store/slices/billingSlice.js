@@ -1144,40 +1144,25 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
         };
       });
 
-      // Keep invoices that have items with either remaining balances or patient balances.
-      // Also keep invoices where the invoice-level balance (BalTotal) is still positive —
-      // this catches cases where per-item paidAmount tracking doesn't perfectly match the
-      // ledger balance (e.g. insurance write-offs tracked at invoice level vs item level).
+      // AddPaymentDialog is strictly for collecting patient payments.
+      // Only keep line items where the patient actually has an outstanding balance (> 0).
+      // Filter out any invoices where the remaining patient balance or patient portion is zero.
       const result = enrichedInvoices
-        .filter((inv) => {
-          const invoiceLevelBalance = Number(
-            inv.balanceDue || inv.totalAmount || 0,
-          );
-          const hasItemBalance = (inv.lineItems || []).some(
-            (item) =>
-              Number(item.remainingBal) > 0 || Number(item.patientBalance) > 0,
-          );
-          return hasItemBalance || invoiceLevelBalance > 0;
-        })
         .map((inv) => {
-          const invoiceLevelBalance = Number(
-            inv.balanceDue || inv.totalAmount || 0,
+          const patientItems = (inv.lineItems || []).filter(
+            (item) => Number(item.patientBalance || 0) > 0,
           );
-          const filteredItems = (inv.lineItems || []).filter(
-            (item) =>
-              Number(item.remainingBal) > 0 || Number(item.patientBalance) > 0,
-          );
-          // If per-item filter wiped all items but invoice still has a balance,
-          // keep all items so the user can still see them and apply payment.
           return {
             ...inv,
-            lineItems:
-              filteredItems.length > 0
-                ? filteredItems
-                : invoiceLevelBalance > 0
-                  ? inv.lineItems
-                  : [],
+            lineItems: patientItems,
           };
+        })
+        .filter((inv) => {
+          const totalPatientBalance = (inv.lineItems || []).reduce(
+            (sum, item) => sum + Number(item.patientBalance || 0),
+            0,
+          );
+          return totalPatientBalance > 0;
         });
 
       return { patientId, invoices: result };
