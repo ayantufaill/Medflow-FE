@@ -10,7 +10,7 @@ import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, setIsRescheduling, isFuture = false }) => {
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit }) => {
   const [isEditing, setIsEditing] = useState(!showExtendedOptions);
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
 
@@ -34,9 +34,9 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
     () => {
       if (isFuture) return;
       setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, completed: !p.completed } : p));
-      if (setIsRescheduling) setIsRescheduling(true);
+      if (onEnterEdit) onEnterEdit();
     },
-    [row.id, setProcedures, setIsRescheduling, isFuture],
+    [row.id, setProcedures, onEnterEdit, isFuture],
   );
 
   const parseCharge = (v) => {
@@ -141,9 +141,12 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9.]/g, '');
                   setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, charge: val, totalCharge: val } : p));
-                  if (setIsRescheduling) setIsRescheduling(true);
+                  if (onEnterEdit) onEnterEdit();
                 }}
                 placeholder="0.00"
+                InputProps={{
+                  startAdornment: <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", mr: 0.5 }}>$</Typography>,
+                }}
                 sx={{
                   width: "70px",
                   "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "4px", px: "6px", textAlign: "right", fontWeight: 700 },
@@ -174,11 +177,15 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
             </Box>
           </TableCell>
           <TableCell sx={{ ...cellSx, width: "32px", textAlign: "center", px: "4px" }}>
-            <IconButton 
-              size="small" 
-              onClick={() => setIsEditing(!isEditing)} 
-              sx={{ p: "2px", color: isEditing ? "#2262ef" : "#9aa3ae", backgroundColor: isEditing ? "#eef2ff" : "transparent" }}
-            >
+<IconButton
+               size="small"
+               onClick={() => {
+                 const newVal = !isEditing;
+                 setIsEditing(newVal);
+                 if (newVal && onEnterEdit) onEnterEdit();
+               }}
+               sx={{ p: "2px", color: isEditing ? "#2262ef" : "#9aa3ae", backgroundColor: isEditing ? "#eef2ff" : "transparent" }}
+             >
               <EditOutlinedIcon sx={{ fontSize: "16px" }} />
             </IconButton>
           </TableCell>
@@ -187,7 +194,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
 
       {/* Delete action */}
       <TableCell sx={{ ...cellSx, width: "44px", pr: "8px", textAlign: "center" }}>
-        <IconButton size="small" onClick={handleDelete} sx={{ p: "4px" }}>
+        <IconButton size="small" onClick={disableDelete ? undefined : handleDelete} disabled={disableDelete} sx={{ p: "4px", opacity: disableDelete ? 0.3 : 1, cursor: disableDelete ? "not-allowed" : "pointer" }}>
           <Box component="img" src={DeleteIconImg} sx={{ width: "16px", height: "16px", objectFit: "contain" }} />
         </IconButton>
       </TableCell>
@@ -195,7 +202,7 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
 });
 
-const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, setIsRescheduling, isFuture = false }) => {
+const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit }) => {
   const baseHeaders = [
     { label: "PROCEDURE", width: showExtendedOptions ? "72px" : "88px" },
     { label: "SITE",      width: "18%"  },
@@ -235,8 +242,9 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
                 providers={providers}
                 setProcedures={setProcedures}
                 showExtendedOptions={showExtendedOptions}
-                setIsRescheduling={setIsRescheduling}
                 isFuture={isFuture}
+                disableDelete={disableDelete}
+                onEnterEdit={onEnterEdit}
               />
             ))}
             {procedures.length === 0 && (

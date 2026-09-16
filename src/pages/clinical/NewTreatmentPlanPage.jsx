@@ -37,6 +37,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { appointmentService } from '../../services/appointment.service';
+import { invoiceService } from '../../services/invoice.service';
 import { authorizationService } from '../../services/authorization.service';
 import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
 
@@ -100,6 +102,12 @@ const NewTreatmentPlanPage = () => {
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
+  const [appointmentProcedures, setAppointmentProcedures] = useState([]);
+  const allProcedures = [...treatmentPlans, ...appointmentProcedures].sort((a, b) => {
+    const dateA = dayjs(a.scheduled !== '-' ? a.scheduled : a.created, ['MM/DD/YYYY']);
+    const dateB = dayjs(b.scheduled !== '-' ? b.scheduled : b.created, ['MM/DD/YYYY']);
+    return dateB.valueOf() - dateA.valueOf();
+  });
   const [isPreAuthModalOpen, setIsPreAuthModalOpen] = useState(false);
   const [createdPreAuthId, setCreatedPreAuthId] = useState(null);
   const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
@@ -127,13 +135,18 @@ const NewTreatmentPlanPage = () => {
     const fetchTreatmentPlans = async () => {
       if (!currentPatient) {
         setTreatmentPlans([]);
+        setAppointmentProcedures([]);
         setActivePlanId(null);
         return;
       }
       try {
         setIsLoading(true);
-        const res = await treatmentPlanService.getAll({ patientId: currentPatient._id || currentPatient.id });
-        const plans = res?.data?.treatmentPlans || [];
+        const patientId = currentPatient._id || currentPatient.id;
+        const [tpRes, apptRes] = await Promise.all([
+          treatmentPlanService.getAll({ patientId }),
+          appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
+        ]);
+        const plans = tpRes?.data?.treatmentPlans || [];
 
         if (plans.length > 0) {
           const activePlan = plans[0]; // Load the most recent plan
@@ -143,8 +156,79 @@ const NewTreatmentPlanPage = () => {
           setActivePlanId(null);
           setTreatmentPlans([]);
         }
+
+        const appointments = Array.isArray(apptRes) ? apptRes : (Array.isArray(apptRes?.data) ? apptRes.data : (apptRes?.data?.appointments || []));
+        const apptProcs = [];
+        appointments.forEach(appt => {
+          const procs = appt.customFields?.procedures || appt.procedures || [];
+          procs.forEach((p, idx) => {
+            if (p && p.code) {
+              const isCompleted = p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete';
+              apptProcs.push({
+                id: `appt-${appt.id || appt._id}-${p.id || idx}`,
+                priority: '- -',
+                status: isCompleted ? 'Completed' : 'Scheduled',
+                created: dayjs(appt.createdAt || appt.date).format('MM/DD/YYYY'),
+                scheduled: dayjs(appt.date).format('MM/DD/YYYY'),
+                site: p.site || p.tooth || '-',
+                tooth: p.tooth || p.site || '',
+                code: p.code,
+                description: p.treatment || p.description || '-',
+                icd: '-',
+                provider: p.provider || appt.providerId || appt.provider?._id || '-',
+                ...(() => {
+                  const rawCharge = Number(String(p.charge || p.fee || 0).replace(/[^0-9.-]+/g, ''));
+                  // Use actual values from API if available (checked-out appointments), otherwise calculate
+                  const hasActualValues = p.insPortion != null && p.insPortion !== '$0.00' && p.insPortion !== '0';
+                  const insPortion = hasActualValues
+                    ? Number(String(p.insPortion).replace(/[^0-9.-]+/g, ''))
+                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).insPortion;
+                  const ptPortion = hasActualValues
+                    ? Number(String(p.ptPart || p.ptPortion || 0).replace(/[^0-9.-]+/g, ''))
+                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).ptPortion;
+                  return {
+                    negRate: formatMoney(rawCharge, '-'),
+                    insEst: formatMoney(insPortion, '-'),
+                    ptEst: formatMoney(ptPortion, '-'),
+                  };
+                })(),
+                preAuth: '-',
+                labCase: '-'
+              });
+            }
+          });
+        });
+        setAppointmentProcedures(apptProcs);
+
+        // Enrich with real insurance estimates from backend (same as appointment form)
+        if (apptProcs.length > 0 && patientId) {
+          try {
+            const itemsForEstimate = apptProcs.map(proc => ({
+              code: proc.code,
+              charge: Number(String(proc.negRate || '0').replace(/[^0-9.-]+/g, '')) || 0,
+            }));
+            const estimates = await invoiceService.estimateInvoiceItems(patientId, itemsForEstimate);
+            if (Array.isArray(estimates) && estimates.length) {
+              const enriched = apptProcs.map((proc, idx) => {
+                const est = estimates[idx] || {};
+                const writeoffVal = est.writeoff !== undefined ? Number(est.writeoff) : (est.estimatedWriteOff !== undefined ? Number(est.estimatedWriteOff) : 0);
+                const insVal = est.insPortion !== undefined ? Number(est.insPortion) : 0;
+                const ptVal = est.ptPortion !== undefined ? Number(est.ptPortion) : 0;
+                return {
+                  ...proc,
+                  insEst: `$${(insVal || 0).toFixed(2)}`,
+                  ptEst: `$${(ptVal || 0).toFixed(2)}`,
+                  writeoff: `$${(writeoffVal || 0).toFixed(2)}`,
+                };
+              });
+              setAppointmentProcedures(enriched);
+            }
+          } catch (err) {
+            console.warn('Failed to enrich appointment procedure estimates:', err);
+          }
+        }
       } catch (err) {
-        console.error('Failed to fetch treatment plans:', err);
+        console.error('Failed to fetch treatment plans or appointments:', err);
       } finally {
         setIsLoading(false);
       }
@@ -208,7 +292,7 @@ const NewTreatmentPlanPage = () => {
     const procedureDescription = procedure.description || procedure.name || procedureCode;
 
     const rawFee = Number(procedure.fee || procedure.charge || procedure.ProcFee || 0);
-    const { insPortion: estIns, ptPortion: estPt } = calculatePortionsForCategory(procedureCode, rawFee, 0);
+    const { insPortion: estIns, ptPortion: estPt } = calculatePortionsForCategory({ charge: rawFee, code: procedureCode });
 
     const newProcedure = {
       id: newId,
@@ -546,7 +630,7 @@ const NewTreatmentPlanPage = () => {
         {activeTab === 0 && (
           <Box sx={{ p: 0 }}>
             <ChartTable
-              treatmentPlans={treatmentPlans}
+              treatmentPlans={allProcedures}
               onUpdateItemStatus={handleUpdateItemStatus}
             />
           </Box>
@@ -643,7 +727,7 @@ const NewTreatmentPlanPage = () => {
               <Box sx={{ display: 'flex', gap: 3 }}>
                 <Box sx={{ width: '100%', flexGrow: 1, minWidth: 0 }}>
                   <NewTreatmentPlanTable
-                    treatmentPlans={treatmentPlans}
+                    treatmentPlans={allProcedures}
                     onMoveToTop={handleMoveToTop}
                     onUpdateItemStatus={handleUpdateItemStatus}
                     selectedRows={selectedRows}
@@ -654,7 +738,7 @@ const NewTreatmentPlanPage = () => {
                 <Divider className="print-hide" orientation="vertical" flexItem sx={{ borderColor: '#e2e8f0' }} />
 
                 <Box className="print-hide" sx={{ width: '35%', minWidth: 0 }}>
-                  <UnplannedProceduresSidebar procedures={treatmentPlans} />
+                  <UnplannedProceduresSidebar procedures={allProcedures} />
                 </Box>
               </Box>
             </Paper>
@@ -701,7 +785,7 @@ const NewTreatmentPlanPage = () => {
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
         currentPatient={currentPatient}
-        selectedProcedures={treatmentPlans}
+        selectedProcedures={allProcedures}
       />
 
       <PreAuthModal
@@ -717,7 +801,7 @@ const NewTreatmentPlanPage = () => {
         }}
         patientId={currentPatientId}
         treatmentPlanId={activePlanId}
-        selectedProcedures={treatmentPlans}
+        selectedProcedures={allProcedures}
       />
 
       <Snackbar

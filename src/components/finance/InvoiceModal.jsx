@@ -723,10 +723,13 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                       <TableCell sx={{ py: 1 }}>
                         <TextField
                           size="small"
-                          value={row.charge}
+                          value={(row.charge || "").toString().replace(/^\$/, "")}
                           onChange={(e) =>
                             handleAmountChange(row.id, "charge", e.target.value)
                           }
+                          InputProps={{
+                            startAdornment: <Typography sx={{ fontFamily: "Inter", fontSize: "12px", fontWeight: 600, color: "#09121f", mr: 0.5 }}>$</Typography>,
+                          }}
                           sx={{
                             width: "80px",
                             "& .MuiInputBase-input": {

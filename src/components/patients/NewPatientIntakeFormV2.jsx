@@ -1360,28 +1360,6 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                         />
                       )}
                     />
-                    <Controller
-                      name="pauseScheduleGapFillsReminders"
-                      control={control}
-                      render={({ field }) => (
-                        <ColoredChipCheckbox
-                          checked={!!field.value}
-                          onChange={field.onChange}
-                          label="Pause Schedule Gap Fill Reminders"
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="pauseArAutomationReminders"
-                      control={control}
-                      render={({ field }) => (
-                        <ColoredChipCheckbox
-                          checked={!!field.value}
-                          onChange={field.onChange}
-                          label="Pause AR Automation Reminders"
-                        />
-                      )}
-                    />
                   </Stack>
                 </Grid>
 
@@ -1444,55 +1422,64 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                           }}
                           label="Yes, it is a helpful reminder"
                         />
-                        <Controller
-                          name="stopReminderAfterConfirmation"
-                          control={control}
-                          render={({ field: sf }) => (
-                            <ColoredChipCheckbox
-                              shape="circle"
-                              checked={!!sf.value}
-                              onChange={(val) => {
-                                sf.onChange(val);
-                                if (val) {
-                                  setValue("reminderPreference", "");
-                                  setValue("dontRequestReview", false);
-                                }
-                              }}
-                              label="Stop reminding after confirmation"
-                            />
-                          )}
-                        />
                       </Stack>
                     )}
                   />
 
-                  <Typography
-                    sx={{
-                      fontSize: fontSize.md,
-                      color: COLORS.TEXT_BODY,
-                      mb: 1.5,
-                    }}
-                  >
-                    Patient prefers not to receive a review request:
-                  </Typography>
-                  <Controller
-                    name="dontRequestReview"
-                    control={control}
-                    render={({ field }) => (
-                      <ColoredChipCheckbox
-                        shape="circle"
-                        checked={!!field.value}
-                        onChange={(val) => {
-                          field.onChange(val);
-                          if (val) {
-                            setValue("reminderPreference", "");
-                            setValue("stopReminderAfterConfirmation", false);
-                          }
-                        }}
-                        label="Don't request review"
+                  <Box sx={{ mt: 3 }}>
+                    <Stack spacing={1.5}>
+                      <Controller
+                        name="stopReminderAfterConfirmation"
+                        control={control}
+                        render={({ field: sf }) => (
+                          <ColoredChipCheckbox
+                            checked={!!sf.value}
+                            onChange={(val) => {
+                              sf.onChange(val);
+                              if (val) {
+                                setValue("reminderPreference", "");
+                                setValue("dontRequestReview", false);
+                              }
+                            }}
+                            label="Stop reminding after confirmation"
+                          />
+                        )}
                       />
-                    )}
-                  />
+                      <Controller
+                        name="pauseScheduleGapFillsReminders"
+                        control={control}
+                        render={({ field }) => (
+                          <ColoredChipCheckbox
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                            label="Pause Schedule Gap Fill Reminders"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="pauseArAutomationReminders"
+                        control={control}
+                        render={({ field }) => (
+                          <ColoredChipCheckbox
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                            label="Pause AR Automation Reminders"
+                          />
+                        )}
+                      />
+                      <Controller
+                        name="receiveEmailCampaign"
+                        control={control}
+                        render={({ field }) => (
+                          <ColoredChipCheckbox
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                            label="Receive Email Campaign"
+                          />
+                        )}
+                      />
+                    </Stack>
+                  </Box>
                 </Grid>
               </Grid>
             </SectionCard>

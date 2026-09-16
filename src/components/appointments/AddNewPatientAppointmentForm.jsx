@@ -445,6 +445,7 @@ const AddNewPatientAppointmentForm = ({
       setIsRescheduling(false);
       setSubmitAttempted(false);
       setErrorMessage("");
+      setIsEditing(false);
       if (initialAppointment) {
         const applyApptToForm = (sourceAppt, sourceProcedures = []) => {
           const customFields =
@@ -747,9 +748,7 @@ const AddNewPatientAppointmentForm = ({
           if (Array.isArray(colorTagsSource)) {
             setSelectedColorTags(
               new Set(
-                colorTagsSource.map((c) =>
-                  typeof c === "string" ? c.toLowerCase() : c,
-                ),
+                colorTagsSource.map((c) => c)
               ),
             );
           }
@@ -1038,9 +1037,7 @@ const AddNewPatientAppointmentForm = ({
         if (customFields.colorTags && Array.isArray(customFields.colorTags)) {
           setSelectedColorTags(
             new Set(
-              customFields.colorTags.map((c) =>
-                typeof c === "string" ? c.toLowerCase() : c,
-              ),
+              customFields.colorTags.map((c) => c),
             ),
           );
         } else if (
@@ -1443,6 +1440,7 @@ const AddNewPatientAppointmentForm = ({
   const [isCopiedToShortlist, setIsCopiedToShortlist] = useState(
     Boolean(initialAppointment?.customFields?.linkedToShortlist),
   );
+  const [isEditing, setIsEditing] = useState(false);
 
   // Re-sync when a different appointment is loaded into the form
   useEffect(() => {
@@ -1654,6 +1652,9 @@ const AddNewPatientAppointmentForm = ({
           amPm={amPm}
           visitType={visitType}
           isCopiedToShortlist={isCopiedToShortlist}
+          onDateChange={setApptDate}
+          onTimeChange={(h, m) => { setTimeHours(h); setTimeMins(m); }}
+          onAmPmChange={setAmPm}
         />
 
         {errorMessage && (
@@ -1672,7 +1673,7 @@ const AddNewPatientAppointmentForm = ({
             flex: 1,
             overflow: "hidden",
             minHeight: 0,
-            mt: errorMessage ? 0 : 2,
+            mt: errorMessage ? 0 : isEditMode ? 0 : 2,
           }}
         >
           <AppointmentLeftPanel
@@ -1708,8 +1709,11 @@ const AddNewPatientAppointmentForm = ({
             showExtendedOptions={showExtendedOptions}
             onComputeNextVisit={handleComputeNextVisit}
             onDuplicateProcedure={setToastMessage}
-            readOnly={isEditMode && !isRescheduling}
+            readOnly={isEditMode && !isRescheduling && !isEditing}
             setIsRescheduling={setIsRescheduling}
+            onEnterEdit={() => setIsEditing(true)}
+            isEditMode={isEditMode}
+            isRescheduling={isRescheduling}
             appointmentId={
               initialAppointment?.id ||
               initialAppointment?._id ||
@@ -1756,7 +1760,7 @@ const AddNewPatientAppointmentForm = ({
             tags={tags}
             onTagsChange={setTags}
             showExtendedOptions={showExtendedOptions}
-            readOnly={isEditMode && !isRescheduling}
+            readOnly={isEditMode && !isRescheduling && !isEditing}
           />
         </Box>
 
@@ -1770,7 +1774,11 @@ const AddNewPatientAppointmentForm = ({
           loading={loading || isSubmitting}
           showExtendedOptions={showExtendedOptions}
           isEditMode={isEditMode}
-          readOnly={isEditMode && !isRescheduling}
+          readOnly={isEditMode && !isRescheduling && !isEditing}
+          isEditing={isEditing}
+          onEnterEdit={() => setIsEditing(true)}
+          onToggleEdit={() => setIsEditing((v) => !v)}
+          isRescheduling={isRescheduling}
           onLabOrderClick={() => setIsLabOrderOpen(true)}
           computedVisitType={computedVisitType}
           hasConflict={hasOccupancyConflict}

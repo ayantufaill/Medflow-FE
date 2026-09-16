@@ -18,15 +18,26 @@ const InsurancePaymentTable = ({
   const totalWo = procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0);
   const totalPay = procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
 
+  // Group procedures by invoice if available
+  const invoiceGroups = React.useMemo(() => {
+    const groups = {};
+    procedures.forEach((proc, idx) => {
+      const invId = proc.invoiceId || 'default';
+      if (!groups[invId]) {
+        groups[invId] = {
+          invoiceId: proc.invoiceId,
+          invoiceNumber: proc.invoiceNumber || selectedClaimObj?.invoice?.invoiceNumber || proc.invoiceId || invoiceNum,
+          invoiceDate: proc.invoiceDate ? dayjs(proc.invoiceDate).format('MM/DD/YYYY') : invoiceDate,
+          items: []
+        };
+      }
+      groups[invId].items.push({ ...proc, _originalIndex: idx });
+    });
+    return Object.values(groups);
+  }, [procedures, invoiceNum, invoiceDate, selectedClaimObj]);
+
   return (
     <Box sx={{ px: 3, pb: 2 }}>
-      {/* Invoice Summary Row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#333' }}>
-          Invoice #{invoiceNum} : {invoiceDate} for {patientName || 'Unknown Patient'}
-        </Typography>
-      </Box>
-
       {/* Table Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
         <Box sx={{ width: '250px' }}></Box>
@@ -41,65 +52,80 @@ const InsurancePaymentTable = ({
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'center', color: '#555' }}>Move to new claim ⓘ</Typography>
       </Box>
 
-      {/* Procedure Rows */}
-      {procedures.map((proc, i) => (
-        <Box key={i} sx={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #f5f5f5' }}>
-          <Box sx={{ width: '250px', display: 'flex', alignItems: 'center', py: 1 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{proc.code}</Typography>
+      {/* Invoice Groups */}
+      {invoiceGroups.map((group, gIdx) => (
+        <Box key={gIdx} sx={{ mb: 2 }}>
+          {/* Invoice Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#f8fafc', px: 1.5, py: 0.75, borderRadius: '6px', mb: 1, border: '1px solid #e2e8f0' }}>
+            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1e293b' }}>
+              Invoice #{group.invoiceNumber} : {group.invoiceDate} for {patientName || 'Unknown Patient'}
+            </Typography>
           </Box>
-          <Box sx={{ width: '40px', display: 'flex', alignItems: 'center', py: 1, borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>RSL</Typography>
-          </Box>
-          <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.submitted}</Typography>
-          </Box>
-          <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-            <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
-              <input type="text" value={proc.ded} onChange={(e) => handleProcedureChange(i, 'ded', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
-            </Box>
-          </Box>
-          <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-            <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
-              <input type="text" value={proc.allowed} onChange={(e) => handleProcedureChange(i, 'allowed', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
-            </Box>
-          </Box>
-          <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-            <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: '#f06c6c' }}>$</Typography>
-              <input type="text" value={proc.wo} onChange={(e) => handleProcedureChange(i, 'wo', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0, color: '#f06c6c' }} />
-            </Box>
-          </Box>
-          <Box sx={{ width: '120px', display: 'flex', alignItems: 'stretch' }}>
-            <Box sx={{ bgcolor: '#8eb378', px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%' }}>
-              <Box sx={{ border: '1px dashed #7ea368', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent' }}>
-                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mr: 0.25 }}>$</Typography>
-                <input type="text" value={proc.pay} onChange={(e) => handleProcedureChange(i, 'pay', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', padding: 0 }} />
+
+          {/* Procedure Rows for this Invoice */}
+          {group.items.map((proc) => {
+            const i = proc._originalIndex;
+            return (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #f5f5f5' }}>
+                <Box sx={{ width: '250px', display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{proc.code}</Typography>
+                </Box>
+                <Box sx={{ width: '40px', display: 'flex', alignItems: 'center', py: 1, borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>RSL</Typography>
+                </Box>
+                <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.submitted}</Typography>
+                </Box>
+                <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
+                    <input type="text" value={proc.ded} onChange={(e) => handleProcedureChange(i, 'ded', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+                  </Box>
+                </Box>
+                <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
+                    <input type="text" value={proc.allowed} onChange={(e) => handleProcedureChange(i, 'allowed', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+                  </Box>
+                </Box>
+                <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: '#f06c6c' }}>$</Typography>
+                    <input type="text" value={proc.wo} onChange={(e) => handleProcedureChange(i, 'wo', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0, color: '#f06c6c' }} />
+                  </Box>
+                </Box>
+                <Box sx={{ width: '120px', display: 'flex', alignItems: 'stretch' }}>
+                  <Box sx={{ bgcolor: '#8eb378', px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <Box sx={{ border: '1px dashed #7ea368', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent' }}>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mr: 0.25 }}>$</Typography>
+                      <input type="text" value={proc.pay} onChange={(e) => handleProcedureChange(i, 'pay', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', padding: 0 }} />
+                    </Box>
+                  </Box>
+                </Box>
+                <Box sx={{ width: '130px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={proc.updateAllowedFee} 
+                    onChange={(e) => handleProcedureChange(i, 'updateAllowedFee', e.target.checked)} 
+                  />
+                </Box>
+                <Box sx={{ width: '150px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={proc.updateInsFlatPortion} 
+                    onChange={(e) => handleProcedureChange(i, 'updateInsFlatPortion', e.target.checked)} 
+                  />
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={proc.moveToNewClaim} 
+                    onChange={(e) => handleProcedureChange(i, 'moveToNewClaim', e.target.checked)} 
+                  />
+                </Box>
               </Box>
-            </Box>
-          </Box>
-          <Box sx={{ width: '130px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <input 
-              type="checkbox" 
-              checked={proc.updateAllowedFee} 
-              onChange={(e) => handleProcedureChange(i, 'updateAllowedFee', e.target.checked)} 
-            />
-          </Box>
-          <Box sx={{ width: '150px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <input 
-              type="checkbox" 
-              checked={proc.updateInsFlatPortion} 
-              onChange={(e) => handleProcedureChange(i, 'updateInsFlatPortion', e.target.checked)} 
-            />
-          </Box>
-          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <input 
-              type="checkbox" 
-              checked={proc.moveToNewClaim} 
-              onChange={(e) => handleProcedureChange(i, 'moveToNewClaim', e.target.checked)} 
-            />
-          </Box>
+            );
+          })}
         </Box>
       ))}
 

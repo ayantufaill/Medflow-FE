@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Redux — providers & patients
 import {
@@ -54,23 +55,24 @@ const getProviderName = (p) => {
 
 const ManualClaimDialog = ({ patient, onClose }) => {
   const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
 
   // ── Redux state ──────────────────────────────────────────────────────────
-  const providers      = useSelector(selectProviderDropdownList);
-  const patients       = useSelector(selectPatientList);
+  const providers = useSelector(selectProviderDropdownList);
+  const patients = useSelector(selectPatientList);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const invoicesLoading = useSelector(selectDraftInvoicesLoading);
-  const isSubmitting    = useSelector(selectClaimLoading);
+  const isSubmitting = useSelector(selectClaimLoading);
 
   // ── Local form state ─────────────────────────────────────────────────────
-  const [description,      setDescription]      = useState('');
-  const [showDescription,  setShowDescription]  = useState(false);
-  const [note,             setNote]             = useState('');
-  const [showNote,         setShowNote]         = useState(false);
+  const [description, setDescription] = useState('');
+  const [showDescription, setShowDescription] = useState(false);
+  const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(patient?._id || patient?.id || '');
-  const [selectedInsuranceId,    setSelectedInsuranceId]    = useState('');
+  const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
   const [selectedTreatingProvider, setSelectedTreatingProvider] = useState('');
-  const [selectedBillingEntity,    setSelectedBillingEntity]    = useState('');
+  const [selectedBillingEntity, setSelectedBillingEntity] = useState('');
   const [claimType, setClaimType] = useState('Manual');
 
   // ── Derived values ───────────────────────────────────────────────────────
@@ -144,15 +146,15 @@ const ManualClaimDialog = ({ patient, onClose }) => {
 
   const handleSendToBatch = async () => {
     if (!selectedInsuranceId) {
-      alert('Please select an insurance plan.');
+      showSnackbar('Please select an insurance plan.', 'warning');
       return;
     }
     if (!selectedTreatingProvider) {
-      alert('Please select a treating provider.');
+      showSnackbar('Please select a treating provider.', 'warning');
       return;
     }
     if (!selectedBillingEntity) {
-      alert('Please select a billing entity.');
+      showSnackbar('Please select a billing entity.', 'warning');
       return;
     }
 
@@ -162,7 +164,14 @@ const ManualClaimDialog = ({ patient, onClose }) => {
         if (item.checked) {
           selectedItems.push({
             invoiceId: inv.id,
+            invoiceNumber: inv.invoiceNumber || inv.id,
+            invoiceDate: inv.invoiceDate || '',
             itemId: item.id,
+            code: item.cptCode || item.code || '',
+            description: item.description || item.name || item.notes || '',
+            fee: Number(item.total || item.totalPrice || item.charge || 0),
+            ptAmount: Number(item.ptAmount?.replace('$', '')) || 0,
+            insAmount: Number(item.insAmount?.replace('$', '')) || 0,
             amount: Number(item.insAmount?.replace('$', '')) || 0,
           });
         }
@@ -170,7 +179,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     });
 
     if (selectedItems.length === 0) {
-      alert('Please select at least one procedure to include in the claim.');
+      showSnackbar('Please select at least one procedure to include in the claim.', 'warning');
       return;
     }
 
@@ -193,10 +202,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       // Fire the same event LedgerList already listens to — triggers a full
       // ledger re-fetch so the claim shows up in each invoice's procedure rows
       window.dispatchEvent(new CustomEvent('refresh-ledger'));
-      alert('Claim successfully added to batch.');
+      showSnackbar('Claim successfully added to batch.', 'success');
       onClose();
     } else {
-      alert(result.payload || 'Failed to create manual claim. Please try again.');
+      showSnackbar(result.payload || 'Failed to create manual claim. Please try again.', 'error');
     }
   };
 
@@ -208,8 +217,8 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
       : '';
 
-  const linkBlue         = COLORS.ACCENT;
-  const errorRed         = '#d32f2f';
+  const linkBlue = COLORS.ACCENT;
+  const errorRed = '#d32f2f';
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -256,10 +265,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                   {...params}
                   placeholder="Search patient..."
                   size="small"
-                  sx={{ 
-                    '& .MuiInputBase-root': { 
-                      height: '36px', 
-                      bgcolor: COLORS.SURFACE_TINT, 
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      height: '36px',
+                      bgcolor: COLORS.SURFACE_TINT,
                       borderRadius: radius.sm,
                       fontSize: '13px',
                       color: COLORS.TEXT_PRIMARY,
@@ -284,7 +293,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedInsuranceId(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "150px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -305,22 +314,22 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               {activeInsurances.length === 0
                 ? <MenuItem value="" disabled>No active insurance</MenuItem>
                 : [
-                    <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
-                    ...activeInsurances.map((ins) => {
-                      const label =
-                        ins.insuranceCompany?.name ||
-                        ins.insuranceCompanyId?.name ||
-                        ins.payer ||
-                        ins.planType ||
-                        ins.plan ||
-                        'Insurance Plan';
-                      return (
-                        <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
-                          {label}
-                        </MenuItem>
-                      );
-                    }),
-                  ]
+                  <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
+                  ...activeInsurances.map((ins) => {
+                    const label =
+                      ins.insuranceCompany?.name ||
+                      ins.insuranceCompanyId?.name ||
+                      ins.payer ||
+                      ins.planType ||
+                      ins.plan ||
+                      'Insurance Plan';
+                    return (
+                      <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
+                        {label}
+                      </MenuItem>
+                    );
+                  }),
+                ]
               }
             </Select>
           </Box>
@@ -340,7 +349,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedTreatingProvider(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -384,7 +393,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedBillingEntity(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -420,7 +429,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               value={claimType}
               onChange={(e) => setClaimType(e.target.value)}
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
