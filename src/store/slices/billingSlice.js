@@ -336,17 +336,31 @@ export const fetchLedgerItems = createAsyncThunk(
         // Adjustments function identically to patient payments since they reduce patient burden
         const effectivePtPaid = totalPtPaidAmt + totalPtAdjAmt;
 
+        // Check if claims associated with this invoice have been paid/approved
+        const hasApprovedClaim = claimsMapped.some((c) => c.isApproved);
+        const hasInsurancePayment = totalInsPaidAmt > 0;
+        const isInsuranceSettled =
+          hasApprovedClaim ||
+          (hasInsurancePayment &&
+            (claimsMapped.length === 0 || claimsMapped.every((c) => c.isApproved)));
+
+        const insUnderpayment = isInsuranceSettled
+          ? Math.max(0, rawIns - totalInsPaidAmt)
+          : 0;
+
         const insOverpayment = Math.max(0, totalInsPaidAmt - rawIns);
         const ptOverpayment = Math.max(0, effectivePtPaid - rawPt);
 
         const adjustedPtBal = Math.max(
           0,
-          rawPt + penaltyTotal - effectivePtPaid - insOverpayment,
+          rawPt + penaltyTotal + insUnderpayment - effectivePtPaid - insOverpayment,
         );
-        const adjustedInsBal = Math.max(
-          0,
-          rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
-        );
+        const adjustedInsBal = isInsuranceSettled
+          ? 0
+          : Math.max(
+              0,
+              rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
+            );
         const adjustedInvBal = Math.max(
           0,
           originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
@@ -1017,7 +1031,8 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           );
           const ins = Number(item.insPortion || item.insurancePortion || 0);
           let patientBal;
-          if (item.dbi === true) patientBal = owed;
+          if (totalInsurancePaid > 0) patientBal = owed;
+          else if (item.dbi === true) patientBal = owed;
           else if (item.dbi === false) patientBal = pt;
           else if (ins > 0 && pt > 0) patientBal = pt;
           else if (ins > 0 && pt === 0) patientBal = 0;
@@ -1049,7 +1064,10 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
             const owed = Math.max(0, total - writeoff);
 
             let patientBal, insBal;
-            if (item.dbi === true) {
+            if (totalInsurancePaid > 0) {
+              patientBal = owed;
+              insBal = 0;
+            } else if (item.dbi === true) {
               patientBal = owed;
               insBal = 0;
             } else if (item.dbi === false) {
