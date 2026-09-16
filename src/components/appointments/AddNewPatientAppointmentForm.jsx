@@ -747,9 +747,7 @@ const AddNewPatientAppointmentForm = ({
           if (Array.isArray(colorTagsSource)) {
             setSelectedColorTags(
               new Set(
-                colorTagsSource.map((c) =>
-                  typeof c === "string" ? c.toLowerCase() : c,
-                ),
+                colorTagsSource.map((c) => c)
               ),
             );
           }
@@ -1038,9 +1036,7 @@ const AddNewPatientAppointmentForm = ({
         if (customFields.colorTags && Array.isArray(customFields.colorTags)) {
           setSelectedColorTags(
             new Set(
-              customFields.colorTags.map((c) =>
-                typeof c === "string" ? c.toLowerCase() : c,
-              ),
+              customFields.colorTags.map((c) => c),
             ),
           );
         } else if (
@@ -1654,6 +1650,9 @@ const AddNewPatientAppointmentForm = ({
           amPm={amPm}
           visitType={visitType}
           isCopiedToShortlist={isCopiedToShortlist}
+          onDateChange={setApptDate}
+          onTimeChange={(h, m) => { setTimeHours(h); setTimeMins(m); }}
+          onAmPmChange={setAmPm}
         />
 
         {errorMessage && (
@@ -1672,7 +1671,7 @@ const AddNewPatientAppointmentForm = ({
             flex: 1,
             overflow: "hidden",
             minHeight: 0,
-            mt: errorMessage ? 0 : 2,
+            mt: errorMessage ? 0 : isEditMode ? 0 : 2,
           }}
         >
           <AppointmentLeftPanel
@@ -1710,6 +1709,8 @@ const AddNewPatientAppointmentForm = ({
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling}
             setIsRescheduling={setIsRescheduling}
+            isEditMode={isEditMode}
+            isRescheduling={isRescheduling}
             appointmentId={
               initialAppointment?.id ||
               initialAppointment?._id ||
