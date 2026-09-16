@@ -139,7 +139,7 @@ const EmptySlotsSearch = () => {
                   p: '12px', 
                   borderRadius: radius.md, 
                   border: `1px solid ${COLORS.BORDER}`, 
-                  backgroundColor: COLORS.WHITE,
+                  backgroundColor: "#fafbfe",
                   cursor: 'pointer',
                   '&:hover': {
                     borderColor: COLORS.ACCENT,
@@ -173,14 +173,14 @@ const EmptySlotsSearch = () => {
   }
 
   return (
-    <Box sx={{ p: '16px', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}` }}>
+    <Box sx={{ p: '16px', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, mb: '20px' }}>
         Search for Empty Slots By:
       </Typography>
 
       <Box sx={{ mb: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '6px', textTransform: 'uppercase' }}>
-          Provider:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          provider
         </Typography>
         <Select
           MenuProps={{ sx: { zIndex: 1400 } }}
@@ -190,13 +190,23 @@ const EmptySlotsSearch = () => {
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           sx={{
-            height: "32px",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            borderRadius: "8px",
-            backgroundColor: COLORS.WHITE,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-            color: providerId ? COLORS.TEXT_PRIMARY : "#9aa3ae"
+            height: 36,
+            fontSize: '13px',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            color: providerId ? '#09121f' : '#94a3b8',
+            backgroundColor: '#fafbfe',
+            borderRadius: '4px',
+            '& .MuiSelect-select': {
+              py: 1,
+              pl: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e2e8f0'
+            }
           }}
         >
           <MenuItem value="" disabled sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Search and select provider</MenuItem>
@@ -214,29 +224,31 @@ const EmptySlotsSearch = () => {
       </Box>
 
       <Box sx={{ mb: '16px' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase' }}>
-              Duration:
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+              duration
             </Typography>
-            <TextField
-              type="number"
-              size="small"
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value) || 0)}
-              sx={{
-                width: "64px",
-                "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "6px", textAlign: "center" },
-                "& .MuiOutlinedInput-root": { borderRadius: "8px" },
-              }}
-              inputProps={{ min: 5, step: 5 }}
-            />
-            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>mins</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TextField
+                type="number"
+                size="small"
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                sx={{
+                  width: "64px",
+                  "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "6px", textAlign: "center" },
+                  "& .MuiOutlinedInput-root": { borderRadius: "4px" },
+                }}
+                inputProps={{ min: 5, step: 5 }}
+              />
+              <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>mins</Typography>
+            </Box>
           </Box>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", alignSelf: "flex-end" }}>
             {PRESETS.map((row, i) => (
-              <Box key={i} sx={{ display: "flex", gap: "4px" }}>
+              <Box key={i} sx={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                 {row.map((v) => (
                   <Box
                     key={v}
@@ -260,8 +272,8 @@ const EmptySlotsSearch = () => {
       </Box>
 
       <Box sx={{ mb: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '6px', textTransform: 'uppercase' }}>
-          Operatory:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          operatory
         </Typography>
         <Select
           MenuProps={{ sx: { zIndex: 1400 } }}
@@ -271,13 +283,23 @@ const EmptySlotsSearch = () => {
           value={roomId}
           onChange={(e) => setRoomId(e.target.value)}
           sx={{
-            height: "32px",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            borderRadius: "8px",
-            backgroundColor: COLORS.WHITE,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-            color: roomId ? COLORS.TEXT_PRIMARY : "#9aa3ae"
+            height: 36,
+            fontSize: '13px',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            color: roomId ? '#09121f' : '#94a3b8',
+            backgroundColor: '#fafbfe',
+            borderRadius: '4px',
+            '& .MuiSelect-select': {
+              py: 1,
+              pl: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e2e8f0'
+            }
           }}
         >
           <MenuItem value="" disabled sx={{ fontFamily: "Inter", fontSize: "13px", color: "#9aa3ae" }}>Search Operatory</MenuItem>
@@ -290,72 +312,118 @@ const EmptySlotsSearch = () => {
       </Box>
 
       <Box sx={{ mb: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '8px', textTransform: 'uppercase' }}>
-          Date Range:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          search availability for
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, width: '40px' }}>From:</Typography>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker
-                format="DD/MM/YYYY"
-                value={dateFrom}
-                onChange={(v) => setDateFrom(v)}
-                slotProps={{
-                  textField: {
-                    size: 'small',
-                    placeholder: 'dd/mm/yyyy',
-                    sx: {
-                      width: "165px",
-                      backgroundColor: COLORS.WHITE,
-                      "& .MuiInputBase-root": { height: "32px", borderRadius: "8px", paddingRight: "4px" },
-                      "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: "32px", boxSizing: "border-box" }
-                    }
-                  },
-                  openPickerButton: {
-                    sx: { padding: '4px', color: '#9aa3ae' }
-                  },
-                  openPickerIcon: {
-                    sx: { fontSize: '18px' }
-                  }
-                }}
-              />
-            </LocalizationProvider>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, width: '40px' }}>To:</Typography>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker
-                format="DD/MM/YYYY"
-                value={dateTo}
-                onChange={(v) => setDateTo(v)}
-                slotProps={{
-                  textField: {
-                    size: 'small',
-                    placeholder: 'dd/mm/yyyy',
-                    sx: {
-                      width: "165px",
-                      backgroundColor: COLORS.WHITE,
-                      "& .MuiInputBase-root": { height: "32px", borderRadius: "8px", paddingRight: "4px" },
-                      "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: "32px", boxSizing: "border-box" }
-                    }
-                  },
-                  openPickerButton: {
-                    sx: { padding: '4px', color: '#9aa3ae' }
-                  },
-                  openPickerIcon: {
-                    sx: { fontSize: '18px' }
-                  }
-                }}
-              />
-            </LocalizationProvider>
-          </Box>
-        </Box>
+        <Select
+          MenuProps={{ sx: { zIndex: 1400 } }}
+          size="small"
+          fullWidth
+          value={searchRange}
+          onChange={(e) => setSearchRange(e.target.value)}
+          sx={{
+            height: 36,
+            fontSize: '13px',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            color: '#09121f',
+            backgroundColor: '#fafbfe',
+            borderRadius: '4px',
+            '& .MuiSelect-select': {
+              py: 1,
+              pl: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e2e8f0'
+            }
+          }}
+        >
+          <MenuItem value="1 week" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 week</MenuItem>
+          <MenuItem value="1 month" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 month</MenuItem>
+          <MenuItem value="3 months" sx={{ fontFamily: "Inter", fontSize: "13px" }}>3 months</MenuItem>
+          <MenuItem value="custom range" sx={{ fontFamily: "Inter", fontSize: "13px" }}>custom range</MenuItem>
+        </Select>
       </Box>
 
+      {searchRange === 'custom range' && (
+        <Box sx={{ mb: '16px' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+            date range
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, width: '40px' }}>From:</Typography>
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  value={dateFrom}
+                  onChange={(v) => {
+                    setDateFrom(v);
+                    if (dateTo.isBefore(v, 'day')) {
+                      setDateTo(v);
+                    }
+                  }}
+                  minDate={dayjs()}
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      placeholder: 'dd/mm/yyyy',
+                      sx: {
+                        width: "165px",
+                        backgroundColor: "#fafbfe",
+                        "& .MuiInputBase-root": { height: 36, borderRadius: "4px", paddingRight: "4px" },
+                        "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: 36, boxSizing: "border-box" }
+                      }
+                    },
+                    openPickerButton: {
+                      sx: { padding: '4px', color: '#9aa3ae' }
+                    },
+                    openPickerIcon: {
+                      sx: { fontSize: '18px' }
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, width: '40px' }}>To:</Typography>
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  value={dateTo}
+                  onChange={(v) => setDateTo(v)}
+                  minDate={dateFrom || dayjs()}
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      placeholder: 'dd/mm/yyyy',
+                      sx: {
+                        width: "165px",
+                        backgroundColor: "#fafbfe",
+                        "& .MuiInputBase-root": { height: 36, borderRadius: "4px", paddingRight: "4px" },
+                        "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "0", height: 36, boxSizing: "border-box" }
+                      }
+                    },
+                    openPickerButton: {
+                      sx: { padding: '4px', color: '#9aa3ae' }
+                    },
+                    openPickerIcon: {
+                      sx: { fontSize: '18px' }
+                    }
+                  }}
+                />
+              </LocalizationProvider>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
       <Box sx={{ mb: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, textTransform: 'uppercase' }}>
-          Time:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          time
         </Typography>
         <FormControlLabel
           control={<Checkbox checked={amSelected} onChange={(e) => setAmSelected(e.target.checked)} size="small" sx={{ p: '4px', color: '#2362EF', '&.Mui-checked': { color: '#2362EF' } }} />}
@@ -374,52 +442,28 @@ const EmptySlotsSearch = () => {
         />
       </Box>
 
-      <Box sx={{ mb: '24px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '6px', textTransform: 'uppercase' }}>
-          Search Availability For:
-        </Typography>
-        <Select
-          MenuProps={{ sx: { zIndex: 1400 } }}
-          size="small"
+      <Box>
+        <Button
+          variant="contained"
           fullWidth
-          value={searchRange}
-          onChange={(e) => setSearchRange(e.target.value)}
+          disableElevation
+          onClick={handleSearch}
+          disabled={loading || !providerId}
           sx={{
-            height: "32px",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            borderRadius: "8px",
-            backgroundColor: COLORS.WHITE,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-            color: COLORS.TEXT_PRIMARY
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            fontWeight: fontWeight.semibold,
+            fontSize: fontSize.md,
+            textTransform: 'none',
+            borderRadius: radius.md,
+            height: '44px',
+            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+            '&.Mui-disabled': { backgroundColor: '#e2e8f0', color: '#94a3b8' }
           }}
         >
-          <MenuItem value="1 week" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 week</MenuItem>
-          <MenuItem value="1 month" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 month</MenuItem>
-          <MenuItem value="3 months" sx={{ fontFamily: "Inter", fontSize: "13px" }}>3 months</MenuItem>
-        </Select>
+          {loading ? 'Searching...' : 'Search'}
+        </Button>
       </Box>
-
-      <Button
-        variant="contained"
-        fullWidth
-        disableElevation
-        onClick={handleSearch}
-        disabled={loading || !providerId}
-        sx={{
-          backgroundColor: COLORS.ACCENT,
-          color: COLORS.WHITE,
-          fontWeight: fontWeight.semibold,
-          fontSize: fontSize.md,
-          textTransform: 'none',
-          borderRadius: radius.md,
-          height: '44px',
-          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
-          '&.Mui-disabled': { backgroundColor: '#e2e8f0', color: '#94a3b8' }
-        }}
-      >
-        {loading ? 'Searching...' : 'Search'}
-      </Button>
     </Box>
   );
 };

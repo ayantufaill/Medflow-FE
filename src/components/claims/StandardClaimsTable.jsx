@@ -1249,10 +1249,12 @@ export const StandardClaimsTable = ({
                                     {proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : (claim.createdDate ? new Date(claim.createdDate).toLocaleDateString() : '-')}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
-                                    {proc.tooth || proc.toothNum || proc.site || '-'}
+                                    {Array.isArray(proc.tooth || proc.toothNum || proc.site) 
+                                      ? (proc.tooth || proc.toothNum || proc.site).join(', ') 
+                                      : (proc.tooth || proc.toothNum || proc.site || '-')}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
-                                    {proc.surface || '-'}
+                                    {Array.isArray(proc.surface) ? proc.surface.join(', ') : (proc.surface || '-')}
                                   </TableCell>
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
                                     {proc.code || '-'}

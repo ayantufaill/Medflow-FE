@@ -14,6 +14,7 @@ import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
 import { appointmentService } from "../../services/appointment.service";
 import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { fetchPatientBalance, selectPatientBalanceCache } from "../../store/slices/patientSlice";
 import { resolveFlagColor } from "../patient-flags/constants";
 
 const EMPTY_APPT = { date: "", time: "", provider: "" };
@@ -221,7 +222,7 @@ const dynamicTags = (patient.patientFlags || [])
   return {
     name,
     id,
-    rawId: patient._id || patient.id || null,
+    rawId: patient.PatNum || patient._id || patient.id || null,
     insuranceId:
       patient.primaryInsurance?._id ||
       patient.primaryInsurance?.id ||
@@ -267,6 +268,7 @@ const PatientSlider = ({ open, onClose, patient }) => {
   }, [open, globalFlags, dispatch]);
 
   const basePt = useMemo(() => toSliderShape(sourcePatient, globalFlags), [sourcePatient, globalFlags]);
+  const balanceCache = useSelector(selectPatientBalanceCache);
   const [fetchedAppointments, setFetchedAppointments] = useState({
     patientId: null,
     appointments: [],
@@ -306,6 +308,14 @@ const PatientSlider = ({ open, onClose, patient }) => {
     fetchAppointmentsData(patientId);
   }, [open, sourcePatient]);
 
+  // Fetch live balance data when slider opens
+  useEffect(() => {
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    if (open && patientId) {
+      dispatch(fetchPatientBalance(patientId));
+    }
+  }, [open, sourcePatient, dispatch]);
+
   // Action function sent down to SliderHeader for execution
   const handleRefresh = () => {
     const patientId = sourcePatient?._id || sourcePatient?.id;
@@ -316,23 +326,40 @@ const PatientSlider = ({ open, onClose, patient }) => {
 
   const pt = useMemo(() => {
     if (!basePt) return null;
-    if (
-      !fetchedAppointments.appointments.length ||
-      String(fetchedAppointments.patientId) !== String(basePt.rawId)
-    ) {
-      return basePt;
-    }
 
-    const derivedAppointments = deriveNextAppointments(
-      fetchedAppointments.appointments,
-    );
+    // Merge live balance data from the balance cache
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    const cachedBalance = patientId ? balanceCache?.[patientId]?.data : null;
+    const liveBalance = cachedBalance
+      ? {
+          familyBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          patientBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          lastPatientPay: cachedBalance.lastPaymentDate
+            ? dayjs(cachedBalance.lastPaymentDate).format('MM/DD/YYYY')
+            : 'No payment',
+          lastInsPay: cachedBalance.lastInsPayDate
+            ? dayjs(cachedBalance.lastInsPayDate).format('MM/DD/YYYY')
+            : 'No payment',
+        }
+      : {};
 
-    return {
-      ...basePt,
-      nextTxAppt: derivedAppointments.nextTxAppt,
-      nextHygAppt: derivedAppointments.nextHygAppt,
-    };
-  }, [basePt, fetchedAppointments]);
+    const base = (() => {
+      if (
+        !fetchedAppointments.appointments.length ||
+        String(fetchedAppointments.patientId) !== String(basePt.rawId)
+      ) {
+        return basePt;
+      }
+      const derivedAppointments = deriveNextAppointments(fetchedAppointments.appointments);
+      return {
+        ...basePt,
+        nextTxAppt: derivedAppointments.nextTxAppt,
+        nextHygAppt: derivedAppointments.nextHygAppt,
+      };
+    })();
+
+    return { ...base, ...liveBalance };
+  }, [basePt, fetchedAppointments, balanceCache, sourcePatient]);
 
   if (!pt) return null;
 
