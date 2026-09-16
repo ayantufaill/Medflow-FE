@@ -49,6 +49,8 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { useSnackbar } from "../../contexts/SnackbarContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { hasRequiredRole, hasRequiredPermission } from "../../config/navMenuItems";
 import { clinicalNoteService } from "../../services/clinical-note.service";
 import ConfirmationDialog from "../../components/shared/ConfirmationDialog";
 import { NOTE_TYPES } from "../../validations/clinicalNoteValidations";
@@ -56,6 +58,7 @@ import { NOTE_TYPES } from "../../validations/clinicalNoteValidations";
 const ClinicalNotesListPage = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const [clinicalNotes, setClinicalNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -533,7 +536,7 @@ const ClinicalNotesListPage = () => {
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {!actionMenu.isSigned && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Hygienist', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
           <MenuItem onClick={() => handleEdit(actionMenu.noteId)}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
@@ -541,7 +544,7 @@ const ClinicalNotesListPage = () => {
             <ListItemText>Edit</ListItemText>
           </MenuItem>
         )}
-        {!actionMenu.isSigned && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
           <MenuItem onClick={() => handleSign(actionMenu.noteId)}>
             <ListItemIcon>
               <SignIcon fontSize="small" color="primary" />
@@ -551,7 +554,7 @@ const ClinicalNotesListPage = () => {
             </ListItemText>
           </MenuItem>
         )}
-        {!actionMenu.isSigned && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.delete']) || hasRequiredRole(user, ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
           <MenuItem
             onClick={() =>
               handleDelete(actionMenu.noteId, actionMenu.patientName)

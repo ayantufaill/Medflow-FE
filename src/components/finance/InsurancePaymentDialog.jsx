@@ -328,14 +328,13 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         await paymentService.createPayment(paymentData);
       }
 
-      // Mark claim as paid if payment money was applied
-      if (totalPay > 0) {
-        await claimService.updateClaim(selectedClaimObj.id, {
-          status: 'paid',
-          paidAmount: totalPay,
-          paidDate: new Date().toISOString()
-        });
-      }
+      // Update claim paidAmount and status to paid (finalizing claim adjudication)
+      const claimPaidAmt = totalPay > 0 ? totalPay : (parseFloat(paymentAmount) || 0);
+      await claimService.updateClaim(selectedClaimObj.id, {
+        status: 'paid',
+        paidAmount: claimPaidAmt,
+        paidDate: new Date().toISOString()
+      });
 
       // Invalidate and refresh patient balance and insurance usage across Redux
       const pId = patientId.toString();
