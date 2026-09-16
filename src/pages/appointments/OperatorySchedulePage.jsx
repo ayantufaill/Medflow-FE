@@ -377,6 +377,7 @@ const OperatorySchedulePage = () => {
         setEditingAppointment(shallowAppt);
         setFormOpen(true);
         setShowExtendedOptions(true);
+        setInitialShortlistData(null);
         return;
       }
 
@@ -391,11 +392,13 @@ const OperatorySchedulePage = () => {
           setEditingAppointment(fullAppt);
           setFormOpen(true);
           setShowExtendedOptions(true);
+          setInitialShortlistData(null);
         } catch (err) {
           console.error("Failed to load appointment full details", err);
           setEditingAppointment(shallowAppt);
           setFormOpen(true);
           setShowExtendedOptions(true);
+          setInitialShortlistData(null);
         } finally {
           setIsOpeningForm(false);
         }
@@ -1262,7 +1265,8 @@ const OperatorySchedulePage = () => {
           onCancel={() => { 
             setFormOpen(false); 
             setShowExtendedOptions(false); 
-            setEditingAppointment(null);
+            setEditingAppointment(null); 
+            setInitialShortlistData(null); 
           }}
           onSubmit={handleAddAppointmentSubmit}
           loading={formSaving}

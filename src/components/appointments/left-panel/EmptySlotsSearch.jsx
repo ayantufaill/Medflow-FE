@@ -11,8 +11,6 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import dayjs from 'dayjs';
 
-const PRESETS = [[30, 45, 60], [90, 120]];
-
 const EmptySlotsSearch = () => {
   const [duration, setDuration] = useState(60);
   const [providerId, setProviderId] = useState("");
@@ -24,10 +22,11 @@ const EmptySlotsSearch = () => {
   const [showResults, setShowResults] = useState(false);
   const [amSelected, setAmSelected] = useState(true);
   const [pmSelected, setPmSelected] = useState(true);
-  const [searchRange, setSearchRange] = useState("1 month");
+  const [searchRange, setSearchRange] = useState("1 day");
   const dispatch = useDispatch();
 
   useEffect(() => {
+    if (searchRange === '1 day') setDateTo(dayjs(dateFrom));
     if (searchRange === '1 week') setDateTo(dayjs(dateFrom).add(1, 'week'));
     if (searchRange === '1 month') setDateTo(dayjs(dateFrom).add(1, 'month'));
     if (searchRange === '3 months') setDateTo(dayjs(dateFrom).add(3, 'month'));
@@ -223,13 +222,13 @@ const EmptySlotsSearch = () => {
         </Select>
       </Box>
 
-      <Box sx={{ mb: '16px' }}>
+<Box sx={{ mb: '16px' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap', fontSize: '11px', py: 0 }}>
               duration
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <TextField
                 type="number"
                 size="small"
@@ -237,34 +236,30 @@ const EmptySlotsSearch = () => {
                 onChange={(e) => setDuration(Number(e.target.value) || 0)}
                 sx={{
                   width: "64px",
-                  "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "13px", py: "6px", textAlign: "center" },
+                  "& .MuiInputBase-input": { fontFamily: "Inter", fontSize: "12px", py: "4px", textAlign: "center" },
                   "& .MuiOutlinedInput-root": { borderRadius: "4px" },
                 }}
                 inputProps={{ min: 5, step: 5 }}
               />
-              <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>mins</Typography>
+              <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: COLORS.TEXT_SECONDARY }}>mins</Typography>
             </Box>
           </Box>
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", alignSelf: "flex-end" }}>
-            {PRESETS.map((row, i) => (
-              <Box key={i} sx={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                {row.map((v) => (
-                  <Box
-                    key={v}
-                    onClick={() => setDuration(v)}
-                    sx={{
-                      px: "10px", py: "3px", borderRadius: "6px",
-                      cursor: "pointer", fontFamily: "Inter", fontSize: "11px", fontWeight: 600,
-                      backgroundColor: duration === v ? COLORS.ACCENT : "#f1f5f9",
-                      color: duration === v ? COLORS.WHITE : "#6b7280",
-                      transition: "all 0.15s",
-                      "&:hover": { backgroundColor: duration === v ? COLORS.ACCENT_HOVER : "#e2e8f0" },
-                    }}
-                  >
-                    {v}m
-                  </Box>
-                ))}
+          <Box sx={{ display: "flex", gap: "4px", justifyContent: "flex-end", width: "100%" }}>
+            {[30, 45, 60, 90, 120].map((v) => (
+              <Box
+                key={v}
+                onClick={() => setDuration(v)}
+                sx={{
+                  px: "8px", py: "2px", borderRadius: "4px",
+                  cursor: "pointer", fontFamily: "Inter", fontSize: "11px", fontWeight: 600,
+                  backgroundColor: duration === v ? COLORS.ACCENT : "#f1f5f9",
+                  color: duration === v ? COLORS.WHITE : "#6b7280",
+                  transition: "all 0.15s",
+                  "&:hover": { backgroundColor: duration === v ? COLORS.ACCENT_HOVER : "#e2e8f0" },
+                }}
+              >
+                {v}m
               </Box>
             ))}
           </Box>
@@ -341,10 +336,11 @@ const EmptySlotsSearch = () => {
             }
           }}
         >
-          <MenuItem value="1 week" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 week</MenuItem>
-          <MenuItem value="1 month" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 month</MenuItem>
-          <MenuItem value="3 months" sx={{ fontFamily: "Inter", fontSize: "13px" }}>3 months</MenuItem>
-          <MenuItem value="custom range" sx={{ fontFamily: "Inter", fontSize: "13px" }}>custom range</MenuItem>
+<MenuItem value="1 day" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 day</MenuItem>
+           <MenuItem value="1 week" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 week</MenuItem>
+           <MenuItem value="1 month" sx={{ fontFamily: "Inter", fontSize: "13px" }}>1 month</MenuItem>
+           <MenuItem value="3 months" sx={{ fontFamily: "Inter", fontSize: "13px" }}>3 months</MenuItem>
+           <MenuItem value="custom range" sx={{ fontFamily: "Inter", fontSize: "13px" }}>custom range</MenuItem>
         </Select>
       </Box>
 

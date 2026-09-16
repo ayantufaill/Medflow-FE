@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { PersonOutline, EmailOutlined, MessageOutlined, ScienceOutlined } from "@mui/icons-material";
 
-const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick, computedVisitType, hasConflict = false }) => (
+const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick, computedVisitType, hasConflict = false, isEditing, onEnterEdit, onToggleEdit, isRescheduling }) => (
   <Box sx={{ flexShrink: 0, borderTop: '1px solid #e0e5eb' }}>
 
     {/* Lab Order + Reminder strip — only when opened from PatientCard Book button */}
@@ -55,7 +55,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
         <Button
           variant="outlined"
           color="inherit"
-          onClick={onCancel}
+          onClick={isEditing ? onToggleEdit : onCancel}
           sx={{
             fontFamily: "Inter", fontSize: "13px", fontWeight: 500,
             textTransform: "none", borderRadius: "8px",
@@ -66,6 +66,23 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
         >
           Cancel
         </Button>
+{isEditMode && !isRescheduling && !isEditing && (
+          <Button
+            variant="contained"
+            disableElevation
+            onClick={onEnterEdit}
+            sx={{
+              fontFamily: "Inter", fontSize: "13px", fontWeight: 600,
+              textTransform: "none", borderRadius: "8px",
+              backgroundColor: "#2262ef", color: "#fff",
+              px: "20px", py: "7px",
+              "&:hover": { backgroundColor: "#1a50cc" },
+              "&.Mui-disabled": { backgroundColor: "#c5d3f8", color: "#fff", cursor: "not-allowed" },
+            }}
+          >
+            Edit
+          </Button>
+        )}
         {!readOnly && (
           <Button
             variant="contained"
