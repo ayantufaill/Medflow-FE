@@ -77,8 +77,8 @@ const ProductivityPanel = () => {
       
       {/* Filters Area */}
       <Box sx={{ mb: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '6px', textTransform: 'uppercase' }}>
-          Provider:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          provider
         </Typography>
         <Select
           MenuProps={{ sx: { zIndex: 1400 } }}
@@ -87,13 +87,23 @@ const ProductivityPanel = () => {
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           sx={{
-            height: "40px",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            borderRadius: "8px",
-            backgroundColor: COLORS.WHITE,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-            color: providerId ? COLORS.TEXT_PRIMARY : "#9aa3ae"
+            height: 36,
+            fontSize: '13px',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            color: '#09121f',
+            backgroundColor: '#fafbfe',
+            borderRadius: '4px',
+            '& .MuiSelect-select': {
+              py: 1,
+              pl: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e2e8f0'
+            }
           }}
         >
           <MenuItem value="all" sx={{ fontFamily: "Inter", fontSize: "13px" }}>All</MenuItem>
