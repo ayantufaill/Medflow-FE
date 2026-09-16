@@ -32,6 +32,9 @@ import AddBankAccountModal from './AddBankAccountModal';
 import { COLORS } from '../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../constants/styles';
 import { roundedSelectMenuProps, roundedAutocompletePaperSx, standardFieldSx } from '../../constants/styles';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
+import { formatDate } from './utils';
 import { usePatient, usePatients } from '../../hooks/redux/usePatient';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
@@ -206,6 +209,22 @@ export function ReferringCard({ patient, isEditMode, onPatientDataChange }) {
     onPatientDataChange({ customFields: { referringPatient: val } });
   };
 
+  const handleDateChange = (field, value) => {
+    let processedValue = value;
+    if (value) {
+      try {
+        const [year, month, day] = value.split('-');
+        const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+        if (!isNaN(date.getTime())) {
+          processedValue = date.toISOString();
+        }
+      } catch (error) {
+        processedValue = value;
+      }
+    }
+    onPatientDataChange({ [field]: processedValue });
+  };
+
   return (
     <SectionCard icon={ReferringIcon} title="Referring">
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -255,6 +274,42 @@ export function ReferringCard({ patient, isEditMode, onPatientDataChange }) {
             InputProps={{ readOnly: !isEditMode }}
           />
         ) : null}
+
+        {isEditMode ? (
+          <InlineFieldRow
+            label="Last Visit Date"
+            input={
+              <DatePicker
+                views={['year', 'month', 'day']}
+                disableFuture
+                value={patient?.lastVisitDate ? dayjs(patient.lastVisitDate) : null}
+                onChange={(newValue) => {
+                  handleDateChange('lastVisitDate', newValue ? newValue.format('YYYY-MM-DD') : '');
+                }}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    sx: standardFieldSx,
+                  }
+                }}
+              />
+            }
+          />
+        ) : (
+          <InlineFieldRow
+            label="Last Visit Date"
+            value={formatDate(patient?.lastVisitDate)}
+            InputProps={{ readOnly: true }}
+          />
+        )}
+        
+        <InlineFieldRow
+          label="Portal Access"
+          value={patient?.portalAccessEnabled ? 'Yes' : 'No'}
+          onChange={(e) => onPatientDataChange({ portalAccessEnabled: e.target.value === 'Yes' })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
       </Box>
     </SectionCard>
   );
@@ -263,20 +318,90 @@ export function ReferringCard({ patient, isEditMode, onPatientDataChange }) {
 // ── Confirmation Settings ───────────────────────────────────────────────────
 
 export function ConfirmationSettingsCard({ patient, isEditMode, onPatientDataChange }) {
-  const items = [
+  const customFields = patient?.customFields || {};
+
+  const checkboxItems = [
+    { text: 'Stop reminding after confirmation', field: 'stopReminderAfterConfirmation' },
     { text: 'Pause Schedule Gap-Fill Reminders', field: 'communicationPauseScheduleGapFillsReminders' },
     { text: 'Pause AR Automation Reminders', field: 'communicationPauseArAutomationReminders' },
     { text: 'Receive Email Campaign', field: 'communicationAgreeElectronicCommunications' },
-  ].map((item) => ({ ...item, checked: !!patient?.customFields?.[item.field] }));
+  ].map((item) => ({ ...item, checked: !!customFields[item.field] }));
 
-  const handleToggle = (field, checked) => {
-    // Only pass changed customFields key — do NOT spread the full patient object
-    onPatientDataChange({ customFields: { [field]: checked } });
+  const handleToggleCheckbox = (field, checked) => {
+    const updates = { [field]: checked };
+    if (field === 'stopReminderAfterConfirmation' && checked) {
+      updates.reminderPreference = '';
+    }
+    onPatientDataChange({ customFields: updates });
   };
+
+  const reminderPref = customFields.reminderPreference || '';
 
   return (
     <SectionCard icon={ConfirmationIcon} title="Confirmation Settings">
-      <CheckList items={items} isEditMode={isEditMode} onToggle={handleToggle} />
+      <Box sx={{ mb: 3 }}>
+        <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.base, color: COLORS.TEXT_BODY, mb: 1.5 }}>
+          Patient prefers to receive a reminder before appointment:
+        </Typography>
+        {isEditMode ? (
+          <Stack spacing={0.5}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={reminderPref === 'none'}
+                  onChange={(e) => {
+                    const val = e.target.checked ? 'none' : '';
+                    const updates = { reminderPreference: val };
+                    if (val) updates.stopReminderAfterConfirmation = false;
+                    onPatientDataChange({ customFields: updates });
+                  }}
+                  icon={<UncheckedIcon sx={{ fontSize: 20 }} />}
+                  checkedIcon={<CheckCircleIcon sx={{ fontSize: 20, color: COLORS.ACCENT }} />}
+                />
+              }
+              label={<CheckItemLabel text="No, it is unnecessary" />}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={reminderPref === 'helpful'}
+                  onChange={(e) => {
+                    const val = e.target.checked ? 'helpful' : '';
+                    const updates = { reminderPreference: val };
+                    if (val) updates.stopReminderAfterConfirmation = false;
+                    onPatientDataChange({ customFields: updates });
+                  }}
+                  icon={<UncheckedIcon sx={{ fontSize: 20 }} />}
+                  checkedIcon={<CheckCircleIcon sx={{ fontSize: 20, color: COLORS.ACCENT }} />}
+                />
+              }
+              label={<CheckItemLabel text="Yes, it is a helpful reminder" />}
+            />
+          </Stack>
+        ) : (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              {reminderPref === 'none' ? (
+                <CheckCircleIcon sx={{ fontSize: 16, color: COLORS.ACCENT, mt: '2px', flexShrink: 0 }} />
+              ) : (
+                <UncheckedIcon sx={{ fontSize: 16, color: COLORS.TEXT_MUTED, mt: '2px', flexShrink: 0 }} />
+              )}
+              <CheckItemLabel text="No, it is unnecessary" />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              {reminderPref === 'helpful' ? (
+                <CheckCircleIcon sx={{ fontSize: 16, color: COLORS.ACCENT, mt: '2px', flexShrink: 0 }} />
+              ) : (
+                <UncheckedIcon sx={{ fontSize: 16, color: COLORS.TEXT_MUTED, mt: '2px', flexShrink: 0 }} />
+              )}
+              <CheckItemLabel text="Yes, it is a helpful reminder" />
+            </Box>
+          </Stack>
+        )}
+      </Box>
+      <CheckList items={checkboxItems} isEditMode={isEditMode} onToggle={handleToggleCheckbox} />
     </SectionCard>
   );
 }

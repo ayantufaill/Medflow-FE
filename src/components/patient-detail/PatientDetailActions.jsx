@@ -30,6 +30,7 @@ import RequestUpdatesDialog from "./RequestUpdatesDialog";
 import PatientChat from "../shared/PatientChat";
 import RouteSlipDialog from "../appointments/schedule/route-slip-modal/RouteSlipDialog";
 import { useScheduleState } from "../../hooks/redux";
+import PatientRegistrationPreviewDialog from "./print/PatientRegistrationPreviewDialog";
 import { COLORS } from "../../constants/colors";
 import { radius, fontSize, fontWeight } from "../../constants/styles";
 
@@ -65,12 +66,14 @@ export default function PatientDetailActions({
   onRequestUpdatesClick,
   isActive,
   patient,
+  careTeamProviders,
   isEditMode = false,
 }) {
   const [myChartFileDialogOpen, setMyChartFileDialogOpen] = useState(false);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [patientChatOpen, setPatientChatOpen] = useState(false);
   const [requestUpdatesOpen, setRequestUpdatesOpen] = useState(false);
+  const [registrationPreviewOpen, setRegistrationPreviewOpen] = useState(false);
   const { setRouteSlipDialogOpen } = useScheduleState();
   const navigate = useNavigate();
 
@@ -216,7 +219,7 @@ export default function PatientDetailActions({
               <IconButton
                 size="small"
                 sx={iconButtonSx}
-                onClick={() => setRouteSlipDialogOpen(true)}
+                onClick={() => setRegistrationPreviewOpen(true)}
               >
                 <PrintIcon sx={{ fontSize: 18 }} />
               </IconButton>
@@ -326,6 +329,13 @@ export default function PatientDetailActions({
 
       {/* Route Slip — uses the new modernized RouteSlipDialog that handles its own Redux state */}
       <RouteSlipDialog />
+
+      <PatientRegistrationPreviewDialog 
+        open={registrationPreviewOpen}
+        onClose={() => setRegistrationPreviewOpen(false)}
+        patient={patient}
+        careTeamProviders={careTeamProviders}
+      />
     </>
   );
 }
