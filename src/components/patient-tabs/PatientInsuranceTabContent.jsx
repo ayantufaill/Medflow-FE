@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Typography,
@@ -41,6 +42,11 @@ import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
 import InsuranceTabs from '../insurance/InsuranceTabs';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+import {
+  fetchInsuranceUsage,
+  selectInsuranceUsage,
+  selectInsuranceUsageCache,
+} from '../../store/slices/patientSlice';
 
 const parseAmount = (val) => {
   if (val === null || val === undefined || val === '') return null;
@@ -51,23 +57,25 @@ const parseAmount = (val) => {
   return isNaN(num) ? null : num;
 };
 
-const getCoverageAmounts = (ins) => {
+const getCoverageAmounts = (ins, usage) => {
   let coverageLimits = ins?.coverageLimits;
   if (typeof coverageLimits === 'string') {
     try {
       coverageLimits = JSON.parse(coverageLimits);
-    } catch (e) {
+    } catch {
       coverageLimits = null;
     }
   }
   const limitsInd = coverageLimits?.individual;
   
   const rawUsed = 
+    usage?.usedAmount ??
     limitsInd?.usedAmount ?? 
     ins?.usedAmount ?? 
     ins?.copayAmount;
     
   const rawMax = 
+    usage?.annualMax ??
     limitsInd?.annualMax ?? 
     ins?.individualAnnualMax ?? 
     ins?.deductibleAmount;
@@ -83,7 +91,6 @@ const CoverageRow = ({
   companies, 
   getInsuranceCompanyName, 
   handleViewPlan, 
-  handleInsuranceEdit, 
   handleInsuranceDeactivate, 
   isInactive, 
   handleInsuranceActivate,
@@ -92,11 +99,12 @@ const CoverageRow = ({
   onMoveUp,
   onMoveDown,
   patient,
-  onViewCarrierInfo
+  onViewCarrierInfo,
+  usage
 }) => {
   const [expanded, setExpanded] = useState(false);
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
-  const { usedAmount, maxAmount } = getCoverageAmounts(ins);
+  const { usedAmount, maxAmount } = getCoverageAmounts(ins, usage);
 
   const getCompany = (insuranceCompanyId) => {
     if (insuranceCompanyId && typeof insuranceCompanyId === 'object') return insuranceCompanyId;
@@ -239,6 +247,7 @@ const CoverageRow = ({
 
 export default function PatientInsuranceTabContent({ patientId, patient }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
 
   const patientName = patient ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim() : "Patient";
@@ -252,7 +261,6 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     create: createInsurance,
     update: updateInsurance,
     remove: removeInsurance,
-    reorder: reorderInsurances,
   } = usePatientInsurance(patientId);
 
   const {
@@ -276,13 +284,17 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const [carrierInfoOpen, setCarrierInfoOpen] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+  const insuranceUsage = useSelector(selectInsuranceUsage);
+  const insuranceUsageCache = useSelector(selectInsuranceUsageCache);
+  const cachedUsage = patientId ? insuranceUsageCache[patientId]?.data : null;
+  const activeUsage = cachedUsage ?? insuranceUsage ?? null;
 
   const handleViewCarrierInfo = (company) => {
     setSelectedCarrier(company);
     setCarrierInfoOpen(true);
   };
 
-  const fetchInsurancesAndCompanies = async () => {
+  const fetchInsurancesAndCompanies = useCallback(async () => {
     try {
       await Promise.all([
         fetchInsurances(),
@@ -291,11 +303,15 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     } catch (err) {
       console.error('Failed to load insurance data', err);
     }
-  };
+  }, [fetchAllCatalog, fetchInsurances]);
 
   useEffect(() => {
     if (patientId) fetchInsurancesAndCompanies();
-  }, [patientId]);
+  }, [patientId, fetchInsurancesAndCompanies]);
+
+  useEffect(() => {
+    if (patientId) dispatch(fetchInsuranceUsage(patientId));
+  }, [patientId, dispatch]);
 
   useEffect(() => {
     setLocalInsurances(insurances || []);
@@ -339,7 +355,6 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     }
   }, [displayInsurances, tabValue]);
 
-  const hasActiveCoverage = displayInsurances.some((i) => i.isActive);
   const inactiveInsurances = localInsurances.filter((i) => !i.isActive);
 
   const handleInsuranceAdd = () => {
@@ -381,7 +396,6 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     }
   };
 
-  const handleInsuranceMenuOpen = (event, insurance) => setInsuranceMenu({ anchorEl: event.currentTarget, insurance });
   const handleInsuranceMenuClose = () => setInsuranceMenu((prev) => ({ ...prev, anchorEl: null }));
   const handleInsuranceMenuExited = () => setInsuranceMenu({ anchorEl: null, insurance: null });
 
@@ -482,6 +496,23 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const handleMoveDown = (index, activeArray) => {
     if (index === activeArray.length - 1) return;
     handleReorder(activeArray[index], activeArray[index + 1], activeArray);
+  };
+
+  const getUsageForCoverage = (ins, index) => {
+    const primaryUsage = activeUsage?.primaryInsurance ?? null;
+    const secondaryUsage = activeUsage?.secondaryInsurance ?? null;
+    const coverageOrdinal = Number(ins?.Ordinal ?? ins?.ordinal ?? index + 1);
+    const rowName = (ins?.planName || ins?.groupName || '').toLowerCase();
+
+    if (primaryUsage?.planName && rowName && primaryUsage.planName.toLowerCase() === rowName) {
+      return primaryUsage;
+    }
+    if (secondaryUsage?.planName && rowName && secondaryUsage.planName.toLowerCase() === rowName) {
+      return secondaryUsage;
+    }
+    if (coverageOrdinal === 1 || index === 0) return primaryUsage;
+    if (coverageOrdinal === 2 || index === 1) return secondaryUsage;
+    return null;
   };
 
   return (
@@ -591,7 +622,6 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                   companies={companies}
                   getInsuranceCompanyName={getInsuranceCompanyName}
                   handleViewPlan={handleViewPlan}
-                  handleInsuranceEdit={handleInsuranceEdit}
                   handleInsuranceDeactivate={handleInsuranceDeactivate}
                   isInactive={!ins.isActive}
                   handleInsuranceActivate={handleInsuranceActivate}
@@ -601,6 +631,7 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                   onMoveDown={() => handleMoveDown(index, array)}
                   patient={patient}
                   onViewCarrierInfo={handleViewCarrierInfo}
+                  usage={getUsageForCoverage(ins, index)}
                 />
               ))}
             </Stack>

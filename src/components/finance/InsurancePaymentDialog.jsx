@@ -135,8 +135,20 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           const allowedNum = p.insPayEst !== undefined && p.insPayEst !== null ? Number(p.insPayEst) : submittedNum;
           const woNum = Math.max(0, submittedNum - allowedNum);
 
+          let procInvoiceId = p.invoiceId;
+          if (!procInvoiceId && claim.selectedItems?.length > 0) {
+            const found = claim.selectedItems.find(si => String(si.itemId) === String(p.id || p._id || p.ProcNum));
+            if (found) procInvoiceId = found.invoiceId;
+          }
+          if (!procInvoiceId) {
+            procInvoiceId = claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+          }
+
           return {
             id: p.id || p._id || p.ProcNum || p.procedureId,
+            invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
+            invoiceNumber: p.invoiceNumber,
+            invoiceDate: p.invoiceDate,
             code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
             submitted: `$${submittedNum.toFixed(2)}`,
             bal: `$${Number(p.balance || submittedNum).toFixed(2)}`,
@@ -157,32 +169,44 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           const allowedNum = l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : submittedNum);
           const woNum = Math.max(0, submittedNum - allowedNum);
 
-        return {
-          id: l.id || l._id || l.procedureId || l.procId,
-          code: `${l.code || ''} - ${l.description || l.name || ''}`,
-          submitted: `$${submittedNum.toFixed(2)}`,
-          bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
-          ded: '0.00',
-          allowed: allowedNum.toFixed(2),
-          wo: woNum.toFixed(2),
-          pay: allowedNum.toFixed(2),
-          updateAllowedFee: false,
-          updateInsFlatPortion: false,
-          moveToNewClaim: false
-        };
-      });
+          const procInvoiceId = l.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+
+          return {
+            id: l.id || l._id || l.procedureId || l.procId,
+            invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
+            invoiceNumber: l.invoiceNumber,
+            invoiceDate: l.invoiceDate,
+            code: `${l.code || ''} - ${l.description || l.name || ''}`,
+            submitted: `$${submittedNum.toFixed(2)}`,
+            bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
+            ded: '0.00',
+            allowed: allowedNum.toFixed(2),
+            wo: woNum.toFixed(2),
+            pay: allowedNum.toFixed(2),
+            updateAllowedFee: false,
+            updateInsFlatPortion: false,
+            moveToNewClaim: false
+          };
+        });
     } else if (claim.selectedItems && claim.selectedItems.length > 0) {
       claimProcs = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true').map(item => {
-        const submittedNum = Number(item.amount || 0);
+        const submittedNum = Number(item.fee || item.amount || 0);
+        const allowedNum = Number(item.amount || item.fee || 0);
+        const itemCode = item.code ? (item.description ? `${item.code} - ${item.description}` : item.code) : `Item ID: ${item.itemId}`;
+        const procInvoiceId = item.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+
         return {
           id: item.id || item._id || item.itemId || item.procedureId,
-          code: `Item ID: ${item.itemId}`,
+          invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
+          invoiceNumber: item.invoiceNumber,
+          invoiceDate: item.invoiceDate,
+          code: itemCode,
           submitted: `$${submittedNum.toFixed(2)}`,
           bal: `$${submittedNum.toFixed(2)}`,
           ded: '0.00',
-          allowed: submittedNum.toFixed(2),
+          allowed: allowedNum.toFixed(2),
           wo: '0.00',
-          pay: submittedNum.toFixed(2),
+          pay: allowedNum.toFixed(2),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
           moveToNewClaim: false
@@ -212,7 +236,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
   const handleConfirmSimpleBilling = () => {
     setShowSimpleBillingAlert(false);
-    // Add logic for switching to simple billing here
   };
 
   const handleCancelSimpleBilling = () => {
@@ -234,19 +257,19 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
     setIsSubmitting(true);
     try {
-      let finalInvoiceId = selectedClaimObj.invoiceId;
-      if (typeof finalInvoiceId === 'object' && finalInvoiceId !== null) {
-        finalInvoiceId = finalInvoiceId.id || finalInvoiceId._id;
+      let defaultInvoiceId = selectedClaimObj.invoiceId;
+      if (typeof defaultInvoiceId === 'object' && defaultInvoiceId !== null) {
+        defaultInvoiceId = defaultInvoiceId.id || defaultInvoiceId._id;
       }
-      if (!finalInvoiceId) {
+      if (!defaultInvoiceId) {
         const inv = selectedClaimObj.invoice;
-        finalInvoiceId = (typeof inv === 'string') ? inv : (inv?.id || inv?._id);
+        defaultInvoiceId = (typeof inv === 'string') ? inv : (inv?.id || inv?._id);
       }
-      if (!finalInvoiceId && selectedClaimObj.selectedItems?.length > 0) {
-        finalInvoiceId = selectedClaimObj.selectedItems[0].invoiceId || selectedClaimObj.selectedItems[0].StatementNum;
+      if (!defaultInvoiceId && selectedClaimObj.selectedItems?.length > 0) {
+        defaultInvoiceId = selectedClaimObj.selectedItems[0].invoiceId || selectedClaimObj.selectedItems[0].StatementNum;
       }
-      if (!finalInvoiceId) {
-        finalInvoiceId = selectedClaimObj.id || selectedClaimObj.ClaimNum;
+      if (!defaultInvoiceId) {
+        defaultInvoiceId = selectedClaimObj.id || selectedClaimObj.ClaimNum;
       }
 
       const totalPay = procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
@@ -259,34 +282,57 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       else if (pLower.includes('eft') || pLower.includes('ach')) backendMethod = 'ach';
       else if (pLower.includes('insurance')) backendMethod = 'insurance';
 
-      const paymentData = {
-        patientId: patientId.toString(),
-        invoiceId: finalInvoiceId?.toString(),
-        amount: totalPay,
-        paymentMethod: backendMethod,
-        paymentSource: 'insurance_company',
-        paymentDate: new Date().toISOString(),
-        insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
-        notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`,
-        procedures: procedures.map(p => ({
-          ...p,
-          allowed: Number(p.allowed || 0),
-          wo: Number(p.wo || 0),
-          pay: Number(p.pay || 0),
-          ded: Number(p.ded || 0),
-          claimId: selectedClaimObj.id || selectedClaimObj._id
-        }))
-      };
+      // Group procedures by their respective invoiceId so payments are distributed per invoice
+      const procsByInvoice = {};
+      procedures.forEach((proc) => {
+        let invId = proc.invoiceId;
+        if (!invId && selectedClaimObj.selectedItems?.length > 0) {
+          const found = selectedClaimObj.selectedItems.find(si => String(si.itemId) === String(proc.id || proc.ProcNum));
+          if (found) invId = found.invoiceId;
+        }
+        if (!invId) {
+          invId = defaultInvoiceId;
+        }
+        const invKey = String(invId);
+        if (!procsByInvoice[invKey]) {
+          procsByInvoice[invKey] = [];
+        }
+        procsByInvoice[invKey].push(proc);
+      });
 
-      // Call API to create payment
-      await paymentService.createPayment(paymentData);
+      const invoiceEntries = Object.entries(procsByInvoice);
+      for (const [invId, invProcs] of invoiceEntries) {
+        const invPay = invProcs.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
+        if (invPay <= 0) continue;
 
-      // Only mark claim as paid if there is actual payment money applied
+        const paymentData = {
+          patientId: patientId.toString(),
+          invoiceId: invId.toString(),
+          amount: invPay,
+          paymentMethod: backendMethod,
+          paymentSource: 'insurance_company',
+          paymentDate: new Date().toISOString(),
+          insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
+          notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`,
+          procedures: invProcs.map(p => ({
+            ...p,
+            allowed: Number(p.allowed || 0),
+            wo: Number(p.wo || 0),
+            pay: Number(p.pay || 0),
+            ded: Number(p.ded || 0),
+            claimId: selectedClaimObj.id || selectedClaimObj._id
+          }))
+        };
+
+        // Call API to create payment for this invoice
+        await paymentService.createPayment(paymentData);
+      }
+
+      // Mark claim as paid if payment money was applied
       if (totalPay > 0) {
-        // Update claim paidAmount and status to paid
         await claimService.updateClaim(selectedClaimObj.id, {
           status: 'paid',
-          paidAmount: parseFloat(paymentAmount) || 0,
+          paidAmount: totalPay,
           paidDate: new Date().toISOString()
         });
       }
@@ -300,10 +346,11 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
       const eventPayload = {
         patientId: pId,
-        amount: Number(paymentAmount) || 0,
+        amount: totalPay,
       };
       window.dispatchEvent(new CustomEvent('payment-completed', { detail: eventPayload }));
       window.dispatchEvent(new CustomEvent('appointment-financials-updated', { detail: eventPayload }));
+      window.dispatchEvent(new CustomEvent('refresh-ledger'));
       try {
         const bc = new BroadcastChannel('medflow-payments');
         bc.postMessage(eventPayload);
@@ -313,7 +360,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       showSnackbar('Insurance payment applied successfully', 'success');
 
       if (onSave) {
-        onSave(paymentData);
+        onSave({ totalPay, procsByInvoice });
       }
 
       setShowPaymentOptions(false);

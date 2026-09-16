@@ -162,7 +162,14 @@ const ManualClaimDialog = ({ patient, onClose }) => {
         if (item.checked) {
           selectedItems.push({
             invoiceId: inv.id,
+            invoiceNumber: inv.invoiceNumber || inv.id,
+            invoiceDate: inv.invoiceDate || '',
             itemId: item.id,
+            code: item.cptCode || item.code || '',
+            description: item.description || item.name || item.notes || '',
+            fee: Number(item.total || item.totalPrice || item.charge || 0),
+            ptAmount: Number(item.ptAmount?.replace('$', '')) || 0,
+            insAmount: Number(item.insAmount?.replace('$', '')) || 0,
             amount: Number(item.insAmount?.replace('$', '')) || 0,
           });
         }
