@@ -33,69 +33,53 @@ import AuthorizationsListPage from '../pages/authorizations/AuthorizationsListPa
 import CreateAuthorizationPage from '../pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from '../pages/authorizations/ViewAuthorizationPage';
 
-// 'Billing' and 'Doctor'/'Front Desk' are not real backend roles (see
-// seedRoles.ts) — 'Billing Staff'/'Provider'/'Receptionist' are their actual
-// seeded equivalents. 'Front Desk' resolved to the same real role
-// ('Receptionist') already used below, so the separate wrapper that used to
-// exist for it was consolidated into adminBillingReception rather than kept
-// as a duplicate.
-const adminBilling = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff']}>
-    <Layout hideSidebar={hideSidebar}>{children}</Layout>
-  </ProtectedRoute>
-);
+const OPERATIONS_ALLOWED_GROUPS = ['ADMIN_GROUP', 'OPERATIONS_GROUP'];
 
-const adminBillingReception = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff', 'Receptionist']}>
+const operationsRoute = (children, hideSidebar = false) => (
+  <ProtectedRoute allowedGroups={OPERATIONS_ALLOWED_GROUPS}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
-  </ProtectedRoute>
-);
-
-const adminBillingProvider = (children) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Billing Staff', 'Provider']}>
-    <Layout>{children}</Layout>
   </ProtectedRoute>
 );
 
 const billingRoutes = [
-  <Route key="/insurance" path="/insurance" element={adminBillingReception(<InsurancePage />, true)} />,
-  <Route key="/insurance/new" path="/insurance/new" element={adminBillingReception(<AddCoveragePage />, true)} />,
-  <Route key="/finance" path="/finance" element={adminBillingReception(<FinancePage />, true)} />,
+  <Route key="/insurance" path="/insurance" element={operationsRoute(<InsurancePage />, true)} />,
+  <Route key="/insurance/new" path="/insurance/new" element={operationsRoute(<AddCoveragePage />, true)} />,
+  <Route key="/finance" path="/finance" element={operationsRoute(<FinancePage />, true)} />,
 
-  <Route key="/services" path="/services" element={adminBilling(<ServicesListPage />)} />,
-  <Route key="/services/new" path="/services/new" element={adminBilling(<CreateServicePage />)} />,
-  <Route key="/services/:serviceId" path="/services/:serviceId" element={adminBilling(<ViewServicePage />)} />,
-  <Route key="/services/:serviceId/edit" path="/services/:serviceId/edit" element={adminBilling(<EditServicePage />)} />,
+  <Route key="/services" path="/services" element={operationsRoute(<ServicesListPage />)} />,
+  <Route key="/services/new" path="/services/new" element={operationsRoute(<CreateServicePage />)} />,
+  <Route key="/services/:serviceId" path="/services/:serviceId" element={operationsRoute(<ViewServicePage />)} />,
+  <Route key="/services/:serviceId/edit" path="/services/:serviceId/edit" element={operationsRoute(<EditServicePage />)} />,
 
-  <Route key="/invoices" path="/invoices" element={adminBillingReception(<InvoicesListPage />)} />,
-  <Route key="/invoices/new" path="/invoices/new" element={adminBillingReception(<CreateInvoicePage />)} />,
-  <Route key="/invoices/:invoiceId" path="/invoices/:invoiceId" element={adminBillingReception(<ViewInvoicePage />)} />,
-  <Route key="/invoices/:invoiceId/edit" path="/invoices/:invoiceId/edit" element={adminBillingReception(<EditInvoicePage />)} />,
+  <Route key="/invoices" path="/invoices" element={operationsRoute(<InvoicesListPage />)} />,
+  <Route key="/invoices/new" path="/invoices/new" element={operationsRoute(<CreateInvoicePage />)} />,
+  <Route key="/invoices/:invoiceId" path="/invoices/:invoiceId" element={operationsRoute(<ViewInvoicePage />)} />,
+  <Route key="/invoices/:invoiceId/edit" path="/invoices/:invoiceId/edit" element={operationsRoute(<EditInvoicePage />)} />,
 
-  <Route key="/payments" path="/payments" element={adminBillingReception(<PaymentsListPage />)} />,
-  <Route key="/payments/new" path="/payments/new" element={adminBillingReception(<RecordPaymentPage />)} />,
-  <Route key="/payments/:paymentId" path="/payments/:paymentId" element={adminBillingReception(<ViewPaymentPage />)} />,
+  <Route key="/payments" path="/payments" element={operationsRoute(<PaymentsListPage />)} />,
+  <Route key="/payments/new" path="/payments/new" element={operationsRoute(<RecordPaymentPage />)} />,
+  <Route key="/payments/:paymentId" path="/payments/:paymentId" element={operationsRoute(<ViewPaymentPage />)} />,
 
-  <Route key="/estimates" path="/estimates" element={adminBillingProvider(<EstimatesListPage />)} />,
-  <Route key="/estimates/new" path="/estimates/new" element={adminBillingProvider(<CreateEstimatePage />)} />,
-  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={adminBillingProvider(<EditEstimatePage />)} />,
-  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={adminBillingProvider(<ViewEstimatePage />)} />,
+  <Route key="/estimates" path="/estimates" element={operationsRoute(<EstimatesListPage />)} />,
+  <Route key="/estimates/new" path="/estimates/new" element={operationsRoute(<CreateEstimatePage />)} />,
+  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={operationsRoute(<EditEstimatePage />)} />,
+  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={operationsRoute(<ViewEstimatePage />)} />,
 
-  <Route key="/claims" path="/claims" element={adminBilling(<ClaimsListPage />, true)} />,
-  <Route key="/batch-actions" path="/batch-actions" element={adminBilling(<BatchActionsPage />, true)} />,
-  <Route key="/claims/denied" path="/claims/denied" element={adminBilling(<DeniedClaimsPage />)} />,
-  <Route key="/claims/secondary" path="/claims/secondary" element={adminBilling(<SecondaryClaimsPage />)} />,
-  <Route key="/claims/:claimId" path="/claims/:claimId" element={adminBilling(<ViewClaimPage />)} />,
-  <Route key="/claims/:claimId/resubmit" path="/claims/:claimId/resubmit" element={adminBilling(<ResubmitClaimPage />)} />,
+  <Route key="/claims" path="/claims" element={operationsRoute(<ClaimsListPage />, true)} />,
+  <Route key="/batch-actions" path="/batch-actions" element={operationsRoute(<BatchActionsPage />, true)} />,
+  <Route key="/claims/denied" path="/claims/denied" element={operationsRoute(<DeniedClaimsPage />)} />,
+  <Route key="/claims/secondary" path="/claims/secondary" element={operationsRoute(<SecondaryClaimsPage />)} />,
+  <Route key="/claims/:claimId" path="/claims/:claimId" element={operationsRoute(<ViewClaimPage />)} />,
+  <Route key="/claims/:claimId/resubmit" path="/claims/:claimId/resubmit" element={operationsRoute(<ResubmitClaimPage />)} />,
 
-  <Route key="/era" path="/era" element={adminBilling(<ERAListPage />)} />,
-  <Route key="/era/import" path="/era/import" element={adminBilling(<ImportERAPage />)} />,
-  <Route key="/era/unmatched" path="/era/unmatched" element={adminBilling(<UnmatchedERAItemsPage />)} />,
-  <Route key="/era/:eraId" path="/era/:eraId" element={adminBilling(<ViewERAPage />)} />,
+  <Route key="/era" path="/era" element={operationsRoute(<ERAListPage />)} />,
+  <Route key="/era/import" path="/era/import" element={operationsRoute(<ImportERAPage />)} />,
+  <Route key="/era/unmatched" path="/era/unmatched" element={operationsRoute(<UnmatchedERAItemsPage />)} />,
+  <Route key="/era/:eraId" path="/era/:eraId" element={operationsRoute(<ViewERAPage />)} />,
 
-  <Route key="/authorizations" path="/authorizations" element={adminBillingReception(<AuthorizationsListPage />)} />,
-  <Route key="/authorizations/new" path="/authorizations/new" element={adminBillingReception(<CreateAuthorizationPage />)} />,
-  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={adminBillingReception(<ViewAuthorizationPage />)} />,
+  <Route key="/authorizations" path="/authorizations" element={operationsRoute(<AuthorizationsListPage />)} />,
+  <Route key="/authorizations/new" path="/authorizations/new" element={operationsRoute(<CreateAuthorizationPage />)} />,
+  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={operationsRoute(<ViewAuthorizationPage />)} />,
 ];
 
 export default billingRoutes;

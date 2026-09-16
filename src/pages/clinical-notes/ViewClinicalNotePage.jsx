@@ -33,6 +33,8 @@ import {
   InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRequiredRole, hasRequiredPermission } from '../../config/navMenuItems';
 import { clinicalNoteService } from '../../services/clinical-note.service';
 import { NOTE_TYPES } from '../../validations/clinicalNoteValidations';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
@@ -41,6 +43,7 @@ const ViewClinicalNotePage = () => {
   const navigate = useNavigate();
   const { clinicalNoteId } = useParams();
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [clinicalNote, setClinicalNote] = useState(null);
@@ -216,21 +219,25 @@ const ViewClinicalNotePage = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           {!clinicalNote.isSigned && (
             <>
-              <Button
-                variant="outlined"
-                startIcon={<EditIcon />}
-                onClick={() => navigate(`/clinical-notes/${clinicalNoteId}/edit`)}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<SignIcon />}
-                onClick={() => setSignDialog(true)}
-              >
-                Sign
-              </Button>
+              {(hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => navigate(`/clinical-notes/${clinicalNoteId}/edit`)}
+                >
+                  Edit
+                </Button>
+              )}
+              {(hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<SignIcon />}
+                  onClick={() => setSignDialog(true)}
+                >
+                  Sign
+                </Button>
+              )}
             </>
           )}
         </Box>
