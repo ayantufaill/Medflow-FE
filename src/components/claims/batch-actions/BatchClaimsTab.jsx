@@ -1,9 +1,13 @@
 import React from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Box, Checkbox, Collapse
+  Paper, Typography, Box, Checkbox, Collapse, IconButton, CircularProgress, Tooltip
 } from '@mui/material';
+import { Download as DownloadIcon } from "@mui/icons-material";
 import { COLORS } from '../../../constants/colors';
+import { claimService } from '../../../services/claim.service';
+import { useSnackbar } from '../../../contexts/SnackbarContext';
+import { getClaimTypeLabel } from '../../../utils/claimUtils';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
 const headerCellSx = { backgroundColor: '#f8f9fa', 
@@ -26,6 +30,30 @@ const bodyCellSx = {
 
 const BatchClaimsTab = ({ filteredClaimsList, selectedClaims, setSelectedClaims }) => {
   const [expandedId, setExpandedId] = React.useState(null);
+  const [exporting837Id, setExporting837Id] = React.useState(null);
+  const { showSnackbar } = useSnackbar();
+
+  const handleExport837 = async (claimId, e) => {
+    e.stopPropagation();
+    try {
+      setExporting837Id(claimId);
+      await claimService.generate837D(claimId);
+      const blob = await claimService.export837D(claimId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `claim_${claimId}.837`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSnackbar("837D file exported successfully", "success");
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || "Failed to export 837D file", "error");
+    } finally {
+      setExporting837Id(null);
+    }
+  };
 
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: 'none', overflowX: 'auto', width: '100%' }}>
@@ -51,12 +79,13 @@ const BatchClaimsTab = ({ filteredClaimsList, selectedClaims, setSelectedClaims 
             <TableCell>CARRIER</TableCell>
             <TableCell>PLAN NAME</TableCell>
             <TableCell>TOTAL</TableCell>
+            <TableCell align="right">ACTIONS</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {filteredClaimsList.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 4, fontSize: fontSize.md, color: COLORS.TEXT_MUTED }}>
+              <TableCell colSpan={8} align="center" sx={{ py: 4, fontSize: fontSize.md, color: COLORS.TEXT_MUTED }}>
                 No pending claims found.
               </TableCell>
             </TableRow>
@@ -96,7 +125,7 @@ const BatchClaimsTab = ({ filteredClaimsList, selectedClaims, setSelectedClaims 
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
                       <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>
-                        {claim.claimType}
+                        {getClaimTypeLabel(claim.claimType)}
                       </Typography>
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
@@ -114,11 +143,27 @@ const BatchClaimsTab = ({ filteredClaimsList, selectedClaims, setSelectedClaims 
                         ${claimTotal.toFixed(2)}
                       </Typography>
                     </TableCell>
+                    <TableCell sx={{ py: 1.5 }} align="right">
+                      <Tooltip title="Export 837D">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleExport837(claim.id, e)}
+                          disabled={exporting837Id === claim.id}
+                          sx={{ color: "#7d9cc4", p: 0.2 }}
+                        >
+                          {exporting837Id === claim.id ? (
+                            <CircularProgress size={14} />
+                          ) : (
+                            <DownloadIcon sx={{ fontSize: 14 }} />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
 
                   {/* Collapsible procedure details */}
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ p: 0, borderBottom: isExpanded ? `1px solid ${COLORS.BORDER_VERY_LIGHT}` : 'none' }}>
+                    <TableCell colSpan={8} sx={{ p: 0, borderBottom: isExpanded ? `1px solid ${COLORS.BORDER_VERY_LIGHT}` : 'none' }}>
                       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                         <Box sx={{ px: 3, py: 2, backgroundColor: COLORS.SURFACE_HOVER, borderLeft: `3px solid ${COLORS.ACCENT}` }}>
                           <Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: COLORS.TEXT_MUTED, letterSpacing: '0.4px', textTransform: 'uppercase', mb: 1 }}>

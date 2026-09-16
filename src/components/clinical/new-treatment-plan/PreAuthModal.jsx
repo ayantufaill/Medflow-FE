@@ -48,12 +48,13 @@ import dayjs from 'dayjs';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
 import { authorizationService } from '../../../services/authorization.service';
+import { treatmentPlanService } from '../../../services/treatment-plan.service';
 import { documentService } from '../../../services/document.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { ICON_TAGS } from '../../appointments/new-appointment/constants';
 import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
-const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures = [], onSave, onDelete }) => {
+const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, selectedProcedures = [], onSave, onDelete }) => {
   const currentPatient = useSelector(selectCurrentPatient);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const currentUser = useSelector((state) => state.auth?.user);
@@ -309,8 +310,12 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         showSnackbar('Authorization updated successfully', 'success');
         if (onSave) onSave(existingId);
       } else {
+        if (!treatmentPlanId) {
+           showSnackbar('Please save the treatment plan first to generate a Pre-Authorization.', 'error');
+           return;
+        }
         // Create new authorization logic here
-        const newAuth = await authorizationService.requestAuthorization({
+        const newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
           patientId,
           order,
           serviceDate: authData.serviceDate,
@@ -318,7 +323,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           tags: tagIds,
           notes: notesText,
           insuranceCompanyId: authData.insuranceCompanyId,
-          procedures: authData.procedures || []
+          items: authData.procedures || []
         });
         showSnackbar('Authorization requested successfully', 'success');
         if (onSave) onSave(newAuth._id || newAuth.id);
@@ -342,7 +347,11 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }
 
 
-    const newAuth = await authorizationService.requestAuthorization({
+    if (!treatmentPlanId) {
+      throw new Error('Please save the treatment plan first to generate a Pre-Authorization.');
+    }
+
+    const newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
       patientId,
       order,
       serviceDate: authData.serviceDate,
@@ -351,7 +360,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       insuranceCompanyId: authData.insuranceCompanyId,
       notes: notesText,
       // map selected procedures - pass full procedure objects so backend can save details
-      procedures: authData.procedures || [],
+      items: authData.procedures || [],
     });
     const newId = newAuth._id || newAuth.id;
     setSavedAuthorizationId(newId);

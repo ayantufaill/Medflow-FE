@@ -67,7 +67,7 @@ const ProductionReport = () => {
   const codes = appliedFilters.codeText ? appliedFilters.codeText.toLowerCase().split(/[,\s]+/).map(c => c.trim()).filter(Boolean) : [];
 
   let filteredReportData = reportData.filter(row => {
-    if (appliedFilters.provider !== 'all' && row.provider !== selectedProvName) return false;
+    if (appliedFilters.provider !== 'all' && row.providerId !== appliedFilters.provider) return false;
     
     if (codes.length > 0) {
       const rowCode = (row.code || '').toLowerCase();
@@ -269,6 +269,7 @@ const ProductionReport = () => {
 
       <ProductionReportFilters 
         dropdownProviders={dropdownProviders}
+        reportData={reportData}
         onApplyFilters={(filters) => setAppliedFilters(filters)}
       />
 

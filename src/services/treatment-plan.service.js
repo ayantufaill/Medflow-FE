@@ -24,5 +24,10 @@ export const treatmentPlanService = {
   async delete(id) {
     const response = await apiClient.delete(`/treatment-plans/${id}`);
     return response.data;
+  },
+
+  async generatePreAuth(id, payload) {
+    const response = await apiClient.post(`/treatment-plans/${id}/generate-preauth`, payload);
+    return response.data;
   }
 };
