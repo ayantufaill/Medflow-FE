@@ -49,7 +49,7 @@ const AppointmentModalHeader = ({
     flexDirection: "row", padding: "0px 11.8px", borderWidth: "1px",
     fontFamily: "Inter", fontSize: "12px", fontWeight: 500,
     textTransform: "none", borderRadius: "20px",
-    borderColor: "#e0e5eb", color: "#09121f", gap: "12px",
+    borderColor: "#e0e5eb", color: "#09121f", gap: "6px",
     px: "14px", py: "6px", bgcolor: "#fbfdfe",
     "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f9fafb" },
   };

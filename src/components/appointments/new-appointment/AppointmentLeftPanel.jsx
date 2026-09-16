@@ -69,6 +69,7 @@ const AppointmentLeftPanel = ({
   onDuplicateProcedure,
   readOnly,
   setIsRescheduling,
+  onEnterEdit,
   isEditMode = false,
   appointmentId,
   status,
@@ -711,8 +712,9 @@ const AppointmentLeftPanel = ({
           setProcedures={setProcedures}
           providers={providers}
           showExtendedOptions={showExtendedOptions}
-          setIsRescheduling={setIsRescheduling}
           isFuture={isFuture}
+          disableDelete={readOnly}
+          onEnterEdit={onEnterEdit}
         />
 
         {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
