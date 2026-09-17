@@ -144,29 +144,60 @@ const OperatorySchedulePage = () => {
   const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
-  // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
+// Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
   // to jump the calendar to a specific date and flash the relevant appointment card.
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightAppointmentId, setHighlightAppointmentId] = useState(null);
 
+  // Compute highlightTime directly from URL params so it survives remounts
+  const urlTimeParam = searchParams.get('time');
+  const highlightTime = useMemo(() => {
+    if (!urlTimeParam) return null;
+    const timeMatch = urlTimeParam.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1], 10);
+      const mins = parseInt(timeMatch[2], 10);
+      if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+      if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+      return hour * 60 + mins;
+    }
+    return null;
+  }, [urlTimeParam]);
+
+  const urlDateParam = searchParams.get('date');
+  const urlHighlightParam = searchParams.get('highlightAppointmentId');
+
+  // Apply deep-link date to schedule state whenever URL changes
   useEffect(() => {
     const dateParam = searchParams.get('date');
     const highlightParam = searchParams.get('highlightAppointmentId');
+    if (!dateParam && !highlightParam) return;
 
-    if (dateParam && dayjs(dateParam).isValid()) {
-      setSelectedDate(dayjs(dateParam).toISOString());
+    if (dateParam && dayjs(dateParam).isValid() && reduxSelectedDate !== dayjs(dateParam).format("YYYY-MM-DD")) {
+      setSelectedDate(dayjs(dateParam).format("YYYY-MM-DD"));
     }
     if (highlightParam) {
       setHighlightAppointmentId(highlightParam);
     }
-    if (dateParam || highlightParam) {
-      // Clear the params from the URL so a refresh doesn't re-trigger the jump/highlight.
-      setSearchParams({}, { replace: true });
-    }
-    // Depends on searchParams (not just mount) because clicking a notification while already
-    // on this route updates the query string in place without remounting the page.
+    // Only depends on searchParams so we catch URL changes while already on this route
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Scroll to highlight time when both selectedDate and highlightTime are set
+  useEffect(() => {
+    if (highlightTime != null && highlightTime >= 0) {
+      const timer = setTimeout(() => {
+        const gridNode = document.getElementById('schedule-grid-scroll-container');
+        if (gridNode) {
+          const HOUR_HEIGHT = 150;
+          const START_HOUR = 7;
+          const scrollTop = Math.max(0, ((highlightTime / 60) - START_HOUR)) * HOUR_HEIGHT;
+          gridNode.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightTime, selectedDate]);
 
 
 
@@ -340,7 +371,7 @@ const OperatorySchedulePage = () => {
         await scheduleBlockService.createBlock(newBlockData);
         showSnackbar("Calendar block rescheduled successfully", "success");
         setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        fetchScheduleBlocks();
+        refetchScheduleBlocks();
       } catch (err) {
         const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
         showSnackbar(msg, "error");
@@ -422,13 +453,11 @@ const OperatorySchedulePage = () => {
     };
   }, []);
 
-  const fetchScheduleBlocks = useCallback(async () => {
+  const refetchScheduleBlocks = useCallback(async () => {
     try {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
       setScheduleBlocks(blocks);
-
-      // Parse closed days from blocks
       const closedOps = {};
       blocks.forEach(block => {
         if (block.notes === "CLOSED_DAY") {
@@ -445,8 +474,27 @@ const OperatorySchedulePage = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    fetchScheduleBlocks();
-  }, [fetchScheduleBlocks]);
+    let cancelled = false;
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    scheduleBlockService.getBlocksForDate(dateStr).then(blocks => {
+      if (!cancelled) {
+        setScheduleBlocks(blocks);
+        const closedOps = {};
+        blocks.forEach(block => {
+          if (block.notes === "CLOSED_DAY") {
+            const roomId = block.roomId ? String(block.roomId).replace(/^op/, "") : "";
+            if (roomId) {
+              closedOps[`${dateStr}:op${roomId}`] = true;
+            }
+          }
+        });
+        setClosedOperatories(closedOps);
+      }
+    }).catch(err => {
+      if (!cancelled) console.error("Error fetching schedule blocks:", err);
+    });
+    return () => { cancelled = true; };
+  }, [selectedDate]);
 
   const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
     if (dayjs(dateStr).isBefore(dayjs(), 'day')) {
@@ -479,12 +527,12 @@ const OperatorySchedulePage = () => {
         setClosedOperatories(prev => ({ ...prev, [key]: true }));
       }
       // Re-fetch to ensure sync with backend
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       console.error("Failed to toggle operatory status:", err);
       showSnackbar("Failed to update operatory status", "error");
     }
-  }, [closedOperatories, scheduleBlocks, fetchScheduleBlocks, showSnackbar]);
+  }, [closedOperatories, scheduleBlocks, refetchScheduleBlocks, showSnackbar]);
 
   const handleSaveBlock = async (blockData) => {
     try {
@@ -496,7 +544,7 @@ const OperatorySchedulePage = () => {
         showSnackbar("Block created successfully", "success");
       }
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to block slot";
       showSnackbar(msg, "error");
@@ -508,7 +556,7 @@ const OperatorySchedulePage = () => {
       await scheduleBlockService.deleteBlock(blockId);
       showSnackbar("Block deleted successfully", "success");
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
       showSnackbar(msg, "error");

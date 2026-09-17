@@ -17,7 +17,7 @@ const ScheduleCalendar = ({ onSlotClick, onBlockClick, scheduleBlocks, privacyMo
   const totalGridWidth = TIME_LABEL_WIDTH + columnCount * COLUMN_MIN_WIDTH;
 
   return (
-    <Box sx={{ flex: 1, overflow: 'auto' }}>
+    <Box id="schedule-grid-scroll-container" sx={{ flex: 1, overflow: 'auto' }}>
       <Box sx={{ minWidth: totalGridWidth }}>
         {isWeek ? <WeekHeaders selectedDate={selectedDate} /> : (
           <OperatoryHeaders 

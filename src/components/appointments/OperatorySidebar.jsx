@@ -479,13 +479,15 @@ const OperatorySidebar = ({
     }));
   };
 
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error('Failed to copy text:', err);
-    }
-  };
+   const copyToClipboard = async (text) => {
+     try {
+       if (typeof navigator !== 'undefined' && navigator.clipboard) {
+         await navigator.clipboard.writeText(text);
+       }
+     } catch (err) {
+       console.error('Failed to copy text:', err);
+     }
+   };
 
   const handleChatClick = () => setChatOpen(true);
   const handleDrawerClose = () => {

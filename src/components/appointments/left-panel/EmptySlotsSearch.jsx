@@ -64,16 +64,20 @@ const EmptySlotsSearch = () => {
           duration
         })).unwrap().then(result => {
           const rawSlots = result?.availableSlots || [];
-          const mappedSlots = rawSlots.map(timeStr => {
-            const start = dayjs(`${searchDate}T${timeStr}`);
-            const end = start.add(duration, 'minute');
-            return {
-              date: searchDate,
-              startTime: start.format('h:mm A'),
-              endTime: end.format('h:mm A'),
-              roomName: ''
-            };
-          });
+           const now = dayjs();
+           const mappedSlots = rawSlots.map(timeStr => {
+             const start = dayjs(`${searchDate}T${timeStr}`);
+             const end = start.add(duration, 'minute');
+             return {
+               date: searchDate,
+               startTime: start.format('h:mm A'),
+               endTime: end.format('h:mm A'),
+               roomName: ''
+             };
+           }).filter(slot => {
+             const slotStart = dayjs(`${slot.date} ${slot.startTime}`, 'YYYY-MM-DD h:mm A');
+             return !slotStart.isBefore(now, 'minute');
+           });
           
           // Apply AM/PM filters
           return mappedSlots.filter(slot => {
@@ -148,7 +152,9 @@ const EmptySlotsSearch = () => {
                   }
                 }}
                 onClick={() => {
-                  navigate(`/appointments/operatory-schedule?date=${slot.date || dateFrom.format('YYYY-MM-DD')}`);
+                  const slotDate = slot.date || dateFrom.format('YYYY-MM-DD');
+                  const slotTime = slot.startTime;
+                  navigate(`/appointments/operatory-schedule?date=${slotDate}&time=${encodeURIComponent(slotTime)}`);
                 }}
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '4px' }}>
