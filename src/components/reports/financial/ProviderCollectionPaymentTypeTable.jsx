@@ -25,9 +25,15 @@ const ProviderCollectionPaymentTypeTable = ({
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal);
+    // If flagVal is already a full object with color info (from backend)
+    if (flagVal && typeof flagVal === 'object' && flagVal.color) {
+      return { color: flagVal.color, name: flagVal.name || 'Flag' };
+    }
+    // Otherwise try to resolve string ID against global flags
+    const flagId = typeof flagVal === 'object' ? flagVal?.id : flagVal;
+    const found = globalFlags.find(f => f.id === flagId || f.id === String(flagId));
     if (found) return { color: found.color, name: found.name };
-    return { color: flagVal, name: 'Flag' };
+    return { color: '#94a3b8', name: 'Flag' }; // Default gray instead of invalid color
   };
 
   return (

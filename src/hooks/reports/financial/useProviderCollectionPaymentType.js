@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { reportingService } from '../../../services/reporting.service';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import medflowLogo from '../../../assets/medflow-logo.png';
 
 export const useProviderCollectionPaymentType = () => {
   const dispatch = useDispatch();
@@ -10,146 +11,39 @@ export const useProviderCollectionPaymentType = () => {
   const initialStartDate = new Date().toISOString().split('T')[0];
   const initialEndDate = new Date().toISOString().split('T')[0];
 
-  const [dateRange, setDateRange] = useState('daily');
-  const [startDate, setStartDate] = useState(initialStartDate);
-  const [endDate, setEndDate] = useState(initialEndDate);
-  const [provider, setProvider] = useState('all');
-  const [showFlags, setShowFlags] = useState(true);
-  const [flagFilter, setFlagFilter] = useState('pts');
-  const [sortBy, setSortBy] = useState('default');
+  const [filters, setFilters] = useState({
+    dateRange: 'daily',
+    startDate: initialStartDate,
+    endDate: initialEndDate,
+    provider: 'all',
+    showFlags: true,
+    flagFilter: 'pts',
+    sortBy: 'default'
+  });
 
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const getLocalDateString = (d) => {
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().split('T')[0];
-  };
-
-  const handleFilterChange = (key, value) => {
-    switch (key) {
-      case 'showFlags':
-        setShowFlags(value);
-        break;
-      case 'startDate':
-        setStartDate(value);
-        break;
-      case 'endDate':
-        setEndDate(value);
-        break;
-      case 'provider':
-        setProvider(value);
-        break;
-      case 'flagFilter':
-        setFlagFilter(value);
-        break;
-      case 'sortBy':
-        setSortBy(value);
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleFilterModeChange = (e) => {
-    const newMode = e.target.value;
-    setDateRange(newMode);
-    
-    if (newMode === 'range') return;
-
-    const today = new Date();
-    let start = new Date(today);
-    let end = new Date(today);
-
-    switch (newMode) {
-      case 'daily':
-        break;
-      case 'this_week': {
-        const day = today.getDay();
-        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(today);
-        start.setDate(diff);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-      case 'this_month':
-      case 'month_to_date': {
-        start = new Date(today.getFullYear(), today.getMonth(), 1);
-        end = newMode === 'this_month' ? new Date(today.getFullYear(), today.getMonth() + 1, 0) : new Date(today);
-        break;
-      }
-      case 'last_7_days': {
-        start = new Date(today);
-        start.setDate(today.getDate() - 7);
-        break;
-      }
-      case 'last_week': {
-        const day = today.getDay();
-        const diffToLastWeekStart = today.getDate() - day - 7 + (day === 0 ? -6 : 1);
-        start = new Date(today);
-        start.setDate(diffToLastWeekStart);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-      case 'last_4_weeks': {
-        start = new Date(today);
-        start.setDate(today.getDate() - 28);
-        break;
-      }
-      case 'last_month': {
-        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        end = new Date(today.getFullYear(), today.getMonth(), 0);
-        break;
-      }
-      case 'last_3_months': {
-        start = new Date(today);
-        start.setMonth(today.getMonth() - 3);
-        break;
-      }
-      case 'last_12_months': {
-        start = new Date(today);
-        start.setFullYear(today.getFullYear() - 1);
-        break;
-      }
-      case 'quarter_to_date': {
-        const quarter = Math.floor(today.getMonth() / 3);
-        start = new Date(today.getFullYear(), quarter * 3, 1);
-        break;
-      }
-      case 'year_to_date': {
-        start = new Date(today.getFullYear(), 0, 1);
-        break;
-      }
-      case 'last_year': {
-        start = new Date(today.getFullYear() - 1, 0, 1);
-        end = new Date(today.getFullYear() - 1, 11, 31);
-        break;
-      }
-      default:
-        break;
-    }
-    
-    setStartDate(getLocalDateString(start));
-    setEndDate(getLocalDateString(end));
-  };
-
   const lastFetchedRef = useRef(null);
 
-  const fetchData = async () => {
-    const paramsKey = `${dateRange}_${startDate}_${endDate}`;
+  const fetchData = async (overrideFilters = null) => {
+    const active = overrideFilters || filters;
+    const activeDateRange = active.dateRange;
+    const activeStartDate = active.startDate;
+    const activeEndDate = active.endDate;
+
+    const paramsKey = `${activeDateRange}_${activeStartDate}_${activeEndDate}`;
     if (lastFetchedRef.current === paramsKey) return;
     lastFetchedRef.current = paramsKey;
 
     try {
       setLoading(true);
-      const rangeParam = dateRange.charAt(0).toUpperCase() + dateRange.slice(1);
+      const rangeParam = activeDateRange.charAt(0).toUpperCase() + activeDateRange.slice(1);
       const res = await reportingService.getFinancialReport('provider-collection-payment-type', {
-        date: startDate,
+        date: activeStartDate,
         range: rangeParam,
-        startDate: startDate,
-        endDate: endDate,
+        startDate: activeStartDate,
+        endDate: activeEndDate,
       });
       setReportData(res || []);
     } catch (err) {
@@ -166,7 +60,8 @@ export const useProviderCollectionPaymentType = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dateRange, startDate, endDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.dateRange, filters.startDate, filters.endDate]);
 
   const getProviderFirstAndLastName = (p) => {
     if (p?.userId?.firstName || p?.userId?.lastName) {
@@ -186,59 +81,59 @@ export const useProviderCollectionPaymentType = () => {
     return `${firstName} ${lastName}`.trim() || p?.name || 'Unknown';
   };
 
-  const selectedProvObj = dropdownProviders.find(p => (p._id || p.id) === provider);
-  const selectedProvAbbr = selectedProvObj ? (selectedProvObj.abbr || selectedProvObj.Abbr || '').trim() : '';
-  const selectedProvInitials = selectedProvObj ? (() => {
-    const { firstName, lastName } = getProviderFirstAndLastName(selectedProvObj);
-    const f = firstName.trim();
-    const l = lastName.trim();
-    if (f && l) {
-      return (f[0] + l.substring(0, 2)).toUpperCase();
-    }
-    return (f ? f.substring(0, 3) : '').toUpperCase();
-  })() : '';
-
   const filteredReportData = reportData.filter(row => {
-    if (provider !== 'all' && row.providerId !== provider) return false;
+    if (filters.provider !== 'all' && row.providerId !== filters.provider) return false;
 
-    if (flagFilter === 'with_flags') {
+    if (filters.flagFilter === 'with_flags') {
       if (!row.flags || row.flags.length === 0) return false;
-    } else if (flagFilter === 'without_flags') {
+    } else if (filters.flagFilter === 'without_flags') {
       if (row.flags && row.flags.length > 0) return false;
     }
 
     return true;
   });
 
-  const handleApply = () => {
-    lastFetchedRef.current = null;
-    fetchData();
+  const handleApply = (newFilters) => {
+    if (newFilters) {
+      setFilters(newFilters);
+      // Only re-fetch if dates changed
+      const dateChanged =
+        newFilters.dateRange !== filters.dateRange ||
+        newFilters.startDate !== filters.startDate ||
+        newFilters.endDate !== filters.endDate;
+      if (dateChanged) {
+        lastFetchedRef.current = null;
+        fetchData(newFilters);
+      }
+    }
   };
 
   const handleClear = () => {
-    setDateRange('daily');
-    setStartDate(initialStartDate);
-    setEndDate(initialEndDate);
-    setProvider('all');
-    setShowFlags(true);
-    setFlagFilter('pts');
-    setSortBy('default');
-
+    const defaultFilters = {
+      dateRange: 'daily',
+      startDate: initialStartDate,
+      endDate: initialEndDate,
+      provider: 'all',
+      showFlags: true,
+      flagFilter: 'pts',
+      sortBy: 'default'
+    };
+    setFilters(defaultFilters);
     lastFetchedRef.current = null;
-    fetchData();
+    fetchData(defaultFilters);
   };
 
   const sortedReportData = [...filteredReportData].sort((a, b) => {
-    if (sortBy === 'date_asc') {
+    if (filters.sortBy === 'date_asc') {
       return new Date(a.date || 0) - new Date(b.date || 0);
     }
-    if (sortBy === 'date_desc') {
+    if (filters.sortBy === 'date_desc') {
       return new Date(b.date || 0) - new Date(a.date || 0);
     }
-    if (sortBy === 'patient') {
+    if (filters.sortBy === 'patient') {
       return (a.patient || '').localeCompare(b.patient || '');
     }
-    if (sortBy === 'amount_desc') {
+    if (filters.sortBy === 'amount_desc') {
       const aAmt = (a.ins || 0) + (a.pt || 0);
       const bAmt = (b.ins || 0) + (b.pt || 0);
       return bAmt - aAmt;
@@ -280,7 +175,7 @@ export const useProviderCollectionPaymentType = () => {
   const handleExportCSV = () => {
     const headers = [
       'Date',
-      showFlags ? 'Flags' : null,
+      filters.showFlags ? 'Flags' : null,
       'Patient',
       'Code',
       'Procedure',
@@ -299,7 +194,7 @@ export const useProviderCollectionPaymentType = () => {
     const rows = sortedReportData.map(row => {
       const rowData = [
         row.date ? new Date(row.date).toLocaleDateString() : '',
-        showFlags ? (row.flags ? row.flags.length : 0) : null,
+        filters.showFlags ? (row.flags ? row.flags.length : 0) : null,
         row.patient || '',
         row.code || '',
         row.procedure || '',
@@ -337,42 +232,68 @@ export const useProviderCollectionPaymentType = () => {
     const tableEl = document.getElementById('provider-collection-payment-table');
     const footerEl = document.getElementById('provider-collection-payment-footer');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Provider Collection Per Payment Type</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2 style="font-family: sans-serif;">Provider Collection Per Payment Type</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    if (footerEl) {
-      printWindow.document.write('<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">' + footerEl.innerHTML + '</div>');
-    }
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Provider Collection Per Payment Type</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print, svg { display: none !important; }
+            h6, h5 { font-family: sans-serif; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Provider Collection Per Payment Type</h2>
+          ${tableEl.outerHTML}
+          ${footerEl ? `<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">${footerEl.innerHTML}</div>` : ''}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   return {
-    dateRange,
-    startDate,
-    endDate,
-    provider,
-    showFlags,
-    flagFilter,
-    sortBy,
+    filters,
     loading,
     dropdownProviders,
     sortedReportData,
     summaryStats,
     totals,
     getProviderLabel,
-    handleFilterChange,
-    handleFilterModeChange,
     handleApply,
     handleClear,
     handleExportCSV,

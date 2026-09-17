@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { reportingService } from '../../../services/reporting.service';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import medflowLogo from '../../../assets/medflow-logo.png';
 
 export const useProductionCollectionSummary = () => {
   const dispatch = useDispatch();
@@ -165,28 +166,95 @@ export const useProductionCollectionSummary = () => {
     });
   }
 
+  const dailyStats = [];
+  if (filters.showSummaryPerDay) {
+    const datesRaw = {};
+    filteredReportData.forEach(row => {
+      const rawDate = row.date || row.createdAt || row.dos;
+      let dStr = 'Unknown Date';
+      if (rawDate) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          dStr = d.toLocaleDateString();
+        } else {
+          dStr = String(rawDate).split('T')[0];
+        }
+      }
+      if (!datesRaw[dStr]) datesRaw[dStr] = [];
+      datesRaw[dStr].push(row);
+    });
+
+    const sortedDates = Object.keys(datesRaw).sort((a, b) => {
+      if (a === 'Unknown Date') return 1;
+      if (b === 'Unknown Date') return -1;
+      return new Date(a) - new Date(b);
+    });
+
+    sortedDates.forEach(dateStr => {
+      const dayRows = datesRaw[dateStr];
+      const dayGlobal = calculateStats(dayRows);
+      let dayProviders = null;
+
+      if (filters.grouping === 'group-provider') {
+        const provRaw = {};
+        dayProviders = {};
+        dayRows.forEach(row => {
+          const provName = getProviderForRow(row);
+          if (!provRaw[provName]) provRaw[provName] = [];
+          provRaw[provName].push(row);
+        });
+        Object.entries(provRaw).forEach(([provName, groupRows]) => {
+          dayProviders[provName] = calculateStats(groupRows);
+        });
+      }
+
+      dailyStats.push({
+        date: dateStr,
+        globalStats: dayGlobal,
+        providerGroupsStats: dayProviders
+      });
+    });
+  }
+
   const handleExportCSV = () => {
     const headers = ['Statistic / Metric', 'Value'];
     let rows = [];
 
+    const pushStatsToRows = (statsObj, prefix = '') => {
+      rows.push(...statsObj.prodStats.map(s => [s.label, s.value]));
+      rows.push(...statsObj.collStats.map(s => [s.label, s.value]));
+      rows.push(['Collection Percentage', `${statsObj.percent.toFixed(1)}%`]);
+      rows.push(['', '']);
+    };
+
+    if (filters.showSummaryPerDay && dailyStats.length > 0) {
+      dailyStats.forEach(day => {
+        rows.push([`Date: ${day.date}`, '']);
+        if (filters.grouping === 'group-provider' && day.providerGroupsStats) {
+          Object.entries(day.providerGroupsStats).forEach(([provName, stats]) => {
+            rows.push([`Provider: ${provName}`, '']);
+            pushStatsToRows(stats);
+          });
+          rows.push(['Total for Date', '']);
+        }
+        pushStatsToRows(day.globalStats);
+      });
+      rows.push(['GRAND TOTAL', '']);
+    }
+
     if (filters.grouping === 'group-provider') {
       Object.entries(providerGroupsStats).forEach(([provName, stats]) => {
         rows.push([`Provider: ${provName}`, '']);
-        rows.push(...stats.prodStats.map(s => [s.label, s.value]));
-        rows.push(...stats.collStats.map(s => [s.label, s.value]));
-        rows.push(['Collection Percentage', `${stats.percent.toFixed(1)}%`]);
-        rows.push(['', '']); // spacer
+        pushStatsToRows(stats);
       });
-      rows.push(['Grand Total', '']);
+      if (filters.showSummaryPerDay) rows.push(['Grand Total', '']);
     }
 
-    rows.push(...globalStats.prodStats.map(s => [s.label, s.value]));
-    rows.push(...globalStats.collStats.map(s => [s.label, s.value]));
-    rows.push(['Collection Percentage', `${globalStats.percent.toFixed(1)}%`]);
+    pushStatsToRows(globalStats);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -201,22 +269,32 @@ export const useProductionCollectionSummary = () => {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Production & Collection Summary</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: sans-serif; font-size: 11px; padding: 20px; }');
-    printWindow.document.write('.provider-section { margin-bottom: 30px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }');
-    printWindow.document.write('.section-title { font-size: 14px; font-weight: bold; color: #1976d2; margin-bottom: 10px; }');
-    printWindow.document.write('.stats-container { display: flex; flex-direction: row; gap: 40px; }');
-    printWindow.document.write('.stats-column { flex: 1; }');
-    printWindow.document.write('.stat-row { display: flex; margin-bottom: 4px; }');
-    printWindow.document.write('.stat-label { font-weight: 500; min-width: 240px; color: #333; }');
-    printWindow.document.write('.stat-value { font-weight: bold; color: #000; }');
-    printWindow.document.write('.formula-label { color: #1976d2; }');
-    printWindow.document.write('.percent-container { margin-top: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #1976d2; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Production & Collection Summary Report</h2>');
-    printWindow.document.write(`<p>Date Range: ${filters.dateRange} (${filters.startDate} to ${filters.endDate})</p>`);
+    let printHTML = `
+      <html>
+        <head>
+          <title>Production & Collection Summary</title>
+          <style>
+            body { font-family: sans-serif; font-size: 11px; padding: 20px; background-color: #fff; color: #000; }
+            .provider-section { margin-bottom: 30px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
+            .section-title { font-size: 14px; font-weight: bold; color: #1976d2; margin-bottom: 10px; }
+            .date-title { font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 20px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; }
+            .stats-container { display: flex; flex-direction: row; gap: 40px; }
+            .stats-column { flex: 1; }
+            .stat-row { display: flex; margin-bottom: 4px; }
+            .stat-label { font-weight: 500; min-width: 240px; color: #333; }
+            .stat-value { font-weight: bold; color: #000; }
+            .formula-label { color: #1976d2; }
+            .percent-container { margin-top: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #1976d2; }
+            .no-print, button, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Production & Collection Summary Report</h2>
+          <p>Date Range: ${filters.dateRange} (${filters.startDate} to ${filters.endDate})</p>
+    `;
 
     const renderPrintSection = (prodStats, collStats, percent, heading = '') => {
       let html = '<div class="provider-section">';
@@ -225,7 +303,6 @@ export const useProductionCollectionSummary = () => {
       }
       html += '<div class="stats-container">';
       
-      // Production Column
       html += '<div class="stats-column">';
       prodStats.forEach(s => {
         const labelClass = s.isFormula ? 'stat-label formula-label' : 'stat-label';
@@ -233,7 +310,6 @@ export const useProductionCollectionSummary = () => {
       });
       html += '</div>';
 
-      // Collection Column
       html += '<div class="stats-column">';
       collStats.forEach(s => {
         html += `<div class="stat-row"><span class="stat-label formula-label">${s.label}</span><span class="stat-value" style="margin-left:10px;">${s.value}</span></div>`;
@@ -246,20 +322,59 @@ export const useProductionCollectionSummary = () => {
       return html;
     };
 
-    if (filters.grouping === 'group-provider') {
-      Object.entries(providerGroupsStats).forEach(([provName, stats]) => {
-        printWindow.document.write(renderPrintSection(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`));
+    if (filters.showSummaryPerDay && dailyStats.length > 0) {
+      dailyStats.forEach(day => {
+        printHTML += `<div class="date-title">Date: ${day.date}</div>`;
+        if (filters.grouping === 'group-provider' && day.providerGroupsStats) {
+          Object.entries(day.providerGroupsStats).forEach(([provName, stats]) => {
+            printHTML += renderPrintSection(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`);
+          });
+          printHTML += '<h3>Total for Date</h3>';
+        }
+        printHTML += renderPrintSection(day.globalStats.prodStats, day.globalStats.collStats, day.globalStats.percent);
       });
-      printWindow.document.write('<h3>Grand Total</h3>');
+      printHTML += '<h2 style="margin-top: 30px;">GRAND TOTAL</h2>';
     }
 
-    printWindow.document.write(renderPrintSection(globalStats.prodStats, globalStats.collStats, globalStats.percent));
+    if (filters.grouping === 'group-provider') {
+      Object.entries(providerGroupsStats).forEach(([provName, stats]) => {
+        printHTML += renderPrintSection(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`);
+      });
+      if (filters.showSummaryPerDay || filters.grouping === 'group-provider') {
+        printHTML += '<h3>Grand Total</h3>';
+      }
+    }
 
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    printHTML += renderPrintSection(globalStats.prodStats, globalStats.collStats, globalStats.percent);
+
+    printHTML += '</body></html>';
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = printHTML;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   return {
@@ -270,6 +385,7 @@ export const useProductionCollectionSummary = () => {
     filteredReportData,
     globalStats,
     providerGroupsStats,
+    dailyStats,
     handleExportCSV,
     handlePrint
   };

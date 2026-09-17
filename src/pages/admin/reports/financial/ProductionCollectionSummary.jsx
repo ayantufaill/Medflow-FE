@@ -15,6 +15,7 @@ const ProductionCollectionSummary = () => {
     filteredReportData,
     globalStats,
     providerGroupsStats,
+    dailyStats,
     handleExportCSV,
     handlePrint
   } = useProductionCollectionSummary();
@@ -37,6 +38,8 @@ const ProductionCollectionSummary = () => {
         <ProductionCollectionSummaryView 
           globalStats={globalStats}
           providerGroups={providerGroupsStats}
+          dailyStats={dailyStats}
+          showSummaryPerDay={filters.showSummaryPerDay}
           grouping={filters.grouping}
         />
       </Box>
