@@ -12,6 +12,7 @@ const ProductionCollection = () => {
     setFilters,
     loading,
     dropdownProviders,
+    reportData,
     transformedReportData,
     handleExportCSV,
     handlePrint,
@@ -27,12 +28,13 @@ const ProductionCollection = () => {
     <ReportLayout title="Production & Collection Report">
       <ProductionCollectionFilters 
         dropdownProviders={dropdownProviders}
+        reportData={reportData}
         onApplyFilters={(f) => setFilters(f)}
       />
 
       <ProductionReportActions 
         loading={loading}
-        onExportCSV={handleExportCSV}
+        onExportCsv={handleExportCSV}
         onPrint={handlePrint}
         hasData={transformedReportData.length > 0}
         customLeftActions={customLeftActions}
@@ -45,6 +47,7 @@ const ProductionCollection = () => {
           showFlags={filters.showFlags}
           showDOB={filters.showDOB}
           showProvider={filters.showProvider}
+          filterByDOS={filters.filterByDOS}
           handleExportGroupCSV={handleExportGroupCSV}
           handlePrintGroup={handlePrintGroup}
         />

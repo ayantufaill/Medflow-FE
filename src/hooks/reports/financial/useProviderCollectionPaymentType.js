@@ -199,16 +199,7 @@ export const useProviderCollectionPaymentType = () => {
   })() : '';
 
   const filteredReportData = reportData.filter(row => {
-    if (provider !== 'all') {
-      const renderLower = (row.render || '').toLowerCase();
-      const billLower = (row.bill || '').toLowerCase();
-      const abbrLower = selectedProvAbbr.toLowerCase();
-      const initialsLower = selectedProvInitials.toLowerCase();
-      
-      const match = (abbrLower && (renderLower === abbrLower || billLower === abbrLower)) ||
-                    (initialsLower && (renderLower === initialsLower || billLower === initialsLower));
-      if (!match) return false;
-    }
+    if (provider !== 'all' && row.providerId !== provider) return false;
 
     if (flagFilter === 'with_flags') {
       if (!row.flags || row.flags.length === 0) return false;

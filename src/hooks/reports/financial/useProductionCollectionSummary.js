@@ -83,44 +83,16 @@ export const useProductionCollectionSummary = () => {
   })() : '';
 
   const filteredReportData = reportData.filter(row => {
-    if (filters.provider !== 'all') {
-      const renderLower = (row.render || '').toLowerCase();
-      const billLower = (row.bill || '').toLowerCase();
-      const abbrLower = selectedProvAbbr.toLowerCase();
-      const initialsLower = selectedProvInitials.toLowerCase();
-      
-      const match = (abbrLower && (renderLower === abbrLower || billLower === abbrLower)) ||
-                    (initialsLower && (renderLower === initialsLower || billLower === initialsLower));
-      if (!match) return false;
-    }
+    if (filters.provider !== 'all' && row.providerId !== filters.provider) return false;
     return true;
   });
 
   const getProviderForRow = (row) => {
-    const renderVal = (row.render || '').trim().toLowerCase();
-    const billVal = (row.bill || '').trim().toLowerCase();
-    if (!renderVal && !billVal) return 'Unassigned';
-
-    const found = dropdownProviders.find(p => {
-      const abbr = (p.abbr || p.Abbr || '').trim().toLowerCase();
-      const { firstName, lastName } = getProviderFirstAndLastName(p);
-      const f = firstName.trim();
-      const l = lastName.trim();
-      let initials = '';
-      if (f && l) {
-        initials = (f[0] + l.substring(0, 2)).toLowerCase();
-      } else {
-        initials = (f ? f.substring(0, 3) : '').toLowerCase();
-      }
-
-      return (abbr && (renderVal === abbr || billVal === abbr)) ||
-             (initials && (renderVal === initials || billVal === initials));
-    });
-
-    if (found) {
-      return getProviderLabel(found);
+    if (row.providerId) {
+      const found = dropdownProviders.find(p => (p._id || p.id) === row.providerId);
+      if (found) return getProviderLabel(found);
     }
-    return row.render || row.bill || 'Unassigned';
+    return row.provider || row.render || row.bill || 'Unassigned';
   };
 
   const calculateStats = (rows) => {
