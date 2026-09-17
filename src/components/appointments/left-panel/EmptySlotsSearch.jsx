@@ -4,6 +4,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { fetchAvailableSlots } from '../../../store/slices/appointmentSlice';
 import { useDropdownData } from '../../../hooks/redux';
@@ -12,6 +13,7 @@ import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import dayjs from 'dayjs';
 
 const EmptySlotsSearch = () => {
+  const navigate = useNavigate();
   const [duration, setDuration] = useState(60);
   const [providerId, setProviderId] = useState("");
   const [roomId, setRoomId] = useState("");
@@ -132,18 +134,21 @@ const EmptySlotsSearch = () => {
             const roomName = slot.roomName || (roomId ? rooms.find(r => (r._id || r.id) === roomId)?.name : 'Op1');
             
             return (
-              <Box 
-                key={idx} 
-                sx={{ 
-                  p: '12px', 
-                  borderRadius: radius.md, 
-                  border: `1px solid ${COLORS.BORDER}`, 
+              <Box
+                key={idx}
+                sx={{
+                  p: '12px',
+                  borderRadius: radius.md,
+                  border: `1px solid ${COLORS.BORDER}`,
                   backgroundColor: "#fafbfe",
                   cursor: 'pointer',
                   '&:hover': {
                     borderColor: COLORS.ACCENT,
                     backgroundColor: COLORS.ACCENT_BG
                   }
+                }}
+                onClick={() => {
+                  navigate(`/appointments/operatory-schedule?date=${slot.date || dateFrom.format('YYYY-MM-DD')}`);
                 }}
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '4px' }}>
