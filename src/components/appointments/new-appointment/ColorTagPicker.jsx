@@ -6,7 +6,7 @@ import { ICON_TAGS } from "./constants";
 
 const MAX_TAGS = 2;
 
-const ColorTagPicker = ({ selected = new Set(), onChange }) => {
+const ColorTagPicker = ({ selected = new Set(), onChange, readOnly = false }) => {
   const selectedArray = selected instanceof Set ? Array.from(selected) : (Array.isArray(selected) ? selected : []);
   const normalizedSelected = new Set(selectedArray.map(s => typeof s === 'string' ? s.toLowerCase() : s));
 
@@ -55,59 +55,59 @@ const ColorTagPicker = ({ selected = new Set(), onChange }) => {
 
       <Box sx={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
         {selectedTags.map((tag) => (
-          <Box
-            key={tag.id}
-            sx={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "20px",
-              backgroundColor: "#eff6ff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "default",
-              transition: "all 0.15s",
-              flexShrink: 0,
-              position: "relative",
-              "&:hover": {
-                backgroundColor: "#dbeafe",
-                transform: "scale(1.1)",
-              },
-              "&:hover svg": {
-                display: "block",
-              },
-            }}
-          >
+          <Tooltip key={tag.id} title={tag.label} placement="top">
             <Box
-              component="img"
-              src={tag.src}
-              alt={tag.label}
-              sx={{ width: "36px", height: "36px", objectFit: "contain" }}
-            />
-            <Close
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveTag(tag.id);
-              }}
               sx={{
-                position: "absolute",
-                top: "2px",
-                right: "2px",
-                fontSize: "12px",
-                color: "#ef4444",
+                pointerEvents: "auto",
+                width: "52px",
+                height: "52px",
+                borderRadius: "20px",
                 backgroundColor: "#eff6ff",
-                borderRadius: "50%",
-                width: "16px",
-                height: "16px",
-                padding: "2px",
-                display: "none",
-                cursor: "pointer",
-                "&:hover": { color: "#dc2626" },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "default",
+                transition: "all 0.15s",
+                flexShrink: 0,
+                position: "relative",
+                "&:hover": {
+                  backgroundColor: "#dbeafe",
+                  transform: "scale(1.1)",
+                },
               }}
-            />
-          </Box>
+            >
+              <Box
+                component="img"
+                src={tag.src}
+                alt={tag.label}
+                sx={{ width: "36px", height: "36px", objectFit: "contain" }}
+              />
+              {!readOnly && (
+                <Close
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveTag(tag.id);
+                  }}
+                  sx={{
+                    position: "absolute",
+                    top: "2px",
+                    right: "2px",
+                    fontSize: "12px",
+                    color: "#ef4444",
+                    backgroundColor: "#eff6ff",
+                    borderRadius: "50%",
+                    width: "16px",
+                    height: "16px",
+                    padding: "2px",
+                    cursor: "pointer",
+                    "&:hover": { color: "#dc2626" },
+                  }}
+                />
+              )}
+            </Box>
+          </Tooltip>
         ))}
-        {selectedTags.length < MAX_TAGS && (
+        {!readOnly && selectedTags.length < MAX_TAGS && (
           <Tooltip title="Add Tag" arrow placement="top" disableInteractive>
             <Box
               component="span"
