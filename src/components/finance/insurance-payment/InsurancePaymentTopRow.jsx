@@ -81,10 +81,22 @@ const InsurancePaymentTopRow = ({
         <MenuItem value="Test Jen">Test Jen</MenuItem>
       </Select>
       
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 'auto' }}>
         {checkboxOptions.map((item) => (
-          <Box key={item.label} sx={{ display: 'flex', alignItems: 'center' }}>
-            <Checkbox size="small" sx={{ p: 0.2, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />
+          <Box
+            key={item.label}
+            onClick={() => item.onChange?.({ target: { checked: !item.checked } })}
+            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <Checkbox
+              size="small"
+              checked={Boolean(item.checked)}
+              onChange={(e) => {
+                e.stopPropagation();
+                item.onChange?.(e);
+              }}
+              sx={{ p: 0.2, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }}
+            />
             <Typography sx={{ fontSize: '0.8125rem' }}>{item.label}</Typography>
             {item.icon && <HelpOutlineIcon sx={{ fontSize: '0.8rem', ml: 0.5, color: '#666' }} />}
           </Box>

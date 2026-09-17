@@ -249,7 +249,10 @@ export const fetchLedgerItems = createAsyncThunk(
 
           const isApproved =
             claimStatus.toLowerCase().includes("approved") ||
-            claimStatus.toLowerCase().includes("paid");
+            claimStatus.toLowerCase().includes("paid") ||
+            claimStatus.toLowerCase().includes("received") ||
+            claimStatus.toLowerCase().includes("rejected") ||
+            claimStatus.toLowerCase().includes("denied");
 
           let specificProcedures = [];
           if (claim.procedures && claim.procedures.length > 0) {
@@ -363,32 +366,67 @@ export const fetchLedgerItems = createAsyncThunk(
 
         // Check if claims associated with this invoice have been paid/approved
         const hasApprovedClaim = claimsMapped.some((c) => c.isApproved);
-        const hasInsurancePayment = totalInsPaidAmt > 0;
+        const hasInsurancePaymentRecord = invoicePms.some(
+          (p) =>
+            (p.paymentSource === "insurance_company" || p.method === "insurance") &&
+            String(p.status || "").toLowerCase() !== "void" &&
+            String(p.status || "").toLowerCase() !== "voided"
+        );
+        const hasInsurancePayment = totalInsPaidAmt > 0 || hasInsurancePaymentRecord;
         const isInsuranceSettled =
           hasApprovedClaim ||
           (hasInsurancePayment &&
             (claimsMapped.length === 0 || claimsMapped.every((c) => c.isApproved)));
 
-        const insUnderpayment = isInsuranceSettled
-          ? Math.max(0, rawIns - totalInsPaidAmt)
-          : 0;
-
         const insOverpayment = Math.max(0, totalInsPaidAmt - rawIns);
         const ptOverpayment = Math.max(0, effectivePtPaid - rawPt);
 
-        const adjustedPtBal = Math.max(
-          0,
-          rawPt + penaltyTotal + insUnderpayment - effectivePtPaid - insOverpayment,
+        const isClaimPartial = claimsMapped.some(
+          (c) => String(c.status || "").toLowerCase().includes("partial")
         );
-        const adjustedInsBal = isInsuranceSettled
-          ? 0
-          : Math.max(
+        const hasPartialPayment = invoicePms.some(
+          (p) =>
+            (p.paymentSource === "insurance_company" || p.method === "insurance") &&
+            Boolean(p.isPartialPayment)
+        );
+        const isPartialAdjudication = isClaimPartial || hasPartialPayment;
+
+        let adjustedPtBal = 0;
+        let adjustedInsBal = 0;
+
+        if (isInsuranceSettled) {
+          if (isPartialAdjudication) {
+            // Partial Payment marked:
+            // Claim remains open/ongoing. Underpayment remains in insurance balance.
+            // Patient portion is preserved and NOT charged for underpayment.
+            adjustedPtBal = Math.max(0, rawPt + penaltyTotal - effectivePtPaid);
+            adjustedInsBal = Math.max(
               0,
-              rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
+              originalTotal - rawPt - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt,
             );
+          } else {
+            // Final Payment (Partial Payment unchecked / final):
+            // Final claim adjudication. Any underpayment shifts to patient responsibility. Insurance balance is zero.
+            adjustedPtBal = Math.max(
+              0,
+              originalTotal - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt - effectivePtPaid,
+            );
+            adjustedInsBal = 0;
+          }
+        } else {
+          // Insurance pending: patient owes their portion, insurance owes their portion
+          adjustedPtBal = Math.max(
+            0,
+            rawPt + penaltyTotal - effectivePtPaid - insOverpayment,
+          );
+          adjustedInsBal = Math.max(
+            0,
+            rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
+          );
+        }
         const adjustedInvBal = Math.max(
           0,
-          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
+          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt - (Number(invoice.writeoffAmount) || 0),
         );
 
         const ptPaidDisplay = totalPtPaidAmt;
