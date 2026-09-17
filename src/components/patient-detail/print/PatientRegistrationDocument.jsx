@@ -233,16 +233,16 @@ const PatientRegistrationDocument = forwardRef(({ patient, careTeamProviders = [
 
            {/* COLUMN 4 */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, justifyContent: 'space-between' }}>
-               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                 <MoneyIcon sx={{ color: COLORS.STATUS_SUCCESS, fontSize: 16, mr: 0.5 }} />
-                 <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Outstanding Family:</Typography>
+             <Box sx={{ mb: 1 }}>
+               <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                 <MoneyIcon sx={{ color: COLORS.STATUS_SUCCESS, fontSize: 16, mr: 0.5, mt: '2px' }} />
+                 <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.2 }}>Outstanding Family:</Typography>
                </Box>
-               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{patient.familyBalance || '-'}</Typography>
+               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, pl: 2.5, mt: 0.5 }}>{patient.familyBalance || '-'}</Typography>
              </Box>
-             <Box sx={{ display: 'flex', mb: 1.5, pl: 2, justifyContent: 'space-between' }}>
-               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Outstanding Patient:</Typography>
-               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{patient.patientBalance || '-'}</Typography>
+             <Box sx={{ mb: 1.5, pl: 2.5 }}>
+               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.2 }}>Outstanding Patient:</Typography>
+               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mt: 0.5 }}>{patient.patientBalance || '-'}</Typography>
              </Box>
              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, color: COLORS.TEXT_SECONDARY }}>Last patient pay:</Typography>
              <Typography sx={{ fontSize: '0.7rem', mb: 1, color: COLORS.TEXT_PRIMARY }}>{patient.lastPatientPay || '-'}</Typography>

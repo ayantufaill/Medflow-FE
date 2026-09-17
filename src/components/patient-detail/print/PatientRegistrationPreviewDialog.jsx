@@ -16,6 +16,8 @@ import PatientRegistrationDocument from './PatientRegistrationDocument';
 import { COLORS } from '../../../constants/colors';
 import { usePatientInsurance } from '../../../hooks/redux/usePatientInsurance';
 import { fetchFeeGuides, selectFeeGuides } from '../../../store/slices/feeGuideSlice';
+import { fetchPatientBalance, selectPatientBalanceCache } from '../../../store/slices/patientSlice';
+import dayjs from 'dayjs';
 
 const TYPO = {
   fontFamily: 'Inter, sans-serif',
@@ -24,32 +26,48 @@ const TYPO = {
 export default function PatientRegistrationPreviewDialog({ open, onClose, patient, careTeamProviders }) {
   const componentRef = useRef(null);
   const dispatch = useDispatch();
-  
+
   const patientId = patient?._id || patient?.id;
   const { insurances, fetch: fetchInsurances } = usePatientInsurance(patientId);
   const feeGuides = useSelector(selectFeeGuides);
+  const balanceCache = useSelector(selectPatientBalanceCache);
 
   useEffect(() => {
     if (open && patientId) {
       fetchInsurances();
+      dispatch(fetchPatientBalance(patientId));
       if (!feeGuides || feeGuides.length === 0) {
         dispatch(fetchFeeGuides());
       }
     }
   }, [open, patientId, fetchInsurances, feeGuides?.length, dispatch]);
 
-  const patientWithInsurances = patient ? { ...patient, insurances } : null;
+  const cachedBalance = patientId ? balanceCache?.[patientId]?.data : null;
+  const liveBalance = cachedBalance
+    ? {
+      familyBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      patientBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      lastPatientPay: cachedBalance.lastPaymentDate
+        ? dayjs(cachedBalance.lastPaymentDate).format('MM/DD/YYYY')
+        : 'No payment',
+      lastInsPay: cachedBalance.lastInsPayDate
+        ? dayjs(cachedBalance.lastInsPayDate).format('MM/DD/YYYY')
+        : 'No payment',
+    }
+    : {};
+
+  const patientWithInsurances = patient ? { ...patient, insurances, ...liveBalance } : null;
 
   const handlePrint = () => {
     const element = componentRef.current;
     if (!element) return;
 
     const opt = {
-      margin:       [0.5, 0.5, 0.5, 0.5],
-      filename:     `Registration_${patient?.firstName || ''}_${patient?.lastName || ''}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `Registration_${patient?.firstName || ''}_${patient?.lastName || ''}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();
@@ -67,12 +85,12 @@ export default function PatientRegistrationPreviewDialog({ open, onClose, patien
       PaperProps={{
         sx: {
           height: '90vh',
-          display: 'flex', 
-          flexDirection: 'column', 
-          borderRadius: '14px', 
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '14px',
           border: `1px solid ${COLORS.BORDER}`,
           boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-          overflow: 'hidden' 
+          overflow: 'hidden'
         }
       }}
     >
@@ -96,7 +114,7 @@ export default function PatientRegistrationPreviewDialog({ open, onClose, patien
           <CloseIcon sx={{ fontSize: "18px" }} />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent sx={{ p: 0, flexGrow: 1, display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc', alignItems: 'center', overflowY: 'auto' }}>
         <Box sx={{ flexGrow: 1, position: 'relative', p: 4, display: 'flex', justifyContent: 'center' }}>
           <Box sx={{
@@ -106,19 +124,19 @@ export default function PatientRegistrationPreviewDialog({ open, onClose, patien
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             overflow: 'hidden'
           }}>
-          {/* This inner box is what actually gets printed */}
-          <Box ref={componentRef}>
+            {/* This inner box is what actually gets printed */}
+            <Box ref={componentRef}>
               <PatientRegistrationDocument patient={patientWithInsurances} careTeamProviders={careTeamProviders} feeGuides={feeGuides} ref={componentRef} />
+            </Box>
           </Box>
         </Box>
-        </Box>
       </DialogContent>
-      
+
       <DialogActions sx={{ p: 2, backgroundColor: '#ffffff', borderTop: `1px solid ${COLORS.BORDER}`, justifyContent: 'flex-end', gap: 1 }}>
-        <Button 
-          onClick={onClose} 
-          variant="outlined" 
-          sx={{ 
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{
             textTransform: 'none',
             borderColor: COLORS.BORDER,
             color: COLORS.TEXT_PRIMARY,
