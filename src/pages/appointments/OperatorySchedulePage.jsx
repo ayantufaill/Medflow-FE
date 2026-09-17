@@ -152,22 +152,28 @@ const OperatorySchedulePage = () => {
   // Compute highlightTime directly from URL params so it survives remounts
   const urlTimeParam = searchParams.get('time');
   const highlightTime = useMemo(() => {
-    if (!urlTimeParam) return null;
-    const timeMatch = urlTimeParam.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (timeMatch) {
-      let hour = parseInt(timeMatch[1], 10);
-      const mins = parseInt(timeMatch[2], 10);
-      if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
-      if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
-      return hour * 60 + mins;
+    // Check URL param first
+    if (urlTimeParam) {
+      const timeMatch = urlTimeParam.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let hour = parseInt(timeMatch[1], 10);
+        const mins = parseInt(timeMatch[2], 10);
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+        return hour * 60 + mins;
+      }
+    }
+    // Check custom event highlight (format: "time-{minutesFromStart}")
+    if (highlightAppointmentId && highlightAppointmentId.startsWith('time-')) {
+      return parseInt(highlightAppointmentId.replace('time-', ''), 10);
     }
     return null;
-  }, [urlTimeParam]);
+  }, [urlTimeParam, highlightAppointmentId]);
 
   const urlDateParam = searchParams.get('date');
   const urlHighlightParam = searchParams.get('highlightAppointmentId');
 
-  // Apply deep-link date to schedule state whenever URL changes
+  // Apply deep-link date to schedule state whenever URL changes (only on initial load)
   useEffect(() => {
     const dateParam = searchParams.get('date');
     const highlightParam = searchParams.get('highlightAppointmentId');
@@ -179,9 +185,9 @@ const OperatorySchedulePage = () => {
     if (highlightParam) {
       setHighlightAppointmentId(highlightParam);
     }
-    // Only depends on searchParams so we catch URL changes while already on this route
+    // Only run once on mount - don't sync URL changes back to Redux
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   // Scroll to highlight time when both selectedDate and highlightTime are set
   useEffect(() => {
@@ -194,11 +200,12 @@ const OperatorySchedulePage = () => {
           const scrollTop = Math.max(0, ((highlightTime / 60) - START_HOUR)) * HOUR_HEIGHT;
           gridNode.scrollTo({ top: scrollTop, behavior: 'smooth' });
         }
+        // Clear the highlight after scrolling
+        setHighlightAppointmentId(null);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [highlightTime, selectedDate]);
-
+}, [highlightTime, selectedDate]);
 
 
   const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
@@ -447,9 +454,27 @@ const OperatorySchedulePage = () => {
     };
     window.addEventListener('block-card-clicked', handleBlockClick);
 
+    const handleNavigateToSlot = (e) => {
+      const { date, time } = e.detail;
+      if (date && dayjs(date).isValid()) {
+        setSelectedDate(dayjs(date).format("YYYY-MM-DD"));
+        // Store time to scroll to it after date change
+        const timeMatch = time?.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1], 10);
+          const mins = parseInt(timeMatch[2], 10);
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+          setHighlightAppointmentId(`time-${hour * 60 + mins}`);
+        }
+      }
+    };
+    window.addEventListener('navigate-to-slot', handleNavigateToSlot);
+
     return () => {
       window.removeEventListener('appointment-card-double-clicked', handleApptDoubleClick);
       window.removeEventListener('block-card-clicked', handleBlockClick);
+      window.removeEventListener('navigate-to-slot', handleNavigateToSlot);
     };
   }, []);
 

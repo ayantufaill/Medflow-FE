@@ -154,7 +154,11 @@ const EmptySlotsSearch = () => {
                 onClick={() => {
                   const slotDate = slot.date || dateFrom.format('YYYY-MM-DD');
                   const slotTime = slot.startTime;
-                  navigate(`/appointments/operatory-schedule?date=${slotDate}&time=${encodeURIComponent(slotTime)}`);
+                  // Use a custom event to communicate with OperatorySchedulePage
+                  // Keep results visible so user can select multiple slots
+                  window.dispatchEvent(new CustomEvent('navigate-to-slot', {
+                    detail: { date: slotDate, time: slotTime }
+                  }));
                 }}
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '4px' }}>
