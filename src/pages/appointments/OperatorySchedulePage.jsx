@@ -383,6 +383,49 @@ const OperatorySchedulePage = () => {
         const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
         showSnackbar(msg, "error");
       }
+} else if (dragData.isRecareBlock) {
+      // Handle recare/treatment block drop - pass data directly via initialAppointment
+      const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+      const appointmentDate = start.format("YYYY-MM-DD");
+      const startTime = start.format("HH:mm");
+      const endTime = end.format("HH:mm");
+      const duration = dragData.durationMinutes || 60;
+      const visitType = dragData.visitType || 'recare';
+
+      // Pass the block data directly as initialAppointment with a template flag
+      const templateData = {
+        ...dragData,
+        appointmentDate: appointmentDate,
+        startTime: startTime,
+        endTime: endTime,
+        durationMinutes: duration,
+        roomId: roomId,
+        visitType: visitType,
+        isRecareTemplate: true,
+        status: 'scheduled',
+        appointmentTypeName: dragData.appointmentTypeName,
+        // Ensure customFields has the procedures and providerRows for the form
+        customFields: {
+          ...dragData.customFields,
+          visitType: visitType,
+          procedures: dragData.procedures || [],
+          providerRows: dragData.providerId ? [{
+            providerId: dragData.providerId,
+            time: dragData.durationMinutes || 60
+          }] : [],
+        },
+        procedures: dragData.procedures || [],
+        providerId: dragData.providerId,
+      };
+
+      console.log('[DROP] templateData created:', JSON.stringify(templateData, null, 2));
+
+      setEditingAppointment(templateData);
+      setInitialShortlistData(null);
+      setFormOpen(true);
+      setShowExtendedOptions(true);
+      
+      showSnackbar(`${visitType.charAt(0).toUpperCase() + visitType.slice(1)} appointment ready to schedule`, "info");
     }
   };
 

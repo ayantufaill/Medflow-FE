@@ -210,6 +210,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     provider: providerName,
     headerColor: mappedProvider?.color || appt.providerColor || "#2262ef",
     procedures: procString,
+    // Include the full procedures array from customFields for drag-and-drop
+    customFields: cf,
+    rawProcedures: cf.procedures && Array.isArray(cf.procedures) ? cf.procedures : [],
     description: appt.notes || appt.reason || "",
     tags: tagsArray,
     colorTags: colorTagsArray,

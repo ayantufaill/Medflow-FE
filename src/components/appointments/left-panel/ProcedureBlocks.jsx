@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Box, Typography, Collapse, Menu, MenuItem, IconButton } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, DragIndicator } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
 import dayjs from 'dayjs';
 import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { useDraggable } from '@dnd-kit/core';
 
 const getProviderInitials = (name) => {
   if (!name) return null;
@@ -69,6 +70,10 @@ const ProcedureBlocks = ({ appointment }) => {
 
   if (!appointment) return null;
 
+  // Determine visit type for drag eligibility
+  const visitType = String(appointment.visitType || appointment.customFields?.visitType || appointment.appointmentTypeName || appointment.appointmentType || '').toLowerCase();
+  const isDraggableVisitType = visitType === 'recare' || visitType === 'treatment';
+
   // Determine header label
   let headerLabel = appointment.appointmentTypeName || appointment.visitType || appointment.appointmentType;
   if (typeof headerLabel === 'object') {
@@ -84,18 +89,56 @@ const ProcedureBlocks = ({ appointment }) => {
 
   // Extract array of procedures
   let proceduresList = [];
-  if (Array.isArray(appointment.procedures)) {
+  // Priority: rawProcedures (from grid item) > customFields.procedures > procedures array > string > chiefComplaint
+  if (Array.isArray(appointment.rawProcedures) && appointment.rawProcedures.length > 0) {
+    proceduresList = appointment.rawProcedures;
+  } else if (Array.isArray(appointment.procedures)) {
     proceduresList = appointment.procedures;
+  } else if (Array.isArray(appointment.customFields?.procedures)) {
+    proceduresList = appointment.customFields.procedures;
   } else if (typeof appointment.procedures === 'string') {
-    // If it's just a string, simulate a single procedure object
     proceduresList = appointment.procedures.split(',').map(p => ({ description: p.trim() }));
   } else if (appointment.chiefComplaint) {
     proceduresList = [{ description: appointment.chiefComplaint }];
   }
 
+  // Prepare drag data for recare/treatment appointments
+  const dragData = isDraggableVisitType ? {
+    isRecareBlock: true,
+    type: visitType,
+    visitType: visitType,
+    procedures: proceduresList.map(p => ({
+      code: p.code || p.procedureCode || p.ProcCode || 'TBD',
+      treatment: p.description || p.name || p.treatment || p.code || 'Procedure',
+      charge: p.charge || p.fee || p.amount || '$0.00',
+      provider: p.provider || p.providerId || p.ProvNum || '',
+      site: p.site || p.tooth || p.ToothNum || ''
+    })),
+    providerId: appointment.providerId || appointment.provider?.ProvNum || appointment.provider?._id || appointment.provider?.id || '',
+    providerName: appointment.providerName || (appointment.provider ? getProviderName(appointment.provider) : ''),
+    durationMinutes: apptDuration || 60,
+    appointmentTypeName: appointment.appointmentTypeName,
+    customFields: appointment.customFields,
+    patientId: appointment.patientId || appointment.patient?._id || appointment.patient?.id || appointment.patient?.PatNum || '',
+    patientName: appointment.patientName || (appointment.patient ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim() : ''),
+    patient: appointment.patient || null
+  } : null;
+
+  console.log('[DRAG] dragData created:', JSON.stringify(dragData, null, 2));
+
+  // Setup draggable for recare/treatment blocks
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `recare-block-${appointment._id || appointment.id}`,
+    data: dragData,
+    disabled: !isDraggableVisitType
+  });
+
   if (proceduresList.length === 0) {
     return (
       <Box
+        ref={isDraggableVisitType ? setNodeRef : undefined}
+        {...(isDraggableVisitType ? attributes : {})}
+        {...(isDraggableVisitType ? listeners : {})}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -105,6 +148,8 @@ const ProcedureBlocks = ({ appointment }) => {
           borderRadius: radius.md,
           px: '12px',
           py: '10px',
+          opacity: isDragging ? 0.5 : 1,
+          cursor: isDraggableVisitType ? 'grab' : 'default'
         }}
       >
         <Typography sx={{ ...headingSecondarySx, color: COLORS.TEXT_MUTED }}>
@@ -119,11 +164,16 @@ const ProcedureBlocks = ({ appointment }) => {
 
   return (
     <Box
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       sx={{
         backgroundColor: COLORS.SURFACE_CARD,
         border: `1px solid ${COLORS.BORDER}`,
         borderRadius: radius.md,
         overflow: 'hidden',
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDraggableVisitType ? 'grab' : 'default'
       }}
     >
       {/* Header Row */}
@@ -135,13 +185,16 @@ const ProcedureBlocks = ({ appointment }) => {
           justifyContent: 'space-between',
           px: '12px',
           py: '10px',
-          cursor: 'pointer',
+          cursor: isDraggableVisitType ? 'grab' : 'pointer',
           backgroundColor: open ? '#f8fafc' : 'transparent',
           borderBottom: open ? `1px solid ${COLORS.BORDER}` : 'none',
           '&:hover': { backgroundColor: '#f1f5f9' },
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {isDraggableVisitType && (
+            <DragIndicator sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED, cursor: 'grab', mr: '4px' }} />
+          )}
           {open ? (
             <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
           ) : (
@@ -150,6 +203,11 @@ const ProcedureBlocks = ({ appointment }) => {
           <Typography sx={{ ...headingSecondarySx, color: COLORS.TEXT_PRIMARY }}>
             {headerLabel}
           </Typography>
+          {isDraggableVisitType && (
+            <Box sx={{ fontSize: '10px', fontWeight: fontWeight.bold, color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG, px: '4px', py: '1px', borderRadius: '2px', ml: '4px' }}>
+              {visitType.toUpperCase()}
+            </Box>
+          )}
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

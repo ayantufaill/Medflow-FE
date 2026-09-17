@@ -205,7 +205,8 @@ const AddNewPatientAppointmentForm = ({
     [selectedStart, durationMins],
   );
 
-  const isExistingAppointment = Boolean(initialAppointment);
+  const isRecareTemplate = initialAppointment?.id?.startsWith("recare-") === true;
+  const isExistingAppointment = Boolean(initialAppointment) && !isRecareTemplate;
 
   const conflictExcludedAppointmentId = useMemo(() => {
     if (initialAppointment) {
@@ -808,15 +809,29 @@ const AddNewPatientAppointmentForm = ({
           }
         };
 
+        const isRecareTemplate = initialAppointment?.isRecareTemplate === true;
+
+        console.log('[FORM] initialAppointment received:', JSON.stringify(initialAppointment, (k, v) => {
+          if (k === 'rawAppointment' || k === 'patient') return '[Object]';
+          return v;
+        }, 2));
+        console.log('[FORM] isRecareTemplate:', isRecareTemplate);
+
         const shallowAppt =
           initialAppointment.rawAppointment || initialAppointment;
-        applyApptToForm(shallowAppt, []); // Synchronous load instantly
+        // For recare templates, pass procedures explicitly to ensure they load
+        const sourceProcedures = isRecareTemplate 
+          ? (shallowAppt.customFields?.procedures || shallowAppt.procedures || [])
+          : [];
+        console.log('[FORM] sourceProcedures for applyApptToForm:', JSON.stringify(sourceProcedures, null, 2));
+        applyApptToForm(shallowAppt, sourceProcedures);
 
         const loadFullDetails = async () => {
           try {
             if (
               initialAppointment.id &&
-              !String(initialAppointment.id).startsWith("temp-")
+              !String(initialAppointment.id).startsWith("temp-") &&
+              !String(initialAppointment.id).startsWith("recare-")
             ) {
               const { appointmentService } =
                 await import("../../services/appointment.service");
@@ -841,6 +856,9 @@ const AddNewPatientAppointmentForm = ({
 
         loadFullDetails();
       } else if (initialShortlistData) {
+        // Check if this is a recare template (from drag-and-drop)
+        const isRecareTemplate = initialShortlistData.isRecareTemplate === true;
+        
         // Try to find the full patient object from the loaded patients list
         const patId = String(
           initialShortlistData.PatNum || initialShortlistData.patientId,
@@ -849,18 +867,42 @@ const AddNewPatientAppointmentForm = ({
           (p) => String(p.id || p._id || p.PatNum) === patId,
         );
 
-        const mockPatient = {
-          id: patId,
-          rawId: patId,
-          firstName: initialShortlistData.PatientName
-            ? initialShortlistData.PatientName.split(" ")[0]
-            : "Unknown",
-          lastName: initialShortlistData.PatientName
-            ? initialShortlistData.PatientName.split(" ").slice(1).join(" ")
-            : "Patient",
-        };
-
-        setPatient(fullPatient || mockPatient);
+        // For recare template, don't set patient automatically - let user select
+        if (!isRecareTemplate) {
+          const mockPatient = {
+            id: patId,
+            rawId: patId,
+            firstName: initialShortlistData.PatientName
+              ? initialShortlistData.PatientName.split(" ")[0]
+              : "Unknown",
+            lastName: initialShortlistData.PatientName
+              ? initialShortlistData.PatientName.split(" ").slice(1).join(" ")
+              : "Patient",
+          };
+          setPatient(fullPatient || mockPatient);
+        } else {
+          // For recare template, set patient from drag data if available
+          const patId = initialShortlistData.PatNum || initialShortlistData.patientId;
+          const patientName = initialShortlistData.PatientName;
+          if (patId || patientName) {
+            const mockPatient = {
+              id: patId,
+              rawId: patId,
+              firstName: patientName
+                ? patientName.split(" ")[0]
+                : "Unknown",
+              lastName: patientName
+                ? patientName.split(" ").slice(1).join(" ")
+                : "Patient",
+            };
+            const foundPatient = patId ? patients.find(
+              (p) => String(p.id || p._id || p.PatNum) === String(patId)
+            ) : null;
+            setPatient(foundPatient || mockPatient);
+          } else {
+            setPatient(null);
+          }
+        }
 
         let parsedDate = dayjs().add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
@@ -884,6 +926,12 @@ const AddNewPatientAppointmentForm = ({
         );
         setStatus(initialShortlistData.Status || "scheduled");
         setDurationMins(initialShortlistData.DurationMins || 60);
+
+        // Set visitType for recare templates
+        const vType = initialShortlistData.customFields?.visitType || 
+          initialShortlistData.visitType || 
+          "recare";
+        setVisitType(String(vType).toLowerCase());
 
         setProviderRows(
           initialShortlistData.ProvNum
@@ -915,7 +963,10 @@ const AddNewPatientAppointmentForm = ({
         }
 
         let initialProcs = [];
-        if (customFields.procedures && Array.isArray(customFields.procedures)) {
+        // PRIORITY: For recare templates, use top-level procedures field first (from drag-and-drop)
+        if (isRecareTemplate && initialShortlistData.procedures && Array.isArray(initialShortlistData.procedures)) {
+          initialProcs = initialShortlistData.procedures;
+        } else if (customFields.procedures && Array.isArray(customFields.procedures)) {
           initialProcs = customFields.procedures;
         } else if (
           customFields.procedureTags &&
