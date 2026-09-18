@@ -86,6 +86,9 @@ const AddNewPatientAppointmentForm = ({
   // Remembers the status that was active just before an auto-complete override,
   // so we can revert back to it when procedures become incomplete again.
   const preAutoCompleteStatusRef = useRef(null);
+  // Tracks procedures the user has manually unchecked (by code), so date/time changes
+  // don't auto-recheck them.
+  const userUncheckedProcedureCodesRef = useRef(new Set());
 
   /* ── Right panel state ── */
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -685,39 +688,7 @@ const AddNewPatientAppointmentForm = ({
               }));
           }
 
-          initialProcs = initialProcs.map((p, i) => {
-            if (typeof p === "string") {
-              return {
-                code: "TBD",
-                treatment: p,
-                charge: "$0.00",
-                checked: true,
-                id: Date.now() + i,
-              };
-            }
-            return {
-              code: p.procedureCode || p.code || p.ProcCode || "TBD",
-              treatment:
-                p.description ||
-                p.treatment ||
-                p.name ||
-                p.title ||
-                p.Descript ||
-                "Unknown",
-              charge: p.fee || p.charge || p.amount || "$0.00",
-              totalCharge: p.totalCharge,
-              ptPart: p.ptPart,
-              insPortion: p.insPortion,
-              writeoff: p.writeoff,
-              allowedFee: p.allowedFee,
-              coveragePct: p.coveragePct,
-              provider: p.providerId || p.provider || p.ProvNum || "",
-              site: p.tooth || p.site || p.ToothNum || "",
-              checked: true,
-              completed: p.completed || false,
-              id: p._id || p.id || Date.now() + i,
-            };
-          });
+          initialProcs = normalizeProceduresForForm(initialProcs, buildRecareProcedureDateMap());
 
           setProcedures(
             initialProcs.length > 0 ? initialProcs : INITIAL_PROCEDURES,
@@ -1205,8 +1176,13 @@ const AddNewPatientAppointmentForm = ({
     return parsed?.isValid() ? parsed.valueOf() : 0;
   };
 
-  const normalizeProceduresForForm = (sourceProcedures = []) =>
+  const normalizeProceduresForForm = (sourceProcedures = [], recareProcedureDateMap = {}) =>
     sourceProcedures.map((p, i) => {
+      const code = p.procedureCode || p.code || p.ProcCode || "TBD";
+      const treatment = p.description || p.treatment || p.name || p.title || p.Descript || "Unknown";
+      const dateKey = `${code}|${treatment}`.trim().toLowerCase();
+      const scheduledDates = recareProcedureDateMap?.[dateKey] || [];
+      const dueDate = scheduledDates.length > 0 ? scheduledDates[0] : undefined;
       if (typeof p === "string") {
         return {
           code: "TBD",
@@ -1215,17 +1191,12 @@ const AddNewPatientAppointmentForm = ({
           checked: true,
           completed: false,
           id: Date.now() + i,
+          dueDate: undefined,
         };
       }
       return {
-        code: p.procedureCode || p.code || p.ProcCode || "TBD",
-        treatment:
-          p.description ||
-          p.treatment ||
-          p.name ||
-          p.title ||
-          p.Descript ||
-          "Unknown",
+        code,
+        treatment,
         charge: p.fee || p.charge || p.amount || "$0.00",
         totalCharge: p.totalCharge,
         ptPart: p.ptPart,
@@ -1238,14 +1209,58 @@ const AddNewPatientAppointmentForm = ({
         checked: true,
         completed: Boolean(p.completed),
         id: p._id || p.id || Date.now() + i,
+        dueDate: dueDate,
       };
     });
+
+  const getProcedureKey = (procedure) => {
+    const code = typeof procedure === 'string' ? '' : (procedure?.code || procedure?.procedureCode || procedure?.ProcCode || '');
+    const treatment = typeof procedure === 'string' ? procedure : (procedure?.treatment || procedure?.description || procedure?.name || '');
+    const fullCode = code || 'TBD';
+    return `${fullCode}|${treatment}`.trim().toLowerCase();
+  };
+
+  const buildRecareProcedureDateMap = () => {
+    const sourceAppt = resolveManualRecareSourceAppointment();
+    const sourceApptId = sourceAppt ? String(getAppointmentId(sourceAppt)) : null;
+    const map = {};
+    (appointments || []).forEach((appt) => {
+      const visitType = String(appt.visitType || appt.customFields?.visitType || '').toLowerCase();
+      if (visitType !== 'recare') return;
+      const raw = appt?.rawAppointment || appt;
+      const apptId = String(raw?.id || raw?._id || raw?.appointmentId || raw?.AptNum || '');
+      const apptSourceId = String(getRecareSourceAppointmentId(appt) || '');
+      const isRelated = sourceApptId
+        ? (apptSourceId === sourceApptId || apptId === sourceApptId)
+        : false;
+      if (!isRelated) return;
+      const date = raw?.appointmentDate || raw?.date || null;
+      if (!date) return;
+      const customFields = raw?.customFields || {};
+      const procedures = Array.isArray(customFields.procedures) && customFields.procedures.length > 0
+        ? customFields.procedures
+        : Array.isArray(raw?.procedures) && raw.procedures.length > 0
+          ? raw.procedures
+          : Array.isArray(raw?.rawProcedures) && raw.rawProcedures.length > 0
+            ? raw.rawProcedures
+            : [];
+      procedures.forEach((proc) => {
+        const key = getProcedureKey(proc);
+        if (key && date) {
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(date)) map[key].push(date);
+        }
+      });
+    });
+    return map;
+  };
 
   const extractAppointmentProcedures = (appointment) => {
     const raw = appointment?.rawAppointment || appointment;
     const customFields = raw?.customFields || {};
+    const recareProcedureDateMap = buildRecareProcedureDateMap();
     if (typeof raw?.procedures === "string" && raw.procedures.trim()) {
-      return normalizeProceduresForForm(raw.procedures.split(",").map((p) => p.trim()).filter(Boolean));
+      return normalizeProceduresForForm(raw.procedures.split(",").map((p) => p.trim()).filter(Boolean), recareProcedureDateMap);
     }
     const source =
       (Array.isArray(customFields.procedures) && customFields.procedures.length > 0 && customFields.procedures) ||
@@ -1253,7 +1268,7 @@ const AddNewPatientAppointmentForm = ({
       (Array.isArray(raw?.procedures) && raw.procedures.length > 0 && raw.procedures) ||
       (Array.isArray(raw?.workspace?.procedures) && raw.workspace.procedures.length > 0 && raw.workspace.procedures) ||
       [];
-    return normalizeProceduresForForm(source);
+    return normalizeProceduresForForm(source, recareProcedureDateMap);
   };
 
   const resolveManualRecareSourceAppointment = () => {
@@ -1306,9 +1321,22 @@ const AddNewPatientAppointmentForm = ({
         preRecareProceduresRef.current = procedures;
       }
       recareProceduresLoadedRef.current = true;
-      setProcedures(sourceProcedures);
+      const uncheckedCodes = userUncheckedProcedureCodesRef.current;
+      const proceduresWithUncheckedState = sourceProcedures.map((p) =>
+        uncheckedCodes.has(p.code) ? { ...p, checked: false } : p
+      );
+      setProcedures(proceduresWithUncheckedState);
     }
   }, [open, visitType, patient, dateTime, appointments, selectedAppointmentContext, isRecareTemplate, isExistingAppointment]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track user-unchecked procedures by code so date/time changes don't auto-recheck them
+  useEffect(() => {
+    const uncheckedCodes = new Set();
+    procedures.forEach((p) => {
+      if (!p.checked) uncheckedCodes.add(p.code);
+    });
+    userUncheckedProcedureCodesRef.current = uncheckedCodes;
+  }, [procedures]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePatientChange = (newPatient) => {
     // If the user is switching from one selected patient to a different one,

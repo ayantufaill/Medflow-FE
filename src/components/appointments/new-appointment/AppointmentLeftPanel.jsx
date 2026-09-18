@@ -715,6 +715,7 @@ const AppointmentLeftPanel = ({
           isFuture={isFuture}
           disableDelete={readOnly}
           onEnterEdit={onEnterEdit}
+          visitType={visitType}
         />
 
         {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
