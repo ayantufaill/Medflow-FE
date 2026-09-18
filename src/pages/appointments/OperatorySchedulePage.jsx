@@ -24,6 +24,7 @@ import { useDispatch } from "react-redux";
 import {
   setSelectedAppointmentId,
   fetchAppointments,
+  fetchPatientHistory,
   updateAppointmentInList,
   invalidateAppointmentDetail,
   setCurrentAppointment,
@@ -410,6 +411,8 @@ const OperatorySchedulePage = () => {
         customFields: {
           ...dragData.customFields,
           visitType: visitType,
+          recareSourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
+          sourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
           procedures: dragData.procedures || [],
           providerRows: dragData.providerId ? [{
             providerId: dragData.providerId,
@@ -418,6 +421,7 @@ const OperatorySchedulePage = () => {
         },
         procedures: dragData.procedures || [],
         providerId: dragData.providerId,
+        sourceProcedureBlockAppointment: dragData.sourceProcedureBlockAppointment || null,
       };
 
       console.log('[DROP] templateData created:', JSON.stringify(templateData, null, 2));
@@ -1076,6 +1080,44 @@ const OperatorySchedulePage = () => {
     }
   }, [showConsult, selectedDate]);
 
+  const getAppointmentId = (appointment) => appointment?._id || appointment?.id || appointment?.appointmentId || appointment?.AptNum;
+  const getAppointmentPatientId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.patientId && typeof raw.patientId === 'object'
+      ? raw.patientId._id || raw.patientId.id || raw.patientId.PatNum
+      : raw?.patientId || raw?.patient?._id || raw?.patient?.id || raw?.patient?.PatNum;
+  };
+  const getAppointmentVisitType = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return String(raw?.customFields?.visitType || raw?.visitType || raw?.appointmentTypeName || raw?.appointmentType || '').toLowerCase();
+  };
+  const getRecareSourceAppointmentId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.customFields?.recareSourceAppointmentId || raw?.customFields?.sourceAppointmentId || null;
+  };
+  const getAppointmentDateValue = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const date = raw?.appointmentDate || raw?.date;
+    const time = raw?.startTime || '00:00';
+    const parsed = date ? dayjs(`${dayjs(date).format('YYYY-MM-DD')}T${time}`) : null;
+    return parsed?.isValid() ? parsed.valueOf() : 0;
+  };
+  const resolveRecareSourceAppointmentId = (formData, start) => {
+    const selectedSourceId = getRecareSourceAppointmentId(selectedAppointment) || getAppointmentId(selectedAppointment);
+    if (selectedSourceId) return selectedSourceId;
+
+    const formPatientId = String(formData.patientId || '');
+    const startValue = start?.isValid?.() ? start.valueOf() : Date.now();
+    const candidates = (reduxAppointments || [])
+      .filter((appointment) => String(getAppointmentPatientId(appointment) || '') === formPatientId)
+      .filter((appointment) => !getRecareSourceAppointmentId(appointment))
+      .filter((appointment) => getAppointmentId(appointment))
+      .filter((appointment) => getAppointmentDateValue(appointment) <= startValue)
+      .sort((a, b) => getAppointmentDateValue(b) - getAppointmentDateValue(a));
+
+    return getAppointmentId(candidates[0]) || null;
+  };
+
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
     const providerId = formData.providerId;
@@ -1109,6 +1151,21 @@ const OperatorySchedulePage = () => {
       };
 
       const isRecareTemplate = editingAppointment?.isRecareTemplate === true;
+      const savedVisitType = String(appointmentData.customFields?.visitType || formData.customFields?.visitType || '').toLowerCase();
+      const recareSourceAppointmentId = savedVisitType === 'recare'
+        ? editingAppointment?.sourceProcedureBlockAppointment?._id ||
+          editingAppointment?.sourceProcedureBlockAppointment?.id ||
+          editingAppointment?.customFields?.recareSourceAppointmentId ||
+          editingAppointment?.customFields?.sourceAppointmentId ||
+          resolveRecareSourceAppointmentId(formData, start)
+        : null;
+      if (recareSourceAppointmentId) {
+        appointmentData.customFields = {
+          ...(appointmentData.customFields || {}),
+          recareSourceAppointmentId,
+          sourceAppointmentId: recareSourceAppointmentId,
+        };
+      }
       if (editingAppointment && !formData.isNewRecall && !isRecareTemplate) {
         let apptId = editingAppointment._id || editingAppointment.id;
         if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
@@ -1117,8 +1174,25 @@ const OperatorySchedulePage = () => {
         await updateAppointment(apptId, appointmentData);
         showSnackbar('Appointment updated successfully', 'success');
       } else {
-        await createAppointment(appointmentData);
+        const newAppt = await createAppointment(appointmentData);
         showSnackbar('Appointment created successfully', 'success');
+        if (newAppt) {
+          const selectedNewAppt = {
+            ...newAppt,
+            id: newAppt.id || newAppt._id,
+            sourceProcedureBlockAppointment: recareSourceAppointmentId
+              ? editingAppointment?.sourceProcedureBlockAppointment || editingAppointment
+              : null,
+          };
+          setSelectedAppointment(selectedNewAppt);
+          const newPatientId = newAppt.patientId && typeof newAppt.patientId === 'object'
+            ? newAppt.patientId._id || newAppt.patientId.id || newAppt.patientId.PatNum
+            : newAppt.patientId;
+          if (newPatientId) {
+            dispatch(fetchPatientById(newPatientId));
+            dispatch(fetchPatientHistory(newPatientId));
+          }
+        }
       }
       setFormOpen(false);
     } catch (err) {
@@ -1283,7 +1357,10 @@ const OperatorySchedulePage = () => {
 
         {/* LEFT PANEL — Static Width */}
         <Box className="no-print" sx={{ flex: '0 0 280px', width: '280px', minWidth: '280px', maxWidth: '280px', height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
-          <LeftPanel />
+          <LeftPanel 
+            selectedAppointment={selectedAppointment} 
+            onSelectAppointment={setSelectedAppointment}
+          />
         </Box>
 
         {/* CENTER PANEL — Dynamic Width */}
@@ -1394,6 +1471,7 @@ const OperatorySchedulePage = () => {
           initialPatient={currentPatient || null}
           initialShortlistData={initialShortlistData}
           initialAppointment={editingAppointment}
+          selectedAppointmentContext={selectedAppointment}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}

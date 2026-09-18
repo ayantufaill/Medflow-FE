@@ -35,6 +35,7 @@ const AddNewPatientAppointmentForm = ({
   initialRoomId = "",
   initialShortlistData = null,
   initialAppointment = null,
+  selectedAppointmentContext = null,
   open = true,
   showExtendedOptions = false,
 }) => {
@@ -80,6 +81,8 @@ const AddNewPatientAppointmentForm = ({
   const [isAddProcedureOpen, setIsAddProcedureOpen] = useState(false);
   const [procedureInput, setProcedureInput] = useState("");
   const nextId = useRef(10);
+  const preRecareProceduresRef = useRef(null);
+  const recareProceduresLoadedRef = useRef(false);
   // Remembers the status that was active just before an auto-complete override,
   // so we can revert back to it when procedures become incomplete again.
   const preAutoCompleteStatusRef = useRef(null);
@@ -215,7 +218,9 @@ const AddNewPatientAppointmentForm = ({
     [selectedStart, durationMins],
   );
 
-  const isRecareTemplate = initialAppointment?.isRecareTemplate === true || initialAppointment?.id?.startsWith("recare-") === true;
+  const isRecareTemplate =
+    initialAppointment?.isRecareTemplate === true ||
+    String(initialAppointment?.id || "").startsWith("recare-");
   const isExistingAppointment = Boolean(initialAppointment) && !isRecareTemplate;
 
   const conflictExcludedAppointmentId = useMemo(() => {
@@ -557,16 +562,17 @@ const AddNewPatientAppointmentForm = ({
               60,
           );
 
-          let vType =
-            sourceAppt.customFields?.visitType ||
-            sourceAppt.appointmentType ||
-            sourceAppt.visitType ||
-            initialAppointment.customFields?.visitType ||
-            initialAppointment.appointmentType ||
-            initialAppointment.visitType ||
-            "recare";
+          let vType = isRecareTemplate
+            ? "recare"
+            : sourceAppt.customFields?.visitType ||
+              sourceAppt.appointmentType ||
+              sourceAppt.visitType ||
+              initialAppointment.customFields?.visitType ||
+              initialAppointment.appointmentType ||
+              initialAppointment.visitType ||
+              "recare";
           vType = String(vType).toLowerCase();
-          if (vType !== "recare") {
+          if (!isRecareTemplate && vType !== "recare") {
             vType = "treatment"; // Default anything that isn't explicitly recare to treatment
           }
           setVisitType(vType);
@@ -936,10 +942,11 @@ const AddNewPatientAppointmentForm = ({
         setStatus(initialShortlistData.Status || "scheduled");
         setDurationMins(initialShortlistData.DurationMins || 60);
 
-        // Set visitType for recare templates
-        const vType = initialShortlistData.customFields?.visitType || 
-          initialShortlistData.visitType || 
-          "recare";
+        const vType = isRecareTemplate
+          ? "recare"
+          : initialShortlistData.customFields?.visitType ||
+            initialShortlistData.visitType ||
+            "recare";
         setVisitType(String(vType).toLowerCase());
 
         setProviderRows(
@@ -1152,12 +1159,156 @@ const AddNewPatientAppointmentForm = ({
     initialAppointment,
   ]);
 
+  const getAppointmentId = (appointment) =>
+    appointment?._id || appointment?.id || appointment?.appointmentId || appointment?.AptNum;
+
+  const getAppointmentPatientId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.patientId && typeof raw.patientId === "object"
+      ? raw.patientId._id || raw.patientId.id || raw.patientId.PatNum
+      : raw?.patientId || raw?.patient?._id || raw?.patient?.id || raw?.patient?.PatNum;
+  };
+
+  const getPatientIdCandidates = (value) => {
+    if (!value) return [];
+    const raw = value.rawAppointment || value;
+    const candidates = [
+      raw._id,
+      raw.id,
+      raw.PatNum,
+      raw.patientId,
+      raw.patient?._id,
+      raw.patient?.id,
+      raw.patient?.PatNum,
+    ];
+    if (raw.patientId && typeof raw.patientId === "object") {
+      candidates.push(raw.patientId._id, raw.patientId.id, raw.patientId.PatNum);
+    }
+    return candidates.filter(Boolean).map(String);
+  };
+
+  const isSamePatient = (appointment, selectedPatient) => {
+    const appointmentIds = new Set(getPatientIdCandidates(appointment));
+    return getPatientIdCandidates(selectedPatient).some((id) => appointmentIds.has(id));
+  };
+
+  const getRecareSourceAppointmentId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.customFields?.recareSourceAppointmentId || raw?.customFields?.sourceAppointmentId || null;
+  };
+
+  const getAppointmentDateValue = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const date = raw?.appointmentDate || raw?.date;
+    const time = raw?.startTime || "00:00";
+    const parsed = date ? dayjs(`${dayjs(date).format("YYYY-MM-DD")}T${time}`) : null;
+    return parsed?.isValid() ? parsed.valueOf() : 0;
+  };
+
+  const normalizeProceduresForForm = (sourceProcedures = []) =>
+    sourceProcedures.map((p, i) => {
+      if (typeof p === "string") {
+        return {
+          code: "TBD",
+          treatment: p,
+          charge: "$0.00",
+          checked: true,
+          completed: false,
+          id: Date.now() + i,
+        };
+      }
+      return {
+        code: p.procedureCode || p.code || p.ProcCode || "TBD",
+        treatment:
+          p.description ||
+          p.treatment ||
+          p.name ||
+          p.title ||
+          p.Descript ||
+          "Unknown",
+        charge: p.fee || p.charge || p.amount || "$0.00",
+        totalCharge: p.totalCharge,
+        ptPart: p.ptPart,
+        insPortion: p.insPortion,
+        writeoff: p.writeoff,
+        allowedFee: p.allowedFee,
+        coveragePct: p.coveragePct,
+        provider: p.providerId || p.provider || p.ProvNum || "",
+        site: p.tooth || p.site || p.ToothNum || "",
+        checked: true,
+        completed: Boolean(p.completed),
+        id: p._id || p.id || Date.now() + i,
+      };
+    });
+
+  const extractAppointmentProcedures = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const customFields = raw?.customFields || {};
+    if (typeof raw?.procedures === "string" && raw.procedures.trim()) {
+      return normalizeProceduresForForm(raw.procedures.split(",").map((p) => p.trim()).filter(Boolean));
+    }
+    const source =
+      (Array.isArray(customFields.procedures) && customFields.procedures.length > 0 && customFields.procedures) ||
+      (Array.isArray(raw?.rawProcedures) && raw.rawProcedures.length > 0 && raw.rawProcedures) ||
+      (Array.isArray(raw?.procedures) && raw.procedures.length > 0 && raw.procedures) ||
+      (Array.isArray(raw?.workspace?.procedures) && raw.workspace.procedures.length > 0 && raw.workspace.procedures) ||
+      [];
+    return normalizeProceduresForForm(source);
+  };
+
+  const resolveManualRecareSourceAppointment = () => {
+    const contextAppointment = isSamePatient(selectedAppointmentContext, patient)
+      ? selectedAppointmentContext
+      : null;
+    const selectedSourceId =
+      getRecareSourceAppointmentId(contextAppointment) ||
+      getAppointmentId(contextAppointment) ||
+      getRecareSourceAppointmentId(initialAppointment) ||
+      getAppointmentId(initialAppointment);
+    if (selectedSourceId) {
+      return appointments.find((appointment) => String(getAppointmentId(appointment)) === String(selectedSourceId)) || contextAppointment || initialAppointment;
+    }
+
+    const patientId = patient?._id || patient?.id || patient?.PatNum;
+    if (!patientId) return null;
+
+    const selectedValue = dateTime?.isValid?.() ? dateTime.valueOf() : Date.now();
+    return (appointments || [])
+      .filter((appointment) => isSamePatient(appointment, patient) || String(getAppointmentPatientId(appointment) || "") === String(patientId))
+      .filter((appointment) => !getRecareSourceAppointmentId(appointment))
+      .filter((appointment) => getAppointmentId(appointment))
+      .filter((appointment) => getAppointmentDateValue(appointment) <= selectedValue)
+      .sort((a, b) => getAppointmentDateValue(b) - getAppointmentDateValue(a))[0] || null;
+  };
+
   const dateTime = useMemo(() => {
     const h = parseInt(timeHours || "9", 10);
     const m = parseInt(timeMins || "0", 10);
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
     return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
   }, [apptDate, timeHours, timeMins, amPm]);
+
+  useEffect(() => {
+    if (!open || isRecareTemplate || isExistingAppointment) return;
+    if (String(visitType).toLowerCase() !== "recare") {
+      if (recareProceduresLoadedRef.current && preRecareProceduresRef.current) {
+        setProcedures(preRecareProceduresRef.current);
+      }
+      recareProceduresLoadedRef.current = false;
+      preRecareProceduresRef.current = null;
+      return;
+    }
+
+    const sourceAppointment = resolveManualRecareSourceAppointment();
+    const sourceProcedures = extractAppointmentProcedures(sourceAppointment);
+    if (sourceProcedures.length > 0) {
+      if (!recareProceduresLoadedRef.current) {
+        preRecareProceduresRef.current = procedures;
+      }
+      recareProceduresLoadedRef.current = true;
+      setProcedures(sourceProcedures);
+    }
+  }, [open, visitType, patient, dateTime, appointments, selectedAppointmentContext, isRecareTemplate, isExistingAppointment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePatientChange = (newPatient) => {
     // If the user is switching from one selected patient to a different one,

@@ -110,7 +110,8 @@ const ProcedureBlocks = ({ appointment }) => {
     customFields: appointment.customFields,
     patientId: appointment.patientId || appointment.patient?._id || appointment.patient?.id || appointment.patient?.PatNum || '',
     patientName: appointment.patientName || (appointment.patient ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim() : ''),
-    patient: appointment.patient || null
+    patient: appointment.patient || null,
+    sourceProcedureBlockAppointment: appointment
   } : null;
 
   // Setup draggable for recare/treatment blocks (must be called unconditionally for hooks rules)
@@ -232,6 +233,8 @@ const ProcedureBlocks = ({ appointment }) => {
         <Box sx={{ p: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {proceduresList.map((proc, idx) => {
             const desc = proc.description || proc.name || proc.treatment || proc.code || 'Procedure';
+            const procedureDateKey = `${proc.code || proc.procedureCode || proc.ProcCode || ''}|${proc.treatment || proc.description || proc.name || desc || ''}`.trim().toLowerCase();
+            const scheduledDates = appointment?.recareProcedureDateMap?.[procedureDateKey] || [];
 
             // Helper: extract name from any provider-shaped object
             const nameFromObj = (obj) => {
@@ -310,12 +313,12 @@ const ProcedureBlocks = ({ appointment }) => {
                       {dayjs(proc.createdAt).format('MM/DD/YY')}
                     </Typography>
                   )}
-                  {/* Show appointment date if scheduled */}
-                  {appointment?.appointmentDate && (
+                  {/* Show only dates for recare appointments that include this specific procedure. */}
+                  {scheduledDates.length > 0 ? (
                     <Typography sx={{ fontSize: '12px', color: COLORS.ACCENT, fontWeight: fontWeight.medium, ml: '8px' }}>
-                      {dayjs(appointment.appointmentDate).format('MM/DD/YYYY')}
+                      {scheduledDates.map(date => dayjs(date).format('MM/DD/YYYY')).join(', ')}
                     </Typography>
-                  )}
+                  ) : null}
                 </Box>
               </Box>
             );
