@@ -423,7 +423,7 @@ const OperatorySchedulePage = () => {
       setEditingAppointment(templateData);
       setInitialShortlistData(null);
       setFormOpen(true);
-      setShowExtendedOptions(true);
+      setShowExtendedOptions(false);
       
       showSnackbar(`${visitType.charAt(0).toUpperCase() + visitType.slice(1)} appointment ready to schedule`, "info");
     }

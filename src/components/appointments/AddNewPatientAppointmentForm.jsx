@@ -129,12 +129,22 @@ const AddNewPatientAppointmentForm = ({
     setProviderRows((rows) => rows.map((row) => ({ ...row, providerId: "" })));
   };
 
-  const initialProviderRows = initialShortlistData?.ProvNum
+  const getInitialProviderId = () => {
+    if (initialShortlistData?.ProvNum) return String(initialShortlistData.ProvNum);
+    if (initialAppointment?.providerId) return String(initialAppointment.providerId);
+    if (initialAppointment?.ProvNum) return String(initialAppointment.ProvNum);
+    if (initialAppointment?.provider?.ProvNum) return String(initialAppointment.provider.ProvNum);
+    if (initialAppointment?.provider?._id) return String(initialAppointment.provider._id);
+    if (initialAppointment?.provider?.id) return String(initialAppointment.provider.id);
+    return "";
+  };
+
+  const initialProviderRows = getInitialProviderId()
     ? [
         {
           id: 1,
-          providerId: String(initialShortlistData.ProvNum),
-          time: initialShortlistData?.DurationMins || 60,
+          providerId: getInitialProviderId(),
+          time: initialShortlistData?.DurationMins || initialAppointment?.durationMinutes || 60,
         },
       ]
     : [{ id: 1, providerId: "", time: 60 }];
@@ -205,7 +215,7 @@ const AddNewPatientAppointmentForm = ({
     [selectedStart, durationMins],
   );
 
-  const isRecareTemplate = initialAppointment?.id?.startsWith("recare-") === true;
+  const isRecareTemplate = initialAppointment?.isRecareTemplate === true || initialAppointment?.id?.startsWith("recare-") === true;
   const isExistingAppointment = Boolean(initialAppointment) && !isRecareTemplate;
 
   const conflictExcludedAppointmentId = useMemo(() => {
@@ -808,8 +818,6 @@ const AddNewPatientAppointmentForm = ({
               .catch(() => {});
           }
         };
-
-        const isRecareTemplate = initialAppointment?.isRecareTemplate === true;
 
         console.log('[FORM] initialAppointment received:', JSON.stringify(initialAppointment, (k, v) => {
           if (k === 'rawAppointment' || k === 'patient') return '[Object]';
@@ -1485,7 +1493,7 @@ const AddNewPatientAppointmentForm = ({
   };
 
   const isShortlistEditMode = Boolean(initialShortlistData);
-  const isEditMode = Boolean(initialAppointment || initialShortlistData);
+  const isEditMode = (Boolean(initialAppointment) && !isRecareTemplate) || Boolean(initialShortlistData);
 
   // Seed from the appointment's persisted customFields so it shows correctly on re-open
   const [isCopiedToShortlist, setIsCopiedToShortlist] = useState(

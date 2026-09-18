@@ -68,42 +68,31 @@ const ProcedureBlocks = ({ appointment }) => {
     return `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.name || null;
   };
 
-  if (!appointment) return null;
+  // Extract array of procedures (needs to be before useDraggable for drag data)
+  let proceduresList = [];
+  if (appointment) {
+    // Priority: rawProcedures (from grid item) > customFields.procedures > procedures array > string > chiefComplaint
+    if (Array.isArray(appointment.rawProcedures) && appointment.rawProcedures.length > 0) {
+      proceduresList = appointment.rawProcedures;
+    } else if (Array.isArray(appointment.procedures)) {
+      proceduresList = appointment.procedures;
+    } else if (Array.isArray(appointment.customFields?.procedures)) {
+      proceduresList = appointment.customFields.procedures;
+    } else if (typeof appointment.procedures === 'string') {
+      proceduresList = appointment.procedures.split(',').map(p => ({ description: p.trim() }));
+    } else if (appointment.chiefComplaint) {
+      proceduresList = [{ description: appointment.chiefComplaint }];
+    }
+  }
 
   // Determine visit type for drag eligibility
-  const visitType = String(appointment.visitType || appointment.customFields?.visitType || appointment.appointmentTypeName || appointment.appointmentType || '').toLowerCase();
+  const visitType = appointment
+    ? String(appointment.visitType || appointment.customFields?.visitType || appointment.appointmentTypeName || appointment.appointmentType || '').toLowerCase()
+    : '';
   const isDraggableVisitType = visitType === 'recare' || visitType === 'treatment';
 
-  // Determine header label
-  let headerLabel = appointment.appointmentTypeName || appointment.visitType || appointment.appointmentType;
-  if (typeof headerLabel === 'object') {
-    headerLabel = headerLabel?.name || 'Procedures';
-  }
-  if (!headerLabel) {
-    headerLabel = 'Scheduled Procedures';
-  }
-
-  // Duration
-  const apptDuration = appointment.durationMinutes || appointment.duration;
-  const durationLabel = apptDuration ? `${apptDuration} min` : '-- min';
-
-  // Extract array of procedures
-  let proceduresList = [];
-  // Priority: rawProcedures (from grid item) > customFields.procedures > procedures array > string > chiefComplaint
-  if (Array.isArray(appointment.rawProcedures) && appointment.rawProcedures.length > 0) {
-    proceduresList = appointment.rawProcedures;
-  } else if (Array.isArray(appointment.procedures)) {
-    proceduresList = appointment.procedures;
-  } else if (Array.isArray(appointment.customFields?.procedures)) {
-    proceduresList = appointment.customFields.procedures;
-  } else if (typeof appointment.procedures === 'string') {
-    proceduresList = appointment.procedures.split(',').map(p => ({ description: p.trim() }));
-  } else if (appointment.chiefComplaint) {
-    proceduresList = [{ description: appointment.chiefComplaint }];
-  }
-
-  // Prepare drag data for recare/treatment appointments
-  const dragData = isDraggableVisitType ? {
+  // Prepare drag data for recare/treatment appointments (for useDraggable hook)
+  const dragData = appointment && isDraggableVisitType ? {
     isRecareBlock: true,
     type: visitType,
     visitType: visitType,
@@ -116,7 +105,7 @@ const ProcedureBlocks = ({ appointment }) => {
     })),
     providerId: appointment.providerId || appointment.provider?.ProvNum || appointment.provider?._id || appointment.provider?.id || '',
     providerName: appointment.providerName || (appointment.provider ? getProviderName(appointment.provider) : ''),
-    durationMinutes: apptDuration || 60,
+    durationMinutes: appointment.durationMinutes || appointment.duration || 60,
     appointmentTypeName: appointment.appointmentTypeName,
     customFields: appointment.customFields,
     patientId: appointment.patientId || appointment.patient?._id || appointment.patient?.id || appointment.patient?.PatNum || '',
@@ -124,14 +113,30 @@ const ProcedureBlocks = ({ appointment }) => {
     patient: appointment.patient || null
   } : null;
 
-  console.log('[DRAG] dragData created:', JSON.stringify(dragData, null, 2));
-
-  // Setup draggable for recare/treatment blocks
+  // Setup draggable for recare/treatment blocks (must be called unconditionally for hooks rules)
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `recare-block-${appointment._id || appointment.id}`,
+    id: `recare-block-${appointment?._id || appointment?.id}`,
     data: dragData,
     disabled: !isDraggableVisitType
   });
+
+  if (!appointment) return null;
+
+  // Determine header label - show "Recare" for both recare and treatment visit types
+  let headerLabel = appointment.appointmentTypeName || appointment.visitType || appointment.appointmentType;
+  if (typeof headerLabel === 'object') {
+    headerLabel = headerLabel?.name || 'Procedures';
+  }
+  if (!headerLabel) {
+    headerLabel = 'Scheduled Procedures';
+  }
+  if (isDraggableVisitType) {
+    headerLabel = 'Recare';
+  }
+
+  // Duration
+  const apptDuration = appointment.durationMinutes || appointment.duration;
+  const durationLabel = apptDuration ? `${apptDuration} min` : '-- min';
 
   if (proceduresList.length === 0) {
     return (
@@ -203,11 +208,6 @@ const ProcedureBlocks = ({ appointment }) => {
           <Typography sx={{ ...headingSecondarySx, color: COLORS.TEXT_PRIMARY }}>
             {headerLabel}
           </Typography>
-          {isDraggableVisitType && (
-            <Box sx={{ fontSize: '10px', fontWeight: fontWeight.bold, color: COLORS.ACCENT, backgroundColor: COLORS.ACCENT_BG, px: '4px', py: '1px', borderRadius: '2px', ml: '4px' }}>
-              {visitType.toUpperCase()}
-            </Box>
-          )}
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -231,7 +231,7 @@ const ProcedureBlocks = ({ appointment }) => {
       <Collapse in={open}>
         <Box sx={{ p: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {proceduresList.map((proc, idx) => {
-            const desc = proc.description || proc.name || proc.code || 'Procedure';
+            const desc = proc.description || proc.name || proc.treatment || proc.code || 'Procedure';
 
             // Helper: extract name from any provider-shaped object
             const nameFromObj = (obj) => {
