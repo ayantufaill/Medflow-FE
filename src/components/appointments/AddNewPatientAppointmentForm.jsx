@@ -836,10 +836,11 @@ const AddNewPatientAppointmentForm = ({
 
         const loadFullDetails = async () => {
           try {
+            const apptId = String(initialAppointment.id || '');
+            const isTemplateId = apptId.startsWith("temp-") || apptId.startsWith("recare-") || /^\d+$/.test(apptId);
             if (
               initialAppointment.id &&
-              !String(initialAppointment.id).startsWith("temp-") &&
-              !String(initialAppointment.id).startsWith("recare-")
+              !isTemplateId
             ) {
               const { appointmentService } =
                 await import("../../services/appointment.service");

@@ -310,6 +310,12 @@ const ProcedureBlocks = ({ appointment }) => {
                       {dayjs(proc.createdAt).format('MM/DD/YY')}
                     </Typography>
                   )}
+                  {/* Show appointment date if scheduled */}
+                  {appointment?.appointmentDate && (
+                    <Typography sx={{ fontSize: '12px', color: COLORS.ACCENT, fontWeight: fontWeight.medium, ml: '8px' }}>
+                      {dayjs(appointment.appointmentDate).format('MM/DD/YYYY')}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
             );

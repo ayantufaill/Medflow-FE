@@ -393,8 +393,10 @@ const OperatorySchedulePage = () => {
       const visitType = dragData.visitType || 'recare';
 
       // Pass the block data directly as initialAppointment with a template flag
+      // Use a numeric ID (no prefix) so form treats it as new appointment
       const templateData = {
         ...dragData,
+        id: Date.now(), // Numeric ID - no "recare-" prefix, no "appt-" prefix
         appointmentDate: appointmentDate,
         startTime: startTime,
         endTime: endTime,
@@ -1106,7 +1108,8 @@ const OperatorySchedulePage = () => {
         patientName: formData.patientName,
       };
 
-      if (editingAppointment && !formData.isNewRecall) {
+      const isRecareTemplate = editingAppointment?.isRecareTemplate === true;
+      if (editingAppointment && !formData.isNewRecall && !isRecareTemplate) {
         let apptId = editingAppointment._id || editingAppointment.id;
         if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
           apptId = apptId.replace('appt-', '');
