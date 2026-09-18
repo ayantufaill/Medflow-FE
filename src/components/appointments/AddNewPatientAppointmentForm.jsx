@@ -486,12 +486,14 @@ const AddNewPatientAppointmentForm = ({
           );
 
           const hasName =
-            sourceAppt.patientName || initialAppointment.patientName;
+            sourceAppt.patientName || initialAppointment.patientName ||
+            initialPatient?.firstName || initialPatient?.name ||
+            (sourceAppt.patient && typeof sourceAppt.patient === "object" ? `${sourceAppt.patient.firstName || ""} ${sourceAppt.patient.lastName || ""}`.trim() : "");
           const mockPatient =
             patId || hasName
               ? {
-                  id: patId || "unknown",
-                  rawId: patId || "unknown",
+                  id: patId || initialPatient?.id || "unknown",
+                  rawId: patId || initialPatient?.rawId || initialPatient?.id || "unknown",
                   firstName: hasName ? hasName.split(" ")[0] : "Unknown",
                   lastName: hasName
                     ? hasName.split(" ").slice(1).join(" ")
@@ -1220,9 +1222,9 @@ const AddNewPatientAppointmentForm = ({
     return `${fullCode}|${treatment}`.trim().toLowerCase();
   };
 
-  const buildRecareProcedureDateMap = () => {
-    const sourceAppt = resolveManualRecareSourceAppointment();
-    const sourceApptId = sourceAppt ? String(getAppointmentId(sourceAppt)) : null;
+  const buildRecareProcedureDateMap = (sourceApptOverride = null) => {
+    const sourceAppt = sourceApptOverride || initialAppointment || selectedAppointmentContext;
+    const sourceApptId = getRecareSourceAppointmentId(sourceAppt) || sourceAppt?.id || sourceAppt?._id || null;
     const map = {};
     (appointments || []).forEach((appt) => {
       const visitType = String(appt.visitType || appt.customFields?.visitType || '').toLowerCase();
@@ -1231,7 +1233,7 @@ const AddNewPatientAppointmentForm = ({
       const apptId = String(raw?.id || raw?._id || raw?.appointmentId || raw?.AptNum || '');
       const apptSourceId = String(getRecareSourceAppointmentId(appt) || '');
       const isRelated = sourceApptId
-        ? (apptSourceId === sourceApptId || apptId === sourceApptId)
+        ? (apptSourceId === sourceApptId || apptId === sourceApptId || apptId === String(sourceApptId))
         : false;
       if (!isRelated) return;
       const date = raw?.appointmentDate || raw?.date || null;
@@ -1258,7 +1260,7 @@ const AddNewPatientAppointmentForm = ({
   const extractAppointmentProcedures = (appointment) => {
     const raw = appointment?.rawAppointment || appointment;
     const customFields = raw?.customFields || {};
-    const recareProcedureDateMap = buildRecareProcedureDateMap();
+    const recareProcedureDateMap = buildRecareProcedureDateMap(appointment);
     if (typeof raw?.procedures === "string" && raw.procedures.trim()) {
       return normalizeProceduresForForm(raw.procedures.split(",").map((p) => p.trim()).filter(Boolean), recareProcedureDateMap);
     }
