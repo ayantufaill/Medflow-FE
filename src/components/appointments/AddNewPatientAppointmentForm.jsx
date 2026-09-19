@@ -82,6 +82,8 @@ const AddNewPatientAppointmentForm = ({
   const [isAddProcedureOpen, setIsAddProcedureOpen] = useState(false);
   const [procedureInput, setProcedureInput] = useState("");
   const nextId = useRef(10);
+  // Server-computed recare due dates keyed by procedure (CDT) code: { [code]: { dueDate, ... } }
+  const [recareDueDateMap, setRecareDueDateMap] = useState({});
   const preRecareProceduresRef = useRef(null);
   const recareProceduresLoadedRef = useRef(false);
   // Remembers the status that was active just before an auto-complete override,
@@ -1186,7 +1188,10 @@ const AddNewPatientAppointmentForm = ({
       const treatment = p.description || p.treatment || p.name || p.title || p.Descript || "Unknown";
       const dateKey = `${code}|${treatment}`.trim().toLowerCase();
       const scheduledDates = recareProcedureDateMap?.[dateKey] || [];
-      const dueDate = scheduledDates.length > 0 ? scheduledDates[0] : undefined;
+      // Backend keys recareDueDates by trimmed/uppercased CDT code.
+      const serverCode = (code || "").trim().toUpperCase();
+      const serverDue = recareDueDateMap?.[serverCode]?.dueDate;
+      const dueDate = serverDue || (scheduledDates.length > 0 ? scheduledDates[0] : undefined);
       if (typeof p === "string") {
         return {
           code: "TBD",
@@ -1331,7 +1336,7 @@ const AddNewPatientAppointmentForm = ({
       );
       setProcedures(proceduresWithUncheckedState);
     }
-  }, [open, visitType, patient, dateTime, appointments, selectedAppointmentContext, isRecareTemplate, isExistingAppointment]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, visitType, patient, dateTime, appointments, selectedAppointmentContext, isRecareTemplate, isExistingAppointment, recareDueDateMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track user-unchecked procedures by code so date/time changes don't auto-recheck them
   useEffect(() => {
@@ -1373,6 +1378,42 @@ const AddNewPatientAppointmentForm = ({
 
     setPatient(newPatient);
   };
+
+  // Fetch server-computed recare due dates (per CDT code) whenever the selected
+  // patient changes or the dialog (re)opens. Falls back to the scheduled-date
+  // heuristic inside normalizeProceduresForForm if the endpoint is unavailable.
+  useEffect(() => {
+    const patId =
+      patient?.patientId ||
+      patient?.chartNumber ||
+      patient?.id ||
+      patient?._id ||
+      "";
+    let cancelled = false;
+    if (!patId) {
+      setRecareDueDateMap({});
+      return undefined;
+    }
+    setRecareDueDateMap({});
+    import("../../services/patient.service")
+      .then(({ patientService }) => patientService.getRecareDueDates(patId))
+      .then((dueDates) => {
+        if (!cancelled) setRecareDueDateMap(dueDates || {});
+      })
+      .catch(() => {
+        console.warn(`Could not load recare due dates for patient ${patId}`);
+        if (!cancelled) setRecareDueDateMap({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    patient?.patientId,
+    patient?.chartNumber,
+    patient?.id,
+    patient?._id,
+  ]);
 
   /* ── Tag handlers ── */
   const handleTagClick = (label, idx) => {
