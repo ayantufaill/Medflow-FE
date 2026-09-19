@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 const InsurancePaymentTable = ({
   procedures,
   handleProcedureChange,
+  handleProcedureBlur,
   selectedClaimObj,
   patientName
 }) => {
@@ -65,10 +66,35 @@ const InsurancePaymentTable = ({
           {/* Procedure Rows for this Invoice */}
           {group.items.map((proc) => {
             const i = proc._originalIndex;
+            // Detect overpayment: if (wo + pay) > insPortionEst, highlight this row
+            const insEst = Number(proc.insPortionEst || 0);
+            const woNum = Number(proc.wo || 0);
+            const payNum = Number(proc.pay || 0);
+            const procOverpay = insEst > 0 ? Math.max(0, Math.round(((woNum + payNum) - insEst) * 100) / 100) : 0;
+            const isOverpaid = procOverpay > 0.005;
+
             return (
-              <Box key={i} sx={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #f5f5f5' }}>
-                <Box sx={{ width: '250px', display: 'flex', alignItems: 'center', py: 1 }}>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{proc.code}</Typography>
+              <Box
+                key={i}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  borderBottom: '1px solid #f5f5f5',
+                  borderRadius: isOverpaid ? '4px' : undefined,
+                  border: isOverpaid ? '1px solid #90caf9' : undefined,
+                  bgcolor: isOverpaid ? 'rgba(35, 98, 239, 0.04)' : undefined,
+                  mb: isOverpaid ? 0.5 : undefined,
+                }}
+              >
+                <Box sx={{ width: '250px', display: 'flex', alignItems: 'center', py: 1, pl: isOverpaid ? 0.5 : 0 }}>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#333' }}>{proc.code}</Typography>
+                    {isOverpaid && (
+                      <Typography sx={{ fontSize: '0.68rem', color: '#1976d2', fontWeight: 600, mt: 0.25 }}>
+                        ℹ Overpays by ${procOverpay.toFixed(2)}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
                 <Box sx={{ width: '40px', display: 'flex', alignItems: 'center', py: 1, borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 }}>
                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>RSL</Typography>
@@ -77,28 +103,56 @@ const InsurancePaymentTable = ({
                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.submitted}</Typography>
                 </Box>
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
-                    <input type="text" value={proc.ded} onChange={(e) => handleProcedureChange(i, 'ded', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+                    <input
+                      type="text"
+                      value={proc.ded}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleProcedureChange(i, 'ded', e.target.value)}
+                      onBlur={() => handleProcedureBlur?.(i, 'ded')}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '55px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }}
+                    />
                   </Box>
                 </Box>
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
-                    <input type="text" value={proc.allowed} onChange={(e) => handleProcedureChange(i, 'allowed', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }} />
+                    <input
+                      type="text"
+                      value={proc.allowed}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleProcedureChange(i, 'allowed', e.target.value)}
+                      onBlur={() => handleProcedureBlur?.(i, 'allowed')}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '55px', fontSize: '0.75rem', fontWeight: 600, padding: 0 }}
+                    />
                   </Box>
                 </Box>
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-                  <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center' }}>
+                  <Box sx={{ border: `1px dashed ${isOverpaid ? '#90caf9' : '#ccc'}`, px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: '#f06c6c' }}>$</Typography>
-                    <input type="text" value={proc.wo} onChange={(e) => handleProcedureChange(i, 'wo', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, padding: 0, color: '#f06c6c' }} />
+                    <input
+                      type="text"
+                      value={proc.wo}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleProcedureChange(i, 'wo', e.target.value)}
+                      onBlur={() => handleProcedureBlur?.(i, 'wo')}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '55px', fontSize: '0.75rem', fontWeight: 600, padding: 0, color: '#f06c6c' }}
+                    />
                   </Box>
                 </Box>
                 <Box sx={{ width: '120px', display: 'flex', alignItems: 'stretch' }}>
-                  <Box sx={{ bgcolor: '#8eb378', px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Box sx={{ border: '1px dashed #7ea368', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent' }}>
+                  <Box sx={{ bgcolor: isOverpaid ? '#1976d2' : '#8eb378', px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%', transition: 'background-color 0.2s' }}>
+                    <Box sx={{ border: `1px dashed ${isOverpaid ? '#1565c0' : '#7ea368'}`, px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent', width: '85px' }}>
                       <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mr: 0.25 }}>$</Typography>
-                      <input type="text" value={proc.pay} onChange={(e) => handleProcedureChange(i, 'pay', e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', width: '40px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', padding: 0 }} />
+                      <input
+                        type="text"
+                        value={proc.pay}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleProcedureChange(i, 'pay', e.target.value)}
+                        onBlur={() => handleProcedureBlur?.(i, 'pay')}
+                        style={{ border: 'none', outline: 'none', background: 'transparent', width: '70px', fontSize: '0.75rem', fontWeight: 600, color: '#fff', padding: 0 }}
+                      />
                     </Box>
                   </Box>
                 </Box>

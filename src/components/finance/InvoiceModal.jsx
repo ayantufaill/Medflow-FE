@@ -37,6 +37,14 @@ import { invoiceService } from "../../services/invoice.service";
 
 const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
+  const reduxPatient = useSelector((state) => state.patient?.currentPatient || state.patient?.selectedPatient);
+  const activePatient = patient || reduxPatient;
+  const activePatientId = activePatient?._id || activePatient?.id || activePatient?.PatNum;
+  const hasSecondary = Boolean(
+    activePatient?.secondaryInsurance ||
+    (activePatient?.insurances && activePatient.insurances.some((i) => i.insuranceType?.toLowerCase() === 'secondary' || i.ordinal === 2))
+  );
+
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
   const [addClaim, setAddClaim] = useState(false);
@@ -86,13 +94,21 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                 : null,
           });
 
+          const localPt = hasSecondary ? 0 : portions.ptPortion;
+          const localSec = hasSecondary ? portions.ptPortion : 0;
+          const localPrim = portions.insPortion;
+          const localTotalIns = localPrim + localSec;
+
           return {
             ...p,
             allowedFee: baseFee,
             originalFee: baseFee,
             writeoff: `$${numWriteoff.toFixed(2)}`,
-            insPortion: `$${portions.insPortion.toFixed(2)}`,
-            ptPortion: `$${portions.ptPortion.toFixed(2)}`,
+            insPortion: `$${localTotalIns.toFixed(2)}`,
+            primaryInsPortion: localPrim,
+            secondaryInsPortion: localSec,
+            totalInsPortion: localTotalIns,
+            ptPortion: `$${localPt.toFixed(2)}`,
             balance: `$${portions.balance.toFixed(2)}`,
             coveragePct: portions.coveragePct,
           };
@@ -102,11 +118,46 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           recalculated,
         );
         setProcedures(recalculated);
+        
+        // Fetch accurate estimates from backend to handle secondary insurance
+        if (activePatientId) {
+          const payload = recalculated.map(p => ({
+            code: p.code,
+            charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
+            allowedFee: p.allowedFee,
+            originalFee: p.originalFee,
+            dbi: Boolean(p.dbi)
+          }));
+          
+          invoiceService.estimateInvoiceItems(activePatientId, payload)
+            .then(estimates => {
+              if (estimates && estimates.length === recalculated.length) {
+                setProcedures(prev => prev.map((p, idx) => {
+                  const est = estimates[idx];
+                  if (!est) return p;
+                  const sec = Number(est.secondaryInsPortion || 0);
+                  const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
+                  const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
+                  const pt = Number(est.ptPortion || 0);
+                  return {
+                    ...p,
+                    insPortion: `$${totalIns.toFixed(2)}`,
+                    primaryInsPortion: prim,
+                    secondaryInsPortion: sec,
+                    totalInsPortion: totalIns,
+                    ptPortion: `$${pt.toFixed(2)}`,
+                    writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+                  };
+                }));
+              }
+            })
+            .catch(err => console.warn("Failed to fetch initial estimates from backend:", err));
+        }
       } else {
         setProcedures(invoiceData.procedures);
       }
     }
-  }, [invoiceData, patient]);
+  }, [invoiceData, patient, reduxPatient]);
 
   // Procedures eligible for a claim: only those where dbi is false
   const claimProcedures = procedures.filter((p) => !p.dbi);
@@ -134,6 +185,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       coverageTable: patient?.coverageTable || null,
     });
 
+    const localPt = hasSecondary ? 0 : portions.ptPortion;
+    const localSec = hasSecondary ? portions.ptPortion : 0;
+    const localPrim = portions.insPortion;
+    const localTotalIns = localPrim + localSec;
+
     const newProcedure = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
       date: new Date().toISOString().split("T")[0],
@@ -149,18 +205,21 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       originalFee: fee,
       writeoff: "$0.00",
       coveragePct: portions.coveragePct,
-      ptPortion: `$${portions.ptPortion.toFixed(2)}`,
-      insPortion: `$${portions.insPortion.toFixed(2)}`,
+      ptPortion: `$${localPt.toFixed(2)}`,
+      insPortion: `$${localTotalIns.toFixed(2)}`,
+      primaryInsPortion: localPrim,
+      secondaryInsPortion: localSec,
+      totalInsPortion: localTotalIns,
       charge: `$${fee.toFixed(2)}`,
       balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
     };
 
-    if (patient && patient._id) {
+    if (activePatientId) {
       try {
         const estimates = await invoiceService.estimateInvoiceItems(
-          patient._id,
+          activePatientId,
           [
             {
               code: newProcedure.code,
@@ -173,8 +232,15 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
         if (estimates && estimates.length > 0) {
           const est = estimates[0];
           console.log("Got estimate from backend for new procedure:", est);
-          newProcedure.insPortion = `$${Number(est.insPortion || 0).toFixed(2)}`;
-          newProcedure.ptPortion = `$${Number(est.ptPortion || 0).toFixed(2)}`;
+          const sec = Number(est.secondaryInsPortion || 0);
+          const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
+          const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
+          const pt = Number(est.ptPortion || 0);
+          newProcedure.insPortion = `$${totalIns.toFixed(2)}`;
+          newProcedure.primaryInsPortion = prim;
+          newProcedure.secondaryInsPortion = sec;
+          newProcedure.totalInsPortion = totalIns;
+          newProcedure.ptPortion = `$${pt.toFixed(2)}`;
           newProcedure.writeoff = `$${Number(est.writeoff || 0).toFixed(2)}`;
           newProcedure.balance = `$${fee.toFixed(2)}`;
           if (est.allowedFee !== undefined) {
@@ -306,10 +372,17 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           setProcedures((prev) =>
             prev.map((p) => {
               if (p.id !== procedureId) return p;
+              const sec = Number(est.secondaryInsPortion || 0);
+              const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
+              const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
+              const pt = Number(est.ptPortion || 0);
               return {
                 ...p,
-                insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
-                ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+                insPortion: `$${totalIns.toFixed(2)}`,
+                primaryInsPortion: prim,
+                secondaryInsPortion: sec,
+                totalInsPortion: totalIns,
+                ptPortion: `$${pt.toFixed(2)}`,
                 writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
                 balance: `$${numCharge.toFixed(2)}`,
                 allowedFee:
@@ -397,10 +470,17 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                 parseFloat(
                   (p.charge || "").toString().replace(/[^0-9.-]+/g, ""),
                 ) || 0;
+              const sec = Number(est.secondaryInsPortion || 0);
+              const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
+              const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
+              const pt = Number(est.ptPortion || 0);
               return {
                 ...p,
-                insPortion: `$${Number(est.insPortion || 0).toFixed(2)}`,
-                ptPortion: `$${Number(est.ptPortion || 0).toFixed(2)}`,
+                insPortion: `$${totalIns.toFixed(2)}`,
+                primaryInsPortion: prim,
+                secondaryInsPortion: sec,
+                totalInsPortion: totalIns,
+                ptPortion: `$${pt.toFixed(2)}`,
                 writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
                 balance: `$${numCharge.toFixed(2)}`,
                 allowedFee:

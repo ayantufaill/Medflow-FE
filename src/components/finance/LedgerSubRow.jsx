@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Typography, Stack, Tooltip } from "@mui/material";
+import { Box, Typography, Stack, Tooltip, Menu, MenuItem } from "@mui/material";
 import {
   Edit,
   NotInterested,
@@ -37,6 +37,7 @@ const LedgerSubRow = ({
   isPayment,
   isClaim,
   isVoided,
+  insuranceType,
   showExtendedTools,
   onVoidClick,
   voidData,
@@ -62,9 +63,24 @@ const LedgerSubRow = ({
   onEditClaimClick,
   onSendClaimClick,
   onVoidAndRecreateClick,
+  onRejectClaimClick,
+  onLockClaimClick,
+  onVoidClaimClick,
   isPatientDeposit,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuClick = (event) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+  const handleMenuClose = (event) => {
+    event.stopPropagation();
+    setAnchorEl(null);
+  };
+
   const hasProcedures = procedures && procedures.length > 0;
 
   const patientTotal = hasProcedures
@@ -273,9 +289,11 @@ const LedgerSubRow = ({
                 fontWeight: 600,
                 color: isPaidClaim
                   ? "#fff"
-                  : isClosedClaim
-                    ? "#6B778C"
-                    : "#f59e0b",
+                  : claimStatus?.toLowerCase() === "rejected" || claimStatus?.toLowerCase() === "denied"
+                    ? "#ef4444"
+                    : isClosedClaim
+                      ? "#6B778C"
+                      : "#f59e0b",
                 fontSize: "11px",
                 whiteSpace: "nowrap",
               }}
@@ -284,6 +302,10 @@ const LedgerSubRow = ({
                 ? "Cancelled"
                 : claimStatus?.toLowerCase() === "paid"
                   ? "Paid"
+                  : claimStatus?.toLowerCase() === "rejected"
+                    ? "Rejected"
+                  : claimStatus?.toLowerCase() === "denied"
+                    ? "Denied"
                   : claimStatus?.toLowerCase() === "draft" ||
                       claimStatus?.toLowerCase() === "readyforsubmission"
                     ? "Ready for submission"
@@ -564,6 +586,69 @@ const LedgerSubRow = ({
                   <Edit sx={{ fontSize: 18, color: "#10b981" }} />
                 </Box>
               </Tooltip>
+              {/* More Options */}
+              <Tooltip title="More Options" placement="top">
+                <Box
+                  onClick={handleMenuClick}
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <MoreHoriz sx={{ fontSize: 20, color: "#94a3b8" }} />
+                </Box>
+              </Tooltip>
+              <Menu
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleMenuClose}
+                onClick={(e) => e.stopPropagation()}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                PaperProps={{
+                  elevation: 0,
+                  sx: {
+                    minWidth: 140,
+                    borderRadius: "10px",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+                    border: "1px solid #E2E8F0",
+                    p: 0.5,
+                  },
+                }}
+              >
+                <MenuItem
+                  onClick={(e) => {
+                    handleMenuClose(e);
+                    onRejectClaimClick?.(eobData || attachData);
+                  }}
+                  sx={{
+                    fontFamily: "'Inter', 'Manrope', 'Segoe UI', sans-serif",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    color: "#334155",
+                    borderRadius: "6px",
+                    px: 1.5,
+                    py: 1,
+                    transition: "all 0.15s ease",
+                    "&:hover": {
+                      bgcolor: "#FEE2E2",
+                      color: "#DC2626",
+                    },
+                  }}
+                >
+                  Reject Claim
+                </MenuItem>
+              </Menu>
             </Stack>
           ) : showExtendedTools ? (
             <>
@@ -814,7 +899,12 @@ const LedgerSubRow = ({
                   mr: 2,
                 }}
               >
-                ${Number(proc.ptPortion || 0).toFixed(2)}
+                ${(isClaim 
+                    ? (insuranceType?.toLowerCase() === 'secondary' 
+                        ? 0 // Secondary claim patient portion is typically 0 (remaining is primary's responsibility at generation)
+                        : Number(proc.ptPortion || 0)) // Primary claim patient portion
+                    : Number(proc.ptPortion || 0)
+                  ).toFixed(2)}
               </Typography>
               <Typography
                 variant="caption"
@@ -826,7 +916,22 @@ const LedgerSubRow = ({
                   mr: 2,
                 }}
               >
-                ${Number(proc.insPortion || 0).toFixed(2)}
+                ${(isClaim
+                    ? (claimStatus?.toLowerCase() === 'rejected' || claimStatus?.toLowerCase() === 'denied'
+                        ? 0
+                        : (insuranceType?.toLowerCase() === 'secondary'
+                            ? Number(
+                                (proc.secondaryInsPortion !== undefined && proc.secondaryInsPortion !== null && Number(proc.secondaryInsPortion) > 0)
+                                  ? proc.secondaryInsPortion
+                                  : (proc.insPayEst ?? proc.amount ?? proc.secondaryInsPortion ?? 0)
+                              )
+                            : Number(
+                                (proc.primaryInsPortion !== undefined && proc.primaryInsPortion !== null && Number(proc.primaryInsPortion) > 0)
+                                  ? proc.primaryInsPortion
+                                  : (proc.insPayEst ?? proc.insPortion ?? proc.amount ?? 0)
+                              ))) // Show primary expected insurance portion
+                    : Number(proc.insPortion || 0)
+                  ).toFixed(2)}
               </Typography>
               <Typography
                 variant="caption"

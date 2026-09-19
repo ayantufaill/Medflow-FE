@@ -17,6 +17,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import WarningIcon from '@mui/icons-material/Warning';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useDispatch } from 'react-redux';
 import { claimService } from '../../services/claim.service';
@@ -33,6 +34,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import InsurancePaymentTopRow from './insurance-payment/InsurancePaymentTopRow';
 import InsurancePaymentTable from './insurance-payment/InsurancePaymentTable';
 import InsurancePaymentFooter from './insurance-payment/InsurancePaymentFooter';
+import SecondaryClaimPromptDialog from './SecondaryClaimPromptDialog';
 
 const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const dispatch = useDispatch();
@@ -42,6 +44,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [paymentMethod, setPaymentMethod] = useState('EFT');
   const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [procedures, setProcedures] = useState([]);
+  const [updateAllowedFee, setUpdateAllowedFee] = useState(false);
+  const [updateInsFlatPortion, setUpdateInsFlatPortion] = useState(false);
+  const [applyWriteOff, setApplyWriteOff] = useState(false);
+  const [isPartialPayment, setIsPartialPayment] = useState(false);
+  const [showOverpaymentAlert, setShowOverpaymentAlert] = useState(false);
+  const [overpaymentAction, setOverpaymentAction] = useState(null); // 'credit' | 'refund'
+  const [showSecondaryPrompt, setShowSecondaryPrompt] = useState(false);
+  const [createdPaymentInfo, setCreatedPaymentInfo] = useState(null);
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
@@ -53,6 +63,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     if (field === 'moveToNewClaim' && value === true) {
       proc['pay'] = '0.00';
       proc['allowed'] = '0.00';
+      proc['wo'] = '0.00';
     }
     
     if (['ded', 'allowed', 'wo', 'pay'].includes(field)) {
@@ -65,27 +76,31 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     
     if (field === 'allowed') {
       const allowedNum = Number(value || 0);
-      proc.wo = (submittedNum - allowedNum).toFixed(2);
-      const dedNum = Number(proc.ded || 0);
-      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+      proc.wo = Math.max(0, submittedNum - allowedNum).toFixed(2);
     } else if (field === 'wo') {
       const woNum = Number(value || 0);
-      const allowedNum = submittedNum - woNum;
+      const allowedNum = Math.max(0, submittedNum - woNum);
       proc.allowed = allowedNum.toFixed(2);
-      const dedNum = Number(proc.ded || 0);
-      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
     } else if (field === 'ded') {
-      const dedNum = Number(value || 0);
-      const allowedNum = Number(proc.allowed || 0);
-      proc.pay = Math.max(0, allowedNum - dedNum).toFixed(2);
+      // ded is updated directly
     } else if (field === 'pay') {
-      const payNum = Number(value || 0);
-      const dedNum = Number(proc.ded || 0);
-      proc.wo = (submittedNum - (payNum + dedNum)).toFixed(2);
+      // pay is updated directly - do NOT change proc.wo on pay change!
+      // Underpayments transfer to patient responsibility, not write-offs.
     }
     
     newProcedures[index] = proc;
     setProcedures(newProcedures);
+  };
+
+  const handleProcedureBlur = (index, field) => {
+    const newProcedures = [...procedures];
+    const proc = { ...newProcedures[index] };
+    if (['ded', 'allowed', 'wo', 'pay'].includes(field)) {
+      const num = parseFloat(proc[field]);
+      proc[field] = isNaN(num) ? '0.00' : num.toFixed(2);
+      newProcedures[index] = proc;
+      setProcedures(newProcedures);
+    }
   };
   const [showSimpleBillingAlert, setShowSimpleBillingAlert] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
@@ -126,74 +141,184 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       return;
     }
     
+    // Determine overall claim-level payments and insurance balance
+    const claimPaidAmount = Number(claim.paidAmount || claim.insPaid || claim.invoice?.insurancePaid || claim.invoice?.insPaid || 0);
+    const claimInsBalance = (claim.insuranceBalance !== undefined && claim.insuranceBalance !== null)
+      ? Number(claim.insuranceBalance)
+      : (claim.insbalance !== undefined && claim.insbalance !== null
+        ? Number(claim.insbalance)
+        : (claim.invoice?.insuranceBalance !== undefined && claim.invoice?.insuranceBalance !== null
+          ? Number(claim.invoice.insuranceBalance)
+          : null));
+
     let claimProcs = [];
     if (claim.procedures && claim.procedures.length > 0) {
-      claimProcs = claim.procedures
-        .filter(p => !p.dbi && String(p.dbi) !== 'true' && (p.insPayEst === undefined || Number(p.insPayEst) > 0))
-        .map(p => {
-          const submittedNum = Number(p.fee || p.ProcFee || p.charge || 0);
-          const allowedNum = p.insPayEst !== undefined && p.insPayEst !== null ? Number(p.insPayEst) : submittedNum;
-          const woNum = Math.max(0, submittedNum - allowedNum);
+      const eligibleProcs = claim.procedures.filter(
+        p => !p.dbi && String(p.dbi) !== 'true' && (p.insPayEst === undefined || Number(p.insPayEst) > 0)
+      );
 
-          let procInvoiceId = p.invoiceId;
-          if (!procInvoiceId && claim.selectedItems?.length > 0) {
-            const found = claim.selectedItems.find(si => String(si.itemId) === String(p.id || p._id || p.ProcNum));
-            if (found) procInvoiceId = found.invoiceId;
-          }
-          if (!procInvoiceId) {
-            procInvoiceId = claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
-          }
+      const totalExplicitPaid = eligibleProcs.reduce((sum, p) => sum + Number(p.insPayAmt || p.insPaid || 0), 0);
+      const unallocatedClaimPaid = Math.max(0, claimPaidAmount - totalExplicitPaid);
+      const totalClaimEst = eligibleProcs.reduce((sum, p) => {
+        const sub = Number(p.fee || p.ProcFee || p.charge || 0);
+        const eWo = Number(p.writeOffEst ?? p.writeoff ?? p.writeOff ?? 0);
+        return sum + (p.insPayEst !== undefined && p.insPayEst !== null ? Number(p.insPayEst) : Math.max(0, sub - eWo));
+      }, 0);
 
-          return {
-            id: p.id || p._id || p.ProcNum || p.procedureId,
-            invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
-            invoiceNumber: p.invoiceNumber,
-            invoiceDate: p.invoiceDate,
-            code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
-            submitted: `$${submittedNum.toFixed(2)}`,
-            bal: `$${Number(p.balance || submittedNum).toFixed(2)}`,
-            ded: '0.00',
-            allowed: allowedNum.toFixed(2),
-            wo: woNum.toFixed(2),
-            pay: allowedNum.toFixed(2),
-            updateAllowedFee: false,
-            updateInsFlatPortion: false,
-            moveToNewClaim: false
-          };
-        });
+      claimProcs = eligibleProcs.map(p => {
+        const submittedNum = Number(p.fee || p.ProcFee || p.charge || 0);
+        const existingWo = Number(p.writeOffEst ?? p.writeoff ?? p.writeOff ?? 0);
+        const allowedNum = p.allowedOverride !== undefined && p.allowedOverride !== null && Number(p.allowedOverride) > 0
+          ? Number(p.allowedOverride)
+          : (p.feeAllowed !== undefined && p.feeAllowed !== null && Number(p.feeAllowed) > 0
+            ? Number(p.feeAllowed)
+            : Math.max(0, submittedNum - existingWo));
+        const woNum = existingWo;
+        const initialEst = p.insPayEst !== undefined && p.insPayEst !== null
+          ? Number(p.insPayEst)
+          : Math.max(0, allowedNum - woNum);
+
+        let procAlreadyPaid = Number(p.insPayAmt ?? p.insPaid ?? 0);
+        if (procAlreadyPaid === 0 && unallocatedClaimPaid > 0) {
+          if (eligibleProcs.length === 1) {
+            procAlreadyPaid = unallocatedClaimPaid;
+          } else if (totalClaimEst > 0) {
+            procAlreadyPaid = Math.round((unallocatedClaimPaid * (initialEst / totalClaimEst)) * 100) / 100;
+          }
+        }
+
+        let remainingPay = Math.max(0, Math.round((initialEst - procAlreadyPaid) * 100) / 100);
+        if (eligibleProcs.length === 1 && claimInsBalance !== null && !isNaN(claimInsBalance) && claimPaidAmount > 0) {
+          remainingPay = Math.max(0, Math.round(claimInsBalance * 100) / 100);
+        }
+
+        let procInvoiceId = p.invoiceId;
+        if (!procInvoiceId && claim.selectedItems?.length > 0) {
+          const found = claim.selectedItems.find(si => String(si.itemId) === String(p.id || p._id || p.ProcNum));
+          if (found) procInvoiceId = found.invoiceId;
+        }
+        if (!procInvoiceId) {
+          procInvoiceId = claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+        }
+
+        return {
+          id: p.id || p._id || p.ProcNum || p.procedureId,
+          invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
+          invoiceNumber: p.invoiceNumber,
+          invoiceDate: p.invoiceDate,
+          code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
+          submitted: `$${submittedNum.toFixed(2)}`,
+          bal: `$${Number(p.balance || submittedNum).toFixed(2)}`,
+          ded: '0.00',
+          allowed: allowedNum.toFixed(2),
+          wo: woNum.toFixed(2),
+          pay: remainingPay.toFixed(2),
+          insPortionEst: (remainingPay + existingWo).toFixed(2),
+          updateAllowedFee: false,
+          updateInsFlatPortion: false,
+          moveToNewClaim: false
+        };
+      });
     } else if (claim.invoice && claim.invoice.lineItems && claim.invoice.lineItems.length > 0) {
-      claimProcs = claim.invoice.lineItems
-        .filter(l => !l.dbi && String(l.dbi) !== 'true' && (l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0))
-        .map(l => {
-          const submittedNum = Number(l.charge || l.totalPrice || 0);
-          const allowedNum = l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : submittedNum);
-          const woNum = Math.max(0, submittedNum - allowedNum);
+      const isSecondary = claim.insuranceType === 'secondary' || String(claim.ClaimType || claim.claimType || '').toLowerCase() === 'secondary';
+      const eligibleItems = claim.invoice.lineItems.filter(
+        l => !l.dbi && String(l.dbi) !== 'true' && (
+          isSecondary 
+            ? (l.secondaryInsPortion !== undefined && Number(l.secondaryInsPortion) > 0)
+            : ((l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0))
+        )
+      );
+      const totalExplicitPaid = eligibleItems.reduce((sum, l) => sum + Number(l.insPayAmt || l.insPaid || l.insurancePaid || 0), 0);
+      const unallocatedClaimPaid = Math.max(0, claimPaidAmount - totalExplicitPaid);
+      const totalClaimEst = eligibleItems.reduce((sum, l) => {
+        const sub = Number(l.charge || l.totalPrice || l.fee || 0);
+        const eWo = Number(l.writeoff ?? l.estimatedWriteOff ?? 0);
+        const estPortion = isSecondary 
+          ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : 0)
+          : (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : (l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : Math.max(0, sub - eWo)));
+        return sum + estPortion;
+      }, 0);
 
-          const procInvoiceId = l.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+      claimProcs = eligibleItems.map(l => {
+        const submittedNum = Number(l.charge || l.totalPrice || l.fee || 0);
+        const existingWo = Number(l.writeoff ?? l.estimatedWriteOff ?? 0);
+        const allowedNum = l.allowedFee !== undefined && l.allowedFee !== null && Number(l.allowedFee) > 0
+          ? Number(l.allowedFee)
+          : (l.feeAllowed !== undefined && l.feeAllowed !== null && Number(l.feeAllowed) > 0
+            ? Number(l.feeAllowed)
+            : Math.max(0, submittedNum - existingWo));
+        const woNum = existingWo;
+        const initialEst = isSecondary
+          ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : 0)
+          : (l.insPortion !== undefined && l.insPortion !== null
+          ? Number(l.insPortion)
+          : (l.insPayEst !== undefined && l.insPayEst !== null
+            ? Number(l.insPayEst)
+            : Math.max(0, allowedNum - woNum)));
 
-          return {
-            id: l.id || l._id || l.procedureId || l.procId,
-            invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
-            invoiceNumber: l.invoiceNumber,
-            invoiceDate: l.invoiceDate,
-            code: `${l.code || ''} - ${l.description || l.name || ''}`,
-            submitted: `$${submittedNum.toFixed(2)}`,
-            bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
-            ded: '0.00',
-            allowed: allowedNum.toFixed(2),
-            wo: woNum.toFixed(2),
-            pay: allowedNum.toFixed(2),
-            updateAllowedFee: false,
-            updateInsFlatPortion: false,
-            moveToNewClaim: false
-          };
-        });
+        let procAlreadyPaid = Number(l.insPayAmt || l.insPaid || l.insurancePaid || 0);
+        if (procAlreadyPaid === 0 && unallocatedClaimPaid > 0) {
+          if (eligibleItems.length === 1) {
+            procAlreadyPaid = unallocatedClaimPaid;
+          } else if (totalClaimEst > 0) {
+            procAlreadyPaid = Math.round((unallocatedClaimPaid * (initialEst / totalClaimEst)) * 100) / 100;
+          }
+        }
+
+        let remainingPay = Math.max(0, Math.round((initialEst - procAlreadyPaid) * 100) / 100);
+        if (eligibleItems.length === 1 && claimInsBalance !== null && !isNaN(claimInsBalance) && claimPaidAmount > 0) {
+          remainingPay = Math.max(0, Math.round(claimInsBalance * 100) / 100);
+        }
+
+        const procInvoiceId = l.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+
+        return {
+          id: l.id || l._id || l.procedureId || l.procId,
+          invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
+          invoiceNumber: l.invoiceNumber,
+          invoiceDate: l.invoiceDate,
+          code: `${l.code || ''} - ${l.description || l.name || ''}`,
+          submitted: `$${submittedNum.toFixed(2)}`,
+          bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
+          ded: '0.00',
+          allowed: allowedNum.toFixed(2),
+          wo: woNum.toFixed(2),
+          pay: remainingPay.toFixed(2),
+          insPortionEst: (remainingPay + existingWo).toFixed(2),
+          updateAllowedFee: false,
+          updateInsFlatPortion: false,
+          moveToNewClaim: false
+        };
+      });
     } else if (claim.selectedItems && claim.selectedItems.length > 0) {
-      claimProcs = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true').map(item => {
+      const eligibleItems = claim.selectedItems.filter(item => !item.dbi && String(item.dbi) !== 'true');
+      const totalExplicitPaid = eligibleItems.reduce((sum, item) => sum + Number(item.insPayAmt || item.insPaid || 0), 0);
+      const unallocatedClaimPaid = Math.max(0, claimPaidAmount - totalExplicitPaid);
+      const totalClaimEst = eligibleItems.reduce((sum, item) => sum + Number(item.amount || item.fee || 0), 0);
+
+      claimProcs = eligibleItems.map(item => {
         const submittedNum = Number(item.fee || item.amount || 0);
-        const allowedNum = Number(item.amount || item.fee || 0);
+        const existingWo = Number(item.writeoff ?? item.writeOff ?? 0);
+        const allowedNum = Math.max(0, submittedNum - existingWo);
         const itemCode = item.code ? (item.description ? `${item.code} - ${item.description}` : item.code) : `Item ID: ${item.itemId}`;
         const procInvoiceId = item.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
+        const initialEst = item.amount !== undefined && item.amount !== null && Number(item.amount) > 0
+          ? Number(item.amount)
+          : Math.max(0, allowedNum - existingWo);
+
+        let procAlreadyPaid = Number(item.insPayAmt || item.insPaid || 0);
+        if (procAlreadyPaid === 0 && unallocatedClaimPaid > 0) {
+          if (eligibleItems.length === 1) {
+            procAlreadyPaid = unallocatedClaimPaid;
+          } else if (totalClaimEst > 0) {
+            procAlreadyPaid = Math.round((unallocatedClaimPaid * (initialEst / totalClaimEst)) * 100) / 100;
+          }
+        }
+
+        let remainingPay = Math.max(0, Math.round((initialEst - procAlreadyPaid) * 100) / 100);
+        if (eligibleItems.length === 1 && claimInsBalance !== null && !isNaN(claimInsBalance) && claimPaidAmount > 0) {
+          remainingPay = Math.max(0, Math.round(claimInsBalance * 100) / 100);
+        }
 
         return {
           id: item.id || item._id || item.itemId || item.procedureId,
@@ -205,8 +330,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           bal: `$${submittedNum.toFixed(2)}`,
           ded: '0.00',
           allowed: allowedNum.toFixed(2),
-          wo: '0.00',
-          pay: allowedNum.toFixed(2),
+          wo: existingWo.toFixed(2),
+          pay: remainingPay.toFixed(2),
+          insPortionEst: (remainingPay + existingWo).toFixed(2),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
           moveToNewClaim: false
@@ -224,10 +350,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const linkBlue = '#5c7cb6';
 
   const checkboxOptions = [
-    { label: 'Update allowed fee' },
-    { label: 'Update Ins. Flat Portion' },
-    { label: 'Apply write-off', icon: true },
-    { label: 'Partial Payment' }
+    { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
+    { label: 'Update Ins. Flat Portion', checked: updateInsFlatPortion, onChange: (e) => setUpdateInsFlatPortion(e.target.checked) },
+    { label: 'Apply write-off', icon: true, checked: applyWriteOff, onChange: (e) => setApplyWriteOff(e.target.checked) },
+    { label: 'Partial Payment', checked: isPartialPayment, onChange: (e) => setIsPartialPayment(e.target.checked) }
   ];
 
   const handleSwitchToSimpleBilling = () => {
@@ -243,7 +369,21 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   };
 
   const handleApplyAndPay = () => {
-    setShowPaymentOptions(true);
+    // Intercept Apply to check for insurance overpayment before showing payment options
+    const overpay = procedures.reduce((total, proc) => {
+      const insEst = Number(proc.insPortionEst || 0);
+      const wo = Number(proc.wo || 0);
+      const pay = Number(proc.pay || 0);
+      return total + Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+    }, 0);
+
+    if (overpay > 0.005) {
+      // Show overpayment alert instead of directly showing payment options
+      setOverpaymentAction(null);
+      setShowOverpaymentAlert(true);
+    } else {
+      setShowPaymentOptions(true);
+    }
   };
 
   const handleProceedPayment = async () => {
@@ -301,19 +441,29 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       });
 
       const invoiceEntries = Object.entries(procsByInvoice);
+      let shouldSuggestSecondary = false;
       for (const [invId, invProcs] of invoiceEntries) {
+        if (!invProcs || invProcs.length === 0) continue;
         const invPay = invProcs.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
-        if (invPay <= 0) continue;
 
         const paymentData = {
           patientId: patientId.toString(),
           invoiceId: invId.toString(),
-          amount: invPay,
+          amount: Math.max(0, invPay),
           paymentMethod: backendMethod,
           paymentSource: 'insurance_company',
           paymentDate: new Date().toISOString(),
-          insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
-          notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.map(opt => opt.label).join(', ')}`,
+          insuranceCompanyId: (
+            selectedClaimObj.insuranceCompanyId?._id ||
+            selectedClaimObj.insuranceCompanyId?.id ||
+            (typeof selectedClaimObj.insuranceCompanyId === 'string' && selectedClaimObj.insuranceCompanyId !== '[object Object]' ? selectedClaimObj.insuranceCompanyId : null) ||
+            selectedClaimObj.insuranceCompany?._id ||
+            selectedClaimObj.insuranceCompany?.id ||
+            selectedClaimObj.insuranceCompanyRefId
+          )?.toString() || undefined,
+          notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.filter(opt => opt.checked).map(opt => opt.label).join(', ') || 'None'}`,
+          overpaymentAmount: overpaymentAmount > 0.005 ? Math.round(overpaymentAmount * 100) / 100 : undefined,
+          overpaymentAction: overpaymentAmount > 0.005 ? (overpaymentAction || 'credit') : undefined,
           procedures: invProcs.map(p => ({
             ...p,
             allowed: Number(p.allowed || 0),
@@ -325,14 +475,21 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         };
 
         // Call API to create payment for this invoice
-        await paymentService.createPayment(paymentData);
+        const paymentRes = await paymentService.createPayment(paymentData);
+        if (paymentRes?.data?.suggestSecondaryClaim || paymentRes?.suggestSecondaryClaim) {
+          shouldSuggestSecondary = true;
+        }
       }
 
-      // Update claim paidAmount and status to paid (finalizing claim adjudication)
-      const claimPaidAmt = totalPay > 0 ? totalPay : (parseFloat(paymentAmount) || 0);
+      // Update claim paidAmount and status:
+      // If Partial Payment is checked, claim remains 'partial' (unadjudicated balance stays with insurance).
+      // Otherwise, claim status is set to 'paid' (final adjudication, underpayment transfers to patient responsibility).
+      const claimPaidAmt = totalPay > 0 ? totalPay : 0;
+      const priorClaimPaid = Number(selectedClaimObj.paidAmount || 0);
+      const newTotalClaimPaid = Math.round((priorClaimPaid + claimPaidAmt) * 100) / 100;
       await claimService.updateClaim(selectedClaimObj.id, {
-        status: 'paid',
-        paidAmount: claimPaidAmt,
+        status: isPartialPayment ? 'partial' : 'paid',
+        paidAmount: newTotalClaimPaid,
         paidDate: new Date().toISOString()
       });
 
@@ -362,8 +519,17 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onSave({ totalPay, procsByInvoice });
       }
 
-      setShowPaymentOptions(false);
-      onClose?.();
+      if (shouldSuggestSecondary) {
+        setShowPaymentOptions(false);
+        setCreatedPaymentInfo({
+          invoiceId: defaultInvoiceId,
+          primaryClaimId: selectedClaimObj.id || selectedClaimObj._id
+        });
+        setShowSecondaryPrompt(true);
+      } else {
+        setShowPaymentOptions(false);
+        onClose?.();
+      }
     } catch (err) {
       console.error('Error applying insurance payment:', err);
       const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to apply insurance payment';
@@ -376,6 +542,63 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
   const handleCancelPayment = () => {
     setShowPaymentOptions(false);
+  };
+
+  const handleSecondarySubmit = async ({ claimType, invoiceId, primaryClaimId }) => {
+    setIsSubmitting(true);
+    try {
+      const generatedClaimRes = await claimService.generateSecondaryClaim(primaryClaimId);
+      const generatedClaim = generatedClaimRes?.data || generatedClaimRes;
+      
+      if (claimType === 'electronic') {
+        await claimService.updateClaim(generatedClaim.id || generatedClaim.ClaimNum, { status: 'ready to send' });
+      }
+      
+      showSnackbar(`Secondary claim generated successfully (${claimType}).`, 'success');
+    } catch (err) {
+      console.error('Error generating secondary claim:', err);
+      showSnackbar('Failed to generate secondary claim', 'error');
+    } finally {
+      setIsSubmitting(false);
+      setShowSecondaryPrompt(false);
+      onClose?.();
+    }
+  };
+
+  // Derived: real-time overpayment amount (sum of per-procedure excess)
+  const overpaymentAmount = procedures.reduce((total, proc) => {
+    const insEst = Number(proc.insPortionEst || 0);
+    const wo = Number(proc.wo || 0);
+    const pay = Number(proc.pay || 0);
+    return total + Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+  }, 0);
+
+  // Overpaid procedure details for the alert dialog
+  const overpaidProcedures = procedures
+    .map(proc => {
+      const insEst = Number(proc.insPortionEst || 0);
+      const wo = Number(proc.wo || 0);
+      const pay = Number(proc.pay || 0);
+      const excess = Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+      return { ...proc, excess };
+    })
+    .filter(proc => proc.excess > 0.005);
+
+  const handleOverpaymentContinueCredit = () => {
+    setOverpaymentAction('credit');
+    setShowOverpaymentAlert(false);
+    setShowPaymentOptions(true);
+  };
+
+  const handleOverpaymentContinueRefund = () => {
+    setOverpaymentAction('refund');
+    setShowOverpaymentAlert(false);
+    setShowPaymentOptions(true);
+  };
+
+  const handleOverpaymentCancel = () => {
+    setShowOverpaymentAlert(false);
+    setOverpaymentAction(null);
   };
 
   return (
@@ -416,6 +639,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         <InsurancePaymentTable 
           procedures={procedures}
           handleProcedureChange={handleProcedureChange}
+          handleProcedureBlur={handleProcedureBlur}
           selectedClaimObj={claims.find(c => c.id === selectedClaim)}
           patientName={patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : ''}
         />
@@ -427,6 +651,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onClose={onClose}
         totalWo={procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0)}
         totalPay={procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0)}
+        overpaymentAmount={overpaymentAmount}
       />
 
       {/* Simple Billing Alert Dialog */}
@@ -593,6 +818,127 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           </Box>
         </DialogActions>
       </Dialog>
+
+      {/* Overpayment Alert Dialog */}
+      <Dialog
+        open={showOverpaymentAlert}
+        onClose={handleOverpaymentCancel}
+        maxWidth="sm"
+        fullWidth
+        sx={{ zIndex: 150000, '& .MuiDialog-paper': { maxWidth: '560px', borderRadius: '14px', overflow: 'hidden' } }}
+      >
+        <DialogTitle sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}>
+          <InfoOutlinedIcon sx={{ color: COLORS.ACCENT, fontSize: '22px', flexShrink: 0 }} />
+          <Typography sx={{ fontSize: "15px", fontWeight: 700, color: COLORS.TEXT_PRIMARY, flex: 1 }}>
+            Overpayment Detected
+          </Typography>
+          <IconButton onClick={handleOverpaymentCancel} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: '24px !important', px: '25px', pb: 2 }}>
+          <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 2, lineHeight: 1.6 }}>
+            The following procedures are overpaid by the entered amounts. How would you like to handle the overpayment?
+          </Typography>
+          <Box sx={{ bgcolor: '#f0f7ff', border: '1px solid #b8d5f8', borderRadius: '8px', px: 2, py: 1.5, mb: 1 }}>
+            {overpaidProcedures.map((proc, idx) => (
+              <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: 500 }}>
+                  {proc.code}
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 700 }}>
+                  overpaid by ${proc.excess.toFixed(2)}
+                </Typography>
+              </Box>
+            ))}
+            <Box sx={{ borderTop: '1px solid #b8d5f8', mt: 1, pt: 1, display: 'flex', justifyContent: 'space-between' }}>
+              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e3a8a' }}>Total Overpayment</Typography>
+              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentAmount.toFixed(2)}</Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1, gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button
+            onClick={handleOverpaymentContinueCredit}
+            variant="contained"
+            id="overpay-save-as-credit-btn"
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: '#fff',
+              textTransform: 'none',
+              boxShadow: 'none',
+              px: 2,
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              '&:hover': { bgcolor: '#1565c0' }
+            }}
+          >
+            Continue and save overpay as credit
+          </Button>
+          <Button
+            onClick={handleOverpaymentContinueRefund}
+            variant="outlined"
+            id="overpay-refund-btn"
+            sx={{
+              color: COLORS.ACCENT,
+              borderColor: '#90caf9',
+              bgcolor: '#f0f7ff',
+              borderRadius: '8px',
+              '&:hover': { borderColor: COLORS.ACCENT, backgroundColor: '#e3f2fd' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600,
+              fontSize: '0.8rem',
+            }}
+          >
+            Continue and refund overpayment
+          </Button>
+          <Button
+            onClick={handleOverpaymentCancel}
+            variant="outlined"
+            id="overpay-cancel-btn"
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600,
+              fontSize: '0.8rem'
+            }}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <SecondaryClaimPromptDialog
+        open={showSecondaryPrompt}
+        onClose={() => {
+          setShowSecondaryPrompt(false);
+          onClose?.();
+        }}
+        onSubmit={handleSecondarySubmit}
+        patientName={`${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient'}
+        invoiceId={createdPaymentInfo?.invoiceId}
+        primaryClaimId={createdPaymentInfo?.primaryClaimId}
+        secondaryInsuranceName="Secondary Insurance"
+      />
     </Box>
   );
 };
