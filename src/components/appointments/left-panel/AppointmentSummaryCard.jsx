@@ -75,6 +75,21 @@ const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
   }
 
   const time = formattedTime;
+
+  // Format date from appointmentDate as mm-dd-yyyy
+  let formattedDate = '';
+  const apptDate = appointment.appointmentDate || appointment.date;
+  if (apptDate) {
+    try {
+      const d = new Date(apptDate);
+      if (!isNaN(d.getTime())) {
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const y = d.getFullYear();
+        formattedDate = `${m}-${day}-${y}`;
+      }
+    } catch {}
+  }
   let rawProcedures = 
     appointment.chiefComplaint || 
     appointment.workspace?.procedures ||
@@ -172,7 +187,7 @@ const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
       {/* Header matching calendar cards: uses appointment.headerColor */}
       <Box sx={{ backgroundColor: appointment.headerColor || COLORS.ACCENT, px: '8px', py: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.bold, color: '#fff', letterSpacing: '0.5px' }}>
-          {String(visitType).toUpperCase()}
+          {String(visitType).toUpperCase()} @ {formattedDate}
         </Typography>
         <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: '#fff' }}>
           {time}

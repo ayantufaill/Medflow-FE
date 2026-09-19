@@ -100,11 +100,20 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
     appointment?.recareSourceAppointmentId ||
     appointment?.sourceAppointmentId ||
     null;
-  const liveAppt = selectedAppointment 
-    ? (appointmentsList.find(a => String(a._id || a.id) === String(selectedAppointmentId)) 
-       || selectedAppointment.rawAppointment 
+  const liveAppt = selectedAppointment
+    ? (appointmentsList.find(a => String(a._id || a.id) === String(selectedAppointmentId))
+       || selectedAppointment.rawAppointment
        || selectedAppointment)
     : null;
+  const appointmentsMap = appointmentsList.reduce((acc, appt) => {
+    const id = appt._id || appt.id || appt.appointmentId || appt.AptNum;
+    if (id) acc[String(id)] = appt;
+    return acc;
+  }, {});
+  const getFreshAppt = (appt) => {
+    const id = getAppointmentId(appt);
+    return (id && appointmentsMap[String(id)]) || appt;
+  };
   const sourceAppointmentId =
     selectedAppointment?.sourceProcedureBlockAppointment?._id ||
     selectedAppointment?.sourceProcedureBlockAppointment?.id ||
@@ -113,7 +122,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
     liveAppt?.sourceProcedureBlockAppointment?.id ||
     getRecareSourceId(liveAppt);
   const sourceHistoryAppointment = sourceAppointmentId
-    ? patientHistoryList.find(a => String(getAppointmentId(a)) === String(sourceAppointmentId))
+    ? getFreshAppt(patientHistoryList.find(a => String(getAppointmentId(a)) === String(sourceAppointmentId))) || null
     : null;
   const sourceProcedureAppointment =
     selectedAppointment?.sourceProcedureBlockAppointment ||
@@ -127,7 +136,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
     getAppointmentId(liveAppt);
   const sourceProcedureAppointmentId = getAppointmentId(sourceProcedureAppointment) || currentChainRootId;
   const recareAppointmentsForSource = sourceProcedureAppointmentId
-    ? patientHistoryList.filter(a => String(getRecareSourceId(a) || '') === String(sourceProcedureAppointmentId))
+    ? patientHistoryList.filter(a => String(getRecareSourceId(a) || '') === String(sourceProcedureAppointmentId)).map(a => getFreshAppt(a))
     : [];
   const getProcedureKey = (procedure) =>
     typeof procedure === 'string'
@@ -166,7 +175,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
       dispatch(fetchPatientHistory(currentPatientId));
       setShowAllHistory(false);
     }
-  }, [currentPatientId, dispatch]);
+  }, [currentPatientId, selectedAppointmentId, dispatch]);
 
   const getAppointmentPatientId = (appointment) =>
     currentPatient?._id ||
@@ -185,7 +194,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
           String(appointmentId) === String(currentChainRootId) ||
           String(getRecareSourceId(appointment) || '') === String(currentChainRootId)
         );
-      })
+      }).map(histAppt => getFreshAppt(histAppt))
     : (liveAppt ? [liveAppt] : []);
   const effectiveHistoryAppointments = historyAppointments.length > 0 ? historyAppointments : (liveAppt ? [liveAppt] : []);
   const visibleHistoryAppointments = showAllHistory ? effectiveHistoryAppointments : effectiveHistoryAppointments.slice(0, 5);
