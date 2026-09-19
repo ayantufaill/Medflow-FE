@@ -165,12 +165,23 @@ export const extractDifferences = (oldVal, newVal, parentKey = "") => {
           ? `${parentKey} - ${fieldName}`
           : fieldName;
 
-      if (JSON.stringify(oVal) !== JSON.stringify(nVal)) {
+      if (
+        oVal &&
+        typeof oVal === "object" &&
+        ("from" in oVal || "to" in oVal) &&
+        nVal === undefined
+      ) {
+        diffs.push({
+          key: subKey,
+          old: formatValueToText(oVal.from),
+          new: formatValueToText(oVal.to),
+        });
+      } else if (JSON.stringify(oVal) !== JSON.stringify(nVal)) {
         if (
           (oVal && typeof oVal === "object" && !Array.isArray(oVal)) ||
           (nVal && typeof nVal === "object" && !Array.isArray(nVal))
         ) {
-          diffs.push(...extractDifferences(oVal, nVal, fieldName));
+          diffs.push(...extractDifferences(oVal, nVal, subKey));
         } else {
           diffs.push({
             key: subKey,

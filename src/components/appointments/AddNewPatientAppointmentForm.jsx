@@ -17,6 +17,7 @@ import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
 import LabOrderModal from "./new-appointment/LabOrderModal";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
+import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -173,6 +174,7 @@ const AddNewPatientAppointmentForm = ({
   const [toastMessage, setToastMessage] = useState("");
   const [computedVisitType, setComputedVisitType] = useState("");
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
+  const [isAuditOpen, setIsAuditOpen] = useState(false);
 
   // Auto-revert status from "completed" when any checked procedure becomes incomplete.
   useEffect(() => {
@@ -2023,6 +2025,15 @@ const AddNewPatientAppointmentForm = ({
           onLabOrderClick={() => setIsLabOrderOpen(true)}
           computedVisitType={computedVisitType}
           hasConflict={hasOccupancyConflict}
+          createdBy={initialAppointment?.createdBy ?? null}
+          createdAt={initialAppointment?.createdAt ?? null}
+          onViewAuditHistory={() => setIsAuditOpen(true)}
+        />
+
+        <AuditScheduleHistoryDialog
+          open={isAuditOpen}
+          onClose={() => setIsAuditOpen(false)}
+          appointment={initialAppointment}
         />
       </Box>
 
