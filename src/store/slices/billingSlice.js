@@ -62,13 +62,38 @@ const isDbiProcedure = (item = {}) =>
   item.dbi === 1 ||
   String(item.dbi).toLowerCase() === "true";
 
-const isPatientPenaltyItem = (item = {}) =>
-  Boolean(
+const isPatientPenaltyItem = (item = {}) => {
+  if (
     item.isPatientPenalty ||
     item.isAccountPenalty ||
     item.patientOnly ||
-    item.accountPenalty,
+    item.accountPenalty ||
+    item.noBillIns === 1 ||
+    item.noBillIns === true
+  ) {
+    return true;
+  }
+  const desc = String(item.description || item.title || "").toLowerCase();
+  const code = String(item.cptCode || item.code || "").toUpperCase();
+  return Boolean(
+    code.startsWith("ACC-") ||
+    code.startsWith("PENALTY") ||
+    code.startsWith("FEE-") ||
+    code.startsWith("LATE-") ||
+    code === "D9986" ||
+    code === "D9987" ||
+    desc.includes("late cancellation") ||
+    desc.includes("cancellation") ||
+    desc.includes("broken appt") ||
+    desc.includes("broken appointment") ||
+    desc.includes("missed") ||
+    desc.includes("no show") ||
+    desc.includes("no-show") ||
+    desc.includes("late fee") ||
+    desc.includes("late payment") ||
+    desc.includes("penalty")
   );
+};
 
 export const createInvoice = createAsyncThunk(
   "billing/createInvoice",
@@ -116,7 +141,7 @@ export const fetchLedgerItems = createAsyncThunk(
         const rawPaid = Number(invoice.paidAmount || 0);
         const rawBal = Number(invoice.balanceDue || 0);
         const rawPt = Number(invoice.patientPortion || 0);
-        const rawIns = Number(invoice.insurancePortion || 0);
+        const rawIns = Number(invoice.insurancePortion || 0) + Number(invoice.secondaryInsPortion || 0);
         const originalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
         const penaltyItems = (invoice.lineItems || []).filter(
           isPatientPenaltyItem,
@@ -254,6 +279,13 @@ export const fetchLedgerItems = createAsyncThunk(
             claimStatus.toLowerCase().includes("rejected") ||
             claimStatus.toLowerCase().includes("denied");
 
+          const isSecondaryClaim =
+            String(claim.insuranceType || '').toLowerCase() === 'secondary' ||
+            String(claim.claimType || '').toLowerCase() === 'secondary' ||
+            String(claim.ClaimType || '').toLowerCase() === 'secondary';
+
+          const effectiveInsuranceType = isSecondaryClaim ? 'secondary' : (claim.insuranceType || 'primary');
+
           let specificProcedures = [];
           if (claim.procedures && claim.procedures.length > 0) {
             specificProcedures = claim.procedures
@@ -288,7 +320,19 @@ export const fetchLedgerItems = createAsyncThunk(
                     String(item.itemId) ===
                     String(l.id || l._id || l.procedureId || l.procId || l.ProcNum),
                 ) && !isDbiProcedure(l)
-              );
+              ).map((l) => {
+                const matchedSel = thisInvoiceItems.find(
+                  (item) =>
+                    String(item.itemId) ===
+                    String(l.id || l._id || l.procedureId || l.procId || l.ProcNum)
+                );
+                return {
+                  ...l,
+                  amount: matchedSel?.amount,
+                  insAmount: matchedSel?.insAmount || matchedSel?.amount,
+                  insPayEst: matchedSel?.amount,
+                };
+              });
             } else {
               specificProcedures = [];
             }
@@ -311,6 +355,24 @@ export const fetchLedgerItems = createAsyncThunk(
             0,
           );
 
+          const specificSecondaryAmount = specificProcedures.reduce(
+            (sum, line) =>
+              sum +
+              Number(
+                line.secondaryInsPortion !== undefined && line.secondaryInsPortion !== null && Number(line.secondaryInsPortion) > 0
+                  ? line.secondaryInsPortion
+                  : (line.insPayEst || line.amount || 0)
+              ),
+            0
+          );
+
+          const rawClaimAmount = Number(claim.submittedAmount) || Number(claim.claimAmount) || 0;
+          const finalClaimAmount = isSecondaryClaim
+            ? (rawClaimAmount > 0 && rawClaimAmount < Number(invoice.totalAmount || 0)
+                ? rawClaimAmount
+                : (specificSecondaryAmount > 0 ? specificSecondaryAmount : rawClaimAmount))
+            : (rawClaimAmount > 0 ? rawClaimAmount : specificAmount);
+
           return {
             id: claim.id || claim._id,
             claimNumber: claim.claimNumber || claim.id || claim._id,
@@ -324,7 +386,10 @@ export const fetchLedgerItems = createAsyncThunk(
             attachments: claim.attachments || [],
             eobs: claim.eobs || [],
             title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || "Insurance"}(${claim.insuranceCompany?.payerId || "00000"}) :`,
-            amount: `$${specificAmount.toFixed(2)}`,
+            amount: `$${finalClaimAmount.toFixed(2)}`,
+            insuranceType: effectiveInsuranceType,
+            ClaimType: isSecondaryClaim ? 'Secondary' : claim.claimType,
+            claimAmount: finalClaimAmount,
             isClaim: true,
             isPayment: false,
             isApproved,
@@ -373,10 +438,48 @@ export const fetchLedgerItems = createAsyncThunk(
             String(p.status || "").toLowerCase() !== "voided"
         );
         const hasInsurancePayment = totalInsPaidAmt > 0 || hasInsurancePaymentRecord;
+        const hasPendingClaim = claimsMapped.some(
+          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void"
+        );
+        const hasPrimaryClaim = claimsMapped.some(
+          (c) => String(c.status || "").toLowerCase() !== "void" && 
+                 String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
+        );
+        const hasSecondaryClaim = claimsMapped.some(
+          (c) => String(c.status || "").toLowerCase() !== "void" && 
+                 String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
+        );
+
+        let unbilledInsurance = 0;
+        if (!hasPrimaryClaim) {
+          unbilledInsurance += Number(invoice.insurancePortion) || 0;
+        }
+        if (!hasSecondaryClaim && Number(invoice.secondaryInsPortion) > 0) {
+          unbilledInsurance += Number(invoice.secondaryInsPortion) || 0;
+        }
+
+        const hasUnbilledInsurance = unbilledInsurance > 0.01;
+
         const isInsuranceSettled =
-          hasApprovedClaim ||
-          (hasInsurancePayment &&
-            (claimsMapped.length === 0 || claimsMapped.every((c) => c.isApproved)));
+          (hasApprovedClaim || hasInsurancePayment) && !hasPendingClaim && !hasUnbilledInsurance;
+
+        let totalPendingClaimAmount = 0;
+        
+        const pendingPrimaryClaim = claimsMapped.find(
+          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void" && 
+                 String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
+        );
+        if (pendingPrimaryClaim) {
+          totalPendingClaimAmount += Number(invoice.insurancePortion) || 0;
+        }
+
+        const pendingSecondaryClaim = claimsMapped.find(
+          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void" && 
+                 String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
+        );
+        if (pendingSecondaryClaim) {
+          totalPendingClaimAmount += Number(invoice.secondaryInsPortion) || 0;
+        }
 
         const insOverpayment = Math.max(0, totalInsPaidAmt - rawIns);
         const ptOverpayment = Math.max(0, effectivePtPaid - rawPt);
@@ -399,10 +502,11 @@ export const fetchLedgerItems = createAsyncThunk(
             // Partial Payment marked:
             // Claim remains open/ongoing. Underpayment remains in insurance balance.
             // Patient portion is preserved and NOT charged for underpayment.
-            adjustedPtBal = Math.max(0, rawPt + penaltyTotal - effectivePtPaid);
+            const unallocatedPenalty = Math.max(0, penaltyTotal - rawPt);
+            adjustedPtBal = Math.max(0, rawPt + unallocatedPenalty - effectivePtPaid);
             adjustedInsBal = Math.max(
               0,
-              originalTotal - rawPt - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt,
+              originalTotal - rawPt - unallocatedPenalty - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt,
             );
           } else {
             // Final Payment (Partial Payment unchecked / final):
@@ -415,13 +519,23 @@ export const fetchLedgerItems = createAsyncThunk(
           }
         } else {
           // Insurance pending: patient owes their portion, insurance owes their portion
+          const penaltyInIns = Math.min(rawIns, penaltyTotal);
+          let calcInsBal = Math.max(
+            0,
+            rawIns - penaltyInIns - totalInsPaidAmt - ptOverpayment,
+          );
+          
+          // Cap insurance balance at pending claims + unbilled insurance ONLY IF we've received an insurance payment 
+          // (which means there was an underpayment on primary and the remaining liability is just the pending + unbilled claims).
+          if (hasInsurancePayment || hasApprovedClaim) {
+             const expectedRemainingIns = totalPendingClaimAmount + unbilledInsurance;
+             calcInsBal = Math.min(calcInsBal, expectedRemainingIns);
+          }
+          
+          adjustedInsBal = calcInsBal;
           adjustedPtBal = Math.max(
             0,
-            rawPt + penaltyTotal - effectivePtPaid - insOverpayment,
-          );
-          adjustedInsBal = Math.max(
-            0,
-            rawIns - penaltyTotal - totalInsPaidAmt - ptOverpayment,
+            originalTotal - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt - effectivePtPaid - adjustedInsBal
           );
         }
         const adjustedInvBal = Math.max(
@@ -1071,10 +1185,11 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
 
         invoicePayments.forEach((pmt) => {
           const method = (pmt.method || pmt.paymentMethod || "").toLowerCase();
+          const source = (pmt.paymentSource || "").toLowerCase();
           const isVoided = (pmt.status || "").toLowerCase().includes("void");
           if (isVoided) return;
 
-          if (method === "insurance") {
+          if (method === "insurance" || source === "insurance_company") {
             totalInsurancePaid += Number(pmt.amount) || 0;
           } else {
             totalPatientPaid += Number(pmt.amount) || 0;
@@ -1092,7 +1207,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           const pt = Number(
             item.ptPortion || item.patientPortion || item.ptAmt || 0,
           );
-          const ins = Number(item.insPortion || item.insurancePortion || 0);
+          const ins = Number(item.insPortion || item.insurancePortion || 0) + Number(item.secondaryInsPortion || 0);
           let patientBal;
           if (totalInsurancePaid > 0) patientBal = owed;
           else if (item.dbi === true) patientBal = owed;
@@ -1117,7 +1232,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
                 item.insAmt ||
                 item.insurance ||
                 0,
-            );
+            ) + Number(item.secondaryInsPortion || 0);
             const pt = Number(
               item.ptPortion || item.patientPortion || item.ptAmt || 0,
             );
@@ -1173,8 +1288,8 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               // This is a safe fallback when insurance and patient payments are mixed, or when void bugs corrupt item.paidAmount.
               const itemShare =
                 totalGrossPatient > 0 ? patientBal / totalGrossPatient : 0;
-              const itemPatientPaid = itemShare * totalPatientPaid;
-              netPatientBal = Math.max(0, patientBal - itemPatientPaid);
+              const itemTotalPaid = itemShare * (totalPatientPaid + totalInsurancePaid);
+              netPatientBal = Math.max(0, patientBal - itemTotalPaid);
             }
 
             // ALWAYS cap by remainingBal (unless there's a void bug, then we must recalculate remainingBal safely)

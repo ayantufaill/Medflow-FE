@@ -34,6 +34,7 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import InsurancePaymentTopRow from './insurance-payment/InsurancePaymentTopRow';
 import InsurancePaymentTable from './insurance-payment/InsurancePaymentTable';
 import InsurancePaymentFooter from './insurance-payment/InsurancePaymentFooter';
+import SecondaryClaimPromptDialog from './SecondaryClaimPromptDialog';
 
 const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const dispatch = useDispatch();
@@ -49,6 +50,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [isPartialPayment, setIsPartialPayment] = useState(false);
   const [showOverpaymentAlert, setShowOverpaymentAlert] = useState(false);
   const [overpaymentAction, setOverpaymentAction] = useState(null); // 'credit' | 'refund'
+  const [showSecondaryPrompt, setShowSecondaryPrompt] = useState(false);
+  const [createdPaymentInfo, setCreatedPaymentInfo] = useState(null);
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
@@ -217,15 +220,23 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         };
       });
     } else if (claim.invoice && claim.invoice.lineItems && claim.invoice.lineItems.length > 0) {
+      const isSecondary = claim.insuranceType === 'secondary' || String(claim.ClaimType || claim.claimType || '').toLowerCase() === 'secondary';
       const eligibleItems = claim.invoice.lineItems.filter(
-        l => !l.dbi && String(l.dbi) !== 'true' && (l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0)
+        l => !l.dbi && String(l.dbi) !== 'true' && (
+          isSecondary 
+            ? (l.secondaryInsPortion !== undefined && Number(l.secondaryInsPortion) > 0)
+            : ((l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0))
+        )
       );
       const totalExplicitPaid = eligibleItems.reduce((sum, l) => sum + Number(l.insPayAmt || l.insPaid || l.insurancePaid || 0), 0);
       const unallocatedClaimPaid = Math.max(0, claimPaidAmount - totalExplicitPaid);
       const totalClaimEst = eligibleItems.reduce((sum, l) => {
         const sub = Number(l.charge || l.totalPrice || l.fee || 0);
         const eWo = Number(l.writeoff ?? l.estimatedWriteOff ?? 0);
-        return sum + (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : (l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : Math.max(0, sub - eWo)));
+        const estPortion = isSecondary 
+          ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : 0)
+          : (l.insPortion !== undefined && l.insPortion !== null ? Number(l.insPortion) : (l.insPayEst !== undefined && l.insPayEst !== null ? Number(l.insPayEst) : Math.max(0, sub - eWo)));
+        return sum + estPortion;
       }, 0);
 
       claimProcs = eligibleItems.map(l => {
@@ -237,11 +248,13 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             ? Number(l.feeAllowed)
             : Math.max(0, submittedNum - existingWo));
         const woNum = existingWo;
-        const initialEst = l.insPortion !== undefined && l.insPortion !== null
+        const initialEst = isSecondary
+          ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : 0)
+          : (l.insPortion !== undefined && l.insPortion !== null
           ? Number(l.insPortion)
           : (l.insPayEst !== undefined && l.insPayEst !== null
             ? Number(l.insPayEst)
-            : Math.max(0, allowedNum - woNum));
+            : Math.max(0, allowedNum - woNum)));
 
         let procAlreadyPaid = Number(l.insPayAmt || l.insPaid || l.insurancePaid || 0);
         if (procAlreadyPaid === 0 && unallocatedClaimPaid > 0) {
@@ -428,6 +441,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       });
 
       const invoiceEntries = Object.entries(procsByInvoice);
+      let shouldSuggestSecondary = false;
       for (const [invId, invProcs] of invoiceEntries) {
         if (!invProcs || invProcs.length === 0) continue;
         const invPay = invProcs.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
@@ -439,8 +453,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           paymentMethod: backendMethod,
           paymentSource: 'insurance_company',
           paymentDate: new Date().toISOString(),
-          isPartialPayment: Boolean(isPartialPayment),
-          insuranceCompanyId: selectedClaimObj.insuranceCompanyId?.toString() || selectedClaimObj.insuranceCompany?.id?.toString() || selectedClaimObj.insuranceCompany?._id?.toString(),
+          insuranceCompanyId: (
+            selectedClaimObj.insuranceCompanyId?._id ||
+            selectedClaimObj.insuranceCompanyId?.id ||
+            (typeof selectedClaimObj.insuranceCompanyId === 'string' && selectedClaimObj.insuranceCompanyId !== '[object Object]' ? selectedClaimObj.insuranceCompanyId : null) ||
+            selectedClaimObj.insuranceCompany?._id ||
+            selectedClaimObj.insuranceCompany?.id ||
+            selectedClaimObj.insuranceCompanyRefId
+          )?.toString() || undefined,
           notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.filter(opt => opt.checked).map(opt => opt.label).join(', ') || 'None'}`,
           overpaymentAmount: overpaymentAmount > 0.005 ? Math.round(overpaymentAmount * 100) / 100 : undefined,
           overpaymentAction: overpaymentAmount > 0.005 ? (overpaymentAction || 'credit') : undefined,
@@ -455,7 +475,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         };
 
         // Call API to create payment for this invoice
-        await paymentService.createPayment(paymentData);
+        const paymentRes = await paymentService.createPayment(paymentData);
+        if (paymentRes?.data?.suggestSecondaryClaim || paymentRes?.suggestSecondaryClaim) {
+          shouldSuggestSecondary = true;
+        }
       }
 
       // Update claim paidAmount and status:
@@ -496,8 +519,17 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onSave({ totalPay, procsByInvoice });
       }
 
-      setShowPaymentOptions(false);
-      onClose?.();
+      if (shouldSuggestSecondary) {
+        setShowPaymentOptions(false);
+        setCreatedPaymentInfo({
+          invoiceId: defaultInvoiceId,
+          primaryClaimId: selectedClaimObj.id || selectedClaimObj._id
+        });
+        setShowSecondaryPrompt(true);
+      } else {
+        setShowPaymentOptions(false);
+        onClose?.();
+      }
     } catch (err) {
       console.error('Error applying insurance payment:', err);
       const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to apply insurance payment';
@@ -510,6 +542,27 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
   const handleCancelPayment = () => {
     setShowPaymentOptions(false);
+  };
+
+  const handleSecondarySubmit = async ({ claimType, invoiceId, primaryClaimId }) => {
+    setIsSubmitting(true);
+    try {
+      const generatedClaimRes = await claimService.generateSecondaryClaim(primaryClaimId);
+      const generatedClaim = generatedClaimRes?.data || generatedClaimRes;
+      
+      if (claimType === 'electronic') {
+        await claimService.updateClaim(generatedClaim.id || generatedClaim.ClaimNum, { status: 'ready to send' });
+      }
+      
+      showSnackbar(`Secondary claim generated successfully (${claimType}).`, 'success');
+    } catch (err) {
+      console.error('Error generating secondary claim:', err);
+      showSnackbar('Failed to generate secondary claim', 'error');
+    } finally {
+      setIsSubmitting(false);
+      setShowSecondaryPrompt(false);
+      onClose?.();
+    }
   };
 
   // Derived: real-time overpayment amount (sum of per-procedure excess)
@@ -873,6 +926,19 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <SecondaryClaimPromptDialog
+        open={showSecondaryPrompt}
+        onClose={() => {
+          setShowSecondaryPrompt(false);
+          onClose?.();
+        }}
+        onSubmit={handleSecondarySubmit}
+        patientName={`${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient'}
+        invoiceId={createdPaymentInfo?.invoiceId}
+        primaryClaimId={createdPaymentInfo?.primaryClaimId}
+        secondaryInsuranceName="Secondary Insurance"
+      />
     </Box>
   );
 };

@@ -229,6 +229,17 @@ export const invoiceService = {
     const response = await apiClient.post('/invoices/estimate', { patientId, items });
     return response.data.data;
   },
+
+  /**
+   * Reject a claim and transfer its expected amount to patient balance
+   */
+  async transferRejectedClaim(invoiceId, claimId) {
+    const url = invoiceId && invoiceId !== 'undefined'
+      ? `/invoices/${invoiceId}/transfer-rejected-claim`
+      : `/invoices/transfer-rejected-claim`;
+    const response = await apiClient.post(url, { claimId, invoiceId });
+    return response.data.data;
+  },
 };
 
 
