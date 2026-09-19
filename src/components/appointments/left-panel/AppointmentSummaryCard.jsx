@@ -28,7 +28,7 @@ const StatusBanner = ({ status }) => {
 };
 
 // Receives the appointment object directly as a prop from LeftPanel
-const AppointmentSummaryCard = ({ appointment }) => {
+const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
 
@@ -75,6 +75,21 @@ const AppointmentSummaryCard = ({ appointment }) => {
   }
 
   const time = formattedTime;
+
+  // Format date from appointmentDate as mm-dd-yyyy
+  let formattedDate = '';
+  const apptDate = appointment.appointmentDate || appointment.date;
+  if (apptDate) {
+    try {
+      const d = new Date(apptDate);
+      if (!isNaN(d.getTime())) {
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const y = d.getFullYear();
+        formattedDate = `${m}-${day}-${y}`;
+      }
+    } catch {}
+  }
   let rawProcedures = 
     appointment.chiefComplaint || 
     appointment.workspace?.procedures ||
@@ -121,6 +136,7 @@ const AppointmentSummaryCard = ({ appointment }) => {
     : '?';
 
   const handleStatusChange = (e) => {
+    e.stopPropagation();
     const newStatus = e.target.value;
     setLocalStatus(newStatus); // Optimistic update
 
@@ -151,12 +167,27 @@ const AppointmentSummaryCard = ({ appointment }) => {
   };
 
   return (
-    <Box sx={{ border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: '10px', overflow: 'hidden', mt: '8px', mb: '2px', backgroundColor: COLORS.WHITE }}>
+    <Box
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      sx={{
+        border: selected ? `2px solid ${COLORS.ACCENT}` : `1px solid ${COLORS.BORDER_LIGHT}`,
+        borderRadius: '10px',
+        overflow: 'hidden',
+        mt: '8px',
+        mb: '2px',
+        backgroundColor: COLORS.WHITE,
+        cursor: onClick ? 'pointer' : 'default',
+        boxShadow: selected ? '0 0 0 1px rgba(35, 98, 239, 0.2)' : 'none',
+      }}
+    >
 
       {/* Header matching calendar cards: uses appointment.headerColor */}
       <Box sx={{ backgroundColor: appointment.headerColor || COLORS.ACCENT, px: '8px', py: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.bold, color: '#fff', letterSpacing: '0.5px' }}>
-          {String(visitType).toUpperCase()}
+          {String(visitType).toUpperCase()} @ {formattedDate}
         </Typography>
         <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: '#fff' }}>
           {time}
@@ -173,10 +204,17 @@ const AppointmentSummaryCard = ({ appointment }) => {
           <Select
             value={localStatus}
             onChange={handleStatusChange}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onOpen={(e) => e?.stopPropagation?.()}
             size="small"
             sx={{ height: 28, fontSize: '12px', minWidth: 130, borderRadius: '6px', bgcolor: '#fff', '& .MuiSelect-select': { py: '4px', pl: '10px' } }}
             MenuProps={{
-              PaperProps: { style: { maxHeight: 250 } },
+              PaperProps: {
+                style: { maxHeight: 250 },
+                onClick: (e) => e.stopPropagation(),
+                onMouseDown: (e) => e.stopPropagation(),
+              },
               anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
               transformOrigin: { vertical: 'top', horizontal: 'left' },
               sx: { zIndex: 1600 },
@@ -190,7 +228,10 @@ const AppointmentSummaryCard = ({ appointment }) => {
             <IconButton
               size="small"
               title="Send confirmation email"
-              onClick={() => handleSendConfirmation('email')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSendConfirmation('email');
+              }}
               disabled={sendingChannel !== null}
               sx={{ p: '4px', color: COLORS.ACCENT }}
             >
@@ -199,7 +240,10 @@ const AppointmentSummaryCard = ({ appointment }) => {
             <IconButton
               size="small"
               title="Send confirmation text"
-              onClick={() => handleSendConfirmation('sms')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSendConfirmation('sms');
+              }}
               disabled={sendingChannel !== null}
               sx={{ p: '4px', color: COLORS.ACCENT }}
             >

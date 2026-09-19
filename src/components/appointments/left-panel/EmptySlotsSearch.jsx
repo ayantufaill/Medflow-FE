@@ -4,6 +4,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { fetchAvailableSlots } from '../../../store/slices/appointmentSlice';
 import { useDropdownData } from '../../../hooks/redux';
@@ -12,6 +13,7 @@ import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import dayjs from 'dayjs';
 
 const EmptySlotsSearch = () => {
+  const navigate = useNavigate();
   const [duration, setDuration] = useState(60);
   const [providerId, setProviderId] = useState("");
   const [roomId, setRoomId] = useState("");
@@ -62,16 +64,20 @@ const EmptySlotsSearch = () => {
           duration
         })).unwrap().then(result => {
           const rawSlots = result?.availableSlots || [];
-          const mappedSlots = rawSlots.map(timeStr => {
-            const start = dayjs(`${searchDate}T${timeStr}`);
-            const end = start.add(duration, 'minute');
-            return {
-              date: searchDate,
-              startTime: start.format('h:mm A'),
-              endTime: end.format('h:mm A'),
-              roomName: ''
-            };
-          });
+           const now = dayjs();
+           const mappedSlots = rawSlots.map(timeStr => {
+             const start = dayjs(`${searchDate}T${timeStr}`);
+             const end = start.add(duration, 'minute');
+             return {
+               date: searchDate,
+               startTime: start.format('h:mm A'),
+               endTime: end.format('h:mm A'),
+               roomName: ''
+             };
+           }).filter(slot => {
+             const slotStart = dayjs(`${slot.date} ${slot.startTime}`, 'YYYY-MM-DD h:mm A');
+             return !slotStart.isBefore(now, 'minute');
+           });
           
           // Apply AM/PM filters
           return mappedSlots.filter(slot => {
@@ -132,18 +138,27 @@ const EmptySlotsSearch = () => {
             const roomName = slot.roomName || (roomId ? rooms.find(r => (r._id || r.id) === roomId)?.name : 'Op1');
             
             return (
-              <Box 
-                key={idx} 
-                sx={{ 
-                  p: '12px', 
-                  borderRadius: radius.md, 
-                  border: `1px solid ${COLORS.BORDER}`, 
+              <Box
+                key={idx}
+                sx={{
+                  p: '12px',
+                  borderRadius: radius.md,
+                  border: `1px solid ${COLORS.BORDER}`,
                   backgroundColor: "#fafbfe",
                   cursor: 'pointer',
                   '&:hover': {
                     borderColor: COLORS.ACCENT,
                     backgroundColor: COLORS.ACCENT_BG
                   }
+                }}
+                onClick={() => {
+                  const slotDate = slot.date || dateFrom.format('YYYY-MM-DD');
+                  const slotTime = slot.startTime;
+                  // Use a custom event to communicate with OperatorySchedulePage
+                  // Keep results visible so user can select multiple slots
+                  window.dispatchEvent(new CustomEvent('navigate-to-slot', {
+                    detail: { date: slotDate, time: slotTime }
+                  }));
                 }}
               >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '4px' }}>

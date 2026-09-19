@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Box, Typography, Collapse, Menu, MenuItem, IconButton } from '@mui/material';
-import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { KeyboardArrowUp, KeyboardArrowDown, DragIndicator } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
 import dayjs from 'dayjs';
 import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { useDraggable } from '@dnd-kit/core';
 
 const getProviderInitials = (name) => {
   if (!name) return null;
@@ -67,9 +68,62 @@ const ProcedureBlocks = ({ appointment }) => {
     return `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.name || null;
   };
 
+  // Extract array of procedures (needs to be before useDraggable for drag data)
+  let proceduresList = [];
+  if (appointment) {
+    // Priority: rawProcedures (from grid item) > customFields.procedures > procedures array > string > chiefComplaint
+    if (Array.isArray(appointment.rawProcedures) && appointment.rawProcedures.length > 0) {
+      proceduresList = appointment.rawProcedures;
+    } else if (Array.isArray(appointment.procedures)) {
+      proceduresList = appointment.procedures;
+    } else if (Array.isArray(appointment.customFields?.procedures)) {
+      proceduresList = appointment.customFields.procedures;
+    } else if (typeof appointment.procedures === 'string') {
+      proceduresList = appointment.procedures.split(',').map(p => ({ description: p.trim() }));
+    } else if (appointment.chiefComplaint) {
+      proceduresList = [{ description: appointment.chiefComplaint }];
+    }
+  }
+
+  // Determine visit type for drag eligibility
+  const visitType = appointment
+    ? String(appointment.visitType || appointment.customFields?.visitType || appointment.appointmentTypeName || appointment.appointmentType || '').toLowerCase()
+    : '';
+  const isDraggableVisitType = visitType === 'recare' || visitType === 'treatment';
+
+  // Prepare drag data for recare/treatment appointments (for useDraggable hook)
+  const dragData = appointment && isDraggableVisitType ? {
+    isRecareBlock: true,
+    type: visitType,
+    visitType: visitType,
+    procedures: proceduresList.map(p => ({
+      code: p.code || p.procedureCode || p.ProcCode || 'TBD',
+      treatment: p.description || p.name || p.treatment || p.code || 'Procedure',
+      charge: p.charge || p.fee || p.amount || '$0.00',
+      provider: p.provider || p.providerId || p.ProvNum || '',
+      site: p.site || p.tooth || p.ToothNum || ''
+    })),
+    providerId: appointment.providerId || appointment.provider?.ProvNum || appointment.provider?._id || appointment.provider?.id || '',
+    providerName: appointment.providerName || (appointment.provider ? getProviderName(appointment.provider) : ''),
+    durationMinutes: appointment.durationMinutes || appointment.duration || 60,
+    appointmentTypeName: appointment.appointmentTypeName,
+    customFields: appointment.customFields,
+    patientId: appointment.patientId || appointment.patient?._id || appointment.patient?.id || appointment.patient?.PatNum || '',
+    patientName: appointment.patientName || (appointment.patient ? `${appointment.patient.firstName || ''} ${appointment.patient.lastName || ''}`.trim() : ''),
+    patient: appointment.patient || null,
+    sourceProcedureBlockAppointment: appointment
+  } : null;
+
+  // Setup draggable for recare/treatment blocks (must be called unconditionally for hooks rules)
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `recare-block-${appointment?._id || appointment?.id}`,
+    data: dragData,
+    disabled: !isDraggableVisitType
+  });
+
   if (!appointment) return null;
 
-  // Determine header label
+  // Determine header label - show "Recare" for both recare and treatment visit types
   let headerLabel = appointment.appointmentTypeName || appointment.visitType || appointment.appointmentType;
   if (typeof headerLabel === 'object') {
     headerLabel = headerLabel?.name || 'Procedures';
@@ -77,25 +131,20 @@ const ProcedureBlocks = ({ appointment }) => {
   if (!headerLabel) {
     headerLabel = 'Scheduled Procedures';
   }
+  if (isDraggableVisitType) {
+    headerLabel = 'Recare';
+  }
 
   // Duration
   const apptDuration = appointment.durationMinutes || appointment.duration;
   const durationLabel = apptDuration ? `${apptDuration} min` : '-- min';
 
-  // Extract array of procedures
-  let proceduresList = [];
-  if (Array.isArray(appointment.procedures)) {
-    proceduresList = appointment.procedures;
-  } else if (typeof appointment.procedures === 'string') {
-    // If it's just a string, simulate a single procedure object
-    proceduresList = appointment.procedures.split(',').map(p => ({ description: p.trim() }));
-  } else if (appointment.chiefComplaint) {
-    proceduresList = [{ description: appointment.chiefComplaint }];
-  }
-
   if (proceduresList.length === 0) {
     return (
       <Box
+        ref={isDraggableVisitType ? setNodeRef : undefined}
+        {...(isDraggableVisitType ? attributes : {})}
+        {...(isDraggableVisitType ? listeners : {})}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -105,6 +154,8 @@ const ProcedureBlocks = ({ appointment }) => {
           borderRadius: radius.md,
           px: '12px',
           py: '10px',
+          opacity: isDragging ? 0.5 : 1,
+          cursor: isDraggableVisitType ? 'grab' : 'default'
         }}
       >
         <Typography sx={{ ...headingSecondarySx, color: COLORS.TEXT_MUTED }}>
@@ -119,11 +170,16 @@ const ProcedureBlocks = ({ appointment }) => {
 
   return (
     <Box
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       sx={{
         backgroundColor: COLORS.SURFACE_CARD,
         border: `1px solid ${COLORS.BORDER}`,
         borderRadius: radius.md,
         overflow: 'hidden',
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDraggableVisitType ? 'grab' : 'default'
       }}
     >
       {/* Header Row */}
@@ -135,13 +191,16 @@ const ProcedureBlocks = ({ appointment }) => {
           justifyContent: 'space-between',
           px: '12px',
           py: '10px',
-          cursor: 'pointer',
+          cursor: isDraggableVisitType ? 'grab' : 'pointer',
           backgroundColor: open ? '#f8fafc' : 'transparent',
           borderBottom: open ? `1px solid ${COLORS.BORDER}` : 'none',
           '&:hover': { backgroundColor: '#f1f5f9' },
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {isDraggableVisitType && (
+            <DragIndicator sx={{ fontSize: '18px', color: COLORS.TEXT_MUTED, cursor: 'grab', mr: '4px' }} />
+          )}
           {open ? (
             <KeyboardArrowUp sx={{ fontSize: '18px', color: COLORS.TEXT_SECONDARY }} />
           ) : (
@@ -173,7 +232,9 @@ const ProcedureBlocks = ({ appointment }) => {
       <Collapse in={open}>
         <Box sx={{ p: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {proceduresList.map((proc, idx) => {
-            const desc = proc.description || proc.name || proc.code || 'Procedure';
+            const desc = proc.description || proc.name || proc.treatment || proc.code || 'Procedure';
+            const procedureDateKey = `${proc.code || proc.procedureCode || proc.ProcCode || ''}|${proc.treatment || proc.description || proc.name || desc || ''}`.trim().toLowerCase();
+            const scheduledDates = appointment?.recareProcedureDateMap?.[procedureDateKey] || [];
 
             // Helper: extract name from any provider-shaped object
             const nameFromObj = (obj) => {
@@ -252,6 +313,12 @@ const ProcedureBlocks = ({ appointment }) => {
                       {dayjs(proc.createdAt).format('MM/DD/YY')}
                     </Typography>
                   )}
+                  {/* Show only dates for recare appointments that include this specific procedure. */}
+                  {scheduledDates.length > 0 ? (
+                    <Typography sx={{ fontSize: '12px', color: COLORS.ACCENT, fontWeight: fontWeight.medium, ml: '8px' }}>
+                      {scheduledDates.map(date => dayjs(date).format('MM/DD/YYYY')).join(', ')}
+                    </Typography>
+                  ) : null}
                 </Box>
               </Box>
             );

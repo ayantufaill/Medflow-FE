@@ -236,6 +236,11 @@ export const appointmentService = {
     return response.data.data.appointments;
   },
 
+  async getAppointmentAuditHistory(appointmentId) {
+    const response = await apiClient.get(`/appointments/${appointmentId}/audit-history`);
+    return response.data.data.auditEvents || [];
+  },
+
   async getFamilyAppointments(patientId) {
     const response = await apiClient.get(`/patients/${patientId}/family-appointments`);
     return response.data.data;

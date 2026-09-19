@@ -438,10 +438,25 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                   mt: "2px",
                 }}
               >
-                <FiberManualRecord
-                  sx={{ fontSize: "13px", color: COLORS.ACCENT }}
-                />
-                <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR }} />
+                <Tooltip title="Dental History" arrow placement="top">
+                  <FiberManualRecord
+                    sx={{ fontSize: "13px", color: COLORS.ACCENT, cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(`/patients/${appointment.patientId}/dental-history`);
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Medical History" arrow placement="top">
+                  <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR, cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(`/patients/${appointment.patientId}/medical-history`);
+                    }}
+                  />
+                </Tooltip>
                 <Tooltip title="Progress Notes" arrow placement="top">
                   <Description
                     sx={{

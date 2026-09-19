@@ -6,13 +6,15 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import dayjs from "dayjs";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
 
-const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit }) => {
+const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit, visitType = "treatment" }) => {
   const [isEditing, setIsEditing] = useState(!showExtendedOptions);
   const cellSx = { borderBottom: isLast ? "none" : "1px solid #f0f2f5", py: "4px" };
+  const isRecare = visitType === "recare";
 
   const handleToggleCheck = useCallback(
     () => setProcedures((prev) => prev.map((p) => p.id === row.id ? { ...p, checked: !p.checked } : p)),
@@ -127,6 +129,16 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
         )}
       </TableCell>
 
+      {isRecare && (
+        <TableCell sx={cellSx}>
+          {row.dueDate
+            ? <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", whiteSpace: "nowrap" }}>
+                {dayjs(row.dueDate).format("MM/DD/YYYY")}
+              </Typography>
+            : <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>&mdash;</Typography>}
+        </TableCell>
+      )}
+
       {/* Extended columns: Pt Part + Total Charge + status icons */}
       {showExtendedOptions && (
         <>
@@ -202,20 +214,26 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
   );
 });
 
-const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit }) => {
+const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOptions, isFuture = false, disableDelete = false, onEnterEdit, visitType = "treatment" }) => {
+  const isRecare = visitType === "recare";
   const baseHeaders = [
     { label: "PROCEDURE", width: showExtendedOptions ? "72px" : "88px" },
     { label: "SITE",      width: "18%"  },
-    { label: "TREATMENT", width: showExtendedOptions ? "22%" : "38%"  },
-    { label: "PROVIDER",  width: showExtendedOptions ? "22%" : "38%"  },
+    { label: "TREATMENT", width: (showExtendedOptions || isRecare) ? "22%" : "38%"  },
+    { label: "PROVIDER",  width: (showExtendedOptions || isRecare) ? "22%" : "38%"  },
   ];
+  const recareHeaders = isRecare ? [
+    { label: "DUE DATE", width: "100px" },
+  ] : [];
   const extendedHeaders = showExtendedOptions ? [
     { label: "PT PART",      width: "80px" },
     { label: "TOTAL CHARGE", width: "90px" },
     { label: "",             width: "32px" },
     { label: "",             width: "32px" },
   ] : [];
-  const allHeaders = [...baseHeaders, ...extendedHeaders];
+  const allHeaders = [...baseHeaders, ...recareHeaders, ...extendedHeaders];
+  const totalCols = 6 + (showExtendedOptions ? 4 : 0) + (isRecare ? 1 : 0);
+  const skipCols = 5 + (isRecare ? 1 : 0);
 
   return (
     <Box sx={{ mb: "16px", pointerEvents: "auto" }}>
@@ -245,11 +263,12 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
                 isFuture={isFuture}
                 disableDelete={disableDelete}
                 onEnterEdit={onEnterEdit}
+                visitType={visitType}
               />
             ))}
             {procedures.length === 0 && (
               <TableRow>
-                <TableCell colSpan={showExtendedOptions ? 10 : 6} sx={{ textAlign: "center", py: "20px", border: "none" }}>
+                <TableCell colSpan={totalCols} sx={{ textAlign: "center", py: "20px", border: "none" }}>
                   <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>
                     No procedures added. Select a quick tag above.
                   </Typography>
@@ -268,7 +287,7 @@ const ProcedureTable = ({ procedures, setProcedures, providers, showExtendedOpti
               const fmt = (v) => `$${Number(v).toFixed(2)}`;
               return (
                 <TableRow sx={{ backgroundColor: "#f8fafc" }}>
-                  <TableCell colSpan={5} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
+                  <TableCell colSpan={skipCols} sx={{ borderTop: "1px solid #e0e5eb", border: "none" }} />
                   <TableCell sx={{ borderTop: "1px solid #e0e5eb", border: "none", fontFamily: "Inter", fontSize: "12px", fontWeight: 700, color: "#09121f", textAlign: "right" }}>
                     {fmt(totalPt)}
                   </TableCell>

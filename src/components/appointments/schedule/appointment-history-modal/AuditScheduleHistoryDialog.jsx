@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  CircularProgress,
 } from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
 import { COLORS } from "../../../../constants/colors";
@@ -22,6 +23,7 @@ import {
   radius,
 } from "../../../../constants/styles";
 import dayjs from "dayjs";
+import { appointmentService } from "../../../../services/appointment.service";
 
 const diffSubHeaderSx = {
   fontFamily: "Inter",
@@ -44,8 +46,39 @@ const diffCellSx = {
 };
 
 const formatValue = (val) => {
-  if (val === null || val === undefined) return "";
-  if (typeof val === "object") return JSON.stringify(val);
+  if (val === null || val === undefined || val === "") return "-";
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  
+  if (typeof val === "object") {
+    if (Array.isArray(val)) {
+      if (val.length === 0) return "None";
+      // Check if it's an array of procedures or other objects we can format
+      const formattedArray = val.map((item) => {
+        if (typeof item === "object" && item !== null) {
+          if (item.OldCode || item.code) {
+            const fee = item.ProcFee || item.fee;
+            return fee !== undefined ? `${item.OldCode || item.code} ($${fee})` : (item.OldCode || item.code);
+          }
+          if (item.name || item.title) return item.name || item.title;
+        }
+        return item;
+      });
+      return typeof formattedArray[0] === "string" ? formattedArray.join(", ") : JSON.stringify(val);
+    }
+    
+    // Try to extract recognizable labels from populated objects
+    if (val.firstName || val.lastName) {
+      return [val.firstName, val.lastName].filter(Boolean).join(" ");
+    }
+    if (val.name) return val.name;
+    if (val.title) return val.title;
+    if (val.email) return val.email;
+    if (val.code || val.appointmentCode) return val.code || val.appointmentCode;
+    if (val.id || val._id) return `ID: ${val.id || val._id}`;
+    
+    return JSON.stringify(val);
+  }
+  
   return String(val);
 };
 
@@ -77,14 +110,28 @@ const normalizeAuditData = (payload) => {
         
         const oldKeys = Object.keys(oldObj);
         const newKeys = Object.keys(newObj);
-        const keysToCompare = oldKeys.filter((k) => newKeys.includes(k));
+        const keysToCompare = Array.from(new Set([...oldKeys, ...newKeys]));
 
         keysToCompare.forEach((key) => {
-          if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
+          const oldVal = oldObj[key];
+          const newVal = newObj[key];
+
+          if (
+            oldVal &&
+            typeof oldVal === "object" &&
+            ("from" in oldVal || "to" in oldVal) &&
+            newObj[key] === undefined
+          ) {
             differences.push({
               key,
-              old: formatValue(oldObj[key]),
-              new: formatValue(newObj[key]),
+              old: formatValue(oldVal.from),
+              new: formatValue(oldVal.to),
+            });
+          } else if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+            differences.push({
+              key,
+              old: formatValue(oldVal),
+              new: formatValue(newVal),
             });
           }
         });
@@ -125,13 +172,18 @@ const normalizeAuditData = (payload) => {
         "",
       user:
         entry?.actor?.name ||
+        (entry?.actor?.firstName ? `${entry.actor.firstName} ${entry.actor.lastName || ''}`.trim() : null) ||
+        entry?.actor?.email ||
         entry?.actorName ||
         entry?.user?.name ||
+        (entry?.user?.firstName ? `${entry.user.firstName} ${entry.user.lastName || ''}`.trim() : null) ||
+        entry?.user?.email ||
         entry?.userName ||
         entry?.user ||
         "System",
       name: entry?.name || entry?.section || entry?.patientName || "Appointment",
       action: entry?.action || entry?.type || "Update",
+      appointmentId: entry?.appointmentId || entry?.aptId || entry?.appointment_id || entry?.apptId || null,
       differences,
     };
   });
@@ -144,19 +196,35 @@ const AuditScheduleHistoryDialog = ({
 }) => {
   const [auditData, setAuditData] = useState([]);
   const [filterAction, setFilterAction] = useState("All");
+  const [loading, setLoading] = useState(false);
+
+  const currentApptId = appointment?._id || appointment?.id;
 
   useEffect(() => {
-    if (!open || !appointment) {
+    if (!open) {
       setAuditData([]);
+      setLoading(false);
       return;
     }
 
-    if (appointment?.systemEvents) {
-      setAuditData(normalizeAuditData(appointment.systemEvents));
-    } else {
-      setAuditData([]);
-    }
-  }, [open, appointment]);
+    const fetchAudit = async () => {
+      setLoading(true);
+      try {
+        const events = await appointmentService.getAppointmentAuditHistory(currentApptId);
+        setAuditData(normalizeAuditData(events));
+      } catch {
+        if (appointment?.systemEvents) {
+          setAuditData(normalizeAuditData(appointment.systemEvents));
+        } else {
+          setAuditData([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAudit();
+  }, [open, appointment?._id, appointment?.id]);
 
   const allActions = ["All", ...new Set(auditData.map((d) => d.action))];
 
@@ -258,7 +326,11 @@ const AuditScheduleHistoryDialog = ({
           </Select>
         </Box>
 
-        {auditData.length === 0 ? (
+        {loading ? (
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <CircularProgress size={30} />
+          </Box>
+        ) : auditData.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 8 }}>
             <Typography
               sx={{

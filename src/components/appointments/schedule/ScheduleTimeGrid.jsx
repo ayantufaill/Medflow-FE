@@ -210,6 +210,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     provider: providerName,
     headerColor: mappedProvider?.color || appt.providerColor || "#2262ef",
     procedures: procString,
+    // Include the full procedures array from customFields for drag-and-drop
+    customFields: cf,
+    rawProcedures: cf.procedures && Array.isArray(cf.procedures) ? cf.procedures : [],
     description: appt.notes || appt.reason || "",
     tags: tagsArray,
     colorTags: colorTagsArray,
@@ -609,7 +612,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           {/* One cell per column */}
           {activeColumns.map((col, idx) => {
             const roomId = `op${col._id || col.id}`;
-            const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+            const dateStr = dayjsDate.format('YYYY-MM-DD');
             const isClosed = closedOperatories[`${dateStr}:${roomId}`];
             const isPastDate = dayjs(dateStr).isBefore(dayjs(), 'day');
             const isToday = dayjs(dateStr).isSame(dayjs(), 'day');

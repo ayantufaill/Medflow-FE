@@ -17,6 +17,7 @@ import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
 import LabOrderModal from "./new-appointment/LabOrderModal";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
+import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -35,6 +36,7 @@ const AddNewPatientAppointmentForm = ({
   initialRoomId = "",
   initialShortlistData = null,
   initialAppointment = null,
+  selectedAppointmentContext = null,
   open = true,
   showExtendedOptions = false,
 }) => {
@@ -80,9 +82,16 @@ const AddNewPatientAppointmentForm = ({
   const [isAddProcedureOpen, setIsAddProcedureOpen] = useState(false);
   const [procedureInput, setProcedureInput] = useState("");
   const nextId = useRef(10);
+  // Server-computed recare due dates keyed by procedure (CDT) code: { [code]: { dueDate, ... } }
+  const [recareDueDateMap, setRecareDueDateMap] = useState({});
+  const preRecareProceduresRef = useRef(null);
+  const recareProceduresLoadedRef = useRef(false);
   // Remembers the status that was active just before an auto-complete override,
   // so we can revert back to it when procedures become incomplete again.
   const preAutoCompleteStatusRef = useRef(null);
+  // Tracks procedures the user has manually unchecked (by code), so date/time changes
+  // don't auto-recheck them.
+  const userUncheckedProcedureCodesRef = useRef(new Set());
 
   /* ── Right panel state ── */
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -129,12 +138,22 @@ const AddNewPatientAppointmentForm = ({
     setProviderRows((rows) => rows.map((row) => ({ ...row, providerId: "" })));
   };
 
-  const initialProviderRows = initialShortlistData?.ProvNum
+  const getInitialProviderId = () => {
+    if (initialShortlistData?.ProvNum) return String(initialShortlistData.ProvNum);
+    if (initialAppointment?.providerId) return String(initialAppointment.providerId);
+    if (initialAppointment?.ProvNum) return String(initialAppointment.ProvNum);
+    if (initialAppointment?.provider?.ProvNum) return String(initialAppointment.provider.ProvNum);
+    if (initialAppointment?.provider?._id) return String(initialAppointment.provider._id);
+    if (initialAppointment?.provider?.id) return String(initialAppointment.provider.id);
+    return "";
+  };
+
+  const initialProviderRows = getInitialProviderId()
     ? [
         {
           id: 1,
-          providerId: String(initialShortlistData.ProvNum),
-          time: initialShortlistData?.DurationMins || 60,
+          providerId: getInitialProviderId(),
+          time: initialShortlistData?.DurationMins || initialAppointment?.durationMinutes || 60,
         },
       ]
     : [{ id: 1, providerId: "", time: 60 }];
@@ -157,6 +176,7 @@ const AddNewPatientAppointmentForm = ({
   const [toastMessage, setToastMessage] = useState("");
   const [computedVisitType, setComputedVisitType] = useState("");
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
+  const [isAuditOpen, setIsAuditOpen] = useState(false);
 
   // Auto-revert status from "completed" when any checked procedure becomes incomplete.
   useEffect(() => {
@@ -205,7 +225,10 @@ const AddNewPatientAppointmentForm = ({
     [selectedStart, durationMins],
   );
 
-  const isExistingAppointment = Boolean(initialAppointment);
+  const isRecareTemplate =
+    initialAppointment?.isRecareTemplate === true ||
+    String(initialAppointment?.id || "").startsWith("recare-");
+  const isExistingAppointment = Boolean(initialAppointment) && !isRecareTemplate;
 
   const conflictExcludedAppointmentId = useMemo(() => {
     if (initialAppointment) {
@@ -467,12 +490,14 @@ const AddNewPatientAppointmentForm = ({
           );
 
           const hasName =
-            sourceAppt.patientName || initialAppointment.patientName;
+            sourceAppt.patientName || initialAppointment.patientName ||
+            initialPatient?.firstName || initialPatient?.name ||
+            (sourceAppt.patient && typeof sourceAppt.patient === "object" ? `${sourceAppt.patient.firstName || ""} ${sourceAppt.patient.lastName || ""}`.trim() : "");
           const mockPatient =
             patId || hasName
               ? {
-                  id: patId || "unknown",
-                  rawId: patId || "unknown",
+                  id: patId || initialPatient?.id || "unknown",
+                  rawId: patId || initialPatient?.rawId || initialPatient?.id || "unknown",
                   firstName: hasName ? hasName.split(" ")[0] : "Unknown",
                   lastName: hasName
                     ? hasName.split(" ").slice(1).join(" ")
@@ -546,16 +571,17 @@ const AddNewPatientAppointmentForm = ({
               60,
           );
 
-          let vType =
-            sourceAppt.customFields?.visitType ||
-            sourceAppt.appointmentType ||
-            sourceAppt.visitType ||
-            initialAppointment.customFields?.visitType ||
-            initialAppointment.appointmentType ||
-            initialAppointment.visitType ||
-            "recare";
+          let vType = isRecareTemplate
+            ? "recare"
+            : sourceAppt.customFields?.visitType ||
+              sourceAppt.appointmentType ||
+              sourceAppt.visitType ||
+              initialAppointment.customFields?.visitType ||
+              initialAppointment.appointmentType ||
+              initialAppointment.visitType ||
+              "recare";
           vType = String(vType).toLowerCase();
-          if (vType !== "recare") {
+          if (!isRecareTemplate && vType !== "recare") {
             vType = "treatment"; // Default anything that isn't explicitly recare to treatment
           }
           setVisitType(vType);
@@ -668,39 +694,7 @@ const AddNewPatientAppointmentForm = ({
               }));
           }
 
-          initialProcs = initialProcs.map((p, i) => {
-            if (typeof p === "string") {
-              return {
-                code: "TBD",
-                treatment: p,
-                charge: "$0.00",
-                checked: true,
-                id: Date.now() + i,
-              };
-            }
-            return {
-              code: p.procedureCode || p.code || p.ProcCode || "TBD",
-              treatment:
-                p.description ||
-                p.treatment ||
-                p.name ||
-                p.title ||
-                p.Descript ||
-                "Unknown",
-              charge: p.fee || p.charge || p.amount || "$0.00",
-              totalCharge: p.totalCharge,
-              ptPart: p.ptPart,
-              insPortion: p.insPortion,
-              writeoff: p.writeoff,
-              allowedFee: p.allowedFee,
-              coveragePct: p.coveragePct,
-              provider: p.providerId || p.provider || p.ProvNum || "",
-              site: p.tooth || p.site || p.ToothNum || "",
-              checked: true,
-              completed: p.completed || false,
-              id: p._id || p.id || Date.now() + i,
-            };
-          });
+          initialProcs = normalizeProceduresForForm(initialProcs, buildRecareProcedureDateMap());
 
           setProcedures(
             initialProcs.length > 0 ? initialProcs : INITIAL_PROCEDURES,
@@ -808,15 +802,28 @@ const AddNewPatientAppointmentForm = ({
           }
         };
 
+        console.log('[FORM] initialAppointment received:', JSON.stringify(initialAppointment, (k, v) => {
+          if (k === 'rawAppointment' || k === 'patient') return '[Object]';
+          return v;
+        }, 2));
+        console.log('[FORM] isRecareTemplate:', isRecareTemplate);
+
         const shallowAppt =
           initialAppointment.rawAppointment || initialAppointment;
-        applyApptToForm(shallowAppt, []); // Synchronous load instantly
+        // For recare templates, pass procedures explicitly to ensure they load
+        const sourceProcedures = isRecareTemplate 
+          ? (shallowAppt.customFields?.procedures || shallowAppt.procedures || [])
+          : [];
+        console.log('[FORM] sourceProcedures for applyApptToForm:', JSON.stringify(sourceProcedures, null, 2));
+        applyApptToForm(shallowAppt, sourceProcedures);
 
         const loadFullDetails = async () => {
           try {
+            const apptId = String(initialAppointment.id || '');
+            const isTemplateId = apptId.startsWith("temp-") || apptId.startsWith("recare-") || /^\d+$/.test(apptId);
             if (
               initialAppointment.id &&
-              !String(initialAppointment.id).startsWith("temp-")
+              !isTemplateId
             ) {
               const { appointmentService } =
                 await import("../../services/appointment.service");
@@ -841,6 +848,9 @@ const AddNewPatientAppointmentForm = ({
 
         loadFullDetails();
       } else if (initialShortlistData) {
+        // Check if this is a recare template (from drag-and-drop)
+        const isRecareTemplate = initialShortlistData.isRecareTemplate === true;
+        
         // Try to find the full patient object from the loaded patients list
         const patId = String(
           initialShortlistData.PatNum || initialShortlistData.patientId,
@@ -849,18 +859,42 @@ const AddNewPatientAppointmentForm = ({
           (p) => String(p.id || p._id || p.PatNum) === patId,
         );
 
-        const mockPatient = {
-          id: patId,
-          rawId: patId,
-          firstName: initialShortlistData.PatientName
-            ? initialShortlistData.PatientName.split(" ")[0]
-            : "Unknown",
-          lastName: initialShortlistData.PatientName
-            ? initialShortlistData.PatientName.split(" ").slice(1).join(" ")
-            : "Patient",
-        };
-
-        setPatient(fullPatient || mockPatient);
+        // For recare template, don't set patient automatically - let user select
+        if (!isRecareTemplate) {
+          const mockPatient = {
+            id: patId,
+            rawId: patId,
+            firstName: initialShortlistData.PatientName
+              ? initialShortlistData.PatientName.split(" ")[0]
+              : "Unknown",
+            lastName: initialShortlistData.PatientName
+              ? initialShortlistData.PatientName.split(" ").slice(1).join(" ")
+              : "Patient",
+          };
+          setPatient(fullPatient || mockPatient);
+        } else {
+          // For recare template, set patient from drag data if available
+          const patId = initialShortlistData.PatNum || initialShortlistData.patientId;
+          const patientName = initialShortlistData.PatientName;
+          if (patId || patientName) {
+            const mockPatient = {
+              id: patId,
+              rawId: patId,
+              firstName: patientName
+                ? patientName.split(" ")[0]
+                : "Unknown",
+              lastName: patientName
+                ? patientName.split(" ").slice(1).join(" ")
+                : "Patient",
+            };
+            const foundPatient = patId ? patients.find(
+              (p) => String(p.id || p._id || p.PatNum) === String(patId)
+            ) : null;
+            setPatient(foundPatient || mockPatient);
+          } else {
+            setPatient(null);
+          }
+        }
 
         let parsedDate = dayjs().add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
@@ -884,6 +918,13 @@ const AddNewPatientAppointmentForm = ({
         );
         setStatus(initialShortlistData.Status || "scheduled");
         setDurationMins(initialShortlistData.DurationMins || 60);
+
+        const vType = isRecareTemplate
+          ? "recare"
+          : initialShortlistData.customFields?.visitType ||
+            initialShortlistData.visitType ||
+            "recare";
+        setVisitType(String(vType).toLowerCase());
 
         setProviderRows(
           initialShortlistData.ProvNum
@@ -915,7 +956,10 @@ const AddNewPatientAppointmentForm = ({
         }
 
         let initialProcs = [];
-        if (customFields.procedures && Array.isArray(customFields.procedures)) {
+        // PRIORITY: For recare templates, use top-level procedures field first (from drag-and-drop)
+        if (isRecareTemplate && initialShortlistData.procedures && Array.isArray(initialShortlistData.procedures)) {
+          initialProcs = initialShortlistData.procedures;
+        } else if (customFields.procedures && Array.isArray(customFields.procedures)) {
           initialProcs = customFields.procedures;
         } else if (
           customFields.procedureTags &&
@@ -1092,12 +1136,216 @@ const AddNewPatientAppointmentForm = ({
     initialAppointment,
   ]);
 
+  const getAppointmentId = (appointment) =>
+    appointment?._id || appointment?.id || appointment?.appointmentId || appointment?.AptNum;
+
+  const getAppointmentPatientId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.patientId && typeof raw.patientId === "object"
+      ? raw.patientId._id || raw.patientId.id || raw.patientId.PatNum
+      : raw?.patientId || raw?.patient?._id || raw?.patient?.id || raw?.patient?.PatNum;
+  };
+
+  const getPatientIdCandidates = (value) => {
+    if (!value) return [];
+    const raw = value.rawAppointment || value;
+    const candidates = [
+      raw._id,
+      raw.id,
+      raw.PatNum,
+      raw.patientId,
+      raw.patient?._id,
+      raw.patient?.id,
+      raw.patient?.PatNum,
+    ];
+    if (raw.patientId && typeof raw.patientId === "object") {
+      candidates.push(raw.patientId._id, raw.patientId.id, raw.patientId.PatNum);
+    }
+    return candidates.filter(Boolean).map(String);
+  };
+
+  const isSamePatient = (appointment, selectedPatient) => {
+    const appointmentIds = new Set(getPatientIdCandidates(appointment));
+    return getPatientIdCandidates(selectedPatient).some((id) => appointmentIds.has(id));
+  };
+
+  const getRecareSourceAppointmentId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.customFields?.recareSourceAppointmentId || raw?.customFields?.sourceAppointmentId || null;
+  };
+
+  const getAppointmentDateValue = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const date = raw?.appointmentDate || raw?.date;
+    const time = raw?.startTime || "00:00";
+    const parsed = date ? dayjs(`${dayjs(date).format("YYYY-MM-DD")}T${time}`) : null;
+    return parsed?.isValid() ? parsed.valueOf() : 0;
+  };
+
+  const normalizeProceduresForForm = (sourceProcedures = [], recareProcedureDateMap = {}) =>
+    sourceProcedures.map((p, i) => {
+      const code = p.procedureCode || p.code || p.ProcCode || "TBD";
+      const treatment = p.description || p.treatment || p.name || p.title || p.Descript || "Unknown";
+      const dateKey = `${code}|${treatment}`.trim().toLowerCase();
+      const scheduledDates = recareProcedureDateMap?.[dateKey] || [];
+      // Backend keys recareDueDates by trimmed/uppercased CDT code.
+      const serverCode = (code || "").trim().toUpperCase();
+      const serverDue = recareDueDateMap?.[serverCode]?.dueDate;
+      const dueDate = serverDue || (scheduledDates.length > 0 ? scheduledDates[0] : undefined);
+      if (typeof p === "string") {
+        return {
+          code: "TBD",
+          treatment: p,
+          charge: "$0.00",
+          checked: true,
+          completed: false,
+          id: Date.now() + i,
+          dueDate: undefined,
+        };
+      }
+      return {
+        code,
+        treatment,
+        charge: p.fee || p.charge || p.amount || "$0.00",
+        totalCharge: p.totalCharge,
+        ptPart: p.ptPart,
+        insPortion: p.insPortion,
+        writeoff: p.writeoff,
+        allowedFee: p.allowedFee,
+        coveragePct: p.coveragePct,
+        provider: p.providerId || p.provider || p.ProvNum || "",
+        site: p.tooth || p.site || p.ToothNum || "",
+        checked: true,
+        completed: Boolean(p.completed),
+        id: p._id || p.id || Date.now() + i,
+        dueDate: dueDate,
+      };
+    });
+
+  const getProcedureKey = (procedure) => {
+    const code = typeof procedure === 'string' ? '' : (procedure?.code || procedure?.procedureCode || procedure?.ProcCode || '');
+    const treatment = typeof procedure === 'string' ? procedure : (procedure?.treatment || procedure?.description || procedure?.name || '');
+    const fullCode = code || 'TBD';
+    return `${fullCode}|${treatment}`.trim().toLowerCase();
+  };
+
+  const buildRecareProcedureDateMap = (sourceApptOverride = null) => {
+    const sourceAppt = sourceApptOverride || initialAppointment || selectedAppointmentContext;
+    const sourceApptId = getRecareSourceAppointmentId(sourceAppt) || sourceAppt?.id || sourceAppt?._id || null;
+    const map = {};
+    (appointments || []).forEach((appt) => {
+      const visitType = String(appt.visitType || appt.customFields?.visitType || '').toLowerCase();
+      if (visitType !== 'recare') return;
+      const raw = appt?.rawAppointment || appt;
+      const apptId = String(raw?.id || raw?._id || raw?.appointmentId || raw?.AptNum || '');
+      const apptSourceId = String(getRecareSourceAppointmentId(appt) || '');
+      const isRelated = sourceApptId
+        ? (apptSourceId === sourceApptId || apptId === sourceApptId || apptId === String(sourceApptId))
+        : false;
+      if (!isRelated) return;
+      const date = raw?.appointmentDate || raw?.date || null;
+      if (!date) return;
+      const customFields = raw?.customFields || {};
+      const procedures = Array.isArray(customFields.procedures) && customFields.procedures.length > 0
+        ? customFields.procedures
+        : Array.isArray(raw?.procedures) && raw.procedures.length > 0
+          ? raw.procedures
+          : Array.isArray(raw?.rawProcedures) && raw.rawProcedures.length > 0
+            ? raw.rawProcedures
+            : [];
+      procedures.forEach((proc) => {
+        const key = getProcedureKey(proc);
+        if (key && date) {
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(date)) map[key].push(date);
+        }
+      });
+    });
+    return map;
+  };
+
+  const extractAppointmentProcedures = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const customFields = raw?.customFields || {};
+    const recareProcedureDateMap = buildRecareProcedureDateMap(appointment);
+    if (typeof raw?.procedures === "string" && raw.procedures.trim()) {
+      return normalizeProceduresForForm(raw.procedures.split(",").map((p) => p.trim()).filter(Boolean), recareProcedureDateMap);
+    }
+    const source =
+      (Array.isArray(customFields.procedures) && customFields.procedures.length > 0 && customFields.procedures) ||
+      (Array.isArray(raw?.rawProcedures) && raw.rawProcedures.length > 0 && raw.rawProcedures) ||
+      (Array.isArray(raw?.procedures) && raw.procedures.length > 0 && raw.procedures) ||
+      (Array.isArray(raw?.workspace?.procedures) && raw.workspace.procedures.length > 0 && raw.workspace.procedures) ||
+      [];
+    return normalizeProceduresForForm(source, recareProcedureDateMap);
+  };
+
+  const resolveManualRecareSourceAppointment = () => {
+    const contextAppointment = isSamePatient(selectedAppointmentContext, patient)
+      ? selectedAppointmentContext
+      : null;
+    const selectedSourceId =
+      getRecareSourceAppointmentId(contextAppointment) ||
+      getAppointmentId(contextAppointment) ||
+      getRecareSourceAppointmentId(initialAppointment) ||
+      getAppointmentId(initialAppointment);
+    if (selectedSourceId) {
+      return appointments.find((appointment) => String(getAppointmentId(appointment)) === String(selectedSourceId)) || contextAppointment || initialAppointment;
+    }
+
+    const patientId = patient?._id || patient?.id || patient?.PatNum;
+    if (!patientId) return null;
+
+    const selectedValue = dateTime?.isValid?.() ? dateTime.valueOf() : Date.now();
+    return (appointments || [])
+      .filter((appointment) => isSamePatient(appointment, patient) || String(getAppointmentPatientId(appointment) || "") === String(patientId))
+      .filter((appointment) => !getRecareSourceAppointmentId(appointment))
+      .filter((appointment) => getAppointmentId(appointment))
+      .filter((appointment) => getAppointmentDateValue(appointment) <= selectedValue)
+      .sort((a, b) => getAppointmentDateValue(b) - getAppointmentDateValue(a))[0] || null;
+  };
+
   const dateTime = useMemo(() => {
     const h = parseInt(timeHours || "9", 10);
     const m = parseInt(timeMins || "0", 10);
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
     return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
   }, [apptDate, timeHours, timeMins, amPm]);
+
+  useEffect(() => {
+    if (!open || isRecareTemplate || isExistingAppointment) return;
+    if (String(visitType).toLowerCase() !== "recare") {
+      if (recareProceduresLoadedRef.current && preRecareProceduresRef.current) {
+        setProcedures(preRecareProceduresRef.current);
+      }
+      recareProceduresLoadedRef.current = false;
+      preRecareProceduresRef.current = null;
+      return;
+    }
+
+    const sourceAppointment = resolveManualRecareSourceAppointment();
+    const sourceProcedures = extractAppointmentProcedures(sourceAppointment);
+    if (sourceProcedures.length > 0) {
+      if (!recareProceduresLoadedRef.current) {
+        preRecareProceduresRef.current = procedures;
+      }
+      recareProceduresLoadedRef.current = true;
+      const uncheckedCodes = userUncheckedProcedureCodesRef.current;
+      const proceduresWithUncheckedState = sourceProcedures.map((p) =>
+        uncheckedCodes.has(p.code) ? { ...p, checked: false } : p
+      );
+      setProcedures(proceduresWithUncheckedState);
+    }
+  }, [open, visitType, patient, dateTime, appointments, selectedAppointmentContext, isRecareTemplate, isExistingAppointment, recareDueDateMap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track user-unchecked procedures by code so date/time changes don't auto-recheck them
+  useEffect(() => {
+    const uncheckedCodes = new Set();
+    procedures.forEach((p) => {
+      if (!p.checked) uncheckedCodes.add(p.code);
+    });
+    userUncheckedProcedureCodesRef.current = uncheckedCodes;
+  }, [procedures]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePatientChange = (newPatient) => {
     // If the user is switching from one selected patient to a different one,
@@ -1130,6 +1378,42 @@ const AddNewPatientAppointmentForm = ({
 
     setPatient(newPatient);
   };
+
+  // Fetch server-computed recare due dates (per CDT code) whenever the selected
+  // patient changes or the dialog (re)opens. Falls back to the scheduled-date
+  // heuristic inside normalizeProceduresForForm if the endpoint is unavailable.
+  useEffect(() => {
+    const patId =
+      patient?.patientId ||
+      patient?.chartNumber ||
+      patient?.id ||
+      patient?._id ||
+      "";
+    let cancelled = false;
+    if (!patId) {
+      setRecareDueDateMap({});
+      return undefined;
+    }
+    setRecareDueDateMap({});
+    import("../../services/patient.service")
+      .then(({ patientService }) => patientService.getRecareDueDates(patId))
+      .then((dueDates) => {
+        if (!cancelled) setRecareDueDateMap(dueDates || {});
+      })
+      .catch(() => {
+        console.warn(`Could not load recare due dates for patient ${patId}`);
+        if (!cancelled) setRecareDueDateMap({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    patient?.patientId,
+    patient?.chartNumber,
+    patient?.id,
+    patient?._id,
+  ]);
 
   /* ── Tag handlers ── */
   const handleTagClick = (label, idx) => {
@@ -1434,7 +1718,7 @@ const AddNewPatientAppointmentForm = ({
   };
 
   const isShortlistEditMode = Boolean(initialShortlistData);
-  const isEditMode = Boolean(initialAppointment || initialShortlistData);
+  const isEditMode = (Boolean(initialAppointment) && !isRecareTemplate) || Boolean(initialShortlistData);
 
   // Seed from the appointment's persisted customFields so it shows correctly on re-open
   const [isCopiedToShortlist, setIsCopiedToShortlist] = useState(
@@ -1782,6 +2066,15 @@ const AddNewPatientAppointmentForm = ({
           onLabOrderClick={() => setIsLabOrderOpen(true)}
           computedVisitType={computedVisitType}
           hasConflict={hasOccupancyConflict}
+          createdBy={initialAppointment?.createdBy ?? null}
+          createdAt={initialAppointment?.createdAt ?? null}
+          onViewAuditHistory={() => setIsAuditOpen(true)}
+        />
+
+        <AuditScheduleHistoryDialog
+          open={isAuditOpen}
+          onClose={() => setIsAuditOpen(false)}
+          appointment={initialAppointment}
         />
       </Box>
 

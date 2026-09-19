@@ -75,6 +75,20 @@ export const patientService = {
   },
 
   /**
+   * Get server-computed recare due dates keyed by procedure (CDT) code.
+   * @param {string} patientId - Patient ID
+   * @returns {Promise<Object>} Map of { [code]: { dueDate, lastCompletedDate, intervalMonths, offsetDays } }
+   */
+  async getRecareDueDates(patientId) {
+    if (!patientId) return {};
+    const response = await apiClient.get(
+      `/patients/${patientId}/recare-due-dates`,
+    );
+    // Backend envelope: data = { patientId, recareDueDates: { [code]: { dueDate, ... } } }
+    return response.data?.data?.recareDueDates || {};
+  },
+
+  /**
    * Check for duplicate patients
    * @param {Object} data - Patient data (firstName, lastName, dateOfBirth)
    * @returns {Promise<Array>} Array of duplicate patients

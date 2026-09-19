@@ -148,8 +148,8 @@ const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen
 };
 
 // Main AppointmentChecklist component
-const AppointmentChecklist = ({ patientId, appointment }) => {
-  const [preApptOpen, setPreApptOpen] = useState(true);
+const AppointmentChecklist = ({ patientId, appointment, showAllSections = true }) => {
+  const [preApptOpen, setPreApptOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   
@@ -438,23 +438,27 @@ const AppointmentChecklist = ({ patientId, appointment }) => {
         open={preApptOpen}
         onToggleOpen={() => setPreApptOpen(v => !v)}
       />
-      <ChecklistSection
-        title="Check-in Checklist"
-        items={CHECK_IN_ITEMS}
-        state={checkInState}
-        onSetStatus={setStatus(setCheckInState)}
-        open={checkInOpen}
-        onToggleOpen={() => setCheckInOpen(v => !v)}
-      />
-      <ChecklistSection
-        title="Check-out Checklist"
-        items={CHECK_OUT_ITEMS}
-        state={checkOutState}
-        onSetStatus={setStatus(setCheckOutState)}
-        open={checkOutOpen}
-        onToggleOpen={() => setCheckOutOpen(v => !v)}
-        onLinkClick={handleLinkClick}
-      />
+      {showAllSections && (
+        <>
+          <ChecklistSection
+            title="Check-in Checklist"
+            items={CHECK_IN_ITEMS}
+            state={checkInState}
+            onSetStatus={setStatus(setCheckInState)}
+            open={checkInOpen}
+            onToggleOpen={() => setCheckInOpen(v => !v)}
+          />
+          <ChecklistSection
+            title="Check-out Checklist"
+            items={CHECK_OUT_ITEMS}
+            state={checkOutState}
+            onSetStatus={setStatus(setCheckOutState)}
+            open={checkOutOpen}
+            onToggleOpen={() => setCheckOutOpen(v => !v)}
+            onLinkClick={handleLinkClick}
+          />
+        </>
+      )}
 
       {/* Footer */}
       <Box

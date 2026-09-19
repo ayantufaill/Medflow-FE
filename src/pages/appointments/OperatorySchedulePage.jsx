@@ -24,6 +24,7 @@ import { useDispatch } from "react-redux";
 import {
   setSelectedAppointmentId,
   fetchAppointments,
+  fetchPatientHistory,
   updateAppointmentInList,
   invalidateAppointmentDetail,
   setCurrentAppointment,
@@ -144,30 +145,68 @@ const OperatorySchedulePage = () => {
   const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
-  // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
+// Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
   // to jump the calendar to a specific date and flash the relevant appointment card.
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightAppointmentId, setHighlightAppointmentId] = useState(null);
 
+  // Compute highlightTime directly from URL params so it survives remounts
+  const urlTimeParam = searchParams.get('time');
+  const highlightTime = useMemo(() => {
+    // Check URL param first
+    if (urlTimeParam) {
+      const timeMatch = urlTimeParam.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let hour = parseInt(timeMatch[1], 10);
+        const mins = parseInt(timeMatch[2], 10);
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+        return hour * 60 + mins;
+      }
+    }
+    // Check custom event highlight (format: "time-{minutesFromStart}")
+    if (highlightAppointmentId && highlightAppointmentId.startsWith('time-')) {
+      return parseInt(highlightAppointmentId.replace('time-', ''), 10);
+    }
+    return null;
+  }, [urlTimeParam, highlightAppointmentId]);
+
+  const urlDateParam = searchParams.get('date');
+  const urlHighlightParam = searchParams.get('highlightAppointmentId');
+
+  // Apply deep-link date to schedule state whenever URL changes (only on initial load)
   useEffect(() => {
     const dateParam = searchParams.get('date');
     const highlightParam = searchParams.get('highlightAppointmentId');
+    if (!dateParam && !highlightParam) return;
 
-    if (dateParam && dayjs(dateParam).isValid()) {
-      setSelectedDate(dayjs(dateParam).toISOString());
+    if (dateParam && dayjs(dateParam).isValid() && reduxSelectedDate !== dayjs(dateParam).format("YYYY-MM-DD")) {
+      setSelectedDate(dayjs(dateParam).format("YYYY-MM-DD"));
     }
     if (highlightParam) {
       setHighlightAppointmentId(highlightParam);
     }
-    if (dateParam || highlightParam) {
-      // Clear the params from the URL so a refresh doesn't re-trigger the jump/highlight.
-      setSearchParams({}, { replace: true });
-    }
-    // Depends on searchParams (not just mount) because clicking a notification while already
-    // on this route updates the query string in place without remounting the page.
+    // Only run once on mount - don't sync URL changes back to Redux
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
+  // Scroll to highlight time when both selectedDate and highlightTime are set
+  useEffect(() => {
+    if (highlightTime != null && highlightTime >= 0) {
+      const timer = setTimeout(() => {
+        const gridNode = document.getElementById('schedule-grid-scroll-container');
+        if (gridNode) {
+          const HOUR_HEIGHT = 150;
+          const START_HOUR = 7;
+          const scrollTop = Math.max(0, ((highlightTime / 60) - START_HOUR)) * HOUR_HEIGHT;
+          gridNode.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+        // Clear the highlight after scrolling
+        setHighlightAppointmentId(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+}, [highlightTime, selectedDate]);
 
 
   const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
@@ -340,11 +379,59 @@ const OperatorySchedulePage = () => {
         await scheduleBlockService.createBlock(newBlockData);
         showSnackbar("Calendar block rescheduled successfully", "success");
         setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        fetchScheduleBlocks();
+        refetchScheduleBlocks();
       } catch (err) {
         const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
         showSnackbar(msg, "error");
       }
+} else if (dragData.isRecareBlock) {
+      // Handle recare/treatment block drop - pass data directly via initialAppointment
+      const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+      const appointmentDate = start.format("YYYY-MM-DD");
+      const startTime = start.format("HH:mm");
+      const endTime = end.format("HH:mm");
+      const duration = dragData.durationMinutes || 60;
+      const visitType = dragData.visitType || 'recare';
+
+      // Pass the block data directly as initialAppointment with a template flag
+      // Use a numeric ID (no prefix) so form treats it as new appointment
+      const templateData = {
+        ...dragData,
+        id: Date.now(), // Numeric ID - no "recare-" prefix, no "appt-" prefix
+        appointmentDate: appointmentDate,
+        startTime: startTime,
+        endTime: endTime,
+        durationMinutes: duration,
+        roomId: roomId,
+        visitType: visitType,
+        isRecareTemplate: true,
+        status: 'scheduled',
+        appointmentTypeName: dragData.appointmentTypeName,
+        // Ensure customFields has the procedures and providerRows for the form
+        customFields: {
+          ...dragData.customFields,
+          visitType: visitType,
+          recareSourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
+          sourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
+          procedures: dragData.procedures || [],
+          providerRows: dragData.providerId ? [{
+            providerId: dragData.providerId,
+            time: dragData.durationMinutes || 60
+          }] : [],
+        },
+        procedures: dragData.procedures || [],
+        providerId: dragData.providerId,
+        sourceProcedureBlockAppointment: dragData.sourceProcedureBlockAppointment || null,
+      };
+
+      console.log('[DROP] templateData created:', JSON.stringify(templateData, null, 2));
+
+      setEditingAppointment(templateData);
+      setInitialShortlistData(null);
+      setFormOpen(true);
+      setShowExtendedOptions(false);
+      
+      showSnackbar(`${visitType.charAt(0).toUpperCase() + visitType.slice(1)} appointment ready to schedule`, "info");
     }
   };
 
@@ -416,19 +503,35 @@ const OperatorySchedulePage = () => {
     };
     window.addEventListener('block-card-clicked', handleBlockClick);
 
+    const handleNavigateToSlot = (e) => {
+      const { date, time } = e.detail;
+      if (date && dayjs(date).isValid()) {
+        setSelectedDate(dayjs(date).format("YYYY-MM-DD"));
+        // Store time to scroll to it after date change
+        const timeMatch = time?.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1], 10);
+          const mins = parseInt(timeMatch[2], 10);
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+          setHighlightAppointmentId(`time-${hour * 60 + mins}`);
+        }
+      }
+    };
+    window.addEventListener('navigate-to-slot', handleNavigateToSlot);
+
     return () => {
       window.removeEventListener('appointment-card-double-clicked', handleApptDoubleClick);
       window.removeEventListener('block-card-clicked', handleBlockClick);
+      window.removeEventListener('navigate-to-slot', handleNavigateToSlot);
     };
   }, []);
 
-  const fetchScheduleBlocks = useCallback(async () => {
+  const refetchScheduleBlocks = useCallback(async () => {
     try {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
       setScheduleBlocks(blocks);
-
-      // Parse closed days from blocks
       const closedOps = {};
       blocks.forEach(block => {
         if (block.notes === "CLOSED_DAY") {
@@ -445,8 +548,27 @@ const OperatorySchedulePage = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    fetchScheduleBlocks();
-  }, [fetchScheduleBlocks]);
+    let cancelled = false;
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    scheduleBlockService.getBlocksForDate(dateStr).then(blocks => {
+      if (!cancelled) {
+        setScheduleBlocks(blocks);
+        const closedOps = {};
+        blocks.forEach(block => {
+          if (block.notes === "CLOSED_DAY") {
+            const roomId = block.roomId ? String(block.roomId).replace(/^op/, "") : "";
+            if (roomId) {
+              closedOps[`${dateStr}:op${roomId}`] = true;
+            }
+          }
+        });
+        setClosedOperatories(closedOps);
+      }
+    }).catch(err => {
+      if (!cancelled) console.error("Error fetching schedule blocks:", err);
+    });
+    return () => { cancelled = true; };
+  }, [selectedDate]);
 
   const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
     if (dayjs(dateStr).isBefore(dayjs(), 'day')) {
@@ -479,12 +601,12 @@ const OperatorySchedulePage = () => {
         setClosedOperatories(prev => ({ ...prev, [key]: true }));
       }
       // Re-fetch to ensure sync with backend
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       console.error("Failed to toggle operatory status:", err);
       showSnackbar("Failed to update operatory status", "error");
     }
-  }, [closedOperatories, scheduleBlocks, fetchScheduleBlocks, showSnackbar]);
+  }, [closedOperatories, scheduleBlocks, refetchScheduleBlocks, showSnackbar]);
 
   const handleSaveBlock = async (blockData) => {
     try {
@@ -496,7 +618,7 @@ const OperatorySchedulePage = () => {
         showSnackbar("Block created successfully", "success");
       }
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to block slot";
       showSnackbar(msg, "error");
@@ -508,7 +630,7 @@ const OperatorySchedulePage = () => {
       await scheduleBlockService.deleteBlock(blockId);
       showSnackbar("Block deleted successfully", "success");
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
       showSnackbar(msg, "error");
@@ -958,6 +1080,44 @@ const OperatorySchedulePage = () => {
     }
   }, [showConsult, selectedDate]);
 
+  const getAppointmentId = (appointment) => appointment?._id || appointment?.id || appointment?.appointmentId || appointment?.AptNum;
+  const getAppointmentPatientId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.patientId && typeof raw.patientId === 'object'
+      ? raw.patientId._id || raw.patientId.id || raw.patientId.PatNum
+      : raw?.patientId || raw?.patient?._id || raw?.patient?.id || raw?.patient?.PatNum;
+  };
+  const getAppointmentVisitType = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return String(raw?.customFields?.visitType || raw?.visitType || raw?.appointmentTypeName || raw?.appointmentType || '').toLowerCase();
+  };
+  const getRecareSourceAppointmentId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.customFields?.recareSourceAppointmentId || raw?.customFields?.sourceAppointmentId || null;
+  };
+  const getAppointmentDateValue = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const date = raw?.appointmentDate || raw?.date;
+    const time = raw?.startTime || '00:00';
+    const parsed = date ? dayjs(`${dayjs(date).format('YYYY-MM-DD')}T${time}`) : null;
+    return parsed?.isValid() ? parsed.valueOf() : 0;
+  };
+  const resolveRecareSourceAppointmentId = (formData, start) => {
+    const selectedSourceId = getRecareSourceAppointmentId(selectedAppointment) || getAppointmentId(selectedAppointment);
+    if (selectedSourceId) return selectedSourceId;
+
+    const formPatientId = String(formData.patientId || '');
+    const startValue = start?.isValid?.() ? start.valueOf() : Date.now();
+    const candidates = (reduxAppointments || [])
+      .filter((appointment) => String(getAppointmentPatientId(appointment) || '') === formPatientId)
+      .filter((appointment) => !getRecareSourceAppointmentId(appointment))
+      .filter((appointment) => getAppointmentId(appointment))
+      .filter((appointment) => getAppointmentDateValue(appointment) <= startValue)
+      .sort((a, b) => getAppointmentDateValue(b) - getAppointmentDateValue(a));
+
+    return getAppointmentId(candidates[0]) || null;
+  };
+
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
     const providerId = formData.providerId;
@@ -990,7 +1150,23 @@ const OperatorySchedulePage = () => {
         patientName: formData.patientName,
       };
 
-      if (editingAppointment && !formData.isNewRecall) {
+      const isRecareTemplate = editingAppointment?.isRecareTemplate === true;
+      const savedVisitType = String(appointmentData.customFields?.visitType || formData.customFields?.visitType || '').toLowerCase();
+      const recareSourceAppointmentId = savedVisitType === 'recare'
+        ? editingAppointment?.sourceProcedureBlockAppointment?._id ||
+          editingAppointment?.sourceProcedureBlockAppointment?.id ||
+          editingAppointment?.customFields?.recareSourceAppointmentId ||
+          editingAppointment?.customFields?.sourceAppointmentId ||
+          resolveRecareSourceAppointmentId(formData, start)
+        : null;
+      if (recareSourceAppointmentId) {
+        appointmentData.customFields = {
+          ...(appointmentData.customFields || {}),
+          recareSourceAppointmentId,
+          sourceAppointmentId: recareSourceAppointmentId,
+        };
+      }
+      if (editingAppointment && !formData.isNewRecall && !isRecareTemplate) {
         let apptId = editingAppointment._id || editingAppointment.id;
         if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
           apptId = apptId.replace('appt-', '');
@@ -998,8 +1174,25 @@ const OperatorySchedulePage = () => {
         await updateAppointment(apptId, appointmentData);
         showSnackbar('Appointment updated successfully', 'success');
       } else {
-        await createAppointment(appointmentData);
+        const newAppt = await createAppointment(appointmentData);
         showSnackbar('Appointment created successfully', 'success');
+        if (newAppt) {
+          const selectedNewAppt = {
+            ...newAppt,
+            id: newAppt.id || newAppt._id,
+            sourceProcedureBlockAppointment: recareSourceAppointmentId
+              ? editingAppointment?.sourceProcedureBlockAppointment || editingAppointment
+              : null,
+          };
+          setSelectedAppointment(selectedNewAppt);
+          const newPatientId = newAppt.patientId && typeof newAppt.patientId === 'object'
+            ? newAppt.patientId._id || newAppt.patientId.id || newAppt.patientId.PatNum
+            : newAppt.patientId;
+          if (newPatientId) {
+            dispatch(fetchPatientById(newPatientId));
+            dispatch(fetchPatientHistory(newPatientId));
+          }
+        }
       }
       setFormOpen(false);
     } catch (err) {
@@ -1164,7 +1357,10 @@ const OperatorySchedulePage = () => {
 
         {/* LEFT PANEL — Static Width */}
         <Box className="no-print" sx={{ flex: '0 0 280px', width: '280px', minWidth: '280px', maxWidth: '280px', height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
-          <LeftPanel />
+          <LeftPanel 
+            selectedAppointment={selectedAppointment} 
+            onSelectAppointment={setSelectedAppointment}
+          />
         </Box>
 
         {/* CENTER PANEL — Dynamic Width */}
@@ -1275,6 +1471,7 @@ const OperatorySchedulePage = () => {
           initialPatient={currentPatient || null}
           initialShortlistData={initialShortlistData}
           initialAppointment={editingAppointment}
+          selectedAppointmentContext={selectedAppointment}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}
