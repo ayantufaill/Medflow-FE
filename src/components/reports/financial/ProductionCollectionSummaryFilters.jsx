@@ -15,7 +15,14 @@ const ProductionCollectionSummaryFilters = ({ dropdownProviders, onApplyFilters,
   });
 
   const handleFilterChange = (key, value) => {
-    setDraftFilters(prev => ({ ...prev, [key]: value }));
+    let safeValue = value;
+    // Defensive check to prevent raw DOM events from being stored in state
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.nativeEvent) {
+      safeValue = value.target !== undefined && value.target.checked !== undefined 
+        ? value.target.checked 
+        : (value.target !== undefined ? value.target.value : value);
+    }
+    setDraftFilters(prev => ({ ...prev, [key]: safeValue }));
   };
 
   const getLocalDateString = (d) => {
@@ -222,7 +229,7 @@ const ProductionCollectionSummaryFilters = ({ dropdownProviders, onApplyFilters,
         <ReportCheckbox 
           label="Show Summary Per Day" 
           checked={draftFilters.showSummaryPerDay}
-          onChange={(checked) => handleFilterChange('showSummaryPerDay', checked)}
+          onChange={(e) => handleFilterChange('showSummaryPerDay', e?.target?.checked ?? e)}
         />
       }
       onApplyFilters={handleApply} 

@@ -26,6 +26,7 @@ const ProductionReportTable = ({
   showFlags,
   showDOB = true,
   showProvider = true,
+  filterByDOS = false,
   handleExportGroupCSV,
   handlePrintGroup
 }) => {
@@ -86,7 +87,7 @@ const ProductionReportTable = ({
             <Table size="small" sx={{ minWidth: 1200 }}>
               <TableHead>
                 <TableRow sx={headerRowSx}>
-                  <TableCell>Date</TableCell>
+                  <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                   <TableCell>Flags</TableCell>
                   <TableCell>Patient</TableCell>
                   {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -272,7 +273,7 @@ const ProductionReportTable = ({
                       <Table size="small" sx={{ minWidth: 1200 }}>
                         <TableHead>
                           <TableRow sx={headerRowSx}>
-                            <TableCell>Date</TableCell>
+                            <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                             <TableCell>Flags</TableCell>
                             <TableCell>Patient</TableCell>
                             {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -307,8 +308,8 @@ const ProductionReportTable = ({
                         </TableHead>
                         <TableBody>
                           {groupRows.map((row, idx) => (
-                            <TableRow key={row.procedureId || idx} sx={bodyRowSx}>
-                              <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                            <TableRow key={row.procedureId ? `${row.type || 'row'}-${row.procedureId}-${idx}` : idx} sx={bodyRowSx}>
+                              <TableCell>{(row.displayDate || row.date) ? new Date(row.displayDate || row.date).toLocaleDateString() : '-'}</TableCell>
                               <TableCell>
                               {showFlags && row.flags && row.flags.length > 0 && (
                                 <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -381,7 +382,7 @@ const ProductionReportTable = ({
             <Table size="small" sx={{ minWidth: 1200 }}>
               <TableHead>
                 <TableRow sx={headerRowSx}>
-                  <TableCell>Date</TableCell>
+                  <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                   <TableCell>Flags</TableCell>
                   <TableCell>Patient</TableCell>
                   {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -416,8 +417,8 @@ const ProductionReportTable = ({
               </TableHead>
               <TableBody>
                 {sortedReportData.map((row, idx) => (
-                  <TableRow key={row.procedureId || idx} sx={bodyRowSx}>
-                    <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                  <TableRow key={row.procedureId ? `${row.type || 'row'}-${row.procedureId}-${idx}` : idx} sx={bodyRowSx}>
+                    <TableCell>{(row.displayDate || row.date) ? new Date(row.displayDate || row.date).toLocaleDateString() : '-'}</TableCell>
                     <TableCell>
                       {showFlags && row.flags && row.flags.length > 0 && (
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>

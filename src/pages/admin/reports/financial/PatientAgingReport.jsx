@@ -21,6 +21,7 @@ import AgingReportFilters from '../../../../components/reports/financial/AgingRe
 import AgingReportActions from '../../../../components/reports/financial/AgingReportActions';
 import GenerateStatementsDialog from '../../../../components/finance/GenerateStatementsDialog';
 import ViewGeneratedStatementsDialog from '../../../../components/finance/ViewGeneratedStatementsDialog';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const PatientAgingReport = () => {
   const [hidePatientNames, setHidePatientNames] = useState(false);
@@ -220,25 +221,56 @@ const PatientAgingReport = () => {
       htmlToPrint = tableEl.outerHTML;
     }
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Patient Aging Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print { display: none !important; }');
-    printWindow.document.write('h6, h5 { font-family: sans-serif; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write(`<h2>Patient Aging Report ${bucketName ? `- ${bucketName}` : ''}</h2>`);
-    printWindow.document.write(htmlToPrint);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Patient Aging Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print, svg { display: none !important; }
+            h6, h5 { font-family: sans-serif; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Patient Aging Report ${bucketName ? `- ${bucketName}` : ''}</h2>
+          ${htmlToPrint}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleExportCSV = async (bucketName = null, dataToExport = filteredReportData) => {

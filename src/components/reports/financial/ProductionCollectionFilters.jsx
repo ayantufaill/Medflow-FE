@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Autocomplete, TextField, Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportSearchInput, ReportDivider } from '../ui';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 
-const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClearAll }) => {
+const ProductionCollectionFilters = ({ dropdownProviders, reportData, onApplyFilters, onClearAll }) => {
   const [draftFilters, setDraftFilters] = useState({
     dateRange: 'daily',
     startDate: new Date().toISOString().split('T')[0],
@@ -24,8 +25,26 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
   });
 
   const handleFilterChange = (key, value) => {
-    setDraftFilters(prev => ({ ...prev, [key]: value }));
+    let safeValue = value;
+    // Defensive check to prevent raw DOM events from being stored in state
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.nativeEvent) {
+      safeValue = value.target !== undefined && value.target.checked !== undefined 
+        ? value.target.checked 
+        : (value.target !== undefined ? value.target.value : value);
+    }
+    setDraftFilters(prev => ({ ...prev, [key]: safeValue }));
   };
+
+  const uniqueCodes = React.useMemo(() => {
+    if (!reportData) return [];
+    const map = new Map();
+    reportData.forEach(r => {
+      if (r.code) {
+        map.set(r.code, { code: r.code, desc: r.procedure || '' });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }, [reportData]);
 
   const getLocalDateString = (d) => {
     const offset = d.getTimezoneOffset() * 60000;
@@ -36,11 +55,11 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
     const newMode = e.target.value;
     handleFilterChange('dateRange', newMode);
     if (newMode === 'range') return;
-    
+
     const today = new Date();
     let start = new Date(today);
     let end = new Date(today);
-    
+
     switch (newMode) {
       case 'daily':
         break;
@@ -104,7 +123,7 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
       default:
         break;
     }
-    
+
     setDraftFilters(prev => ({
       ...prev,
       startDate: getLocalDateString(start),
@@ -154,7 +173,7 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
 
   const topFilters = (
     <>
-      <ReportSelect 
+      <ReportSelect
         label="DATE RANGE"
         options={[
           { value: 'daily', label: 'Daily' },
@@ -183,11 +202,11 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
           value={dayjs(draftFilters.startDate)}
           onChange={(newValue) => handleFilterChange('startDate', newValue ? newValue.format('YYYY-MM-DD') : '')}
           format="MM/DD/YYYY"
-          slotProps={{ 
+          slotProps={{
             popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+            textField: {
+              size: 'small',
+              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } }
             }
           }}
         />
@@ -200,17 +219,17 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
           value={dayjs(draftFilters.endDate)}
           onChange={(newValue) => handleFilterChange('endDate', newValue ? newValue.format('YYYY-MM-DD') : '')}
           format="MM/DD/YYYY"
-          slotProps={{ 
+          slotProps={{
             popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } } 
+            textField: {
+              size: 'small',
+              sx: { width: '180px', '& .MuiInputBase-root': { fontFamily: 'Inter', fontSize: '13px', borderRadius: '4px', height: '32px', backgroundColor: '#fafbfe', color: '#09121f' }, '& .MuiInputBase-input': { padding: '4px 10px' }, '& fieldset': { borderColor: '#e2e8f0' } }
             }
           }}
         />
       </Box>
       <ReportDivider />
-      <ReportSelect 
+      <ReportSelect
         label="FILTER REPORT BY PROVIDER"
         options={[
           { value: 'all', label: 'All' },
@@ -222,7 +241,7 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
         value={draftFilters.provider}
         onChange={(e) => handleFilterChange('provider', e.target.value)}
       />
-      <ReportSelect 
+      <ReportSelect
         label="GROUP BY"
         options={[
           { value: 'no-grouping', label: 'No Grouping' },
@@ -236,7 +255,7 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
 
   const middleFilters = (
     <>
-      <ReportSelect 
+      <ReportSelect
         label="CODES FILTER"
         options={[
           { value: 'filter', label: 'Filter Codes' },
@@ -245,16 +264,42 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
         value={draftFilters.codeFilter}
         onChange={(e) => handleFilterChange('codeFilter', e.target.value)}
       />
-      <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2.5 }}>
-            <ReportSearchInput 
-              placeholder="Enter code or procedure" 
-              value={draftFilters.codeText}
-              onChange={(e) => handleFilterChange('codeText', e.target.value)}
-              width="250px"
+      <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 250 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          code or procedure
+        </Typography>
+        <Autocomplete
+          size="small"
+          options={uniqueCodes}
+          getOptionLabel={(opt) => `${opt.code} - ${opt.desc}`}
+          value={uniqueCodes.find(c => c.code === draftFilters.codeText) || null}
+          onChange={(e, newVal) => {
+            handleFilterChange('codeText', newVal ? newVal.code : '');
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={!draftFilters.codeText ? "Select code" : ""}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#fafbfe',
+                  minHeight: 36,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontFamily: 'Inter',
+                  fontSize: '13px',
+                  color: '#09121f',
+                  fontWeight: 500,
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }
+              }}
             />
+          )}
+          sx={{ width: '100%' }}
+        />
       </Box>
       <ReportDivider />
-      <ReportSelect 
+      <ReportSelect
         label="Flag Filter"
         options={[
           { value: 'pts', label: 'Pts With Or Without Flags' },
@@ -264,9 +309,22 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
         value={draftFilters.flagFilter}
         onChange={(e) => handleFilterChange('flagFilter', e.target.value)}
       />
-      
+
+      <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
+        <ReportCheckbox
+          label="Show Flags in Report"
+          checked={draftFilters.showFlags}
+          onChange={(e) => handleFilterChange('showFlags', e.target.checked)}
+        />
+      </Box>
+    </>
+  );
+
+  const bottomFilters = (
+    <>
       <ReportSelect 
-        label="SORT REPORT BY"
+        label="SORT REPORT BY: "
+        labelPosition="left"
         options={[
           { value: 'default', label: 'Default' },
           { value: 'date_asc', label: 'Date: Ascending' },
@@ -277,55 +335,48 @@ const ProductionCollectionFilters = ({ dropdownProviders, onApplyFilters, onClea
         value={draftFilters.sortBy}
         onChange={(e) => handleFilterChange('sortBy', e.target.value)}
       />
-     <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
-             <ReportCheckbox 
-               label="Show Flags in Report" 
-               checked={draftFilters.showFlags} 
-               onChange={(e) => handleFilterChange('showFlags', e.target.checked)} 
-             />
+      <ReportCheckbox
+        label="Display Only Records with Collection"
+        checked={draftFilters.displayOnlyCollection}
+        onChange={(e) => handleFilterChange('displayOnlyCollection', e?.target?.checked ?? e)}
+      />
+      <ReportCheckbox
+        label="Exclude Products"
+        checked={draftFilters.excludeProducts}
+        onChange={(e) => handleFilterChange('excludeProducts', e?.target?.checked ?? e)}
+      />
+
+      <ReportCheckbox
+        label="Show Date of Birth"
+        checked={draftFilters.showDOB}
+        onChange={(e) => handleFilterChange('showDOB', e?.target?.checked ?? e)}
+      />
+      <ReportCheckbox
+        label="Show Provider"
+        checked={draftFilters.showProvider}
+        onChange={(e) => handleFilterChange('showProvider', e?.target?.checked ?? e)}
+      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <ReportCheckbox
+          label="Filter by DOS"
+          checked={draftFilters.filterByDOS}
+          onChange={(e) => handleFilterChange('filterByDOS', e?.target?.checked ?? e)}
+        />
+        <Tooltip title="Filters by the actual day the procedure was performed, not the day it was entered into the system." arrow placement="top">
+          <InfoOutlinedIcon sx={{ fontSize: 16, color: '#64748b', cursor: 'help' }} />
+        </Tooltip>
       </Box>
     </>
   );
 
-  const bottomFilters = (
-    <>
-      <ReportCheckbox 
-        label="Display Only Records with Collection" 
-        checked={draftFilters.displayOnlyCollection}
-        onChange={(checked) => handleFilterChange('displayOnlyCollection', checked)}
-      />
-      <ReportCheckbox 
-        label="Exclude Products" 
-        checked={draftFilters.excludeProducts}
-        onChange={(checked) => handleFilterChange('excludeProducts', checked)}
-      />
-      
-      <ReportCheckbox 
-        label="Show Date of Birth" 
-        checked={draftFilters.showDOB}
-        onChange={(checked) => handleFilterChange('showDOB', checked)}
-      />
-      <ReportCheckbox 
-        label="Show Provider" 
-        checked={draftFilters.showProvider}
-        onChange={(checked) => handleFilterChange('showProvider', checked)}
-      />
-      <ReportCheckbox 
-        label="Filter by DOS" 
-        checked={draftFilters.filterByDOS}
-        onChange={(checked) => handleFilterChange('filterByDOS', checked)}
-      />
-    </>
-  );
-
   return (
-    <ReportFilterBar 
-      topRowFilters={topFilters} 
-      middleRowFilters={middleFilters} 
-      bottomRowFilters={bottomFilters} 
-      onApplyFilters={handleApply} 
-      onClearAll={handleClear} 
-      onCreateTemplate={() => {}}
+    <ReportFilterBar
+      topRowFilters={topFilters}
+      middleRowFilters={middleFilters}
+      bottomRowFilters={bottomFilters}
+      onApplyFilters={handleApply}
+      onClearAll={handleClear}
+      onCreateTemplate={() => { }}
     />
   );
 };

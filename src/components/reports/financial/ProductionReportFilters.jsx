@@ -270,34 +270,38 @@ const ProductionReportFilters = ({ dropdownProviders, reportData, onApplyFilters
         value={draftFilters.codeFilter}
         onChange={(e) => handleFilterChange('codeFilter', e.target.value)}
       />
-      <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 250 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          code or procedure
+        </Typography>
         <Autocomplete
-          multiple
           size="small"
           options={uniqueCodes}
           getOptionLabel={(opt) => `${opt.code} - ${opt.desc}`}
-          value={uniqueCodes.filter(c => (draftFilters.codeText || '').includes(c.code))}
+          value={uniqueCodes.find(c => c.code === draftFilters.codeText) || null}
           onChange={(e, newVal) => {
-            const str = newVal.map(v => v.code).join(', ');
-            handleFilterChange('codeText', str);
+            handleFilterChange('codeText', newVal ? newVal.code : '');
           }}
           renderInput={(params) => (
             <TextField 
               {...params} 
-              placeholder={!draftFilters.codeText ? "Select codes" : ""} 
+              placeholder={!draftFilters.codeText ? "Select code" : ""} 
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: '#fafbfe',
                   minHeight: 36,
                   padding: '2px 8px',
-                  borderRadius: '8px',
+                  borderRadius: '4px',
+                  fontFamily: 'Inter',
+                  fontSize: '13px',
+                  color: '#09121f',
+                  fontWeight: 500,
                   '& fieldset': { borderColor: '#e2e8f0' },
                 }
               }}
             />
           )}
-          sx={{ width: '250px' }}
-          disableCloseOnSelect
+          sx={{ width: '100%' }}
         />
       </Box>
       <ReportDivider />

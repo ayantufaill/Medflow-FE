@@ -6,6 +6,7 @@ import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../
 import ProductionReportFilters from '../../../../components/reports/financial/ProductionReportFilters';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import ProductionReportTable from '../../../../components/reports/financial/ProductionReportTable';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const ProductionReport = () => {
   const dispatch = useDispatch();
@@ -36,11 +37,13 @@ const ProductionReport = () => {
       setLoading(true);
       const rangeParam = appliedFilters.dateRange.charAt(0).toUpperCase() + appliedFilters.dateRange.slice(1);
       const res = await reportingService.getFinancialReport('production', {
+        ...appliedFilters,
         date: appliedFilters.startDate,
         range: rangeParam,
         startDate: appliedFilters.startDate,
         endDate: appliedFilters.endDate,
       });
+      
       setReportData(res || []);
     } catch (err) {
       console.error('Failed to fetch production report:', err);
@@ -52,7 +55,7 @@ const ProductionReport = () => {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedFilters.dateRange, appliedFilters.startDate, appliedFilters.endDate]);
+  }, [appliedFilters]);
 
   const getProviderLabel = (p) => {
     if (p?.userId?.firstName || p?.userId?.lastName) {
@@ -82,6 +85,18 @@ const ProductionReport = () => {
       const hasFlags = row.flags && row.flags.length > 0;
       if (appliedFilters.flagFilter === 'with_flags' && !hasFlags) return false;
       if (appliedFilters.flagFilter === 'without_flags' && hasFlags) return false;
+    }
+
+    const targetDateStr = row.date;
+    if (targetDateStr) {
+      const targetDate = new Date(targetDateStr);
+      targetDate.setHours(0, 0, 0, 0);
+      const start = new Date(appliedFilters.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(appliedFilters.endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      if (targetDate < start || targetDate > end) return false;
     }
     
     return true;
@@ -174,25 +189,57 @@ const ProductionReport = () => {
     const tableEl = document.getElementById('production-report-table');
     const footerEl = document.getElementById('production-report-footer');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Production Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2 style="font-family: sans-serif;">Production Report</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    if (footerEl) {
-      printWindow.document.write('<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">' + footerEl.innerHTML + '</div>');
-    }
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Production Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Production Report</h2>
+          ${tableEl.outerHTML}
+          ${footerEl ? `<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">${footerEl.innerHTML}</div>` : ''}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleExportGroupCSV = (groupName, groupRows) => {
@@ -240,25 +287,57 @@ const ProductionReport = () => {
     const tableEl = document.getElementById(elementId);
     const footerEl = document.getElementById('production-report-footer');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Production Report - ' + groupName + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Production Report - ' + groupName + '</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    if (footerEl) {
-      printWindow.document.write('<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">' + footerEl.innerHTML + '</div>');
-    }
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Production Report - ${groupName}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Production Report - ${groupName}</h2>
+          ${tableEl.outerHTML}
+          ${footerEl ? `<div style="font-family: sans-serif; font-size: 12px; margin-top: 20px;">${footerEl.innerHTML}</div>` : ''}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   return (

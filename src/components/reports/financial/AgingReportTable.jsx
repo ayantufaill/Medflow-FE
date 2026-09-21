@@ -51,7 +51,7 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
         <Table id={tableId} size="small" sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0' } }}>
-              <TableCell padding="checkbox" sx={{ width: '40px' }}>
+              <TableCell padding="checkbox" className="no-print" sx={{ width: '40px' }}>
                 <Checkbox 
                   size="small"
                   sx={{ p: 0 }}
@@ -88,7 +88,7 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
               reportData.map((row, idx) => (
                 <React.Fragment key={idx}>
                   <TableRow sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
-                    <TableCell padding="checkbox">
+                    <TableCell padding="checkbox" className="no-print">
                       <Checkbox 
                         size="small"
                         sx={{ p: 0 }}
@@ -144,11 +144,11 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
                       <TableCell key={bucket} align="right">
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '60px' }}>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Pt&nbsp;</Typography>
                             <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>${(row.buckets?.[bucket]?.pt || 0).toFixed(2)}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', width: '100%' }}>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Ins&nbsp;</Typography>
                             <Typography variant="caption" sx={{ color: '#94a3b8' }}>${(row.buckets?.[bucket]?.ins || 0).toFixed(2)}</Typography>
                           </Box>
                         </Box>
@@ -179,7 +179,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
             <TableFooter>
             {/* Footer Row 1: Headers */}
             <TableRow sx={{ '& td, & th': { fontSize: '0.75rem', border: 'none', py: 1, borderTop: '2px solid #e0e0e0' } }}>
-              <TableCell colSpan={firstColSpan} sx={{ fontWeight: 600 }}>  </TableCell>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ fontWeight: 600 }}>  </TableCell>
               {agingBuckets.map((bucket) => (
                 <TableCell key={bucket} align="right" sx={{ fontWeight: 600 }}>
                   {bucket.replace(/ days?/i, '')}
@@ -192,7 +193,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
 
             {/* Footer Row 2: Total Outstanding Balances */}
             <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ color: '#555', fontWeight: 600 }}>
                 Total Outstanding Balances
               </TableCell>
               {agingBuckets.map((bucket) => (
@@ -209,7 +211,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
 
             {/* Footer Row 3: Total Patients Balances */}
             <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ color: '#555', fontWeight: 600 }}>
                 Total Patients Balances
               </TableCell>
               {agingBuckets.map((bucket) => (
@@ -226,7 +229,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
 
             {/* Footer Row 4: Total Insurance Balances */}
             <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ color: '#555', fontWeight: 600 }}>
                 Total Insurance Balances
               </TableCell>
               {agingBuckets.map((bucket) => (
@@ -243,7 +247,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
 
             {/* Footer Row 5: Total Account Credit */}
             <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none' } }}>
-              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ color: '#555', fontWeight: 600 }}>
                 Total Account Credit
               </TableCell>
               {agingBuckets.map((bucket) => (
@@ -260,7 +265,8 @@ const AgingReportTable = ({ tableId = "aging-report-table", loading, reportData,
 
             {/* Footer Row 6: Net Outstanding Balances */}
             <TableRow sx={{ '& td': { fontSize: '0.75rem', color: '#333', py: 0.5, border: 'none', pb: 2 } }}>
-              <TableCell colSpan={firstColSpan} sx={{ color: '#555', fontWeight: 600 }}>
+              <TableCell className="no-print" />
+              <TableCell colSpan={firstColSpan - 1} sx={{ color: '#555', fontWeight: 600 }}>
                 Net Outstanding Balances<br/>
                 <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 400 }}>(Total Outstanding - Total Account Credit)</Typography>
               </TableCell>

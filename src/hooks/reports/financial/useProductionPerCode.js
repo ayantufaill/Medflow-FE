@@ -202,7 +202,8 @@ export const useProductionPerCode = () => {
   const filteredReportData = reportData.filter(row => {
     if (codes.length > 0) {
       const rowCode = (row.code || '').toLowerCase();
-      const matches = codes.some(c => rowCode.includes(c));
+      const rowProc = (row.procedure || '').toLowerCase();
+      const matches = codes.some(c => rowCode.includes(c) || rowProc.includes(c));
       if (codeFilter === 'filter' && !matches) return false;
       if (codeFilter === 'exclude' && matches) return false;
     }
