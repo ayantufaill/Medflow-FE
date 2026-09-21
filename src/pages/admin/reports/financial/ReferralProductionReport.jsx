@@ -1,27 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Box, Typography, Button, Checkbox, FormControlLabel,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, IconButton,
+  Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchAllProvidersForDropdown } from '../../../../store/slices/providerSlice';
-import {
-  fetchReferralProductionReport,
-  setDateFilter,
-  selectReferralSummary,
-  selectReferralDetail,
-  selectReferralLoading,
-  selectReferralDateFilter,
-} from '../../../../store/slices/referralReportSlice';
-import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector,
-} from 'recharts';
+import CloseIcon from '@mui/icons-material/Close';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PrintIcon from '@mui/icons-material/Print';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Sector, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+
+import { ReportLayout } from '../../../../components/reports/ui';
+import medflowLogo from '../../../../assets/medflow-logo.png';
+import ReferralProductionFilters from '../../../../components/reports/financial/ReferralProductionFilters';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { useReferralProduction } from '../../../../hooks/reports/financial/useReferralProduction';
 
 const PIE_COLORS = [
   '#d8b4fe', '#7c3aed', '#3b82f6', '#1e3a5f', '#f59e0b',
@@ -29,26 +24,6 @@ const PIE_COLORS = [
   '#065f46', '#dc2626', '#06b6d4', '#f97316', '#8b5cf6', '#ec4899',
 ];
 
-const filterBtnStyle = {
-  textTransform: 'none',
-  fontWeight: 600,
-  fontSize: '0.75rem',
-  px: 2,
-  py: 0.5,
-  borderRadius: '4px',
-  minWidth: 'auto',
-  color: '#fff',
-  bgcolor: '#c7944a',
-  '&:hover': { bgcolor: '#b07e3a' },
-};
-
-const activeFilterBtnStyle = {
-  ...filterBtnStyle,
-  bgcolor: '#a0703a',
-  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)',
-};
-
-// Active shape renderer for hover effect on pie
 const renderActiveShape = (props) => {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
   return (
@@ -70,31 +45,23 @@ const renderActiveShape = (props) => {
 };
 
 const ReferralProductionReport = () => {
-  const dispatch = useDispatch();
+  const {
+    summaryData,
+    detailData,
+    trendData,
+    loading,
+    appliedFilters,
+    handleApply,
+    handleClear,
+    handleExportCSV,
+    handlePrint
+  } = useReferralProduction();
 
-  // Redux state
-  const summaryData = useSelector(selectReferralSummary);
-  const detailData = useSelector(selectReferralDetail);
-  const loading = useSelector(selectReferralLoading);
-  const dateFilter = useSelector(selectReferralDateFilter);
-
-  // Local UI state
-  const [showTrend, setShowTrend] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogSource, setDialogSource] = useState('');
   const [dialogPatients, setDialogPatients] = useState([]);
 
-  // Fetch data on mount and when dateFilter changes
-  useEffect(() => {
-    dispatch(fetchAllProvidersForDropdown());
-  }, [dispatch]);
-
-  useEffect(() => {
-    dispatch(fetchReferralProductionReport({ dateFilter }));
-  }, [dispatch, dateFilter]);
-
-  // Prepare pie chart data from Redux state
   const pieData = summaryData.map((d, i) => ({
     name: d.source,
     value: d.production,
@@ -102,7 +69,6 @@ const ReferralProductionReport = () => {
     color: PIE_COLORS[i % PIE_COLORS.length],
   }));
 
-  // Hover handlers
   const onPieEnter = useCallback((_, index) => {
     setActiveIndex(index);
   }, []);
@@ -111,7 +77,6 @@ const ReferralProductionReport = () => {
     setActiveIndex(-1);
   }, []);
 
-  // Click handler — open the patient dialog using Redux detail data
   const handleSliceClick = (sourceName) => {
     setDialogSource(sourceName);
     const patients = detailData[sourceName] || [];
@@ -125,7 +90,6 @@ const ReferralProductionReport = () => {
     setDialogPatients([]);
   };
 
-  // Dialog CSV export
   const handleDialogExportCSV = () => {
     const headers = ['id', 'Patient Name', 'Production'];
     const rows = dialogPatients.map(p => [
@@ -149,159 +113,77 @@ const ReferralProductionReport = () => {
     document.body.removeChild(link);
   };
 
-  // Dialog Print
   const handleDialogPrint = () => {
     const tableEl = document.getElementById('referral-dialog-table');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>' + dialogSource + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: sans-serif; } table { width: 100%; border-collapse: collapse; font-size: 12px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('h2 { color: #1976d2; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>' + dialogSource + '</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>${dialogSource}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">${dialogSource}</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
-
-  // Main CSV export (pie chart summary)
-  const handleExportCSV = () => {
-    const headers = ['Referral Source', 'Count', 'Production'];
-    const rows = summaryData.map(r => [
-      r.source,
-      r.count,
-      `$${r.production.toFixed(2)}`,
-    ]);
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Referral_Production_Report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleDateFilterChange = (filter) => {
-    dispatch(setDateFilter(filter));
-  };
-
-  const filterButtons = [
-    { label: 'Today', value: 'today' },
-    { label: 'This Week', value: 'this_week' },
-    { label: 'This Month', value: 'this_month' },
-    { label: 'This Year', value: 'this_year' },
-    { label: 'Range', value: 'range' },
-  ];
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Top filter row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {filterButtons.map((btn) => (
-            <Button
-              key={btn.value}
-              size="small"
-              variant="contained"
-              onClick={() => handleDateFilterChange(btn.value)}
-              sx={dateFilter === btn.value ? activeFilterBtnStyle : filterBtnStyle}
-            >
-              {btn.label}
-            </Button>
-          ))}
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={showTrend}
-                onChange={(e) => setShowTrend(e.target.checked)}
-                sx={{ py: 0 }}
-              />
-            }
-            label={<Typography sx={{ fontSize: '0.75rem', fontWeight: 500 }}>Show Trend</Typography>}
-            sx={{ ml: 1 }}
-          />
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleExportCSV}
-            sx={{
-              textTransform: 'none', fontWeight: 600, fontSize: '0.75rem',
-              px: 2, py: 0.5, bgcolor: '#4a90e2', '&:hover': { bgcolor: '#357abd' },
-            }}
-          >
-            Export As CSV
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            disabled
-            sx={{
-              textTransform: 'none', fontWeight: 600, fontSize: '0.75rem',
-              px: 2, py: 0.5, bgcolor: '#6b7280', color: '#fff',
-              '&.Mui-disabled': { bgcolor: '#6b7280', color: '#fff' },
-            }}
-          >
-            Create Template
-          </Button>
-        </Box>
-      </Box>
+    <ReportLayout title="Referral Production Report">
+      <ReferralProductionFilters
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
+      />
 
-      {/* Bar Graph / Line Graph toggle buttons */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <Button 
-          variant="contained" 
-          size="small" 
-          disabled 
-          sx={{ 
-            ...filterBtnStyle,
-            '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
-          }}
-        >
-          Bar Graph
-        </Button>
-        <Button 
-          variant="contained" 
-          size="small" 
-          disabled 
-          sx={{ 
-            ...filterBtnStyle,
-            '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#9e9e9e' }
-          }}
-        >
-          Line Graph
-        </Button>
-      </Box>
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={summaryData.length > 0}
+      />
 
-      {/* Pie Chart Section */}
-      <Box
-        sx={{
-          border: '2px solid #3b82f6',
-          borderRadius: 1,
-          p: 3,
-          backgroundColor: '#fff',
-          position: 'relative',
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b', mb: 2 }}>
-          Referral Production Piechart
-        </Typography>
-
+      {/* Chart container styling matching the new UI */}
+      <Box id="referral-production-print-area" sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2, backgroundColor: '#fff' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
             <Typography sx={{ color: 'text.secondary' }}>Loading...</Typography>
@@ -310,9 +192,39 @@ const ReferralProductionReport = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
             <Typography sx={{ color: 'text.secondary' }}>No referral data found for the selected period.</Typography>
           </Box>
+        ) : appliedFilters.showTrend ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', height: 450, width: '100%', p: 2 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis 
+                  tickFormatter={(val) => `$${val}`} 
+                  tick={{ fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <RechartsTooltip 
+                  formatter={(value, name) => [`$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, name]}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: '0.8rem' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
+                {summaryData.map((item, index) => (
+                  <Line
+                    key={item.source}
+                    type="monotone"
+                    dataKey={item.source}
+                    stroke={PIE_COLORS[index % PIE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', height: 450, width: '100%' }}>
-            {/* Pie Chart */}
+          <Box sx={{ display: 'flex', alignItems: 'center', height: 450, width: '100%', p: 2 }}>
             <Box sx={{ flex: '0 0 55%', height: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -342,7 +254,7 @@ const ReferralProductionReport = () => {
                       />
                     ))}
                   </Pie>
-                  <Tooltip
+                  <RechartsTooltip
                     formatter={(value, name) => {
                       const item = pieData.find(d => d.name === name);
                       return [`$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${item?.count || 0} referrals)`, name];
@@ -356,8 +268,7 @@ const ReferralProductionReport = () => {
               </ResponsiveContainer>
             </Box>
 
-            {/* Legend */}
-            <Box sx={{ flex: '0 0 45%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px', pl: 2 }}>
+            <Box sx={{ flex: '0 0 45%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: '6px', pl: 2, overflowY: 'auto', overflowX: 'hidden', maxHeight: '100%', py: 1 }}>
               {pieData.map((item, index) => {
                 const isHovered = activeIndex === index;
                 return (
@@ -395,32 +306,44 @@ const ReferralProductionReport = () => {
         )}
       </Box>
 
-      {/* Patient Detail Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={handleDialogClose}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 1, overflow: 'hidden' } }}
+        sx={{ zIndex: 9999 }}
+        PaperProps={{ sx: { borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' } }}
       >
-        <DialogTitle sx={{ bgcolor: '#1976d2', color: '#fff', fontWeight: 700, fontSize: '1rem', textAlign: 'center', py: 1.2 }}>
-          {dialogSource}
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <TableContainer id="referral-dialog-table">
+        <Box sx={{ bgcolor: '#f3f8fd', py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e0e5eb' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ReceiptIcon sx={{ color: '#2563eb', fontSize: '20px' }} />
+            <Typography sx={{ color: '#09121f', fontWeight: 600, fontSize: '15px' }}>
+              {dialogSource}
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleDialogClose}
+            size="small"
+            sx={{ color: '#64748b', '&:hover': { bgcolor: '#f1f5f9' } }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ px: 3, pb: 2, pt: 2, bgcolor: 'white' }}>
+          <TableContainer id="referral-dialog-table" sx={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', width: 100 }}></TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>id</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Patient Name</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Production</TableCell>
+                <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#f8f9fa', py: 1.5, borderBottom: '1px solid #e2e8f0', color: '#4a5568', textTransform: 'uppercase' } }}>
+                  <TableCell className="no-print" sx={{ width: 100 }}></TableCell>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Patient Name</TableCell>
+                  <TableCell>Production</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {dialogPatients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                       No patient records found for this referral source.
                     </TableCell>
                   </TableRow>
@@ -428,17 +351,14 @@ const ReferralProductionReport = () => {
                   dialogPatients.map((patient, idx) => (
                     <TableRow
                       key={idx}
-                      sx={{
-                        '&:hover': { backgroundColor: '#f5f5f5' },
-                        '& td': { fontSize: '0.8rem', py: 0.8, borderBottom: '1px solid #eee' },
-                      }}
+                      sx={{ '& td': { fontSize: '0.8rem', py: 1.5, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, '&:last-child td': { borderBottom: 0 } }}
                     >
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.3 }}>
-                          <IconButton size="small" sx={{ p: 0.2, color: '#4a90e2' }}><PersonIcon sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" sx={{ p: 0.2, color: '#f5a623' }}><DescriptionIcon sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" sx={{ p: 0.2, color: '#22c55e' }}><AttachMoneyIcon sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" sx={{ p: 0.2, color: '#7c3aed' }}><ReceiptIcon sx={{ fontSize: 16 }} /></IconButton>
+                      <TableCell className="no-print">
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#3b82f6' }}><PersonIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#f59e0b' }}><DescriptionIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#10b981' }}><AttachMoneyIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#8b5cf6' }}><ReceiptIcon sx={{ fontSize: 16 }} /></IconButton>
                         </Box>
                       </TableCell>
                       <TableCell>{patient.id}</TableCell>
@@ -451,30 +371,32 @@ const ReferralProductionReport = () => {
             </Table>
           </TableContainer>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'space-between', px: 2, py: 1.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 3, py: 1.5, bgcolor: 'white', borderTop: '1px solid #e0e5eb' }}>
           <Button
             variant="contained" size="small" onClick={handleDialogExportCSV}
-            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' } }}
+            startIcon={<FileDownloadIcon />}
+            sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, py: 0.8, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}
           >
             Export As CSV
           </Button>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
-              variant="contained" size="small" onClick={handleDialogClose}
-              sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', bgcolor: '#6b7280', '&:hover': { bgcolor: '#4b5563' } }}
+              variant="outlined" size="small" onClick={handleDialogClose}
+              sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.8rem', px: 3, py: 0.8, borderColor: '#e0e5eb', color: '#5c646f', '&:hover': { bgcolor: '#fafbfc', borderColor: '#e0e5eb' }, borderRadius: 2 }}
             >
               Close
             </Button>
             <Button
-              variant="contained" size="small" onClick={handleDialogPrint}
-              sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+              variant="outlined" size="small" onClick={handleDialogPrint}
+              startIcon={<PrintIcon />}
+              sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, py: 0.8, fontWeight: 600 }}
             >
               Print
             </Button>
           </Box>
-        </DialogActions>
+        </Box>
       </Dialog>
-    </Box>
+    </ReportLayout>
   );
 };
 
