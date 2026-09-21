@@ -1,11 +1,12 @@
 import { memo, useCallback, useState } from "react";
 import {
   Box, IconButton, MenuItem, Select, Table, TableBody,
-  TableCell, TableHead, TableRow, TextField, Typography,
+  TableCell, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import dayjs from "dayjs";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
@@ -131,11 +132,33 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
 
       {isRecare && (
         <TableCell sx={cellSx}>
-          {row.dueDate
-            ? <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", whiteSpace: "nowrap" }}>
-                {dayjs(row.dueDate).format("MM/DD/YYYY")}
-              </Typography>
-            : <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>&mdash;</Typography>}
+          {(() => {
+            const scheduledDates =
+              Array.isArray(row.scheduledDates) && row.scheduledDates.length > 0
+                ? row.scheduledDates
+                : [];
+            const tooltipText = scheduledDates
+              .map((d) => dayjs(d).format("MM/DD/YYYY"))
+              .join(", ");
+            return (
+              <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {row.dueDate && (
+                  <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", whiteSpace: "nowrap" }}>
+                    {dayjs(row.dueDate).format("MM/DD/YYYY")}
+                  </Typography>
+                )}
+                {scheduledDates.length > 0 && (
+                  <Tooltip
+                    title={<Typography sx={{ fontFamily: "Inter", fontSize: "12px" }}>Scheduled: {tooltipText}</Typography>}
+                    arrow
+                    placement="top"
+                  >
+                    <CalendarMonthOutlinedIcon sx={{ fontSize: "16px", color: "#2262ef", cursor: "pointer", ml: "auto" }} />
+                  </Tooltip>
+                )}
+              </Box>
+            );
+          })()}
         </TableCell>
       )}
 

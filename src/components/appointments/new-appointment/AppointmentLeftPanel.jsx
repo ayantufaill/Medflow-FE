@@ -68,7 +68,6 @@ const AppointmentLeftPanel = ({
   onComputeNextVisit,
   onDuplicateProcedure,
   readOnly,
-  setIsRescheduling,
   onEnterEdit,
   isEditMode = false,
   appointmentId,
@@ -753,7 +752,7 @@ const AppointmentLeftPanel = ({
                       } else {
                         if (onStatusChange) onStatusChange(previousStatus);
                       }
-                      if (setIsRescheduling) setIsRescheduling(true);
+                      if (onEnterEdit) onEnterEdit();
                     }}
                     sx={{
                       color: "#d1d5db",
@@ -788,7 +787,7 @@ const AppointmentLeftPanel = ({
                     );
                     if (!allCompleted) {
                       if (onStatusChange) onStatusChange("completed");
-                      if (setIsRescheduling) setIsRescheduling(true);
+                      if (onEnterEdit) onEnterEdit();
                     }
                   }}
                   sx={{

@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, TextField, Select, MenuItem, FormControl, Typography, IconButton, Tooltip } from '@mui/material';
 import { LocationOn as LocationOnIcon, Facebook as FacebookIcon, Google as GoogleIcon, LinkedIn as LinkedInIcon, Twitter as TwitterIcon, Instagram as InstagramIcon } from '@mui/icons-material';
 import { useFormContext, Controller } from 'react-hook-form';
 import InfoCard from './InfoCard';
 import { FieldRow, stdSx, inputSx } from './SharedComponents';
-
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-  'VA','WA','WV','WI','WY','DC',
-];
+import { US_STATES, STATE_CITIES } from '../../../../constants/usAddressData';
+import { TIME_ZONES, STATE_TIME_ZONES } from '../../../../constants/timeZones';
 
 const AddressLocale = () => {
-  const { register, control, watch } = useFormContext();
+  const { register, control, watch, setValue } = useFormContext();
+  const selectedState = watch('state');
+  const availableCities = STATE_CITIES[selectedState] || [];
+
+  const timeZoneOptions = useMemo(() => {
+    const stateZones = selectedState ? STATE_TIME_ZONES[selectedState] || [] : TIME_ZONES.map((tz) => tz.value);
+    return TIME_ZONES.filter((tz) => new Set([...stateZones, 'Asia/Karachi']).has(tz.value));
+  }, [selectedState]);
 
   return (
     <InfoCard title="ADDRESS & LOCALE" icon={<LocationOnIcon sx={{ fontSize: 16 }} />}>
@@ -25,8 +27,6 @@ const AddressLocale = () => {
             <FormControl sx={inputSx} variant="outlined" size="small" fullWidth>
               <Select {...field} sx={{ fontSize: '0.85rem' }}>
                 <MenuItem value="United States" sx={{ fontSize: '0.85rem' }}>United States</MenuItem>
-                <MenuItem value="Canada"        sx={{ fontSize: '0.85rem' }}>Canada</MenuItem>
-                <MenuItem value="Mexico"        sx={{ fontSize: '0.85rem' }}>Mexico</MenuItem>
               </Select>
             </FormControl>
           )}
@@ -43,21 +43,37 @@ const AddressLocale = () => {
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
-          <FieldRow label="City" labelWidth="100%">
-            <TextField sx={inputSx} variant="outlined" size="small" fullWidth {...register('city')} inputProps={{ style: stdSx }} />
-          </FieldRow>
-        </Box>
-        <Box sx={{ flex: 1 }}>
           <FieldRow label="State" labelWidth="100%">
             <Controller
               name="state"
               control={control}
               render={({ field }) => (
                 <FormControl sx={inputSx} variant="outlined" size="small" fullWidth>
-                  <Select {...field} sx={{ fontSize: '0.85rem' }} displayEmpty>
+                  <Select {...field} sx={{ fontSize: '0.85rem' }} displayEmpty onChange={(e) => {
+                    field.onChange(e);
+                    setValue('city', '');
+                  }}>
                     <MenuItem value="" sx={{ fontSize: '0.85rem' }}><em>Select state</em></MenuItem>
                     {US_STATES.map((s) => (
-                      <MenuItem key={s} value={s} sx={{ fontSize: '0.85rem' }}>{s}</MenuItem>
+                      <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.85rem' }}>{s.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            />
+          </FieldRow>
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <FieldRow label="City" labelWidth="100%">
+            <Controller
+              name="city"
+              control={control}
+              render={({ field }) => (
+                <FormControl sx={inputSx} variant="outlined" size="small" fullWidth>
+                  <Select {...field} sx={{ fontSize: '0.85rem' }} displayEmpty disabled={!selectedState}>
+                    <MenuItem value="" sx={{ fontSize: '0.85rem' }}><em>{selectedState ? 'Select city' : 'Select state first'}</em></MenuItem>
+                    {availableCities.map((c) => (
+                      <MenuItem key={c} value={c} sx={{ fontSize: '0.85rem' }}>{c}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -68,27 +84,33 @@ const AddressLocale = () => {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <FieldRow label="Zip/Postal Code" labelWidth="100%">
             <TextField sx={inputSx} variant="outlined" size="small" fullWidth {...register('zipCode')} inputProps={{ style: stdSx }} />
           </FieldRow>
         </Box>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <FieldRow label="Time zone" labelWidth="100%">
             <Controller
               name="timezone"
               control={control}
               render={({ field }) => (
-                <FormControl sx={inputSx} variant="outlined" size="small" fullWidth>
-                  <Select {...field} sx={{ fontSize: '0.85rem' }}>
-                    <MenuItem value="America/New_York"    sx={{ fontSize: '0.85rem' }}>US Eastern</MenuItem>
-                    <MenuItem value="America/Chicago"     sx={{ fontSize: '0.85rem' }}>US Central</MenuItem>
-                    <MenuItem value="America/Denver"      sx={{ fontSize: '0.85rem' }}>US Mountain</MenuItem>
-                    <MenuItem value="America/Los_Angeles" sx={{ fontSize: '0.85rem' }}>US Pacific</MenuItem>
-                    <MenuItem value="America/Phoenix"     sx={{ fontSize: '0.85rem' }}>US Arizona</MenuItem>
-                    <MenuItem value="America/Anchorage"   sx={{ fontSize: '0.85rem' }}>US Alaska</MenuItem>
-                    <MenuItem value="America/Honolulu"    sx={{ fontSize: '0.85rem' }}>US Hawaii</MenuItem>
-                    <MenuItem value="UTC"                 sx={{ fontSize: '0.85rem' }}>UTC</MenuItem>
+                <FormControl sx={{ ...inputSx, minWidth: 0 }} variant="outlined" size="small" fullWidth>
+                  <Select
+                    {...field}
+                    sx={{ fontSize: '0.85rem' }}
+                    renderValue={(v) => {
+                      const tz = TIME_ZONES.find((t) => t.value === v);
+                      return (
+                        <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {tz ? tz.label : v}
+                        </Box>
+                      );
+                    }}
+                  >
+                    {timeZoneOptions.map((tz) => (
+                      <MenuItem key={tz.value} value={tz.value} sx={{ fontSize: '0.85rem' }}>{tz.label}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               )}

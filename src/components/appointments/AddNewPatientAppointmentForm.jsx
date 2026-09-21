@@ -1191,7 +1191,7 @@ const AddNewPatientAppointmentForm = ({
       // Backend keys recareDueDates by trimmed/uppercased CDT code.
       const serverCode = (code || "").trim().toUpperCase();
       const serverDue = recareDueDateMap?.[serverCode]?.dueDate;
-      const dueDate = serverDue || (scheduledDates.length > 0 ? scheduledDates[0] : undefined);
+      const dueDate = serverDue || undefined;
       if (typeof p === "string") {
         return {
           code: "TBD",
@@ -1201,6 +1201,7 @@ const AddNewPatientAppointmentForm = ({
           completed: false,
           id: Date.now() + i,
           dueDate: undefined,
+          scheduledDates: [],
         };
       }
       return {
@@ -1219,6 +1220,7 @@ const AddNewPatientAppointmentForm = ({
         completed: Boolean(p.completed),
         id: p._id || p.id || Date.now() + i,
         dueDate: dueDate,
+        scheduledDates: scheduledDates,
       };
     });
 
@@ -1994,7 +1996,6 @@ const AddNewPatientAppointmentForm = ({
             onComputeNextVisit={handleComputeNextVisit}
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling && !isEditing}
-            setIsRescheduling={setIsRescheduling}
             onEnterEdit={() => setIsEditing(true)}
             isEditMode={isEditMode}
             isRescheduling={isRescheduling}
