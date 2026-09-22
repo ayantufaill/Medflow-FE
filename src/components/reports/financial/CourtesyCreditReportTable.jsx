@@ -9,16 +9,24 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const flagId = typeof flagVal === 'string' ? flagVal : flagVal?.id || flagVal?.color;
-    const found = globalFlags.find(f => f.id === flagId);
-    if (found) return { color: found.color, name: found.name };
+    const flagId = typeof flagVal === 'string' ? flagVal : flagVal?.id || flagVal?.text || flagVal?.color;
+    const flagIdLower = String(flagId).toLowerCase();
+    
+    const found = globalFlags.find(f => 
+      String(f.id).toLowerCase() === flagIdLower || 
+      (f.name && f.name.toLowerCase() === flagIdLower) ||
+      (f.text && f.text.toLowerCase() === flagIdLower)
+    );
+    if (found) return { color: found.color || '#94a3b8', name: found.name || found.text || flagId };
     
     // If it's an object with a color property, use it directly
     if (typeof flagVal === 'object' && flagVal !== null && flagVal.color) {
-      return { color: flagVal.color, name: flagVal.name || 'Flag' };
+      return { color: flagVal.color, name: flagVal.name || flagVal.text || 'Flag' };
     }
     
-    return { color: flagId, name: 'Flag' };
+    // Fallback: if flagId looks like a hex code, use it; otherwise default to slate grey
+    const isValidHex = typeof flagId === 'string' && flagId.startsWith('#');
+    return { color: isValidHex ? flagId : '#94a3b8', name: flagId || 'Flag' };
   };
 
   return (
