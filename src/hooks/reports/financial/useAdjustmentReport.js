@@ -179,6 +179,7 @@ export const useAdjustmentReport = () => {
         filterByProductionDate: filters.filterByProductionDate,
         filterByDOS: filters.filterByDOS
       });
+      console.log('ADJUSTMENT REPORT DATA:', (res || []).map(d => ({ pat: d.patient, flags: d.flags })));
       setReportData(res || []);
     } catch (err) {
       console.error('Failed to fetch adjustments report:', err);
@@ -351,7 +352,7 @@ export const useAdjustmentReport = () => {
         key = row.provider || 'Unassigned';
       } else if (grouping === 'group-adj') {
         const rowTypeObj = adjustmentTypes.find(t => (t.DefNum || t.id)?.toString() === row.typeId?.toString());
-        key = rowTypeObj ? (rowTypeObj.ItemName || rowTypeObj.name) : (row.notes || 'Adjustment');
+        key = rowTypeObj ? (rowTypeObj.type || rowTypeObj.ItemName || rowTypeObj.name) : (row.notes || 'Adjustment');
       }
       if (!groups[key]) groups[key] = [];
       groups[key].push(row);
@@ -364,7 +365,7 @@ export const useAdjustmentReport = () => {
     const formattedAmt = amt < 0 ? `-$${Math.abs(amt).toFixed(2)}` : `$${amt.toFixed(2)}`;
     
     const rowTypeObj = adjustmentTypes.find(t => (t.DefNum || t.id)?.toString() === row.typeId?.toString());
-    const typeName = rowTypeObj ? (rowTypeObj.ItemName || rowTypeObj.name) : (row.typeId || row.notes || 'Office Adjustment');
+    const typeName = rowTypeObj ? (rowTypeObj.type || rowTypeObj.ItemName || rowTypeObj.name) : (row.typeId || row.notes || 'Office Adjustment');
 
     const providerName = (row.provider && row.provider !== 'Provider') ? row.provider : '-';
     const adaCode = (row.code && row.code.trim() !== '') ? row.code : (row.ada && row.ada !== 'D0000' ? row.ada : '-');
@@ -448,7 +449,8 @@ export const useAdjustmentReport = () => {
         <head>
           <title>Adjustment Report</title>
           <style>
-            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
             th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
             th { background-color: #f8f9fa; font-weight: bold; }

@@ -158,6 +158,7 @@ const FinancePage = () => {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
+        type: creditData.typeId || undefined,
         notes: `Courtesy Credit - Type: ${creditData.adjustmentType}`,
       });
 
@@ -184,6 +185,7 @@ const FinancePage = () => {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
+        type: adjustmentData.typeId || undefined,
         notes: `Account Adjustment - Type: ${adjustmentData.adjustmentType}${adjustmentData.description ? `. Description: ${adjustmentData.description}` : ""}`,
       });
 

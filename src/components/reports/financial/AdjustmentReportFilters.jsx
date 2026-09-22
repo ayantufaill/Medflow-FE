@@ -104,13 +104,7 @@ const AdjustmentReportFilters = ({
         onChange={(e) => handleFilterChange('adjustmentType', e.target.value)}
         options={[
           { value: 'all', label: 'All' },
-          { value: 'Write Off', label: 'Write Off' },
-          { value: 'Un-Collected', label: 'Un-Collected' },
-          { value: 'Pre Payment', label: 'Pre Payment' },
-          { value: 'Wellness', label: 'Wellness' },
-          { value: 'Small Balance W/O', label: 'Small Balance W/O' },
-          { value: 'Curtsey W/O', label: 'Curtsey W/O' },
-          { value: 'Non Payment', label: 'Non Payment' }
+          ...(adjustmentTypes || []).map((t) => ({ value: t.type, label: t.type }))
         ]}
       />
 

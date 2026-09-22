@@ -19,6 +19,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import { invoiceService } from "../../services/invoice.service";
+import apiClient from "../../config/api";
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 
@@ -52,25 +53,25 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
     fetchBalance();
   }, [patient]);
 
-  // Adjustment type options - can be fetched from API
-  const adjustmentTypeOptions = [
-    "Un-Collected",
-    "Professional Courtesy",
-    "Immediate Family Courtesy",
-    "OON paid",
-    "Sunbit Fee",
-    "Courtesy 3% for cash pay",
-    "Alle Rewards",
-    "Uncollect: de-escalate situation",
-    "No balance billing",
-    "Pro bono",
-    "Fee included in Invisalign treatment",
-    "Downgrade",
-    "Care Credit fee",
-    "Employee benefit",
-    "Cherry Fee",
-    "HFD Fee",
-  ];
+  const [adjustmentTypeOptions, setAdjustmentTypeOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchDefinitions = async () => {
+      try {
+        const res = await apiClient.get('/admin-finance/definitions/1');
+        const data = res.data?.data || res.data || [];
+        if (Array.isArray(data) && data.length > 0) {
+          setAdjustmentTypeOptions(data);
+          if (!adjustmentType && data[0]) {
+            setAdjustmentType(data[0].type);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch adjustment definitions:", err);
+      }
+    };
+    fetchDefinitions();
+  }, []);
 
   // Rate type options - can be fetched from API
   const rateTypeOptions = ["Flat rate", "Percentage"];
@@ -173,8 +174,8 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
               }}
             >
               {adjustmentTypeOptions.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
+                <MenuItem key={option.id || option.type} value={option.type}>
+                  {option.type}
                 </MenuItem>
               ))}
             </Select>
@@ -339,8 +340,10 @@ const AccountAdjustmentDialog = ({ patient, onClose, onSave }) => {
             onClick={() => {
               const value = parseFloat(calculateAdjustmentValue()) || 0;
               if (onSave) {
+                const selected = adjustmentTypeOptions.find(o => o.type === adjustmentType);
                 onSave({
-                  adjustmentType,
+                  typeId: selected?.id || "",
+                  adjustmentType: selected?.type || adjustmentType,
                   amount: value,
                   description,
                 });

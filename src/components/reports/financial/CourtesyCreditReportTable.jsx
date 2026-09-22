@@ -9,9 +9,16 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal);
+    const flagId = typeof flagVal === 'string' ? flagVal : flagVal?.id || flagVal?.color;
+    const found = globalFlags.find(f => f.id === flagId);
     if (found) return { color: found.color, name: found.name };
-    return { color: flagVal, name: 'Flag' };
+    
+    // If it's an object with a color property, use it directly
+    if (typeof flagVal === 'object' && flagVal !== null && flagVal.color) {
+      return { color: flagVal.color, name: flagVal.name || 'Flag' };
+    }
+    
+    return { color: flagId, name: 'Flag' };
   };
 
   return (
@@ -67,7 +74,10 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
                         const { color, name } = resolveFlagColor(flagVal);
                         return (
                           <Tooltip key={i} title={name} arrow placement="top">
-                            <Box sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer' }} />
+                            <Box 
+                              sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer', display: 'inline-block', mr: 0.5 }} 
+                              style={{ width: '10px', height: '10px', backgroundColor: color, borderRadius: '2px', display: 'inline-block', marginRight: '4px' }}
+                            />
                           </Tooltip>
                         );
                       })}

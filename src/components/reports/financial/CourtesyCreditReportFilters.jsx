@@ -25,7 +25,11 @@ const CourtesyCreditReportFilters = ({
         label="PATIENTS"
         value={patientFilter}
         onChange={(e) => setPatientFilter(e.target.value)}
-        options={[{ value: 'all', label: 'All' }]} 
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'active', label: 'Active Patients' },
+          { value: 'inactive', label: 'Inactive Patients' }
+        ]} 
         width="200px" 
       />
       <ReportSelect 
