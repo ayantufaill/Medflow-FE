@@ -10,6 +10,7 @@ import {
   selectModificationsData,
   selectModificationsLoading
 } from '../../../../store/slices/billingSlice';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const ModificationsReport = () => {
   const dispatch = useDispatch();
@@ -17,10 +18,18 @@ const ModificationsReport = () => {
   const loading = useSelector(selectModificationsLoading);
 
   const [affectedDate, setAffectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [appliedDate, setAppliedDate] = useState(dayjs().format('YYYY-MM-DD'));
 
   useEffect(() => {
-    dispatch(fetchModificationsReport({ date: affectedDate, range: 'Daily' }));
-  }, [dispatch, affectedDate]);
+    dispatch(fetchModificationsReport({ date: appliedDate, range: 'Daily' }));
+  }, [dispatch, appliedDate]);
+
+  const formatAmount = (val, prefix = '') => {
+    const num = parseFloat(val) || 0;
+    if (num === 0) return '$0.00';
+    if (num < 0) return `-$${Math.abs(num).toFixed(2)}`;
+    return `${prefix}$${num.toFixed(2)}`;
+  };
 
   const mappedModifications = useMemo(() => {
     if (!reportData || reportData.length === 0) {
@@ -28,19 +37,18 @@ const ModificationsReport = () => {
     }
 
     return reportData.map(item => {
-      // If backend returns modifications log: { timestamp, modifiedBy, field, originalValue, newValue }
-      if (item.timestamp && item.modifiedBy) {
+      if (item.action !== undefined && item.fees !== undefined) {
         return {
-          action: item.field || 'Modify',
-          trans: item.modifiedBy || 'System',
-          proc: item.field || 'Log Entry',
-          rendering: 'Admin',
-          billing: 'Admin',
-          fees: `$${parseFloat(item.originalValue || 0).toFixed(2)}`,
-          creditAdj: `-$${Math.abs(parseFloat(item.newValue || 0) - parseFloat(item.originalValue || 0)).toFixed(2)}`,
-          debitAdj: '$0.00',
-          collection: '$0.00',
-          accountCredit: '$0.00'
+          action: item.action,
+          trans: item.trans,
+          proc: item.proc,
+          rendering: item.rendering,
+          billing: item.billing,
+          fees: formatAmount(item.fees),
+          creditAdj: formatAmount(item.creditAdj, item.creditAdj > 0 ? '-' : ''),
+          debitAdj: formatAmount(item.debitAdj),
+          collection: formatAmount(item.collection),
+          accountCredit: formatAmount(item.accountCredit)
         };
       }
       return item;
@@ -75,11 +83,7 @@ const ModificationsReport = () => {
 
   const netProd = totalFees + totalCreditAdj + totalDebitAdj;
 
-  const formatAmount = (val, prefix = '') => {
-    if (val === 0) return '$0.00';
-    if (val < 0) return `-$${Math.abs(val).toFixed(2)}`;
-    return `${prefix}$${val.toFixed(2)}`;
-  };
+
 
   const handleExportCSV = () => {
     const headers = [
@@ -153,30 +157,70 @@ const ModificationsReport = () => {
   const handlePrint = () => {
     const tableEl = document.getElementById('modifications-report-table');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Modifications Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Modifications Report</h2>');
-    printWindow.document.write(`<p>Affected Date: ${affectedDate}</p>`);
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Modifications Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Modifications Report</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Affected Date: ${appliedDate}</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleApply = () => {
-    dispatch(fetchModificationsReport({ date: affectedDate, range: 'Daily' }));
+    setAppliedDate(affectedDate);
   };
 
   const handleClear = () => {
-    setAffectedDate(dayjs().format('YYYY-MM-DD'));
+    const today = dayjs().format('YYYY-MM-DD');
+    setAffectedDate(today);
+    setAppliedDate(today);
   };
 
   return (
