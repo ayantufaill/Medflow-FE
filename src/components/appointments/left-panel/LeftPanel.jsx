@@ -23,7 +23,7 @@ import {
 // - PatientCard and PatientActions only mount after a patient is selected so
 //   they never render in an empty/null state.
 
-const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment }) => {
+const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment, pendingItems }) => {
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('Patient');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -325,7 +325,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
         )}
 
         {activeTab === 'Pending' && (
-          <PendingReschedules />
+          <PendingReschedules pendingItems={pendingItems} />
         )}
 
         {activeTab === 'Search' && (

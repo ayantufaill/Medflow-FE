@@ -36,6 +36,7 @@ import {
 } from "../../store/slices/appointmentSlice";
 import { selectFamilyAppointmentsRecareDueDates } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
 import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
@@ -126,8 +127,9 @@ const OperatorySchedulePage = () => {
     },
   });
   const sensors = useSensors(mouseSensor, touchSensor);
-  const [activeDragData, setActiveDragData] = useState(null);
-  const [pendingItems, setPendingItems] = useState([]);
+   const [activeDragData, setActiveDragData] = useState(null);
+   const [pendingItems, setPendingItems] = useState([]);
+   const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Dynamically derive operatory columns from the rooms list.
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -243,16 +245,12 @@ const OperatorySchedulePage = () => {
     } else if (dragData.isBlockSlot) {
       const block = dragData.block;
       const blockId = dragData.blockId;
-      if (pendingItems.some(item => item.id === blockId)) {
-        showSnackbar("Block is already in the pending list", "info");
-        return;
-      }
       setPendingItems(prev => [...prev, {
-        id: blockId,
+        id: `${blockId}-copy-${Date.now()}`,
         type: "block",
         data: block
       }]);
-      showSnackbar(`Moved calendar block to Pending`, "success");
+      showSnackbar(`Added calendar block copy to Pending`, "success");
     }
   };
 
@@ -341,57 +339,70 @@ const OperatorySchedulePage = () => {
         setFormSaving(false);
       }
     } else if (isAppt) {
-      try {
-        setFormSaving(true);
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-
-        await updateAppointment(itemId, {
-          appointmentDate: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          roomId: roomId,
-          status: "scheduled"
-        });
-
-        showSnackbar("Appointment rescheduled successfully", "success");
-      } catch (err) {
-        if (err.status === 409 || err.response?.status === 409) {
-          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
-          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
-        } else {
-          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
-          showSnackbar(msg, "error");
-        }
-      } finally {
-        setFormSaving(false);
-      }
+      setConfirmDialog({
+        message: "Are you want to move this appointment?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            setFormSaving(true);
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            await updateAppointment(itemId, {
+              appointmentDate: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              roomId: roomId,
+              status: "scheduled"
+            });
+            showSnackbar("Appointment rescheduled successfully", "success");
+          } catch (err) {
+            if (err.status === 409 || err.response?.status === 409) {
+              const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
+              showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+            } else {
+              const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+              showSnackbar(msg, "error");
+            }
+          } finally {
+            setFormSaving(false);
+          }
+        },
+      });
+      return;
     } else if (isBlock) {
-      try {
-        // Always delete the old block, even if it's coming from pending, 
-        // because we don't delete it when moving it TO pending (to prevent data loss on refresh)
-        if (itemId && !String(itemId).startsWith("temp-")) {
-          await scheduleBlockService.deleteBlock(itemId);
-        }
-
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-        const newBlockData = {
-          roomId: roomId,
-          date: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          notes: itemData.notes || "Blocked Slot",
-          color: itemData.color || "#ffe082"
-        };
-
-        await scheduleBlockService.createBlock(newBlockData);
-        showSnackbar("Calendar block rescheduled successfully", "success");
-        setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        refetchScheduleBlocks();
-      } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
-        showSnackbar(msg, "error");
-      }
-} else if (dragData.isRecareBlock) {
+      setConfirmDialog({
+        message: "Are you want to move this block?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            const newBlockData = {
+              roomId: roomId,
+              date: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              notes: itemData.notes || "Blocked Slot",
+              color: itemData.color || "#ffe082"
+            };
+            await scheduleBlockService.createBlock(newBlockData);
+            if (dragData.isPendingItem) {
+              showSnackbar("Calendar block copy placed successfully", "success");
+            } else {
+              if (itemId && !String(itemId).startsWith("temp-")) {
+                await scheduleBlockService.deleteBlock(itemId);
+              }
+              showSnackbar("Calendar block rescheduled successfully", "success");
+            }
+            refetchScheduleBlocks();
+          } catch (err) {
+            const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
+            showSnackbar(msg, "error");
+          }
+        },
+      });
+      return;
+    } else if (dragData.isRecareBlock) {
       // Handle recare/treatment block drop - pass data directly via initialAppointment
       const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
       const appointmentDate = start.format("YYYY-MM-DD");
@@ -1378,6 +1389,7 @@ const OperatorySchedulePage = () => {
           <LeftPanel 
             selectedAppointment={selectedAppointment} 
             onSelectAppointment={setSelectedAppointment}
+            pendingItems={pendingItems}
           />
         </Box>
 
@@ -1752,6 +1764,21 @@ const OperatorySchedulePage = () => {
       {/* Route Slip Modal */}
       <RouteSlipDialog />
       <FamilyAppointmentsDialog />
+
+      <ConfirmationDialog
+        open={confirmDialog !== null}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={() => {
+          const cb = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (cb) cb();
+        }}
+        title="Confirm Move"
+        message={confirmDialog?.message || "Are you sure?"}
+        confirmText={confirmDialog?.confirmText || "Yes"}
+        cancelText={confirmDialog?.cancelText || "Cancel"}
+        confirmColor={COLORS.ACCENT}
+      />
 
       <Backdrop
         sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 9999 }}

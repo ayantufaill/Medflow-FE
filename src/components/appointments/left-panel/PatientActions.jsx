@@ -102,6 +102,31 @@ const PatientActions = ({ appointment }) => {
       {/* ── Procedure Blocks ────────────────────────────────────────────────────── */}
       <ProcedureBlocks appointment={activeAppt} />
 
+      {/* ── Draggable Family Appointments ──────────────────────────── */}
+      <Box
+        ref={famRef}
+        {...famAttrs}
+        {...famListeners}
+        onClick={handleFamilyAppointments}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: COLORS.ACCENT,
+          borderRadius: radius.md,
+          px: '16px',
+          py: '12px',
+          cursor: 'grab',
+          opacity: famDragging ? 0.5 : 1,
+          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+        }}
+      >
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
+          Family Appointments
+        </Typography>
+        <DotGrid />
+      </Box>
+
       {/* ── Blue action buttons ──────────────────────────────────────────────── */}
       {ACTION_BUTTONS.map(({ label, onClick, showDots }) => {
         if (label === 'Family Appointments') return null;
@@ -128,31 +153,6 @@ const PatientActions = ({ appointment }) => {
           </Box>
         );
       })}
-
-      {/* ── Draggable Family Appointments ──────────────────────────── */}
-      <Box
-        ref={famRef}
-        {...famAttrs}
-        {...famListeners}
-        onClick={handleFamilyAppointments}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: COLORS.ACCENT,
-          borderRadius: radius.md,
-          px: '16px',
-          py: '12px',
-          cursor: 'grab',
-          opacity: famDragging ? 0.5 : 1,
-          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
-        }}
-      >
-        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
-          Family Appointments
-        </Typography>
-        <DotGrid />
-      </Box>
 
       {/* Purchase Products is now rendered via ACTION_BUTTONS */}
 

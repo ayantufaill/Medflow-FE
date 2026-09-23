@@ -89,12 +89,19 @@ const BlockCard = ({ title, blockId, block }) => {
     }));
   };
 
+  const handleBlockDoubleClick = (e) => {
+    if (e.defaultPrevented) return;
+    e.stopPropagation();
+    handleBlockClick(e);
+  };
+
   return (
     <Box
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      onClick={handleBlockClick}
+      onDoubleClick={handleBlockDoubleClick}
+      onClick={(e) => { e.stopPropagation(); }}
       sx={{
         height: "100%",
       border: `1.5px dashed ${block.color ? "rgba(0,0,0,0.2)" : "#90caf9"}`,
