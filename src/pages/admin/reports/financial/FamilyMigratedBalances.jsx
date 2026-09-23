@@ -4,6 +4,7 @@ import { ReportLayout } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import FamilyMigratedBalancesTable from '../../../../components/reports/financial/FamilyMigratedBalancesTable';
 import { reportingService } from '../../../../services/reporting.service';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const FamilyMigratedBalances = () => {
   const [reportData, setReportData] = useState([]);
@@ -52,28 +53,51 @@ const FamilyMigratedBalances = () => {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Family Migrated Balances Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('h2 { color: #2262ef; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Family Migrated Balances Report</h2>');
-    printWindow.document.write('<table><thead><tr><th>Patient</th><th>Patient Owing</th><th>Insurance Owing</th><th>Total Owing</th><th>Migration Date</th></tr></thead><tbody>');
-    reportData.forEach(row => {
-      printWindow.document.write(`<tr><td>${row.patient}</td><td>$${(row.patientOwing || 0).toFixed(2)}</td><td>$${(row.insuranceOwing || 0).toFixed(2)}</td><td>$${(row.totalOwing || 0).toFixed(2)}</td><td>${row.migrationDate}</td></tr>`);
-    });
-    printWindow.document.write('</tbody></table>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    const printContent = document.getElementById('family-migrated-balances-print-area');
+    if (!printContent) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Family Migrated Balances Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Family Migrated Balances Report</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${printContent.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 500);
+    };
   };
 
   return (
@@ -84,17 +108,19 @@ const FamilyMigratedBalances = () => {
         hasData={reportData.length > 0}
       />
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress size={32} />
-        </Box>
-      ) : reportData.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          No data available.
-        </Typography>
-      ) : (
-        <FamilyMigratedBalancesTable data={reportData} />
-      )}
+      <Box id="family-migrated-balances-print-area">
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={32} />
+          </Box>
+        ) : reportData.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+            No data available.
+          </Typography>
+        ) : (
+          <FamilyMigratedBalancesTable data={reportData} />
+        )}
+      </Box>
     </ReportLayout>
   );
 };
