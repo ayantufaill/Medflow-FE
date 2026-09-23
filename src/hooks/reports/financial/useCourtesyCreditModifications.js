@@ -78,6 +78,14 @@ export const useCourtesyCreditModifications = () => {
         const rowActionType = (row.actionType || '').toLowerCase();
         if (rowActionType !== appliedFilters.action.toLowerCase()) return false;
       }
+      // Filter by patients (active/inactive)
+      if (appliedFilters.patients !== 'all') {
+        if (appliedFilters.patients === 'active') {
+          if (row.patientStatus !== 0) return false;
+        } else if (appliedFilters.patients === 'inactive') {
+          if (row.patientStatus === 0) return false;
+        }
+      }
       // Filter by flags
       if (appliedFilters.flags === 'with_flags') {
         if (!row.flags || row.flags.length === 0) return false;
@@ -91,10 +99,10 @@ export const useCourtesyCreditModifications = () => {
         );
         if (!hasFlag) return false;
       }
-      // Filter by user
+      // Filter by user (who modified the record)
       if (appliedFilters.users !== 'all') {
-        const userStr = (row.user || '').toLowerCase();
-        if (!userStr.includes(appliedFilters.users.toLowerCase())) return false;
+        const rowUser = (row.user || '').toLowerCase();
+        if (rowUser !== appliedFilters.users.toLowerCase()) return false;
       }
       // Filter by search text
       if (appliedFilters.searchText.trim() !== '') {
@@ -107,6 +115,28 @@ export const useCourtesyCreditModifications = () => {
       return true;
     });
   }, [rawReportData, appliedFilters]);
+
+  // Extract unique user names from data for the Users dropdown
+  const uniqueUsers = useMemo(() => {
+    const userSet = new Set();
+    rawReportData.forEach(row => {
+      if (row.user && row.user !== 'System') userSet.add(row.user);
+    });
+    return Array.from(userSet).sort();
+  }, [rawReportData]);
+
+  // Group by adjustment type when checkbox is checked
+  const groupedData = useMemo(() => {
+    if (!appliedFilters.groupByAdj) return null;
+
+    const groups = {};
+    filteredReportData.forEach(row => {
+      const key = row.type || 'Unassigned';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(row);
+    });
+    return groups;
+  }, [filteredReportData, appliedFilters.groupByAdj]);
 
   const handlePrint = () => {
     const tableEl = document.getElementById('courtesy-credit-mod-table');
@@ -231,7 +261,7 @@ export const useCourtesyCreditModifications = () => {
     users, setUsers,
     groupByAdj, setGroupByAdj,
     searchText, setSearchText,
-    reportData: filteredReportData, 
+    reportData: filteredReportData, groupedData, uniqueUsers,
     loading, adjustmentTypes, dropdownProviders,
     handlePrint, handleClear, handleApply, handleExportCSV
   };
