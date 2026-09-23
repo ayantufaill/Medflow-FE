@@ -261,6 +261,7 @@ const initialState = {
   checkoutLoading: false,
   familyAppointmentsList: [], // Used by FamilyAppointmentsDialog
   familyAppointmentsMembers: [], // Used by FamilyAppointmentsDialog
+  familyAppointmentsRecareDueDates: {}, // { [memberId]: { [code]: { dueDate, isOverdue, ... } } }
   familyAppointmentsLoading: false,
   patientHistoryList: [],     // Used by AppointmentHistoryDialog and OperatorySidebar
   patientHistoryLoading: false,
@@ -292,6 +293,9 @@ const initialState = {
   // Modal visibility
   routeSlipDialogOpen: false,
   familyAppointmentsDialogOpen: false,
+  familyAppointmentsSchedulingDate: null,
+  familyAppointmentsSchedulingTime: null,
+  familyAppointmentsSchedulingRoomId: null,
 
   // ── Operatory schedule pending tray ────────────────────────────────────────
   // Holds items the user has dragged off the grid into the "pending" holding area.
@@ -385,6 +389,22 @@ const appointmentSlice = createSlice({
 
     setFamilyAppointmentsDialogOpen(state, action) {
       state.familyAppointmentsDialogOpen = action.payload;
+    },
+
+    setFamilyAppointmentsSchedulingDate(state, action) {
+      state.familyAppointmentsSchedulingDate = action.payload;
+    },
+
+    setFamilyAppointmentsSchedulingTime(state, action) {
+      state.familyAppointmentsSchedulingTime = action.payload;
+    },
+
+    setFamilyAppointmentsSchedulingRoomId(state, action) {
+      state.familyAppointmentsSchedulingRoomId = action.payload;
+    },
+
+    setFamilyAppointmentsRecareDueDates(state, action) {
+      state.familyAppointmentsRecareDueDates = action.payload;
     },
 
     // Stores the date as an ISO string so it survives Redux serialization checks.
@@ -557,10 +577,21 @@ const appointmentSlice = createSlice({
         const id = action.payload._id || action.payload.id;
         const idx = state.list.findIndex(a => (a._id || a.id) === id);
         // Update in-place (record is kept, only status changes to "cancelled").
-        if (idx !== -1) state.list[idx] = action.payload;
+        if (idx !== -1) {
+          const updatedList = [...state.list];
+          updatedList[idx] = action.payload;
+          state.list = updatedList;
+        }
         if (state.currentAppointment?._id === id) state.currentAppointment = action.payload;
         // Evict cache so the cancelled status is reflected on the next detail fetch.
         delete state.cache[id];
+        // Update patientHistoryList so recareProcedureDateMap reflects the cancellation.
+        const histIdx = state.patientHistoryList.findIndex(a => (a._id || a.id) === id);
+        if (histIdx !== -1) {
+          const updatedList = [...state.patientHistoryList];
+          updatedList[histIdx] = action.payload;
+          state.patientHistoryList = updatedList;
+        }
       })
 
       // ── fetchCheckoutAppointments ─────────────────────────────────────────
@@ -583,6 +614,7 @@ const appointmentSlice = createSlice({
       .addCase(fetchFamilyAppointments.fulfilled, (state, action) => {
         state.familyAppointmentsList = action.payload?.appointments || [];
         state.familyAppointmentsMembers = action.payload?.familyMembers || [];
+        state.familyAppointmentsRecareDueDates = action.payload?.recareDueDatesByMember || {};
         state.familyAppointmentsLoading = false;
       })
       .addCase(fetchFamilyAppointments.rejected, (state) => {
@@ -620,6 +652,10 @@ export const {
   setCalendarView,
   setRouteSlipDialogOpen,
   setFamilyAppointmentsDialogOpen,
+  setFamilyAppointmentsSchedulingDate,
+  setFamilyAppointmentsSchedulingTime,
+  setFamilyAppointmentsSchedulingRoomId,
+  setFamilyAppointmentsRecareDueDates,
   setSelectedDate,
   setFilters,
   clearFilters,
@@ -647,6 +683,7 @@ export const selectCheckoutCompleteList       = (state) => state.appointment.che
 export const selectCheckoutLoading            = (state) => state.appointment.checkoutLoading;
 export const selectFamilyAppointmentsList     = (state) => state.appointment.familyAppointmentsList;
 export const selectFamilyAppointmentsMembers  = (state) => state.appointment.familyAppointmentsMembers;
+export const selectFamilyAppointmentsRecareDueDates = (state) => state.appointment.familyAppointmentsRecareDueDates;
 export const selectFamilyAppointmentsLoading  = (state) => state.appointment.familyAppointmentsLoading;
 export const selectPatientHistoryList         = (state) => state.appointment.patientHistoryList;
 export const selectPatientHistoryLoading      = (state) => state.appointment.patientHistoryLoading;
@@ -666,5 +703,8 @@ export const selectPendingItems               = (state) => state.appointment.pen
 export const selectFrontendFilters            = (state) => state.appointment.frontendFilters;
 export const selectRouteSlipDialogOpen        = (state) => state.appointment.routeSlipDialogOpen;
 export const selectFamilyAppointmentsDialogOpen = (state) => state.appointment.familyAppointmentsDialogOpen;
+export const selectFamilyAppointmentsSchedulingDate = (state) => state.appointment.familyAppointmentsSchedulingDate;
+export const selectFamilyAppointmentsSchedulingTime = (state) => state.appointment.familyAppointmentsSchedulingTime;
+export const selectFamilyAppointmentsSchedulingRoomId = (state) => state.appointment.familyAppointmentsSchedulingRoomId;
 
 export default appointmentSlice.reducer;

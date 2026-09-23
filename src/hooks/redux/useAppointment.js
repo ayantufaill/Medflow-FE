@@ -26,6 +26,9 @@ import {
   clearConflicts,
   setRouteSlipDialogOpen,
   setFamilyAppointmentsDialogOpen,
+  setFamilyAppointmentsSchedulingDate,
+  setFamilyAppointmentsSchedulingTime,
+  setFamilyAppointmentsSchedulingRoomId,
   // Pending tray actions
   addPendingItem,
   removePendingItem,
@@ -48,8 +51,11 @@ import {
   selectPendingItems,
   selectFrontendFilters,
   selectRouteSlipDialogOpen,
-  selectFamilyAppointmentsDialogOpen,
-  setFrontendFilters,
+selectFamilyAppointmentsDialogOpen,
+selectFamilyAppointmentsSchedulingDate,
+selectFamilyAppointmentsSchedulingTime,
+selectFamilyAppointmentsSchedulingRoomId,
+setFrontendFilters,
   clearFrontendFilters,
 } from '../../store/slices/appointmentSlice';
 
@@ -242,6 +248,9 @@ export const useScheduleState = () => {
   const frontendFilters = useSelector(selectFrontendFilters);
   const routeSlipDialogOpen = useSelector(selectRouteSlipDialogOpen);
   const familyAppointmentsDialogOpen = useSelector(selectFamilyAppointmentsDialogOpen);
+  const familyAppointmentsSchedulingDate = useSelector(selectFamilyAppointmentsSchedulingDate);
+  const familyAppointmentsSchedulingTime = useSelector(selectFamilyAppointmentsSchedulingTime);
+  const familyAppointmentsSchedulingRoomId = useSelector(selectFamilyAppointmentsSchedulingRoomId);
 
   return {
     // ── Calendar UI ──────────────────────────────────────────────────────────
@@ -277,6 +286,13 @@ export const useScheduleState = () => {
 
     // ── Family Appointments ───────────────────────────────────────────────────
     familyAppointmentsDialogOpen,
+    familyAppointmentsSchedulingDate,
+    familyAppointmentsSchedulingTime,
+    familyAppointmentsSchedulingRoomId,
     setFamilyAppointmentsDialogOpen: useCallback((open) => dispatch(setFamilyAppointmentsDialogOpen(open)), [dispatch]),
+    setFamilyAppointmentsSchedulingDate: useCallback((date) => dispatch(setFamilyAppointmentsSchedulingDate(date)), [dispatch]),
+    setFamilyAppointmentsSchedulingTime: useCallback((time) => dispatch(setFamilyAppointmentsSchedulingTime(time)), [dispatch]),
+    setFamilyAppointmentsSchedulingRoomId: useCallback((roomId) => dispatch(setFamilyAppointmentsSchedulingRoomId(roomId)), [dispatch]),
+    setFamilyAppointmentsRecareDueDates: useCallback((data) => dispatch(setFamilyAppointmentsRecareDueDates(data)), [dispatch]),
   };
 };

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { KeyboardArrowUp } from '@mui/icons-material';
+import { useDraggable } from '@dnd-kit/core';
 import { useDispatch } from 'react-redux';
 import { PatientDetails, FamilyDetails } from './PatientDetailsCard';
 import AppointmentHistoryDialog from '../schedule/appointment-history-modal/AppointmentHistoryDialog';
@@ -31,7 +32,7 @@ const PatientActions = ({ appointment }) => {
   const dispatch = useDispatch();
   const { selectedPatientId, currentPatient }  = usePatient();
   const { currentAppointment } = useAppointmentDetail();
-  const { setRouteSlipDialogOpen, setFamilyAppointmentsDialogOpen } = useScheduleState();
+  const { setRouteSlipDialogOpen, setFamilyAppointmentsDialogOpen, setFamilyAppointmentsSchedulingDate, setFamilyAppointmentsSchedulingTime, setFamilyAppointmentsSchedulingRoomId, setFamilyAppointmentsRecareDueDates } = useScheduleState();
 
   // Use the passed appointment from the left panel if available, otherwise fallback to Redux
   const activeAppt = appointment || currentAppointment;
@@ -57,6 +58,12 @@ const PatientActions = ({ appointment }) => {
 
   const [purchaseProductOpen, setPurchaseProductOpen] = useState(false);
 
+  // ── Family Appointments draggable ────────────────────────────────────────
+  const { attributes: famAttrs, listeners: famListeners, setNodeRef: famRef, isDragging: famDragging } = useDraggable({
+    id: 'family-appointments-btn',
+    data: { isFamilyAppointmentsBlock: true, action: 'openFamilyAppointments' },
+  });
+
   // ── Button handlers ──────────────────────────────────────────────────────────
 
   const handleAppointmentHistory = () => {
@@ -67,6 +74,10 @@ const PatientActions = ({ appointment }) => {
 
   const handleFamilyAppointments = () => {
     if (!selectedPatientId) return;
+    dispatch(setFamilyAppointmentsSchedulingDate(null));
+    dispatch(setFamilyAppointmentsSchedulingTime(null));
+    dispatch(setFamilyAppointmentsSchedulingRoomId(null));
+    dispatch(setFamilyAppointmentsRecareDueDates({}));
     setFamilyAppointmentsDialogOpen(true);
   };
 
@@ -92,28 +103,56 @@ const PatientActions = ({ appointment }) => {
       <ProcedureBlocks appointment={activeAppt} />
 
       {/* ── Blue action buttons ──────────────────────────────────────────────── */}
-      {ACTION_BUTTONS.map(({ label, onClick, showDots }) => (
-        <Box
-          key={label}
-          onClick={onClick}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: COLORS.ACCENT,
-            borderRadius: radius.md,
-            px: '16px',
-            py: '12px',
-            cursor: 'pointer',
-            '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
-          }}
-        >
-          <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
-            {label}
-          </Typography>
-          {showDots && <DotGrid />}
-        </Box>
-      ))}
+      {ACTION_BUTTONS.map(({ label, onClick, showDots }) => {
+        if (label === 'Family Appointments') return null;
+        return (
+          <Box
+            key={label}
+            onClick={onClick}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: COLORS.ACCENT,
+              borderRadius: radius.md,
+              px: '16px',
+              py: '12px',
+              cursor: 'pointer',
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+            }}
+          >
+            <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
+              {label}
+            </Typography>
+            {showDots && <DotGrid />}
+          </Box>
+        );
+      })}
+
+      {/* ── Draggable Family Appointments ──────────────────────────── */}
+      <Box
+        ref={famRef}
+        {...famAttrs}
+        {...famListeners}
+        onClick={handleFamilyAppointments}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: COLORS.ACCENT,
+          borderRadius: radius.md,
+          px: '16px',
+          py: '12px',
+          cursor: 'grab',
+          opacity: famDragging ? 0.5 : 1,
+          '&:hover': { backgroundColor: COLORS.ACCENT_HOVER },
+        }}
+      >
+        <Typography sx={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: COLORS.WHITE }}>
+          Family Appointments
+        </Typography>
+        <DotGrid />
+      </Box>
 
       {/* Purchase Products is now rendered via ACTION_BUTTONS */}
 

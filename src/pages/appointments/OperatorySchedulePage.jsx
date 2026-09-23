@@ -20,7 +20,7 @@ import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
 import { appointmentService } from "../../services/appointment.service";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   setSelectedAppointmentId,
   fetchAppointments,
@@ -28,7 +28,13 @@ import {
   updateAppointmentInList,
   invalidateAppointmentDetail,
   setCurrentAppointment,
+  setFamilyAppointmentsDialogOpen,
+  setFamilyAppointmentsSchedulingDate,
+  setFamilyAppointmentsSchedulingTime,
+  setFamilyAppointmentsSchedulingRoomId,
+  setFamilyAppointmentsRecareDueDates,
 } from "../../store/slices/appointmentSlice";
+import { selectFamilyAppointmentsRecareDueDates } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
 import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
@@ -95,6 +101,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const OperatorySchedulePage = () => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
+  const recareDueDates = useSelector(selectFamilyAppointmentsRecareDueDates);
 
   // ── Dropdown data (providers, rooms, appointment types) ──────────
   const { providers, rooms, appointmentTypes } = useDropdownData({
@@ -142,7 +149,7 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate, familyAppointmentsDialogOpen, setFamilyAppointmentsDialogOpen, familyAppointmentsSchedulingDate, setFamilyAppointmentsSchedulingDate, familyAppointmentsSchedulingRoomId, setFamilyAppointmentsSchedulingRoomId } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
 // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
@@ -1308,6 +1315,17 @@ const OperatorySchedulePage = () => {
         const hour = parseInt(parts[2], 10);
         const mins = parseInt(parts[3], 10);
         const minutesFromStart = (hour - START_HOUR) * 60 + mins;
+
+        if (dragData.isFamilyAppointmentsBlock) {
+          const dateStr = reduxSelectedDate || dayjs().format("YYYY-MM-DD");
+          dispatch(setFamilyAppointmentsSchedulingDate(dateStr));
+          dispatch(setFamilyAppointmentsSchedulingTime({ hour, mins }));
+          dispatch(setFamilyAppointmentsSchedulingRoomId(roomId));
+          dispatch(setFamilyAppointmentsRecareDueDates({}));
+          setFamilyAppointmentsDialogOpen(true);
+          return;
+        }
+
         handleDropReschedule(roomId, minutesFromStart, dragData);
       }
     }

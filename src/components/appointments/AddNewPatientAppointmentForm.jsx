@@ -1263,6 +1263,17 @@ const AddNewPatientAppointmentForm = ({
         }
       });
     });
+
+    // Also include the source appointment's own recareProcedureDateMap (e.g., from drag-and-drop)
+    const sourceProcBlockAppt = sourceAppt?.sourceProcedureBlockAppointment || sourceAppt;
+    const sourceRecareDateMap = sourceProcBlockAppt?.recareProcedureDateMap || {};
+    Object.entries(sourceRecareDateMap).forEach(([key, dates]) => {
+      if (!map[key]) map[key] = [];
+      dates.forEach((date) => {
+        if (!map[key].includes(date)) map[key].push(date);
+      });
+    });
+
     return map;
   };
 

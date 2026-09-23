@@ -234,7 +234,10 @@ const ProcedureBlocks = ({ appointment }) => {
           {proceduresList.map((proc, idx) => {
             const desc = proc.description || proc.name || proc.treatment || proc.code || 'Procedure';
             const procedureDateKey = `${proc.code || proc.procedureCode || proc.ProcCode || ''}|${proc.treatment || proc.description || proc.name || desc || ''}`.trim().toLowerCase();
-            const scheduledDates = appointment?.recareProcedureDateMap?.[procedureDateKey] || [];
+            const procedureCodeKey = `code|${(proc.code || proc.procedureCode || proc.ProcCode || '').trim().toUpperCase()}`;
+            const scheduledDates = appointment?.recareProcedureDateMap?.[procedureDateKey]
+              || appointment?.recareProcedureDateMap?.[procedureCodeKey]
+              || [];
 
             // Helper: extract name from any provider-shaped object
             const nameFromObj = (obj) => {
@@ -313,12 +316,16 @@ const ProcedureBlocks = ({ appointment }) => {
                       {dayjs(proc.createdAt).format('MM/DD/YY')}
                     </Typography>
                   )}
-                  {/* Show only dates for recare appointments that include this specific procedure. */}
-                  {scheduledDates.length > 0 ? (
-                    <Typography sx={{ fontSize: '12px', color: COLORS.ACCENT, fontWeight: fontWeight.medium, ml: '8px' }}>
-                      {scheduledDates.map(date => dayjs(date).format('MM/DD/YYYY')).join(', ')}
-                    </Typography>
-                  ) : null}
+{/* Show only dates for recare appointments that include this specific procedure. */}
+{scheduledDates.length > 0 ? (
+  <Typography sx={{ fontSize: '12px', color: COLORS.ACCENT, fontWeight: fontWeight.medium, ml: '8px' }}>
+    {scheduledDates.map(date => {
+      // Parse as local date to avoid UTC→local timezone shift
+      const [y, m, d] = String(date).slice(0, 10).split('-');
+      return `${m}/${d}/${y}`;
+    }).join(', ')}
+  </Typography>
+) : null}
                 </Box>
               </Box>
             );
