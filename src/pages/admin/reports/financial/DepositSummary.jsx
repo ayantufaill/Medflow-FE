@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUnDepositedPayments, fetchPaymentMethodsConfig } from '../../../../store/slices/depositSlice';
+
 import {
   Box,
   Typography,
@@ -23,42 +26,109 @@ import {
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import PrintIcon from '@mui/icons-material/Print';
-import { depositService } from '../../../../services/deposit.service';
 import { useLocation } from 'react-router-dom';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
-import { reportingService } from '../../../../services/reporting.service';
 import dayjs from 'dayjs';
 import DepositSlipFilters from '../../../../components/reports/financial/DepositSlipFilters';
 import DepositSummaryPreview from '../../../../components/reports/financial/DepositSummaryPreview';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
-const PAYMENT_TYPES = [
-  'EFT', 'Debit Card', 'Visa Card', 'Credit Card', 'Master Card', 'Amex', 
-  'Patient Check', 'Insurance Check', 'Cash', 'Care Credit', 'ACH Payment', 
-  'Account Correction', 'Courtesy Credit', 'NP Special', 
-  'Insurance Refund/Back to Office', 'Test', 'Test Jen', 'HSA'
-];
+
 
 const DepositSummary = () => {
+  const dispatch = useDispatch();
+  const { unDeposited, paymentMethodsConfig, loading } = useSelector((state) => state.deposits || { unDeposited: { patientPayments: [], insurancePayments: [], depositPayments: [] }, paymentMethodsConfig: { patient: [], insurance: [], refund: [], deposit: [] }, loading: false });
+
+  const METHOD_ALIASES = {
+    'card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'credit_card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'credit card': ['debit card (debit)', 'visa card', 'master card', 'amex', 'testing credit', 'credit card'],
+    'ach': ['eft'],
+    'eft': ['eft', 'ach'],
+    'check': ['patient check', 'insurance check', 'check'],
+    'patient check': ['patient check', 'check'],
+    'insurance check': ['insurance check', 'check'],
+    'cash': ['cash'],
+  };
+
+  const formatMethodLabel = (method) => {
+    if (!method) return 'Check';
+    const lower = method.toLowerCase().trim();
+    if (lower === 'debit_card' || lower === 'debit card (debit)') return 'Debit Card (debit)';
+    if (lower === 'card' || lower === 'credit_card') return 'Credit Card';
+    if (lower === 'cash') return 'Cash';
+    if (lower === 'ach' || lower === 'eft') return 'EFT';
+    if (lower === 'check') return 'Check';
+    return method;
+  };
+
+  const isMethodSelected = (method, selectedTypes) => {
+    if (!method) return false;
+    const lowerMethod = method.toLowerCase().trim();
+    const lowerSelected = selectedTypes.map(t => t.toLowerCase().trim());
+    if (lowerSelected.includes(lowerMethod)) return true;
+    const aliases = METHOD_ALIASES[lowerMethod];
+    if (aliases) return aliases.some(alias => lowerSelected.includes(alias));
+    return false;
+  };
+
   const location = useLocation();
   const templateData = location.state?.templateData;
-  const { showSnackbar } = useSnackbar();
-  
   const [dateRangeType, setDateRangeType] = useState('Range');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
-  const [patientTypes, setPatientTypes] = useState(PAYMENT_TYPES);
-  const [insuranceTypes, setInsuranceTypes] = useState(PAYMENT_TYPES);
-  const [refundTypes, setRefundTypes] = useState(PAYMENT_TYPES);
-  const [depositTypes, setDepositTypes] = useState(PAYMENT_TYPES);
+  const [patientTypes, setPatientTypes] = useState([]);
+  const [insuranceTypes, setInsuranceTypes] = useState([]);
+  const [refundTypes, setRefundTypes] = useState([]);
+  const [depositTypes, setDepositTypes] = useState([]);
+  const [groupByProvider, setGroupByProvider] = useState(true);
   
-  const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
   
-  // All undeposited payments from API
-  const [allPayments, setAllPayments] = useState([]);
-  // Filtered payments grouped by date
+
+  useEffect(() => {
+    dispatch(fetchUnDepositedPayments());
+    dispatch(fetchPaymentMethodsConfig());
+  }, [dispatch]);
+
   const [groupedPayments, setGroupedPayments] = useState(null);
+
+  const applyModeDates = (mode) => {
+    const today = new Date();
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const m = mode.toLowerCase();
+    if (m === 'daily') {
+      const todayStr = getLocalDateString(today);
+      setFromDate(todayStr);
+      setToDate(todayStr);
+    } else if (m === 'weekly') {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(today.setDate(diff));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      setFromDate(getLocalDateString(startOfWeek));
+      setToDate(getLocalDateString(endOfWeek));
+    } else if (m === 'monthly') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      setFromDate(getLocalDateString(startOfMonth));
+      setToDate(getLocalDateString(endOfMonth));
+    } else if (m === 'range') {
+      setToDate(getLocalDateString(today));
+      const lastMonth = new Date(today);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      setFromDate(getLocalDateString(lastMonth));
+    }
+  };
 
   useEffect(() => {
     if (templateData && templateData.filters) {
@@ -76,111 +146,67 @@ const DepositSummary = () => {
       applyModeDates('Range');
     }
   }, [templateData]);
+
+  useEffect(() => {
+    if (templateData && templateData.filters) return;
+    if (paymentMethodsConfig && paymentMethodsConfig.insurance?.length > 0) {
+      if (patientTypes.length === 0) setPatientTypes(paymentMethodsConfig.patient || []);
+      if (insuranceTypes.length === 0) setInsuranceTypes(paymentMethodsConfig.insurance || []);
+      if (refundTypes.length === 0) setRefundTypes(paymentMethodsConfig.refund || []);
+      if (depositTypes.length === 0) setDepositTypes(paymentMethodsConfig.deposit || []);
+    }
+  }, [paymentMethodsConfig, templateData]);
+
   
-  const applyModeDates = (mode) => {
-    const today = new Date();
-    const getLocalDateString = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+
+  
+  const handleApplyFilters = () => {
+    const pts = unDeposited.patientPayments || [];
+    const inss = unDeposited.insurancePayments || [];
+    const deps = unDeposited.depositPayments || [];
+    const combined = [...pts, ...inss, ...deps];
+    filterAndGroupPayments(combined);
+  };
+
+
+  const filterAndGroupPayments = (payments) => {
+    const getLocalDateOnly = (dateVal) => {
+      if (!dateVal) return '';
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
 
-    if (mode === 'Daily') {
-      const todayStr = getLocalDateString(today);
-      setFromDate(todayStr);
-      setToDate(todayStr);
-    } else if (mode === 'Weekly') {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(today.setDate(diff));
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      setFromDate(getLocalDateString(startOfWeek));
-      setToDate(getLocalDateString(endOfWeek));
-    } else if (mode === 'Monthly') {
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      setFromDate(getLocalDateString(startOfMonth));
-      setToDate(getLocalDateString(endOfMonth));
-    } else if (mode === 'Range') {
-      setToDate(getLocalDateString(today));
-      const lastMonth = new Date(today);
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      setFromDate(getLocalDateString(lastMonth));
-    }
-  };
+    const combinedPatientTypes = [...patientTypes];
+    const combinedInsTypes = [...insuranceTypes];
 
-  const handleDateModeChange = (e) => {
-    const mode = e.target.value;
-    setDateRangeType(mode);
-    applyModeDates(mode);
-  };
+    let filtered = payments.filter(p => {
+      let isSelected = false;
+      if (p.type === 'insurance') {
+        isSelected = p.amount < 0 ? isMethodSelected(p.method, refundTypes) : isMethodSelected(p.method, combinedInsTypes);
+      } else if (p.type === 'patient') {
+        isSelected = p.amount < 0 ? isMethodSelected(p.method, refundTypes) : isMethodSelected(p.method, combinedPatientTypes);
+      } else if (p.type === 'deposit') {
+        isSelected = isMethodSelected(p.method, depositTypes);
+      } else {
+        isSelected = isMethodSelected(p.method, [...combinedPatientTypes, ...combinedInsTypes, ...depositTypes]);
+      }
 
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
-      const data = await depositService.getUnDepositedPayments();
-      const combined = [...(data?.patientPayments || []), ...(data?.insurancePayments || [])];
-      setAllPayments(combined);
-      showSnackbar('Fetched undeposited payments', 'success');
-    } catch (err) {
-      showSnackbar('Failed to fetch payments', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!isSelected) return false;
 
-  const handleApplyFilters = async () => {
-    if (allPayments.length === 0) {
-      await fetchPayments();
-    } else {
-      filterAndGroupPayments(allPayments);
-    }
-  };
-
-  useEffect(() => {
-    if (allPayments.length > 0) {
-      filterAndGroupPayments(allPayments);
-    }
-  }, [allPayments]);
-
-  const filterAndGroupPayments = (payments) => {
-    const selectedMethods = new Set([
-      ...patientTypes.map(t => t.toLowerCase()),
-      ...insuranceTypes.map(t => t.toLowerCase()),
-      ...refundTypes.map(t => t.toLowerCase()),
-      ...depositTypes.map(t => t.toLowerCase())
-    ]);
-
-    let filtered = payments;
-
-    if (selectedMethods.size > 0) {
-      filtered = filtered.filter(p => {
-        const method = (p.method || '').toLowerCase();
-        return Array.from(selectedMethods).some(sm => method.includes(sm) || sm.includes(method));
-      });
-    } else {
-      filtered = []; 
-    }
-
-    const getLocalDateOnly = (dateString) => {
-      if (!dateString) return '';
-      return dateString.split('T')[0];
-    };
-
-    if (fromDate) {
-      filtered = filtered.filter(p => p.date && getLocalDateOnly(p.date) >= fromDate);
-    }
-    if (toDate) {
-      filtered = filtered.filter(p => p.date && getLocalDateOnly(p.date) <= toDate);
-    }
+      if (p.date && fromDate && toDate) {
+        const pDate = getLocalDateOnly(p.date);
+        if (pDate < fromDate || pDate > toDate) return false;
+      }
+      return true;
+    });
 
     const groups = {};
     filtered.forEach(p => {
-      const d = p.date ? new Date(p.date).toLocaleDateString() : 'Unknown Date';
+      const d = p.date ? getLocalDateOnly(p.date) : 'Unknown Date';
       if (!groups[d]) {
         groups[d] = {
           date: d,
@@ -189,7 +215,7 @@ const DepositSummary = () => {
           payments: []
         };
       }
-      const typeKey = p.method || 'Unknown';
+      const typeKey = groupByProvider ? (p.providerName || p.provider || 'Unassigned Provider') : formatMethodLabel(p.method);
       if (!groups[d].types[typeKey]) groups[d].types[typeKey] = 0;
       groups[d].types[typeKey] += p.amount;
       groups[d].dailyTotal += p.amount;
@@ -200,147 +226,59 @@ const DepositSummary = () => {
     setGroupedPayments(groupedArray);
   };
 
-  const executeCreateDeposit = async () => {
-    let paymentsToProcess = allPayments;
-    if (allPayments.length === 0) {
-      setLoading(true);
-      try {
-        const data = await depositService.getUnDepositedPayments();
-        const combined = [...(data?.patientPayments || []), ...(data?.insurancePayments || [])];
-        paymentsToProcess = combined;
-        setAllPayments(paymentsToProcess);
-      } catch (err) {
-        showSnackbar('Failed to fetch payments', 'error');
-        setLoading(false);
-        return;
-      }
-      setLoading(false);
-    }
 
-    const selectedMethods = new Set([
-      ...patientTypes.map(t => t.toLowerCase()),
-      ...insuranceTypes.map(t => t.toLowerCase()),
-      ...refundTypes.map(t => t.toLowerCase()),
-      ...depositTypes.map(t => t.toLowerCase())
-    ]);
+  const handlePrint = () => {
+    const tableEl = document.getElementById('deposit-summary-table');
+    if (!tableEl) return;
+    
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Deposit Summary</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Deposit Summary</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${fromDate} to ${toDate}</p>
+          <div style="text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px;">Total Summary Amount: $${overallTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
 
-    let filtered = paymentsToProcess;
-    if (selectedMethods.size > 0) {
-      filtered = filtered.filter(p => {
-        const method = (p.method || '').toLowerCase();
-        return Array.from(selectedMethods).some(sm => method.includes(sm) || sm.includes(method));
-      });
-    } else {
-      filtered = []; 
-    }
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
 
-    const getLocalDateOnly = (dateString) => {
-      if (!dateString) return '';
-      return dateString.split('T')[0];
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
     };
 
-    if (fromDate) {
-      filtered = filtered.filter(p => p.date && getLocalDateOnly(p.date) >= fromDate);
-    }
-    if (toDate) {
-      filtered = filtered.filter(p => p.date && getLocalDateOnly(p.date) <= toDate);
-    }
-
-    const patientPaymentIds = [];
-    const insurancePaymentIds = [];
-
-    const groups = {};
-    filtered.forEach(p => {
-      const d = p.date ? new Date(p.date).toLocaleDateString() : 'Unknown Date';
-      if (!groups[d]) {
-        groups[d] = {
-          date: d,
-          types: {},
-          dailyTotal: 0,
-          payments: []
-        };
-      }
-      const typeKey = p.method || 'Unknown';
-      if (!groups[d].types[typeKey]) groups[d].types[typeKey] = 0;
-      groups[d].types[typeKey] += p.amount;
-      groups[d].dailyTotal += p.amount;
-      groups[d].payments.push(p);
-
-      if (p.type === 'patient') patientPaymentIds.push(p.id);
-      else if (p.type === 'insurance') insurancePaymentIds.push(p.id);
-    });
-
-    if (patientPaymentIds.length === 0 && insurancePaymentIds.length === 0) {
-      showSnackbar('No un-deposited payments match the selected criteria.', 'warning');
-      return;
-    }
-
-    setCreating(true);
-    try {
-      await depositService.createDepositSlip({
-        patientPaymentIds,
-        insurancePaymentIds,
-        date: new Date()
-      });
-      showSnackbar('Deposit created successfully!', 'success');
-      
-      const groupedArray = Object.values(groups).sort((a, b) => new Date(a.date) - new Date(b.date));
-      setGroupedPayments(groupedArray);
-      
-      // Refresh background payments
-      const data = await depositService.getUnDepositedPayments();
-      const combined = [...(data?.patientPayments || []), ...(data?.insurancePayments || [])];
-      setAllPayments(combined);
-    } catch (err) {
-      showSnackbar('Failed to create deposit', 'error');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [savingTemplate, setSavingTemplate] = useState(false);
-
-  const handleSaveTemplate = async () => {
-    if (!templateName.trim()) {
-      showSnackbar("Please enter a template name.", "warning");
-      return;
-    }
-
-    let finalName = templateName.trim();
-    const modeStr = dateRangeType.toLowerCase();
-    if (modeStr === 'daily' && !finalName.toLowerCase().includes('daily')) {
-      finalName = `Daily ${finalName}`;
-    } else if (modeStr === 'weekly' && !finalName.toLowerCase().includes('weekly')) {
-      finalName = `Weekly ${finalName}`;
-    } else if (modeStr === 'monthly' && !finalName.toLowerCase().includes('monthly')) {
-      finalName = `Monthly ${finalName}`;
-    }
-
-    try {
-      setSavingTemplate(true);
-      await reportingService.saveReport({
-        name: finalName,
-        kind: 'Financial',
-        filters: [
-          { type: 'mode', value: dateRangeType },
-          { type: 'patientPayTypes', value: patientTypes },
-          { type: 'insPayTypes', value: insuranceTypes },
-          { type: 'refPayTypes', value: refundTypes },
-          { type: 'incDepTypes', value: depositTypes },
-          { type: 'isSummary', value: true },
-        ],
-        columns: []
-      });
-      showSnackbar('Template saved successfully! It will now appear in Saved Reports.', 'success');
-      setShowTemplateForm(false);
-      setTemplateName('');
-    } catch (err) {
-      showSnackbar(err?.response?.data?.message || 'Failed to save template.', 'error');
-    } finally {
-      setSavingTemplate(false);
-    }
+    document.body.appendChild(iframe);
   };
 
   const CheckboxGroup = ({ title, items, selected, setSelected }) => {
@@ -400,9 +338,7 @@ const DepositSummary = () => {
             buttonText="Apply Filters"
             extraButtons={
               <>
-                <Button variant="contained" size="small" startIcon={<FileDownloadIcon />} sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, boxShadow: 'none', fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { bgcolor: '#2E8CCC', boxShadow: 'none' } }}>Export CSV</Button>
-                <Button variant="outlined" size="small" startIcon={<PrintIcon sx={{ color: '#3b82f6' }} />} sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap', boxShadow: 'none' }}>Print</Button>
-                <Button variant="outlined" size="small" sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap', boxShadow: 'none' }}>Preview Deposit</Button>
+                <Button onClick={handleApplyFilters} variant="outlined" size="small" sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b', borderRadius: '8px', px: 2, fontWeight: 600, bgcolor: '#fff', whiteSpace: 'nowrap', boxShadow: 'none' }}>Preview Deposit</Button>
               </>
             }
             filterMode={dateRangeType.toLowerCase()}
@@ -414,24 +350,26 @@ const DepositSummary = () => {
             setStartDate={(v) => setFromDate(v ? v.format('YYYY-MM-DD') : '')}
             endDate={toDate ? dayjs(toDate) : null}
             setEndDate={(v) => setToDate(v ? v.format('YYYY-MM-DD') : '')}
-            paymentTypes={PAYMENT_TYPES}
-            patientPaymentTypesOptions={PAYMENT_TYPES}
-            insurancePaymentTypesOptions={PAYMENT_TYPES.slice(0, 15)}
-            refundPaymentTypesOptions={PAYMENT_TYPES.slice(0, 15)}
-            includeDepositTypesOptions={PAYMENT_TYPES.slice(0, 5)}
+            
+            patientPaymentTypesOptions={paymentMethodsConfig.patient || []}
+            insurancePaymentTypesOptions={paymentMethodsConfig.insurance || []}
+            refundPaymentTypesOptions={paymentMethodsConfig.refund || []}
+            includeDepositTypesOptions={paymentMethodsConfig.deposit || []}
             patientPayTypes={patientTypes}
-            patPayAll={patientTypes.length === PAYMENT_TYPES.length}
+            patPayAll={patientTypes.length > 0 && patientTypes.length === (paymentMethodsConfig.patient?.length || 0)}
             insPayTypes={insuranceTypes}
-            insPayAll={insuranceTypes.length === PAYMENT_TYPES.slice(0, 15).length}
+            insPayAll={insuranceTypes.length > 0 && insuranceTypes.length === (paymentMethodsConfig.insurance?.length || 0)}
             refPayTypes={refundTypes}
-            refPayAll={refundTypes.length === PAYMENT_TYPES.slice(0, 15).length}
+            refPayAll={refundTypes.length > 0 && refundTypes.length === (paymentMethodsConfig.refund?.length || 0)}
             incDepTypes={depositTypes}
-            incDepAll={depositTypes.length === PAYMENT_TYPES.slice(0, 5).length}
+            incDepAll={depositTypes.length > 0 && depositTypes.length === (paymentMethodsConfig.deposit?.length || 0)}
+            groupByProvider={groupByProvider}
+            onGroupByProviderChange={setGroupByProvider}
             handleToggleAll={(type, checked) => {
-              if (type === 'patient') setPatientTypes(checked ? PAYMENT_TYPES : []);
-              else if (type === 'insurance') setInsuranceTypes(checked ? PAYMENT_TYPES.slice(0, 15) : []);
-              else if (type === 'refund') setRefundTypes(checked ? PAYMENT_TYPES.slice(0, 15) : []);
-              else if (type === 'include') setDepositTypes(checked ? PAYMENT_TYPES.slice(0, 5) : []);
+              if (type === 'patient') setPatientTypes(checked ? [...(paymentMethodsConfig.patient || [])] : []);
+              else if (type === 'insurance') setInsuranceTypes(checked ? [...(paymentMethodsConfig.insurance || [])] : []);
+              else if (type === 'refund') setRefundTypes(checked ? [...(paymentMethodsConfig.refund || [])] : []);
+              else if (type === 'include') setDepositTypes(checked ? [...(paymentMethodsConfig.deposit || [])] : []);
             }}
             handleToggleItem={(type, item, checked) => {
               if (type === 'patient') setPatientTypes(checked ? [...patientTypes, item] : patientTypes.filter(x => x !== item));
@@ -456,7 +394,8 @@ const DepositSummary = () => {
             <DepositSummaryPreview
               groupedPayments={groupedPayments}
               overallTotal={overallTotal}
-              handlePrint={() => window.print()}
+              handlePrint={handlePrint}
+              groupByProvider={groupByProvider}
             />
           </Paper>
         </Grid>

@@ -18,7 +18,8 @@ import PrintIcon from '@mui/icons-material/Print';
 const DepositSummaryPreview = ({
   groupedPayments,
   overallTotal,
-  handlePrint
+  handlePrint,
+  groupByProvider
 }) => {
   if (!groupedPayments) {
     return (
@@ -80,12 +81,12 @@ const DepositSummaryPreview = ({
             </Button>
           </Box>
         </Box>
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: 350, overflowY: 'auto' }}>
+        <TableContainer id="deposit-summary-table" component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: 350, overflowY: 'auto' }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow sx={{ '& th': { backgroundColor: '#f8fafc', color: '#64748b', fontSize: '0.8rem', fontWeight: 600, py: 1.5, borderBottom: '1px solid #e2e8f0', textTransform: 'capitalize' } }}>
                 <TableCell>Date</TableCell>
-                <TableCell>Payment Type</TableCell>
+                <TableCell>{groupByProvider ? 'Provider' : 'Payment Type'}</TableCell>
                 <TableCell align="right">Amount</TableCell>
                 <TableCell align="right">Daily Total</TableCell>
               </TableRow>
