@@ -136,8 +136,8 @@ export const fetchCheckoutAppointments = createAsyncThunk(
   async (args = {}, { rejectWithValue }) => {
     const { page = 1, limit = 200, providerId = '', startDate = '', endDate = '' } = args;
     try {
-      const result = await appointmentService.getAllAppointments(
-        page, limit, providerId, '', 'checkout complete', startDate, endDate,
+       const result = await appointmentService.getAllAppointments(
+         page, limit, providerId, '', '', startDate, endDate,
       );
       return { data: result, args };
     } catch (err) {

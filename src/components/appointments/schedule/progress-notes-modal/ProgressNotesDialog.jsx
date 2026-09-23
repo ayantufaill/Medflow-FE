@@ -36,36 +36,15 @@ import ProgressNotesFilters from "./ProgressNotesFilters";
 import ProgressNotesActions from "./ProgressNotesActions";
 import ProgressNotesTables from "./ProgressNotesTables";
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────
-const MOCK_MISSING_NOTES = [
-  { _id: "m1", patientId: { firstName: "Emma", lastName: "Watson" }, appointmentDate: "2026-03-26", toothNumber: "", surface: "", appointmentTypeId: { code: "D0220" }, providerId: { name: "Christine Sabour" } },
-  { _id: "m2", patientId: { firstName: "John", lastName: "Smith" }, appointmentDate: "2026-03-26", toothNumber: "21", surface: "", appointmentTypeId: { code: "D2740" }, providerId: { name: "Christine Sabour" } },
-  { _id: "m3", patientId: { firstName: "Robert", lastName: "Downey" }, appointmentDate: "2026-03-26", toothNumber: "21", surface: "", appointmentTypeId: { code: "D2950" }, providerId: { name: "Christine Sabour" } },
-  { _id: "m4", patientId: { firstName: "Scarlett", lastName: "Johansson" }, appointmentDate: "2026-03-26", toothNumber: "28", surface: "", appointmentTypeId: { code: "D2740" }, providerId: { name: "Christine Sabour" } },
-  { _id: "m5", patientId: { firstName: "Chris", lastName: "Evans" }, appointmentDate: "2026-03-26", toothNumber: "28", surface: "", appointmentTypeId: { code: "D2950" }, providerId: { name: "Christine Sabour" } },
-  { _id: "m6", patientId: { firstName: "Mark", lastName: "Ruffalo" }, appointmentDate: "2026-03-26", toothNumber: "27", surface: "", appointmentTypeId: { code: "D2740" }, providerId: { name: "Christine Sabour" } }
-];
-
-const MOCK_UNSIGNED_NOTES = [
-  { _id: "u1", patientId: { firstName: "Alexis", lastName: "Quintero" }, createdAt: "2026-03-26", noteType: "Treatment", providerId: { name: "Christine Sabour" }, content: `CC: "I don't like the open bite" points to #23,26 when she smiles that shows black/dark spaces due to open bite\nDiscussed needing IPR to level out the lowers and reduce the open bite\nMentioned rotation #9 and lining up the midlines-I told her we can attempt and will need large vertical attachment on #9` },
-  { _id: "u2", patientId: { firstName: "James", lastName: "Bond" }, createdAt: "2026-03-26", noteType: "Recare", providerId: { name: "Karla Riley" }, content: `Patient presents for Adult Prophy via Guided Biofilm Therapy, Periodic Exam, IOC, iTero, FLV. **INVISALIGN START**\n- Protective eye wear worn by patient.\n- Dr. Sabour prescribed the following X-Rays: No xrays completed today.\n- 3D Wellness Scan completed: Completed full iTero Wellness scan today.\n- Adult prophy following 8-step Guided Biofilm Therapy protocol completed today Hand Instruments only, EMS Airflow Prophylaxis Master utilized and hand instruments.\n- Assessment Ultrasonic and Hand Instruments used.\n- Perio Diagnosis: Stage 1, Grade A\n- Gingival Description healthy- stable, pink and firm, Localized, mild` },
-  { _id: "u3", patientId: { firstName: "Steve", lastName: "Rogers" }, createdAt: "2026-03-26", noteType: "Exam", providerId: { name: "Christine Sabour" }, content: "Periodic oral evaluation - established patient. No significant changes in medical history. Soft tissue exam normal." },
-  { _id: "u4", patientId: { firstName: "Natasha", lastName: "Romanoff" }, createdAt: "2026-03-26", noteType: "Recare", providerId: { name: "Karla Riley" }, content: "Prophylaxis - adult. Scaling and polishing completed. Patient maintained good oral hygiene." }
-];
-
-const MOCK_SIGNED_NOTES = [
-  { _id: "s1", patientId: { firstName: "Diana", lastName: "Prince" }, createdAt: "2026-03-26", noteType: "Recare", providerId: { name: "Karla Riley" }, content: `Patient presents for Adult Prophy via Guided Biofilm Therapy, Periodic Exam, 4BWX + PAs, IOC, FLV.` }
-];
-
 const ProgressNotesDialog = ({ open, onClose }) => {
   const dispatch = useDispatch();
   const { providers = [] } = useDropdownData({ providers: true });
 
-  const [dateRange, setDateRange] = useState('Today');
-  const [startDate, setStartDate] = useState(dayjs());
-  const [endDate, setEndDate] = useState(dayjs());
-  const [kind, setKind] = useState("All");
-  const [providerId, setProviderId] = useState("All");
+   const [dateRange, setDateRange] = useState('Today');
+   const [startDate, setStartDate] = useState(dayjs());
+   const [endDate, setEndDate] = useState(dayjs());
+   const [kind, setKind] = useState("All");
+   const [providerId, setProviderId] = useState("All");
 
   const signedData = useSelector(selectSignedNotes);
   const unsignedData = useSelector(selectUnsignedNotes);
@@ -77,7 +56,13 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
 
-  const loading = clinicalLoading || checkoutLoading;
+  // Local loading flag: stays true until ALL three concurrent dispatches resolve.
+  // We cannot rely on `clinicalLoading` alone because it flips false as soon as
+  // the FIRST of the two fetchClinicalNotes calls completes, causing a flash of
+  // partial data (appointments appear then vanish when the second batch arrives).
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const _reduxLoading = clinicalLoading || checkoutLoading; // kept to avoid selector removal lint
 
   const toggleNoteExpansion = (id) => {
     setExpandedNoteIds(prev => {
@@ -88,63 +73,193 @@ const ProgressNotesDialog = ({ open, onClose }) => {
     });
   };
 
-  const fetchData = useCallback(() => {
+  // fetchData accepts explicit params so it always uses the current filter values,
+  // avoiding stale-closure issues regardless of when it is called.
+  // It is async so we can await all three dispatches with Promise.all and keep
+  // isLocalLoading true for the entire round-trip.
+  const fetchData = useCallback(async (
+    sd = startDate,
+    ed = endDate,
+    pid = providerId,
+    k = kind,
+  ) => {
     const filters = {
-      startDate: startDate.format("YYYY-MM-DD"),
-      endDate: endDate.format("YYYY-MM-DD"),
-      providerId: providerId === "All" ? "" : providerId,
-      noteType: kind === "All" ? "" : kind,
+      startDate: sd.format("YYYY-MM-DD"),
+      endDate: ed.format("YYYY-MM-DD"),
+      providerId: pid === "All" ? "" : pid,
+      noteType: k === "All" ? "" : k,
     };
 
-    dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: true } }));
-    dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: false } }));
-    dispatch(fetchCheckoutAppointments({ page: 1, limit: 200, ...filters }));
-  }, [dispatch, startDate, endDate, providerId, kind]);
+    setIsLocalLoading(true);
+    try {
+      await Promise.all([
+        dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: true } })),
+        dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: false } })),
+        dispatch(fetchCheckoutAppointments({ page: 1, limit: 200, ...filters })),
+      ]);
+    } finally {
+      setIsLocalLoading(false);
+    }
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const normalizeNote = (note) => {
+    if (!note) return note;
+    const patientId = typeof note.patientId === 'object' && note.patientId !== null
+      ? note.patientId
+      : { _id: note.patientId || null, firstName: note.patientFirstName || note.patientName?.firstName || '', lastName: note.patientLastName || note.patientName?.lastName || '' };
+    const providerId = typeof note.providerId === 'object' && note.providerId !== null
+      ? note.providerId
+      : { _id: note.providerId || null, firstName: '', lastName: '', name: note.providerName || 'Unknown Provider' };
+
+    // Build a human-readable content string from SOAP/narrative fields since
+    // the backend stores note body across chiefComplaint/subjective/objective/assessment/plan.
+    const parts = [
+      note.chiefComplaint ? `Chief Complaint: ${note.chiefComplaint}` : null,
+      note.subjective     ? `Subjective: ${note.subjective}`         : null,
+      note.objective      ? `Objective: ${note.objective}`           : null,
+      note.assessment     ? `Assessment: ${note.assessment}`         : null,
+      note.plan           ? `Plan: ${note.plan}`                     : null,
+    ].filter(Boolean);
+    const content = note.content || (parts.length ? parts.join('\n\n') : '');
+
+    return {
+      ...note,
+      patientId,
+      providerId,
+      content,
+      noteType: note.noteType || 'Treatment',
+    };
+  };
 
   const [signedNotes, setSignedNotes] = useState([]);
   const [unsignedNotes, setUnsignedNotes] = useState([]);
 
   useEffect(() => {
-    setSignedNotes([...(signedData || []), ...MOCK_SIGNED_NOTES]);
+    setSignedNotes((signedData || []).map(normalizeNote));
   }, [signedData]);
 
   useEffect(() => {
-    setUnsignedNotes([...(unsignedData || []), ...MOCK_UNSIGNED_NOTES]);
+    setUnsignedNotes((unsignedData || []).map(normalizeNote));
   }, [unsignedData]);
 
   const missingNotes = useMemo(() => {
     const allFetchedNotes = [...signedNotes, ...unsignedNotes];
     const missing = [];
     const appointments = checkoutAppointments || [];
-    
+
+    // Extract a comparable ID string from a value that may be an object or a raw string.
+    const extractId = (val) => {
+      if (!val) return null;
+      if (typeof val === 'object') return String(val._id || val.id || '');
+      return String(val);
+    };
+
     appointments.forEach(appt => {
-      const ptId = appt.patientId?._id || appt.patientId?.id || appt.patientId;
-      if (ptId) {
-        const hasNote = allFetchedNotes.some(n => {
-          const nId = n.patientId?._id || n.patientId?.id || n.patientId;
-          return nId === ptId;
-        });
-        
-        if (!hasNote) {
+      const ptId = extractId(appt.patientId);
+      if (!ptId) return;
+
+      const aptId = String(appt._id || appt.id || '');
+      const apptDay = appt.appointmentDate
+        ? String(appt.appointmentDate).slice(0, 10)
+        : null;
+
+      // Two-tier match — an appointment is considered "covered" if:
+      //  1. A note explicitly references it via appointmentId (most precise), OR
+      //  2. A note from the same patient was created on the same calendar day
+      //     (handles notes written without an appointmentId link).
+      // Deliberately NOT matching by patient ID alone: a note from a prior
+      // visit by the same patient must not hide today's uncovered appointment.
+      const hasNote = allFetchedNotes.some(n => {
+        // Tier 1: explicit appointmentId link
+        const noteAptId = String(n.appointmentId || '');
+        if (noteAptId && aptId && noteAptId === aptId) return true;
+
+        // Tier 2: same patient, same calendar day
+        const notePatId = extractId(n.patientId);
+        if (!notePatId || notePatId !== ptId) return false;
+        const noteDay = n.createdAt
+          ? dayjs(n.createdAt).format('YYYY-MM-DD')
+          : null;
+        return !!(apptDay && noteDay && apptDay === noteDay);
+      });
+
+      if (!hasNote) {
+        const patientObj = typeof appt.patientId === 'object' ? appt.patientId : null;
+
+        const apptProviderName = appt.providerId?.firstName
+          ? `${appt.providerId.firstName} ${appt.providerId.lastName || ''}`.trim()
+          : (appt.providerId?.name || "Unknown Provider");
+
+        const procProviderName = (pid) => {
+          if (!pid) return null;
+          const match = providers.find(item => String(item._id || item.id) === String(pid));
+          if (!match) return null;
+          if (match.name) return match.name;
+          const fullName = `${match.firstName || ""} ${match.lastName || ""}`.trim();
+          if (fullName) return fullName;
+          return match.providerCode || `Provider #${match._id || match.id}`;
+        };
+
+        const procedures = (appt.customFields?.procedures || []).filter(p => p.completed === true);
+
+        procedures.forEach((p, idx) => {
+          const procProviderNameResolved = procProviderName(p.provider);
+          const rowProviderName = procProviderNameResolved
+            || (p.provider ? `Provider #${p.provider}` : null)
+            || apptProviderName;
+
+          let toothVal = p.tooth || p.toothNum || p.toothNumber || appt.toothNumber || null;
+          let surfaceVal = p.surface || (Array.isArray(p.surfaces) ? p.surfaces.join(', ') : p.surfaces) || appt.surface || null;
+
+          const rawSite = (p.site || '').trim();
+          if (rawSite && (!toothVal || !surfaceVal)) {
+            const entries = rawSite.split(',').map(e => e.replace('#', '').trim()).filter(Boolean);
+            const teeth = [];
+            const surfaces = [];
+            let surfaceOnly = null;
+            for (const entry of entries) {
+              const parts = entry.split(' ').filter(Boolean);
+              if (parts.length >= 2) {
+                if (toothVal === null) teeth.push(parts[0]);
+                if (surfaceVal === null) surfaces.push(parts.slice(1).join(''));
+              } else if (parts.length === 1) {
+                if (toothVal === null) teeth.push(parts[0]);
+                else if (surfaceVal === null) surfaceOnly = parts[0];
+              }
+            }
+            if (rawSite.startsWith('#') && toothVal === null && entries.length === 1) {
+              toothVal = entries[0].split(' ')[0];
+            }
+            if (teeth.length) toothVal = [...new Set(teeth)].join(', ');
+            if (surfaces.length) surfaceVal = [...new Set(surfaces)].join(', ');
+            else if (surfaceOnly && surfaceVal === null) surfaceVal = surfaceOnly;
+          }
+
           missing.push({
-            _id: `m-${appt._id || appt.id}`,
-            patientName: appt.patientName || `${appt.patientId?.firstName || ''} ${appt.patientId?.lastName || ''}`.trim() || 'Unknown Patient',
-            appointmentType: appt.appointmentType || appt.appointmentTypeId?.name || "Visit",
-            providerName: appt.providerId?.firstName ? `${appt.providerId.firstName} ${appt.providerId.lastName}` : (appt.providerId?.name || "Unknown Provider"),
-            time: appt.startTime || "Unknown Time"
+            _id: `m-${appt._id || appt.id}-${idx}`,
+            patientName: appt.patientName
+              || (patientObj ? `${patientObj.firstName || ''} ${patientObj.lastName || ''}`.trim() : '')
+              || 'Unknown Patient',
+            appointmentDate: appt.appointmentDate || appt.date || null,
+            providerName: rowProviderName,
+            providerId: procProviderNameResolved ? p.provider : (appt.providerId || null),
+            time: appt.startTime || "Unknown Time",
+            toothNumber: toothVal,
+            surface: surfaceVal,
+            code: p.code || null,
           });
-        }
+        });
       }
     });
-    
-    return [...missing, ...MOCK_MISSING_NOTES];
-  }, [signedNotes, unsignedNotes, checkoutAppointments]);
+
+    return missing;
+  }, [signedNotes, unsignedNotes, checkoutAppointments, providers]);
 
   const handleExport = () => {
     const data = [
-      ...missingNotes.map(n => ({ status: 'Missing', patient: n.patientName, date: dayjs(n.appointmentDate).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' })),
-      ...unsignedNotes.map(n => ({ status: 'Unsigned', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' })),
-      ...signedNotes.map(n => ({ status: 'Signed', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.name || 'Unknown' }))
+      ...missingNotes.map(n => ({ status: 'Missing', patient: n.patientName, date: String(n.appointmentDate).slice(0, 10), provider: n.providerName || `${n.providerId?.firstName || ''} ${n.providerId?.lastName || ''}`.trim() || 'Unknown' })),
+      ...unsignedNotes.map(n => ({ status: 'Unsigned', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.firstName || 'Unknown' })),
+      ...signedNotes.map(n => ({ status: 'Signed', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.firstName || 'Unknown' }))
     ];
     exportToCSV(data, [
       { header: 'Status', key: 'status' },
@@ -154,25 +269,29 @@ const ProgressNotesDialog = ({ open, onClose }) => {
     ], 'Progress_Notes');
   };
   useEffect(() => {
-    if (open) fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Reset state when the dialog is closed
-  useEffect(() => {
-    if (!open) {
+    if (open) {
+      // Reset filters to defaults and immediately fetch with those exact values.
+      // We pass the default values directly into fetchData so there is no
+      // dependency on React state (which may not have flushed yet).
+      const defaultStart = dayjs();
+      const defaultEnd   = dayjs();
+      setDateRange('Today');
+      setStartDate(defaultStart);
+      setEndDate(defaultEnd);
+      setKind("All");
+      setProviderId("All");
+      fetchData(defaultStart, defaultEnd, "All", "All");
+    } else {
       setDateRange('Today');
       setStartDate(dayjs());
       setEndDate(dayjs());
       setKind("All");
       setProviderId("All");
-      
-      // Also reset expanded and editing states for a clean slate
       setExpandedNoteIds(new Set());
       setEditingNoteId(null);
       setEditingContent("");
     }
-  }, [open]);
+  }, [open, fetchData]);
 
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);
@@ -315,7 +434,7 @@ const ProgressNotesDialog = ({ open, onClose }) => {
           providerId={providerId}
           setProviderId={setProviderId}
           providers={providers}
-          onApply={fetchData}
+          onApply={() => fetchData(startDate, endDate, providerId, kind)}
         />
 
         {/* ACTIONS */}
@@ -329,7 +448,7 @@ const ProgressNotesDialog = ({ open, onClose }) => {
 
         {/* TABLES */}
         <Box className="printable-content" sx={{ flexGrow: 1, overflow: 'auto', mb: "25px" }}>
-          {loading ? (
+          {isLocalLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}><CircularProgress /></Box>
           ) : (
             <ProgressNotesTables 

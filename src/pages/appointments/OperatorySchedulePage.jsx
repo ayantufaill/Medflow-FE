@@ -38,7 +38,6 @@ import { selectFamilyAppointmentsRecareDueDates } from "../../store/slices/appoi
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
 import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
 import FamilyAppointmentsDialog from "../../components/appointments/schedule/family-appointments-modal/FamilyAppointmentsDialog";
 import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
@@ -659,10 +658,9 @@ const OperatorySchedulePage = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [completeProceduresOpen, setCompleteProceduresOpen] = useState(false);
-  const [selectProductsOpen, setSelectProductsOpen] = useState(false);
-  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
-  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
-  const [loadingFormPatients, setLoadingFormPatients] = useState(false);
+   const [selectProductsOpen, setSelectProductsOpen] = useState(false);
+   const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
 
   const searchFormPatients = useCallback(async (search = '') => {
     try {
@@ -1540,12 +1538,6 @@ const OperatorySchedulePage = () => {
           open={bulkTextDialogOpen}
           onClose={() => setBulkTextDialogOpen(false)}
           selectedDate={selectedDate}
-          providers={providers || []}
-        />
-
-        <ProgressNotesDialog
-          open={progressNotesOpen}
-          onClose={() => setProgressNotesOpen(false)}
           providers={providers || []}
         />
 

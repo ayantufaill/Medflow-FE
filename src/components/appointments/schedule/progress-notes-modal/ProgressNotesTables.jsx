@@ -67,10 +67,10 @@ const ProgressNotesTables = ({
               {missingNotes.length > 0 ? missingNotes.map((a, i) => (
                 <TableRow key={a._id || i}>
                   <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500 }}>{a.patientName || `${a.patientId?.firstName || ''} ${a.patientId?.lastName || ''}`}</TableCell>
-                  <TableCell sx={cellSx}>{dayjs(a.appointmentDate).format("MM/DD/YYYY")}</TableCell>
+                  <TableCell sx={cellSx}>{a.appointmentDate ? dayjs(String(a.appointmentDate).slice(0, 10)).format("MM/DD/YYYY") : "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.toothNumber || "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.surface || "—"}</TableCell>
-                  <TableCell sx={cellSx}>{a.appointmentTypeId?.code || "—"}</TableCell>
+                  <TableCell sx={cellSx}>{a.code || "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.providerName || getProviderName(a.providerId)}</TableCell>
                 </TableRow>
               )) : (
