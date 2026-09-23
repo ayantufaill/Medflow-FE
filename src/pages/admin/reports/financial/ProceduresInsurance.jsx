@@ -7,6 +7,7 @@ import ProceduresInsuranceFilters from '../../../../components/reports/financial
 import ProceduresInsuranceTable from '../../../../components/reports/financial/ProceduresInsuranceTable';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 import { reportingService } from '../../../../services/reporting.service';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const ProceduresInsurance = () => {
   const dispatch = useDispatch();
@@ -48,7 +49,8 @@ const ProceduresInsurance = () => {
       setLoading(true);
       const res = await reportingService.getFinancialReport('procedures-insurance', {
         startDate,
-        endDate
+        endDate,
+        provider: provider !== 'All' ? provider : undefined
       });
       setReportData(res || []);
     } catch (err) {
@@ -60,10 +62,81 @@ const ProceduresInsurance = () => {
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, []);
+
+  const applyModeDates = (mode) => {
+    const today = new Date();
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const m = mode.toLowerCase();
+    if (m === 'daily') {
+      const todayStr = getLocalDateString(today);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (m === 'weekly' || m === 'this_week') {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(today.setDate(diff));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      setStartDate(getLocalDateString(startOfWeek));
+      setEndDate(getLocalDateString(endOfWeek));
+    } else if (m === 'monthly' || m === 'this_month') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(endOfMonth));
+    } else if (m === 'last_7_days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 7);
+      setStartDate(getLocalDateString(start));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'last_week') {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfLastWeek = new Date(new Date().setDate(diff - 7));
+      const endOfLastWeek = new Date(startOfLastWeek);
+      endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+      setStartDate(getLocalDateString(startOfLastWeek));
+      setEndDate(getLocalDateString(endOfLastWeek));
+    } else if (m === 'last_4_weeks') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 28);
+      setStartDate(getLocalDateString(start));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'last_month') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(endOfMonth));
+    } else if (m === 'last_3_months') {
+      const start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+      setStartDate(getLocalDateString(start));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'last_12_months') {
+      const start = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+      setStartDate(getLocalDateString(start));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'year_to_date') {
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+      setStartDate(getLocalDateString(startOfYear));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'range') {
+      const lastMonth = new Date(today);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      setStartDate(getLocalDateString(lastMonth));
+      setEndDate(getLocalDateString(today));
+    }
+  };
 
   const handleFilterModeChange = (e) => {
     setDateRange(e.target.value);
+    applyModeDates(e.target.value);
   };
 
   const handleApply = () => {
@@ -112,29 +185,52 @@ const ProceduresInsurance = () => {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Procedures By Insurance Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('h2 { color: #2262ef; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Procedures By Insurance Report</h2>');
-    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
-    printWindow.document.write('<table><thead><tr><th>Code</th><th>Patient</th><th>Insurance</th><th>Claim Status</th></tr></thead><tbody>');
-    filteredData.forEach(row => {
-      printWindow.document.write(`<tr><td>${row.code}</td><td>${row.patient}</td><td>${row.insurance}</td><td>${row.claimStatus}</td></tr>`);
-    });
-    printWindow.document.write('</tbody></table>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    const printContent = document.getElementById('procedures-insurance-print-area');
+    if (!printContent) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Procedures By Insurance Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Procedures By Insurance Report</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${startDate} to ${endDate}</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${printContent.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 500);
+    };
   };
 
   return (
@@ -161,25 +257,19 @@ const ProceduresInsurance = () => {
         hasData={filteredData.length > 0}
       />
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-          <CircularProgress size={32} />
-        </Box>
-      ) : !payerName.trim() ? (
-        <Box sx={{ pt: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <Typography sx={{ color: '#888', fontSize: '0.9rem', fontStyle: 'italic' }}>
-              Please enter a payer name to filter results
-            </Typography>
+      <Box id="procedures-insurance-print-area">
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={32} />
           </Box>
-        </Box>
-      ) : filteredData.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          No data available for the selected payer.
-        </Typography>
-      ) : (
-        <ProceduresInsuranceTable data={filteredData} />
-      )}
+        ) : filteredData.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+            No data available for the selected payer or date range.
+          </Typography>
+        ) : (
+          <ProceduresInsuranceTable data={filteredData} />
+        )}
+      </Box>
     </ReportLayout>
   );
 };
