@@ -46,6 +46,16 @@ const ProgressNotesDialog = ({ open, onClose }) => {
    const [kind, setKind] = useState("All");
    const [providerId, setProviderId] = useState("All");
 
+   const startDateRef = React.useRef(startDate);
+   const endDateRef = React.useRef(endDate);
+   const providerIdRef = React.useRef(providerId);
+   const kindRef = React.useRef(kind);
+
+   useEffect(() => { startDateRef.current = startDate; }, [startDate]);
+   useEffect(() => { endDateRef.current = endDate; }, [endDate]);
+   useEffect(() => { providerIdRef.current = providerId; }, [providerId]);
+   useEffect(() => { kindRef.current = kind; }, [kind]);
+
   const signedData = useSelector(selectSignedNotes);
   const unsignedData = useSelector(selectUnsignedNotes);
   const checkoutAppointments = useSelector(selectCheckoutCompleteList);
@@ -78,10 +88,10 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   // It is async so we can await all three dispatches with Promise.all and keep
   // isLocalLoading true for the entire round-trip.
   const fetchData = useCallback(async (
-    sd = startDate,
-    ed = endDate,
-    pid = providerId,
-    k = kind,
+    sd = startDateRef.current,
+    ed = endDateRef.current,
+    pid = providerIdRef.current,
+    k = kindRef.current,
   ) => {
     const filters = {
       startDate: sd.format("YYYY-MM-DD"),
@@ -120,26 +130,51 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       note.assessment     ? `Assessment: ${note.assessment}`         : null,
       note.plan           ? `Plan: ${note.plan}`                     : null,
     ].filter(Boolean);
-    const content = note.content || (parts.length ? parts.join('\n\n') : '');
+    const content = (note.content !== undefined && note.content !== null) ? note.content : (parts.length ? parts.join('\n\n') : '');
+
+    // Structured notes (created via the Treatment Plan EditNoteForm) store their
+    // body in structuredData — pull readable text from it so they don't render
+    // as "No content available for this note."
+    const sd = note.structuredData;
+    const sdText = (typeof sd === 'string' ? sd : null)
+      || sd?.procedureAccomplished
+      || sd?.treatmentRequirementsNotes
+      || sd?.restorativeTreatment
+      || (Array.isArray(sd?.isolation) ? sd.isolation.join(', ') : sd?.isolation)
+      || null;
+    const resolvedContent = content !== '' ? content : (sdText || '');
 
     return {
       ...note,
       patientId,
       providerId,
-      content,
+      content: resolvedContent,
       noteType: note.noteType || 'Treatment',
     };
   };
+
+  // A commlog row only counts as a progress note here if it carries meaningful
+  // clinical content. Without this, generic communication records (appointments,
+  // SMS, seed data) that reach the frontend would render as empty unsigned notes.
+  const hasClinicalContent = (note) => Boolean(
+    note?.content
+    || note?.chiefComplaint
+    || note?.subjective
+    || note?.objective
+    || note?.assessment
+    || note?.plan
+    || note?.structuredData
+  );
 
   const [signedNotes, setSignedNotes] = useState([]);
   const [unsignedNotes, setUnsignedNotes] = useState([]);
 
   useEffect(() => {
-    setSignedNotes((signedData || []).map(normalizeNote));
+    setSignedNotes((signedData || []).map(normalizeNote).filter(hasClinicalContent));
   }, [signedData]);
 
   useEffect(() => {
-    setUnsignedNotes((unsignedData || []).map(normalizeNote));
+    setUnsignedNotes((unsignedData || []).map(normalizeNote).filter(hasClinicalContent));
   }, [unsignedData]);
 
   const missingNotes = useMemo(() => {

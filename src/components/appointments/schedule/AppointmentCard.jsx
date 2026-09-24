@@ -475,9 +475,9 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                       e.stopPropagation();
                       if (appointment.patientId)
                         navigate(
-                          `/clinical/progress-notes?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
+                          `/clinical-notes/create?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
                         );
-                      else navigate(`/clinical/progress-notes?appointmentId=${appointment._id || appointment.id}`);
+                      else navigate(`/clinical-notes/create?appointmentId=${appointment._id || appointment.id}`);
                     }}
                   />
                 </Tooltip>

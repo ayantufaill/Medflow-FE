@@ -20,7 +20,7 @@ import dayjs from 'dayjs';
 import EditNoteForm from '../edit-note/EditNoteForm';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
 
-const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, selectedProcedures }) => {
+const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, currentPatient, selectedProcedures }) => {
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilters, setActiveFilters] = useState(['Clinical']);
@@ -365,7 +365,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, currentPatient, se
               noteId={activeNoteId} 
               view={view}
               patientId={patientId || "1"} 
-              appointmentId={"1"} 
+              appointmentId={appointmentId || "1"} 
               providerId={"1"}
               currentPatient={currentPatient}
               selectedProcedures={selectedProcedures}

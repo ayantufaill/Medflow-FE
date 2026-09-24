@@ -784,6 +784,7 @@ const NewTreatmentPlanPage = () => {
         onClose={() => setIsNotesDrawerOpen(false)}
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
+        appointmentId={searchParams.get('appointmentId')}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
       />
