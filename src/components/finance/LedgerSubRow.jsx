@@ -59,7 +59,8 @@ const LedgerSubRow = ({
   onEOBClick,
   eobData,
   onPrintClaimClick,
-  onReopenClaimClick,
+  onToggleClaimClosed,
+  closedClaimOverrides,
   onEditClaimClick,
   onSendClaimClick,
   onVoidAndRecreateClick,
@@ -90,15 +91,15 @@ const LedgerSubRow = ({
     ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0)
     : 0;
 
-  const isPaidClaim = isClaim && claimStatus?.toLowerCase() === "paid";
+  const statusIsClosed = ["paid", "cancelled"].includes(claimStatus?.toLowerCase());
   const isClosedClaim =
-    isClaim && ["paid", "cancelled"].includes(claimStatus?.toLowerCase());
+    isClaim && (closedClaimOverrides?.[id] ?? statusIsClosed);
   const isUnsentClaim =
     isClaim &&
     ["draft", "readyforsubmission"].includes(claimStatus?.toLowerCase());
-  const rowBgColor = isVoided ? "#ef4444" : isPaidClaim ? "#619c38" : "#FFFFFF";
-  const textPrimaryColor = isVoided || isPaidClaim ? "#FFFFFF" : "#1A1A1A";
-  const textSecondaryColor = isVoided || isPaidClaim ? "#E0E0E0" : "#6B778C";
+  const rowBgColor = isVoided ? "#ef4444" : isClosedClaim ? "#619c38" : "#FFFFFF";
+  const textPrimaryColor = isVoided || isClosedClaim ? "#FFFFFF" : "#1A1A1A";
+  const textSecondaryColor = isVoided || isClosedClaim ? "#E0E0E0" : "#6B778C";
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -114,7 +115,7 @@ const LedgerSubRow = ({
           bgcolor: rowBgColor,
           cursor: hasProcedures ? "pointer" : "default",
           "&:hover": {
-            bgcolor: isVoided ? "#ef4444" : isPaidClaim ? "#568b31" : "#f8f9fa",
+            bgcolor: isVoided ? "#ef4444" : isClosedClaim ? "#568b31" : "#f8f9fa",
           },
         }}
       >
@@ -167,7 +168,7 @@ const LedgerSubRow = ({
                 <Box
                   component="span"
                   sx={{
-                    color: isPaidClaim ? "#fff" : "#2362EF",
+                    color: isClosedClaim ? "#fff" : "#2362EF",
                     fontWeight: "bold",
                   }}
                 >
@@ -188,7 +189,7 @@ const LedgerSubRow = ({
             </Typography>
           ) : isClaim ? (
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              {isPaidClaim && (
+              {isClaim && claimStatus?.toLowerCase() === "paid" && (
                 <CheckCircle sx={{ fontSize: 16, color: "#fff", mr: 0.5 }} />
               )}
               <Typography
@@ -229,7 +230,7 @@ const LedgerSubRow = ({
               sx={{
                 width: 100,
                 fontWeight: 600,
-                color: isPaidClaim ? "#fff" : "#e57373",
+                color: isClosedClaim ? "#fff" : "#e57373",
                 fontSize: "11px",
                 textAlign: "right",
                 mr: 2,
@@ -242,7 +243,7 @@ const LedgerSubRow = ({
               sx={{
                 width: 110,
                 fontWeight: 600,
-                color: isPaidClaim ? "#fff" : "#e57373",
+                color: isClosedClaim ? "#fff" : "#e57373",
                 fontSize: "11px",
                 textAlign: "right",
                 mr: 2,
@@ -263,7 +264,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: isPaidClaim ? "#fff" : "#e57373",
+                  color: isClosedClaim ? "#fff" : "#e57373",
                   fontSize: "10px",
                 }}
               >
@@ -273,7 +274,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: isPaidClaim ? "#fff" : "#e57373",
+                  color: isClosedClaim ? "#fff" : "#e57373",
                   fontSize: "11px",
                 }}
               >
@@ -287,13 +288,11 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 fontWeight: 600,
-                color: isPaidClaim
+                color: isClosedClaim
                   ? "#fff"
                   : claimStatus?.toLowerCase() === "rejected" || claimStatus?.toLowerCase() === "denied"
                     ? "#ef4444"
-                    : isClosedClaim
-                      ? "#6B778C"
-                      : "#f59e0b",
+                    : "#f59e0b",
                 fontSize: "11px",
                 whiteSpace: "nowrap",
               }}
@@ -439,11 +438,11 @@ const LedgerSubRow = ({
                 </Box>
               </Tooltip>
               {/* Arrows pointing in */}
-              <Tooltip title="Open/Close Claim" placement="top">
+              <Tooltip title={isClosedClaim ? "Open Claim" : "Close Claim"} placement="top">
                 <Box
                   onClick={(e) => {
                     e.stopPropagation();
-                    onReopenClaimClick?.(eobData || attachData);
+                    onToggleClaimClosed?.(eobData || attachData);
                   }}
                   sx={{
                     width: 22,
@@ -467,13 +466,18 @@ const LedgerSubRow = ({
               {/* Shield / Send Claim / Void & Recreate */}
               <Tooltip
                 title={
-                  isUnsentClaim ? "Submit Claim" : "Void and Recreate Claim"
+                  isClosedClaim
+                    ? "Claim is closed"
+                    : isUnsentClaim
+                      ? "Submit Claim"
+                      : "Void and Recreate Claim"
                 }
                 placement="top"
               >
                 <Box
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (isClosedClaim) return;
                     if (isUnsentClaim) {
                       onSendClaimClick?.(eobData || attachData);
                     } else {
@@ -487,7 +491,8 @@ const LedgerSubRow = ({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: "pointer",
+                    cursor: isClosedClaim ? "not-allowed" : "pointer",
+                    opacity: isClosedClaim ? 0.4 : 1,
                   }}
                 >
                   {isUnsentClaim ? (
@@ -562,7 +567,7 @@ const LedgerSubRow = ({
                   <PrintOutlined
                     sx={{
                       fontSize: 20,
-                      color: isPaidClaim ? "#fff" : "#38bdf8",
+                      color: isClosedClaim ? "#fff" : "#38bdf8",
                     }}
                   />
                 </Box>
@@ -728,8 +733,8 @@ const LedgerSubRow = ({
             pl: 4,
             pr: 3,
             py: 1,
-            bgcolor: isPaidClaim ? "#568b31" : "#fbfbfb",
-            borderTop: isPaidClaim ? "1px solid #6b9e42" : "1px solid #eee",
+            bgcolor: isClosedClaim ? "#568b31" : "#fbfbfb",
+            borderTop: isClosedClaim ? "1px solid #6b9e42" : "1px solid #eee",
           }}
         >
           {/* Header for the procedures */}
@@ -738,7 +743,7 @@ const LedgerSubRow = ({
               display: "flex",
               alignItems: "center",
               py: 0.5,
-              borderBottom: isPaidClaim
+              borderBottom: isClosedClaim
                 ? "1px solid #6b9e42"
                 : "1px solid #ddd",
               mb: 1,
@@ -748,7 +753,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 80,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
               }}
@@ -759,7 +764,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 60,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
               }}
@@ -770,7 +775,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 flexGrow: 1,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
               }}
@@ -781,7 +786,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 120,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
               }}
@@ -792,7 +797,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 100,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
                 textAlign: "right",
@@ -805,7 +810,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 110,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
                 textAlign: "right",
@@ -818,7 +823,7 @@ const LedgerSubRow = ({
               variant="caption"
               sx={{
                 width: 140,
-                color: isPaidClaim ? "#E0E0E0" : "#666",
+                color: isClosedClaim ? "#E0E0E0" : "#666",
                 fontSize: "10px",
                 fontWeight: 600,
                 textAlign: "right",
@@ -839,7 +844,7 @@ const LedgerSubRow = ({
                 py: 0.75,
                 borderBottom:
                   idx !== procedures.length - 1
-                    ? isPaidClaim
+                    ? isClosedClaim
                       ? "1px dashed #6b9e42"
                       : "1px dashed #e0e0e0"
                     : "none",
@@ -849,7 +854,7 @@ const LedgerSubRow = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    color: isPaidClaim ? "#E0E0E0" : "#555",
+                    color: isClosedClaim ? "#E0E0E0" : "#555",
                     fontSize: "11px",
                   }}
                 >
@@ -872,7 +877,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   flexGrow: 1,
-                  color: isPaidClaim ? "#F0F0F0" : "#444",
+                  color: isClosedClaim ? "#F0F0F0" : "#444",
                   fontSize: "11px",
                 }}
               >
@@ -883,7 +888,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   width: 120,
-                  color: isPaidClaim ? "#E0E0E0" : "#555",
+                  color: isClosedClaim ? "#E0E0E0" : "#555",
                   fontSize: "11px",
                 }}
               >

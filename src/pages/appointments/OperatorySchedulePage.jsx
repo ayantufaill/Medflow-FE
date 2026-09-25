@@ -1327,10 +1327,10 @@ const OperatorySchedulePage = () => {
 
         if (dragData.isFamilyAppointmentsBlock) {
           const dateStr = reduxSelectedDate || dayjs().format("YYYY-MM-DD");
-          dispatch(setFamilyAppointmentsSchedulingDate(dateStr));
-          dispatch(setFamilyAppointmentsSchedulingTime({ hour, mins }));
-          dispatch(setFamilyAppointmentsSchedulingRoomId(roomId));
-          dispatch(setFamilyAppointmentsRecareDueDates({}));
+          setFamilyAppointmentsSchedulingDate(dateStr);
+          setFamilyAppointmentsSchedulingTime({ hour, mins });
+          setFamilyAppointmentsSchedulingRoomId(roomId);
+          setFamilyAppointmentsRecareDueDates({});
           setFamilyAppointmentsDialogOpen(true);
           return;
         }

@@ -35,7 +35,8 @@ const LedgerItemCard = ({
   setPrintItem,
   onEOBClick,
   onPrintClaimClick,
-  onReopenClaimClick,
+  onToggleClaimClosed,
+  closedClaimOverrides,
   handleAddProcedureClick,
   handleAttachClick,
   onEditClaimClick,
@@ -524,7 +525,7 @@ const LedgerItemCard = ({
                 }}
                 eobData={{ ...detail, invoiceId: detail.invoiceId || displayItem.id }}
                 onPrintClaimClick={onPrintClaimClick}
-                onReopenClaimClick={onReopenClaimClick}
+                onToggleClaimClosed={onToggleClaimClosed}
                 onEditClaimClick={onEditClaimClick}
                 onSendClaimClick={onSendClaimClick}
                 onVoidAndRecreateClick={onVoidAndRecreateClick}
@@ -556,6 +557,7 @@ const LedgerItemCard = ({
                 attachData={detail}
                 procedures={detail.procedures}
                 claimStatus={detail.status}
+                closedClaimOverrides={closedClaimOverrides}
                 statusResponse={detail.statusResponse}
                 isApproved={detail.isApproved}
               />

@@ -73,11 +73,11 @@ const PatientActions = ({ appointment }) => {
   };
 
   const handleFamilyAppointments = () => {
-    if (!selectedPatientId) return;
-    dispatch(setFamilyAppointmentsSchedulingDate(null));
-    dispatch(setFamilyAppointmentsSchedulingTime(null));
-    dispatch(setFamilyAppointmentsSchedulingRoomId(null));
-    dispatch(setFamilyAppointmentsRecareDueDates({}));
+    if (!currentPatient) return;
+    setFamilyAppointmentsSchedulingDate(null);
+    setFamilyAppointmentsSchedulingTime(null);
+    setFamilyAppointmentsSchedulingRoomId(null);
+    setFamilyAppointmentsRecareDueDates({});
     setFamilyAppointmentsDialogOpen(true);
   };
 
