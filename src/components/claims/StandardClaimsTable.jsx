@@ -121,7 +121,9 @@ export const StandardClaimsTable = ({
     try {
       const payload = editingDescField === "clearingHouseMessage"
         ? { denialReason: editingDescValue }
-        : { notes: editingDescValue };
+        : editingDescField === "notes"
+          ? { notes: editingDescValue }
+          : { description: editingDescValue };
       await claimService.updateClaim(id, payload);
       window.dispatchEvent(new CustomEvent('refresh-claims'));
       setEditingDescId(null);
@@ -351,6 +353,7 @@ export const StandardClaimsTable = ({
             <TableCell>
               Description
             </TableCell>
+            <TableCell></TableCell>
             <TableCell align="right">
               Actions
             </TableCell>
@@ -374,16 +377,16 @@ export const StandardClaimsTable = ({
               <TableCell
                 colSpan={
                   activeTab === 4
-                    ? 17
+                    ? 18
                     : activeTab === 5
-                      ? 13
+                      ? 14
                       : activeTab === 2 || activeTab === 3
-                        ? 14
+                        ? 15
                         : activeTab === 1
-                          ? 12
+                          ? 13
                           : activeTab === 0
-                            ? 12
-                            : 11
+                            ? 13
+                            : 12
                 }
                 align="center"
                 sx={{ py: 6 }}
@@ -1082,6 +1085,34 @@ export const StandardClaimsTable = ({
                       )}
                     </TableCell>
 
+                    {/* Narrative */}
+                    <TableCell
+                      sx={{
+                        verticalAlign: "top",
+                        minWidth: "150px",
+                      }}
+                      onDoubleClick={(e) => {
+                        if (activeTab === 1 || activeTab === 2 || activeTab === 3) return;
+                        if (editingDescId !== claim.id) {
+                          handleDescDoubleClick(claim.id, claim.notes, e, "notes");
+                        }
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontFamily: "Inter, sans-serif",
+                          color: "#475569",
+                          fontStyle: "italic",
+                          fontSize: "0.75rem",
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {claim.notes || "—"}
+                      </Typography>
+                    </TableCell>
+
                     {/* Actions */}
                     <TableCell align="right">
                       <Box
@@ -1135,8 +1166,8 @@ export const StandardClaimsTable = ({
                                 <IconButton
                                   size="small"
                                   onClick={(e) => {
-                                    if (activeTab === 0 || activeTab === 4) {
-                                      handleDescDoubleClick(claim.id, claim.description || claim.notes, e);
+                                    if (activeTab === 0 || activeTab === 4 || activeTab === 5) {
+                                      handleDescDoubleClick(claim.id, claim.notes, e, "notes");
                                     } else {
                                       handleOpenEdit(claim);
                                     }
