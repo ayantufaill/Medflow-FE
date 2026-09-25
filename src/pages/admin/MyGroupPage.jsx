@@ -24,9 +24,11 @@ import { useBranch } from '../../hooks/redux';
 import { hasRequiredRole } from '../../config/navMenuItems';
 import {
   fetchGroupUsers,
+  fetchGroupById,
   selectGroupUsers,
   selectGroupUsersLoading,
   selectGroupUsersError,
+  selectCurrentGroup,
 } from '../../store/slices/practiceGroupSlice';
 import {
   fetchUsers,
@@ -82,6 +84,8 @@ const MyGroupPage = () => {
   const groupUsersLoading = useSelector(selectGroupUsersLoading);
   const groupUsersError = useSelector(selectGroupUsersError);
 
+  const currentGroup = useSelector(selectCurrentGroup);
+
   const allUsers = useSelector(selectUserList) || [];
   const allUsersLoading = useSelector(selectUserListLoading);
 
@@ -127,6 +131,12 @@ const MyGroupPage = () => {
   }, [dispatch, groupId, isBranchAdminOnly]);
 
   useEffect(() => {
+    if (groupId) {
+      dispatch(fetchGroupById(groupId));
+    }
+  }, [dispatch, groupId]);
+
+  useEffect(() => {
     if (tab === 'providers') {
       dispatch(fetchProviders({ limit: 100, branchId: isBranchAdminOnly ? ownBranchIds[0] : undefined }));
     }
@@ -159,9 +169,13 @@ const MyGroupPage = () => {
           My Group
         </Typography>
         <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.9rem' }}>
-          {isBranchAdminOnly
-            ? 'Reassign users and providers assigned to your branch.'
-            : 'Reassign users and providers to branches within your practice group.'}
+          {currentGroup?.name
+            ? (isBranchAdminOnly
+              ? `${currentGroup.name} · reassign users and providers assigned to your branch.`
+              : `${currentGroup.name} · reassign users and providers to branches within your practice group.`)
+            : (isBranchAdminOnly
+              ? 'Reassign users and providers assigned to your branch.'
+              : 'Reassign users and providers to branches within your practice group.')}
         </Typography>
       </Box>
 
