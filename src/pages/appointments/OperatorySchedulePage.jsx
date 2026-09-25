@@ -20,7 +20,7 @@ import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
 import { appointmentService } from "../../services/appointment.service";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   setSelectedAppointmentId,
   fetchAppointments,
@@ -28,10 +28,16 @@ import {
   updateAppointmentInList,
   invalidateAppointmentDetail,
   setCurrentAppointment,
+  setFamilyAppointmentsDialogOpen,
+  setFamilyAppointmentsSchedulingDate,
+  setFamilyAppointmentsSchedulingTime,
+  setFamilyAppointmentsSchedulingRoomId,
+  setFamilyAppointmentsRecareDueDates,
 } from "../../store/slices/appointmentSlice";
+import { selectFamilyAppointmentsRecareDueDates } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
 import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
 import FamilyAppointmentsDialog from "../../components/appointments/schedule/family-appointments-modal/FamilyAppointmentsDialog";
 import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
@@ -95,6 +101,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const OperatorySchedulePage = () => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
+  const recareDueDates = useSelector(selectFamilyAppointmentsRecareDueDates);
 
   // ── Dropdown data (providers, rooms, appointment types) ──────────
   const { providers, rooms, appointmentTypes } = useDropdownData({
@@ -119,8 +126,9 @@ const OperatorySchedulePage = () => {
     },
   });
   const sensors = useSensors(mouseSensor, touchSensor);
-  const [activeDragData, setActiveDragData] = useState(null);
-  const [pendingItems, setPendingItems] = useState([]);
+   const [activeDragData, setActiveDragData] = useState(null);
+   const [pendingItems, setPendingItems] = useState([]);
+   const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Dynamically derive operatory columns from the rooms list.
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -142,7 +150,7 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate, familyAppointmentsDialogOpen, setFamilyAppointmentsDialogOpen, familyAppointmentsSchedulingDate, setFamilyAppointmentsSchedulingDate, familyAppointmentsSchedulingRoomId, setFamilyAppointmentsSchedulingRoomId } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
 // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
@@ -236,16 +244,12 @@ const OperatorySchedulePage = () => {
     } else if (dragData.isBlockSlot) {
       const block = dragData.block;
       const blockId = dragData.blockId;
-      if (pendingItems.some(item => item.id === blockId)) {
-        showSnackbar("Block is already in the pending list", "info");
-        return;
-      }
       setPendingItems(prev => [...prev, {
-        id: blockId,
+        id: `${blockId}-copy-${Date.now()}`,
         type: "block",
         data: block
       }]);
-      showSnackbar(`Moved calendar block to Pending`, "success");
+      showSnackbar(`Added calendar block copy to Pending`, "success");
     }
   };
 
@@ -334,57 +338,70 @@ const OperatorySchedulePage = () => {
         setFormSaving(false);
       }
     } else if (isAppt) {
-      try {
-        setFormSaving(true);
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-
-        await updateAppointment(itemId, {
-          appointmentDate: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          roomId: roomId,
-          status: "scheduled"
-        });
-
-        showSnackbar("Appointment rescheduled successfully", "success");
-      } catch (err) {
-        if (err.status === 409 || err.response?.status === 409) {
-          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
-          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
-        } else {
-          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
-          showSnackbar(msg, "error");
-        }
-      } finally {
-        setFormSaving(false);
-      }
+      setConfirmDialog({
+        message: "Are you want to move this appointment?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            setFormSaving(true);
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            await updateAppointment(itemId, {
+              appointmentDate: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              roomId: roomId,
+              status: "scheduled"
+            });
+            showSnackbar("Appointment rescheduled successfully", "success");
+          } catch (err) {
+            if (err.status === 409 || err.response?.status === 409) {
+              const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
+              showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+            } else {
+              const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+              showSnackbar(msg, "error");
+            }
+          } finally {
+            setFormSaving(false);
+          }
+        },
+      });
+      return;
     } else if (isBlock) {
-      try {
-        // Always delete the old block, even if it's coming from pending, 
-        // because we don't delete it when moving it TO pending (to prevent data loss on refresh)
-        if (itemId && !String(itemId).startsWith("temp-")) {
-          await scheduleBlockService.deleteBlock(itemId);
-        }
-
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-        const newBlockData = {
-          roomId: roomId,
-          date: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          notes: itemData.notes || "Blocked Slot",
-          color: itemData.color || "#ffe082"
-        };
-
-        await scheduleBlockService.createBlock(newBlockData);
-        showSnackbar("Calendar block rescheduled successfully", "success");
-        setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        refetchScheduleBlocks();
-      } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
-        showSnackbar(msg, "error");
-      }
-} else if (dragData.isRecareBlock) {
+      setConfirmDialog({
+        message: "Are you want to move this block?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            const newBlockData = {
+              roomId: roomId,
+              date: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              notes: itemData.notes || "Blocked Slot",
+              color: itemData.color || "#ffe082"
+            };
+            await scheduleBlockService.createBlock(newBlockData);
+            if (dragData.isPendingItem) {
+              showSnackbar("Calendar block copy placed successfully", "success");
+            } else {
+              if (itemId && !String(itemId).startsWith("temp-")) {
+                await scheduleBlockService.deleteBlock(itemId);
+              }
+              showSnackbar("Calendar block rescheduled successfully", "success");
+            }
+            refetchScheduleBlocks();
+          } catch (err) {
+            const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
+            showSnackbar(msg, "error");
+          }
+        },
+      });
+      return;
+    } else if (dragData.isRecareBlock) {
       // Handle recare/treatment block drop - pass data directly via initialAppointment
       const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
       const appointmentDate = start.format("YYYY-MM-DD");
@@ -641,10 +658,9 @@ const OperatorySchedulePage = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [completeProceduresOpen, setCompleteProceduresOpen] = useState(false);
-  const [selectProductsOpen, setSelectProductsOpen] = useState(false);
-  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
-  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
-  const [loadingFormPatients, setLoadingFormPatients] = useState(false);
+   const [selectProductsOpen, setSelectProductsOpen] = useState(false);
+   const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
 
   const searchFormPatients = useCallback(async (search = '') => {
     try {
@@ -1308,6 +1324,17 @@ const OperatorySchedulePage = () => {
         const hour = parseInt(parts[2], 10);
         const mins = parseInt(parts[3], 10);
         const minutesFromStart = (hour - START_HOUR) * 60 + mins;
+
+        if (dragData.isFamilyAppointmentsBlock) {
+          const dateStr = reduxSelectedDate || dayjs().format("YYYY-MM-DD");
+          dispatch(setFamilyAppointmentsSchedulingDate(dateStr));
+          dispatch(setFamilyAppointmentsSchedulingTime({ hour, mins }));
+          dispatch(setFamilyAppointmentsSchedulingRoomId(roomId));
+          dispatch(setFamilyAppointmentsRecareDueDates({}));
+          setFamilyAppointmentsDialogOpen(true);
+          return;
+        }
+
         handleDropReschedule(roomId, minutesFromStart, dragData);
       }
     }
@@ -1360,6 +1387,7 @@ const OperatorySchedulePage = () => {
           <LeftPanel 
             selectedAppointment={selectedAppointment} 
             onSelectAppointment={setSelectedAppointment}
+            pendingItems={pendingItems}
           />
         </Box>
 
@@ -1510,12 +1538,6 @@ const OperatorySchedulePage = () => {
           open={bulkTextDialogOpen}
           onClose={() => setBulkTextDialogOpen(false)}
           selectedDate={selectedDate}
-          providers={providers || []}
-        />
-
-        <ProgressNotesDialog
-          open={progressNotesOpen}
-          onClose={() => setProgressNotesOpen(false)}
           providers={providers || []}
         />
 
@@ -1734,6 +1756,21 @@ const OperatorySchedulePage = () => {
       {/* Route Slip Modal */}
       <RouteSlipDialog />
       <FamilyAppointmentsDialog />
+
+      <ConfirmationDialog
+        open={confirmDialog !== null}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={() => {
+          const cb = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (cb) cb();
+        }}
+        title="Confirm Move"
+        message={confirmDialog?.message || "Are you sure?"}
+        confirmText={confirmDialog?.confirmText || "Yes"}
+        cancelText={confirmDialog?.cancelText || "Cancel"}
+        confirmColor={COLORS.ACCENT}
+      />
 
       <Backdrop
         sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 9999 }}

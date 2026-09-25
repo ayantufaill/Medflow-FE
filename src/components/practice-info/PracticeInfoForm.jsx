@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Box,
@@ -18,6 +18,8 @@ import {
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import { practiceInfoValidations } from '../../validations/practiceInfoValidations';
+import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
+import { TIME_ZONES, STATE_TIME_ZONES } from '../../constants/timeZones';
 
 const PracticeInfoForm = ({
   onSubmit,
@@ -39,6 +41,7 @@ const PracticeInfoForm = ({
     control,
     reset,
     watch,
+    setValue,
   } = useForm({
     defaultValues: initialData || {
       practiceName: '',
@@ -56,7 +59,7 @@ const PracticeInfoForm = ({
         postalCode: '',
       },
       logo: null,
-      timezone: 'UTC',
+      timezone: 'Asia/Karachi',
       businessHours: {},
     },
   });
@@ -80,7 +83,7 @@ const PracticeInfoForm = ({
         },
         logo: null,
         logoPath: initialData.logoPath || '',
-        timezone: initialData.timezone || 'UTC',
+        timezone: initialData.timezone || 'Asia/Karachi',
         businessHours: initialData.businessHours || {},
       });
       if (initialData.logoPath) {
@@ -92,6 +95,14 @@ const PracticeInfoForm = ({
   const handleBack = () => {
     window.history.back();
   };
+
+  const selectedState = watch('address.state');
+  const availableCities = STATE_CITIES[selectedState] || [];
+
+  const timeZoneOptions = useMemo(() => {
+    const stateZones = selectedState ? STATE_TIME_ZONES[selectedState] || [] : TIME_ZONES.map((tz) => tz.value);
+    return TIME_ZONES.filter((tz) => new Set([...stateZones, 'Asia/Karachi']).has(tz.value));
+  }, [selectedState]);
 
   const sanitizeValue = (value) =>
     typeof value === 'string' ? value.trim() : value;
@@ -319,25 +330,67 @@ const PracticeInfoForm = ({
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField
-            fullWidth
-            label="City"
-            {...register('address.city', practiceInfoValidations.address.city)}
-            error={!!errors.address?.city}
-            helperText={errors.address?.city?.message}
-          />
+          <FormControl fullWidth error={!!errors.address?.state}>
+            <InputLabel>State</InputLabel>
+            <Controller
+              name="address.state"
+              control={control}
+              rules={practiceInfoValidations.address.state}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    setValue('address.city', '');
+                  }}
+                  label="State"
+                >
+                  <MenuItem value="" disabled>
+                    Select State
+                  </MenuItem>
+                  {US_STATES.map((s) => (
+                    <MenuItem key={s.value} value={s.value}>
+                      {s.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+            />
+            {errors.address?.state && (
+              <FormHelperText>{errors.address.state.message}</FormHelperText>
+            )}
+          </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField
-            fullWidth
-            label="State"
-            {...register(
-              'address.state',
-              practiceInfoValidations.address.state
+          <FormControl fullWidth error={!!errors.address?.city}>
+            <InputLabel>City</InputLabel>
+            <Controller
+              name="address.city"
+              control={control}
+              rules={practiceInfoValidations.address.city}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  value={field.value || ''}
+                  disabled={!selectedState}
+                  label="City"
+                >
+                  <MenuItem value="" disabled>
+                    Select City
+                  </MenuItem>
+                  {availableCities.map((c) => (
+                    <MenuItem key={c} value={c}>
+                      {c}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+            />
+            {errors.address?.city && (
+              <FormHelperText>{errors.address.city.message}</FormHelperText>
             )}
-            error={!!errors.address?.state}
-            helperText={errors.address?.state?.message}
-          />
+          </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
@@ -441,286 +494,23 @@ const PracticeInfoForm = ({
               render={({ field }) => (
                 <Select
                   {...field}
-                  value={field.value || 'UTC'}
+                  value={field.value || 'Asia/Karachi'}
                   onChange={(e) => field.onChange(e.target.value)}
                   label="Timezone"
+                  renderValue={(v) => {
+                    const tz = TIME_ZONES.find((t) => t.value === v);
+                    return (
+                      <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {tz ? tz.label : v}
+                      </Box>
+                    );
+                  }}
                 >
-                  <MenuItem value="UTC">
-                    UTC (Coordinated Universal Time)
-                  </MenuItem>
-                  <MenuItem disabled>
-                    ────────── North America ──────────
-                  </MenuItem>
-                  <MenuItem value="America/New_York">
-                    America/New_York (Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="America/Chicago">
-                    America/Chicago (Central Time)
-                  </MenuItem>
-                  <MenuItem value="America/Denver">
-                    America/Denver (Mountain Time)
-                  </MenuItem>
-                  <MenuItem value="America/Los_Angeles">
-                    America/Los_Angeles (Pacific Time)
-                  </MenuItem>
-                  <MenuItem value="America/Phoenix">
-                    America/Phoenix (Mountain Time - No DST)
-                  </MenuItem>
-                  <MenuItem value="America/Anchorage">
-                    America/Anchorage (Alaska Time)
-                  </MenuItem>
-                  <MenuItem value="America/Honolulu">
-                    America/Honolulu (Hawaii Time)
-                  </MenuItem>
-                  <MenuItem value="America/Toronto">
-                    America/Toronto (Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="America/Vancouver">
-                    America/Vancouver (Pacific Time)
-                  </MenuItem>
-                  <MenuItem value="America/Montreal">
-                    America/Montreal (Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="America/Winnipeg">
-                    America/Winnipeg (Central Time)
-                  </MenuItem>
-                  <MenuItem value="America/Calgary">
-                    America/Calgary (Mountain Time)
-                  </MenuItem>
-                  <MenuItem value="America/Halifax">
-                    America/Halifax (Atlantic Time)
-                  </MenuItem>
-                  <MenuItem disabled>
-                    ────────── Central & South America ──────────
-                  </MenuItem>
-                  <MenuItem value="America/Mexico_City">
-                    America/Mexico_City (Central Time)
-                  </MenuItem>
-                  <MenuItem value="America/Bogota">
-                    America/Bogota (Colombia Time)
-                  </MenuItem>
-                  <MenuItem value="America/Lima">
-                    America/Lima (Peru Time)
-                  </MenuItem>
-                  <MenuItem value="America/Santiago">
-                    America/Santiago (Chile Time)
-                  </MenuItem>
-                  <MenuItem value="America/Sao_Paulo">
-                    America/Sao_Paulo (Brasilia Time)
-                  </MenuItem>
-                  <MenuItem value="America/Buenos_Aires">
-                    America/Buenos_Aires (Argentina Time)
-                  </MenuItem>
-                  <MenuItem value="America/Caracas">
-                    America/Caracas (Venezuela Time)
-                  </MenuItem>
-                  <MenuItem value="America/La_Paz">
-                    America/La_Paz (Bolivia Time)
-                  </MenuItem>
-                  <MenuItem disabled>────────── Europe ──────────</MenuItem>
-                  <MenuItem value="Europe/London">
-                    Europe/London (Greenwich Mean Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Paris">
-                    Europe/Paris (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Berlin">
-                    Europe/Berlin (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Rome">
-                    Europe/Rome (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Madrid">
-                    Europe/Madrid (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Amsterdam">
-                    Europe/Amsterdam (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Brussels">
-                    Europe/Brussels (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Vienna">
-                    Europe/Vienna (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Zurich">
-                    Europe/Zurich (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Stockholm">
-                    Europe/Stockholm (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Copenhagen">
-                    Europe/Copenhagen (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Oslo">
-                    Europe/Oslo (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Dublin">
-                    Europe/Dublin (Greenwich Mean Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Lisbon">
-                    Europe/Lisbon (Western European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Warsaw">
-                    Europe/Warsaw (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Prague">
-                    Europe/Prague (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Budapest">
-                    Europe/Budapest (Central European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Athens">
-                    Europe/Athens (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Bucharest">
-                    Europe/Bucharest (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Sofia">
-                    Europe/Sofia (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Helsinki">
-                    Europe/Helsinki (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Europe/Moscow">
-                    Europe/Moscow (Moscow Time)
-                  </MenuItem>
-                  <MenuItem disabled>────────── Asia ──────────</MenuItem>
-                  <MenuItem value="Asia/Dubai">
-                    Asia/Dubai (Gulf Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Riyadh">
-                    Asia/Riyadh (Arabia Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Kuwait">
-                    Asia/Kuwait (Arabia Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Qatar">
-                    Asia/Qatar (Arabia Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Bahrain">
-                    Asia/Bahrain (Arabia Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Muscat">
-                    Asia/Muscat (Gulf Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Karachi">
-                    Asia/Karachi (Pakistan Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Kolkata">
-                    Asia/Kolkata (India Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Dhaka">
-                    Asia/Dhaka (Bangladesh Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Colombo">
-                    Asia/Colombo (Sri Lanka Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Kathmandu">
-                    Asia/Kathmandu (Nepal Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Kabul">
-                    Asia/Kabul (Afghanistan Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Tehran">
-                    Asia/Tehran (Iran Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Baghdad">
-                    Asia/Baghdad (Arabia Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Jerusalem">
-                    Asia/Jerusalem (Israel Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Beirut">
-                    Asia/Beirut (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Amman">
-                    Asia/Amman (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Damascus">
-                    Asia/Damascus (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Bangkok">
-                    Asia/Bangkok (Indochina Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Singapore">
-                    Asia/Singapore (Singapore Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Kuala_Lumpur">
-                    Asia/Kuala_Lumpur (Malaysia Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Jakarta">
-                    Asia/Jakarta (Western Indonesia Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Manila">
-                    Asia/Manila (Philippine Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Hong_Kong">
-                    Asia/Hong_Kong (Hong Kong Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Shanghai">
-                    Asia/Shanghai (China Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Taipei">
-                    Asia/Taipei (Taiwan Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Tokyo">
-                    Asia/Tokyo (Japan Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Seoul">
-                    Asia/Seoul (Korea Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Almaty">
-                    Asia/Almaty (Kazakhstan Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Tashkent">
-                    Asia/Tashkent (Uzbekistan Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Baku">
-                    Asia/Baku (Azerbaijan Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Yerevan">
-                    Asia/Yerevan (Armenia Time)
-                  </MenuItem>
-                  <MenuItem value="Asia/Tbilisi">
-                    Asia/Tbilisi (Georgia Time)
-                  </MenuItem>
-                  <MenuItem disabled>────────── Africa ──────────</MenuItem>
-                  <MenuItem value="Africa/Cairo">
-                    Africa/Cairo (Eastern European Time)
-                  </MenuItem>
-                  <MenuItem value="Africa/Johannesburg">
-                    Africa/Johannesburg (South Africa Standard Time)
-                  </MenuItem>
-                  <MenuItem value="Africa/Lagos">
-                    Africa/Lagos (West Africa Time)
-                  </MenuItem>
-                  <MenuItem value="Africa/Nairobi">
-                    Africa/Nairobi (East Africa Time)
-                  </MenuItem>
-                  <MenuItem disabled>
-                    ────────── Australia & Pacific ──────────
-                  </MenuItem>
-                  <MenuItem value="Australia/Sydney">
-                    Australia/Sydney (Australian Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="Australia/Melbourne">
-                    Australia/Melbourne (Australian Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="Australia/Brisbane">
-                    Australia/Brisbane (Australian Eastern Time)
-                  </MenuItem>
-                  <MenuItem value="Australia/Perth">
-                    Australia/Perth (Australian Western Time)
-                  </MenuItem>
-                  <MenuItem value="Australia/Adelaide">
-                    Australia/Adelaide (Australian Central Time)
-                  </MenuItem>
-                  <MenuItem value="Pacific/Auckland">
-                    Pacific/Auckland (New Zealand Time)
-                  </MenuItem>
-                  <MenuItem value="Pacific/Honolulu">
-                    Pacific/Honolulu (Hawaii Time)
-                  </MenuItem>
+                  {timeZoneOptions.map((tz) => (
+                    <MenuItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </MenuItem>
+                  ))}
                 </Select>
               )}
             />

@@ -23,7 +23,7 @@ import {
 // - PatientCard and PatientActions only mount after a patient is selected so
 //   they never render in an empty/null state.
 
-const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment }) => {
+const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment, pendingItems }) => {
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('Patient');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -135,13 +135,21 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
     getAppointmentId(sourceProcedureAppointment) ||
     getAppointmentId(liveAppt);
   const sourceProcedureAppointmentId = getAppointmentId(sourceProcedureAppointment) || currentChainRootId;
+  const INACTIVE_STATUSES = new Set(['cancelled', 'canceled', 'broken', 'deleted', 'no show', 'noshow']);
   const recareAppointmentsForSource = sourceProcedureAppointmentId
-    ? patientHistoryList.filter(a => String(getRecareSourceId(a) || '') === String(sourceProcedureAppointmentId)).map(a => getFreshAppt(a))
+    ? patientHistoryList
+        .filter(a => String(getRecareSourceId(a) || '') === String(sourceProcedureAppointmentId))
+        .filter(a => !INACTIVE_STATUSES.has(String(a.status || '').toLowerCase()))
+        .map(a => getFreshAppt(a))
     : [];
   const getProcedureKey = (procedure) =>
     typeof procedure === 'string'
       ? `|${procedure}`.trim().toLowerCase()
       : `${procedure?.code || procedure?.procedureCode || procedure?.ProcCode || ''}|${procedure?.treatment || procedure?.description || procedure?.name || ''}`.trim().toLowerCase();
+  const getProcedureCodeKey = (procedure) =>
+    typeof procedure === 'string'
+      ? ''
+      : `code|${(procedure?.code || procedure?.procedureCode || procedure?.ProcCode || '').trim().toUpperCase()}`;
   const recareProcedureDateMap = recareAppointmentsForSource.reduce((acc, appointment) => {
     const procedures = Array.isArray(appointment.customFields?.procedures)
       ? appointment.customFields.procedures
@@ -150,9 +158,20 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
         : [];
     procedures.forEach((procedure) => {
       const key = getProcedureKey(procedure);
-      if (!key || !appointment.appointmentDate) return;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(appointment.appointmentDate);
+      const codeKey = getProcedureCodeKey(procedure);
+      if (!appointment.appointmentDate) return;
+      // Extract YYYY-MM-DD only to avoid UTC→local timezone shift when displaying
+      const dateStr = String(appointment.appointmentDate).slice(0, 10);
+      if (key) {
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(dateStr);
+      }
+      if (codeKey) {
+        if (!acc[codeKey]) acc[codeKey] = [];
+        if (!acc[codeKey].includes(dateStr)) {
+          acc[codeKey].push(dateStr);
+        }
+      }
     });
     return acc;
   }, {});
@@ -306,7 +325,7 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
         )}
 
         {activeTab === 'Pending' && (
-          <PendingReschedules />
+          <PendingReschedules pendingItems={pendingItems} />
         )}
 
         {activeTab === 'Search' && (

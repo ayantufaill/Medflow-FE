@@ -4,7 +4,6 @@ import { useSelector } from 'react-redux';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
-import dayjs from 'dayjs';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import IconButton from '@mui/material/IconButton';
@@ -143,11 +142,74 @@ const DraggableWaitlistEntry = ({ entry }) => {
   );
 };
 
-const PendingReschedules = () => {
+const DraggablePendingBlock = ({ blockItem }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `pending-block-${blockItem.id}`,
+    data: {
+      isPendingItem: true,
+      isBlockSlot: true,
+      type: "block",
+      id: blockItem.id,
+      originalData: blockItem.data,
+      blockId: blockItem.data._id || blockItem.data.id,
+      block: blockItem.data,
+    },
+  });
+
+  const notes = blockItem.data.notes || blockItem.data.note || "Blocked Slot";
+
+  return (
+    <Box
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      sx={{
+        p: '12px',
+        border: `1px dashed ${blockItem.data.color || '#90caf9'}`,
+        borderRadius: radius.md,
+        textAlign: 'left',
+        backgroundColor: COLORS.WHITE,
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'grab',
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Box sx={{
+            width: 32, height: 32, borderRadius: '50%',
+            bgcolor: '#fef3c7', color: '#d97706',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '12px', fontWeight: fontWeight.bold,
+          }}>
+            🚫
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: '13px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
+              {notes}
+            </Typography>
+            <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>
+              Calendar Block
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: '12px' }}>
+        <Box sx={{ backgroundColor: '#fef3c7', color: '#d97706', px: '6px', py: '2px', borderRadius: '4px', fontSize: '10px', fontWeight: fontWeight.bold }}>
+          BLOCK
+        </Box>
+        <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, fontWeight: fontWeight.medium }}>
+          {blockItem.data.durationMinutes || 30} min
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
+const PendingReschedules = ({ pendingItems = [] }) => {
   const { waitlistEntries, total } = useSelector(state => state.waitlist);
   const appointmentsList = useSelector(state => state.appointment?.list || []);
   const pendingAppointments = appointmentsList.filter(a => String(a.status).toLowerCase() === 'pending');
-  const combinedTotal = (total || 0) + pendingAppointments.length;
+  const combinedTotal = (total || 0) + pendingAppointments.length + pendingItems.length;
 
   const { setNodeRef, isOver } = useDroppable({
     id: 'pending-tab',
@@ -181,7 +243,7 @@ const PendingReschedules = () => {
         Pending Reschedules ({combinedTotal})
       </Typography>
 
-      {((waitlistEntries && waitlistEntries.length > 0) || pendingAppointments.length > 0) ? (
+      {((waitlistEntries && waitlistEntries.length > 0) || pendingAppointments.length > 0 || pendingItems.length > 0) ? (
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', mb: '20px' }}>
           {pendingAppointments.map(appt => (
             <DraggablePendingAppt key={`appt-${appt._id || appt.id || appt.AptNum}`} appt={appt} />
@@ -189,6 +251,19 @@ const PendingReschedules = () => {
           {waitlistEntries && waitlistEntries.map(entry => (
             <DraggableWaitlistEntry key={`wl-${entry._id || entry.id}`} entry={entry} />
           ))}
+          {pendingItems.filter(i => i.type === "block").length > 0 && (
+            <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.bold, color: COLORS.TEXT_SECONDARY, mb: '4px', mt: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Copied Blocks
+            </Typography>
+          )}
+          {pendingItems.map(item => {
+            if (item.type === "block") {
+              return (
+                <DraggablePendingBlock key={`block-${item.id}`} blockItem={item} />
+              );
+            }
+            return null;
+          })}
         </Box>
       ) : (
         <>

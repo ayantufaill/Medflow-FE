@@ -1191,7 +1191,7 @@ const AddNewPatientAppointmentForm = ({
       // Backend keys recareDueDates by trimmed/uppercased CDT code.
       const serverCode = (code || "").trim().toUpperCase();
       const serverDue = recareDueDateMap?.[serverCode]?.dueDate;
-      const dueDate = serverDue || (scheduledDates.length > 0 ? scheduledDates[0] : undefined);
+      const dueDate = serverDue || undefined;
       if (typeof p === "string") {
         return {
           code: "TBD",
@@ -1201,6 +1201,7 @@ const AddNewPatientAppointmentForm = ({
           completed: false,
           id: Date.now() + i,
           dueDate: undefined,
+          scheduledDates: [],
         };
       }
       return {
@@ -1219,6 +1220,7 @@ const AddNewPatientAppointmentForm = ({
         completed: Boolean(p.completed),
         id: p._id || p.id || Date.now() + i,
         dueDate: dueDate,
+        scheduledDates: scheduledDates,
       };
     });
 
@@ -1261,6 +1263,17 @@ const AddNewPatientAppointmentForm = ({
         }
       });
     });
+
+    // Also include the source appointment's own recareProcedureDateMap (e.g., from drag-and-drop)
+    const sourceProcBlockAppt = sourceAppt?.sourceProcedureBlockAppointment || sourceAppt;
+    const sourceRecareDateMap = sourceProcBlockAppt?.recareProcedureDateMap || {};
+    Object.entries(sourceRecareDateMap).forEach(([key, dates]) => {
+      if (!map[key]) map[key] = [];
+      dates.forEach((date) => {
+        if (!map[key].includes(date)) map[key].push(date);
+      });
+    });
+
     return map;
   };
 
@@ -1994,7 +2007,6 @@ const AddNewPatientAppointmentForm = ({
             onComputeNextVisit={handleComputeNextVisit}
             onDuplicateProcedure={setToastMessage}
             readOnly={isEditMode && !isRescheduling && !isEditing}
-            setIsRescheduling={setIsRescheduling}
             onEnterEdit={() => setIsEditing(true)}
             isEditMode={isEditMode}
             isRescheduling={isRescheduling}
