@@ -52,6 +52,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [overpaymentAction, setOverpaymentAction] = useState(null); // 'credit' | 'refund'
   const [showSecondaryPrompt, setShowSecondaryPrompt] = useState(false);
   const [createdPaymentInfo, setCreatedPaymentInfo] = useState(null);
+  const [chequeNo, setChequeNo] = useState('');
+  const [branchNo, setBranchNo] = useState('');
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
@@ -462,6 +464,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             selectedClaimObj.insuranceCompanyRefId
           )?.toString() || undefined,
           notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.filter(opt => opt.checked).map(opt => opt.label).join(', ') || 'None'}`,
+          chequeNo: chequeNo || undefined,
+          branchNo: branchNo || undefined,
           overpaymentAmount: overpaymentAmount > 0.005 ? Math.round(overpaymentAmount * 100) / 100 : undefined,
           overpaymentAction: overpaymentAmount > 0.005 ? (overpaymentAction || 'credit') : undefined,
           procedures: invProcs.map(p => ({
@@ -632,6 +636,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
           checkboxOptions={checkboxOptions}
+          chequeNo={chequeNo}
+          setChequeNo={setChequeNo}
+          branchNo={branchNo}
+          setBranchNo={setBranchNo}
         />
 
         <Box sx={{ borderTop: `1px solid ${COLORS.BORDER}`, mt: 2.5, mb: 2.5 }} />

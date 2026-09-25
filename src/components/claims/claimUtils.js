@@ -47,7 +47,8 @@ export const mapClaimFields = (c, tab) => ({
   procedures: c.procedures || [],
   clearingHouseMessage: c.denialReason || c.clearingHouseMessage || "",
   eraStatus: c.eraStatus || "",
-  description: c.notes || c.description || "",
+  description: c.description || "",
+  notes: c.note || c.notes || "",
   submittedValue: c.submittedValue ?? c.submittedAmount ?? 0,
   planName: c.planName ?? c.policyNumber ?? (c.insuranceCompany?.name || "Standard Insurance Plan"),
   daysSinceSent: c.daysSinceSent ?? (

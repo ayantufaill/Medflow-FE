@@ -849,7 +849,7 @@ const NewTreatmentPlanPage = () => {
         }}
         patientId={currentPatientId}
         treatmentPlanId={activePlanId}
-        selectedProcedures={allProcedures}
+        selectedProcedures={selectedRows.length > 0 ? allProcedures.filter(p => selectedRows.includes(p.id)) : allProcedures}
       />
 
       <Snackbar

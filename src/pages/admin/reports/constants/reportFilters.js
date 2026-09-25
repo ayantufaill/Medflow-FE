@@ -13,7 +13,7 @@ export const OWING_OPTIONS = [
 ];
 
 export const BILLING_DATE_OPTIONS = [
-  { value: 'any', label: 'Any Balance' },
+  { value: 'any', label: 'Any Billing Date' },
   { value: 'pt_last_statement_before', label: 'Patient last statement before' },
   { value: 'day_since_last_statement', label: 'Day since last statement' }
 ];
