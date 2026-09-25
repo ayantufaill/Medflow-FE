@@ -1693,6 +1693,12 @@ const AddNewPatientAppointmentForm = ({
         setIsSubmitting(true);
         await onSubmit(payload);
       } catch (err) {
+        // onSubmit resolves instead of rejecting when the parent handles the
+        // error itself (e.g. OperatorySchedulePage shows a snackbar in a
+        // catch/finally without rethrowing), so isSubmitting must ALWAYS be
+        // reset here — otherwise the Save button stays disabled after an error.
+        console.error("Appointment save failed:", err);
+      } finally {
         setIsSubmitting(false);
       }
     }
@@ -1725,6 +1731,8 @@ const AddNewPatientAppointmentForm = ({
         setIsSubmitting(true);
         await onSubmit(payload);
       } catch (err) {
+        console.error("Appointment draft save failed:", err);
+      } finally {
         setIsSubmitting(false);
       }
     }

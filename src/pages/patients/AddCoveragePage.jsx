@@ -603,7 +603,7 @@ const AddCoveragePage = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: "#f5f6f8", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: "#f5f6f8", minHeight: "calc(100vh - 65px)" }}>
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
