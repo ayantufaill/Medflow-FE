@@ -4,7 +4,7 @@ import { Add, LocalOfferOutlined, Close } from "@mui/icons-material";
 import { Label } from "./helpers";
 import { ICON_TAGS } from "./constants";
 
-const MAX_TAGS = 2;
+const MAX_TAGS = 4;
 
 const ColorTagPicker = ({ selected = new Set(), onChange, readOnly = false }) => {
   const selectedArray = selected instanceof Set ? Array.from(selected) : (Array.isArray(selected) ? selected : []);
@@ -135,7 +135,7 @@ const ColorTagPicker = ({ selected = new Set(), onChange, readOnly = false }) =>
 
       {selectedTags.length >= MAX_TAGS && (
         <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#ef4444", mt: "6px", ml: "2px" }}>
-          Only 2 tags allow
+          Only {MAX_TAGS} tags allow
         </Typography>
       )}
 
@@ -164,7 +164,7 @@ const ColorTagPicker = ({ selected = new Set(), onChange, readOnly = false }) =>
           {availableTags.map((tag) => {
             const isAtMax = selectedTags.length >= MAX_TAGS;
             return (
-              <Tooltip key={tag.id} title={isAtMax ? "Only 2 tags allow" : tag.label}>
+              <Tooltip key={tag.id} title={isAtMax ? `Only ${MAX_TAGS} tags allow` : tag.label}>
                 <Box
                   component="span"
                   onClick={() => {

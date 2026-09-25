@@ -1046,7 +1046,6 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             <AddNewProcedureDialog
               onClose={() => setShowAddProcedure(false)}
               onSave={handleSaveProcedure}
-              existingProcedures={procedures}
             />
           </Box>
         </Box>

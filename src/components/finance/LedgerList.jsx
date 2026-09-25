@@ -153,19 +153,23 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowAdaDialog(true);
   };
 
-  const handleReopenClaimClick = async (claim) => {
-    if (!claim?.id) return;
-    try {
-      const isClosed = ["paid", "cancelled"].includes(
-        (claim.status || "").toLowerCase(),
-      );
-      const newStatus = isClosed ? "draft" : "cancelled";
-      await claimService.updateClaim(claim.id, { status: newStatus });
-      refreshLedger();
-    } catch (err) {
-      console.error("Failed to toggle claim status", err);
-      alert("Failed to toggle claim status.");
-    }
+  // Per-claim visual open/closed state. This is presentation only — it never
+  // writes claim status; the initial value falls back to the real claim status.
+  const [closedClaimOverrides, setClosedClaimOverrides] = useState({});
+
+  const handleToggleClaimClosed = (claim) => {
+    const claimKey = claim?.id;
+    if (claimKey === undefined || claimKey === null) return;
+    setClosedClaimOverrides((prev) => {
+      const current = prev[claimKey];
+      if (current === undefined) {
+        const statusIsClosed = ["paid", "cancelled"].includes(
+          (claim.status || "").toLowerCase(),
+        );
+        return { ...prev, [claimKey]: !statusIsClosed };
+      }
+      return { ...prev, [claimKey]: !current };
+    });
   };
 
   // Local deposit edits (not server-persisted in the original code either)
@@ -860,7 +864,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
             setPrintItem={setPrintItem}
             onEOBClick={handleEOBClick}
             onPrintClaimClick={handlePrintClaimClick}
-            onReopenClaimClick={handleReopenClaimClick}
+            onToggleClaimClosed={handleToggleClaimClosed}
+            closedClaimOverrides={closedClaimOverrides}
             onEditClaimClick={handleEditClaimClick}
             onSendClaimClick={handleSendClaimClick}
             onVoidAndRecreateClick={handleVoidAndRecreateClick}

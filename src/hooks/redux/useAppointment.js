@@ -29,6 +29,7 @@ import {
   setFamilyAppointmentsSchedulingDate,
   setFamilyAppointmentsSchedulingTime,
   setFamilyAppointmentsSchedulingRoomId,
+  setFamilyAppointmentsRecareDueDates,
   // Pending tray actions
   addPendingItem,
   removePendingItem,

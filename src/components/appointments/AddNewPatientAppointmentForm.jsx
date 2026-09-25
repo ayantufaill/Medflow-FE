@@ -17,6 +17,7 @@ import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
 import LabOrderModal from "./new-appointment/LabOrderModal";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
+import { useSnackbar } from "../../contexts/SnackbarContext";
 import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
 
 const AddNewPatientAppointmentForm = ({
@@ -175,6 +176,8 @@ const AddNewPatientAppointmentForm = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const [computedVisitType, setComputedVisitType] = useState("");
+
+  const { showSnackbar } = useSnackbar();
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
 
@@ -1529,6 +1532,23 @@ const AddNewPatientAppointmentForm = ({
       siteStr = surfaceStr;
     }
 
+    const normalizeKey = (value) =>
+      (value ?? "").toString().trim().replace(/\s+/g, " ").toLowerCase();
+
+    const isDuplicate = procedures.some(
+      (p) =>
+        normalizeKey(p.code) === normalizeKey(procedureCode) &&
+        normalizeKey(p.site) === normalizeKey(siteStr)
+    );
+
+    if (isDuplicate) {
+      showSnackbar(
+        "The procedure with this tooth number and surface already exist.",
+        "error"
+      );
+      return;
+    }
+
     const numFee =
       typeof fee === "number"
         ? fee
@@ -2117,7 +2137,7 @@ const AddNewPatientAppointmentForm = ({
           <AddNewProcedureDialog
             onClose={() => setIsAddProcedureOpen(false)}
             onSave={handleSaveNewProcedure}
-            existingProcedures={procedures}
+            maxTeeth={1}
           />
         </Dialog>
       )}
