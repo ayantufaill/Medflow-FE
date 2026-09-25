@@ -9,9 +9,24 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal);
-    if (found) return { color: found.color, name: found.name };
-    return { color: flagVal, name: 'Flag' };
+    const flagId = typeof flagVal === 'string' ? flagVal : flagVal?.id || flagVal?.text || flagVal?.color;
+    const flagIdLower = String(flagId).toLowerCase();
+    
+    const found = globalFlags.find(f => 
+      String(f.id).toLowerCase() === flagIdLower || 
+      (f.name && f.name.toLowerCase() === flagIdLower) ||
+      (f.text && f.text.toLowerCase() === flagIdLower)
+    );
+    if (found) return { color: found.color || '#94a3b8', name: found.name || found.text || flagId };
+    
+    // If it's an object with a color property, use it directly
+    if (typeof flagVal === 'object' && flagVal !== null && flagVal.color) {
+      return { color: flagVal.color, name: flagVal.name || flagVal.text || 'Flag' };
+    }
+    
+    // Fallback: if flagId looks like a hex code, use it; otherwise default to slate grey
+    const isValidHex = typeof flagId === 'string' && flagId.startsWith('#');
+    return { color: isValidHex ? flagId : '#94a3b8', name: flagId || 'Flag' };
   };
 
   return (
@@ -67,7 +82,10 @@ const CourtesyCreditReportTable = ({ dummyData, totalAmount }) => {
                         const { color, name } = resolveFlagColor(flagVal);
                         return (
                           <Tooltip key={i} title={name} arrow placement="top">
-                            <Box sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer' }} />
+                            <Box 
+                              sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', cursor: 'pointer', display: 'inline-block', mr: 0.5 }} 
+                              style={{ width: '10px', height: '10px', backgroundColor: color, borderRadius: '2px', display: 'inline-block', marginRight: '4px' }}
+                            />
                           </Tooltip>
                         );
                       })}

@@ -45,7 +45,7 @@ const DepositSlipPreview = ({
             </Typography>
           </Box>
         ) : (
-          <Box>
+          <Box id="deposit-slip-print-area">
             <Paper variant="outlined" sx={{ p: 3, mb: 4, borderRadius: '12px', borderColor: '#e2e8f0', backgroundColor: '#ffffff' }}>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
@@ -109,7 +109,7 @@ const DepositSlipPreview = ({
 
   // If createdSlipDetails exists, show the actual created slip
   return (
-    <Box sx={{ fontFamily: 'sans-serif', color: '#333' }}>
+    <Box id="deposit-slip-print-area" sx={{ fontFamily: 'sans-serif', color: '#333' }}>
       {/* Slip Header */}
       <Box sx={{ borderBottom: '1px solid #e2e8f0', pb: 2, mb: 2 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 2 }}>

@@ -1,5 +1,6 @@
-import React from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { useMemo } from 'react';
+import { Box, Typography, Autocomplete, TextField, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportSearchInput, ReportDivider } from '../ui';
@@ -7,9 +8,22 @@ import { ReportFilterBar, ReportSelect, ReportCheckbox, ReportSearchInput, Repor
 const AdjustmentReportFilters = ({
   dateRange, startDate, endDate, provider, adjustmentType, grouping,
   codeFilter, codeText, filterByProductionDate, showFlags, showDOB,
-  showProviderColumn, filterByDOS, flagFilter, sortBy, dropdownProviders, adjustmentTypes,
+  showProviderColumn, filterByDOS, flagFilter, sortBy, reportData, dropdownProviders, adjustmentTypes,
   getProviderLabel, handleFilterChange, handleFilterModeChange, handleApply, handleClear
 }) => {
+
+  const uniqueCodes = useMemo(() => {
+    if (!reportData) return [];
+    const map = new Map();
+    const rows = Array.isArray(reportData) ? reportData : [];
+    
+    rows.forEach(r => {
+      if (r.code) {
+        map.set(r.code, { code: r.code, desc: r.procedure || '' });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }, [reportData]);
 
   const topFilters = (
     <>
@@ -118,12 +132,46 @@ const AdjustmentReportFilters = ({
         value={codeFilter}
         onChange={(e) => handleFilterChange('codeFilter', e.target.value)}
       />
-      <Box sx={{ display: 'flex', flexDirection: 'column', pt: 2.5 }}>
-        <ReportSearchInput 
-          placeholder="Enter code or procedure" 
-          value={codeText}
-          onChange={(e) => handleFilterChange('codeText', e.target.value)}
-          width="250px"
+      <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 250 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap', visibility: 'hidden' }}>
+          code or procedure
+        </Typography>
+        <Autocomplete
+          size="small"
+          options={uniqueCodes}
+          getOptionLabel={(opt) => `${opt.code} - ${opt.desc}`}
+          value={uniqueCodes.find(c => c.code === codeText) || null}
+          onChange={(e, newVal) => {
+            handleFilterChange('codeText', newVal ? newVal.code : '');
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={!codeText ? "Enter code or procedure" : ""}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#fafbfe',
+                  minHeight: 36,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontFamily: 'Inter',
+                  fontSize: '13px',
+                  color: '#09121f',
+                  fontWeight: 500,
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }
+              }}
+            />
+          )}
+          ListboxProps={{
+            sx: {
+              '& .MuiAutocomplete-option': {
+                fontFamily: 'Inter',
+                fontSize: '13px',
+              }
+            }
+          }}
+          sx={{ width: '100%' }}
         />
       </Box>
 

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { reportingService } from '../../../services/reporting.service';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { fetchAdjustmentTypes, selectAdjustmentTypes } from '../../../store/slices/billingSlice';
+import medflowLogo from '../../../assets/medflow-logo.png';
 
 export const useAdjustmentReport = () => {
   const dispatch = useDispatch();
@@ -27,6 +28,24 @@ export const useAdjustmentReport = () => {
 
   const [flagFilter, setFlagFilter] = useState('pts');
   const [sortBy, setSortBy] = useState('default');
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    dateRange: 'daily',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    provider: 'all',
+    adjustmentType: 'all',
+    grouping: 'no-grouping',
+    codeFilter: 'filter',
+    codeText: '',
+    filterByProductionDate: false,
+    showFlags: true,
+    showDOB: true,
+    showProviderColumn: true,
+    filterByDOS: false,
+    flagFilter: 'pts',
+    sortBy: 'default'
+  });
 
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -144,20 +163,23 @@ export const useAdjustmentReport = () => {
 
   const lastFetchedRef = useRef(null);
 
-  const fetchData = async () => {
-    const paramsKey = `${dateRange}_${startDate}_${endDate}`;
+  const fetchData = async (filters = appliedFilters) => {
+    const paramsKey = `${filters.dateRange}_${filters.startDate}_${filters.endDate}_${filters.filterByProductionDate}_${filters.filterByDOS}`;
     if (lastFetchedRef.current === paramsKey) return;
     lastFetchedRef.current = paramsKey;
 
     try {
       setLoading(true);
-      const rangeParam = dateRange.charAt(0).toUpperCase() + dateRange.slice(1);
+      const rangeParam = filters.dateRange.charAt(0).toUpperCase() + filters.dateRange.slice(1);
       const res = await reportingService.getFinancialReport('adjustment', {
-        date: startDate,
+        date: filters.startDate,
         range: rangeParam,
-        startDate: startDate,
-        endDate: endDate,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        filterByProductionDate: filters.filterByProductionDate,
+        filterByDOS: filters.filterByDOS
       });
+      console.log('ADJUSTMENT REPORT DATA:', (res || []).map(d => ({ pat: d.patient, flags: d.flags })));
       setReportData(res || []);
     } catch (err) {
       console.error('Failed to fetch adjustments report:', err);
@@ -173,8 +195,8 @@ export const useAdjustmentReport = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    fetchData();
-  }, [dateRange, startDate, endDate]);
+    fetchData(appliedFilters);
+  }, [appliedFilters.dateRange, appliedFilters.startDate, appliedFilters.endDate]);
 
   const getProviderFirstAndLastName = (p) => {
     if (p?.userId?.firstName || p?.userId?.lastName) {
@@ -211,65 +233,90 @@ export const useAdjustmentReport = () => {
     setFlagFilter('pts');
     setSortBy('default');
     
+    const newApplied = {
+      dateRange: 'daily',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      provider: 'all',
+      adjustmentType: 'all',
+      grouping: 'no-grouping',
+      codeFilter: 'filter',
+      codeText: '',
+      filterByProductionDate: false,
+      showFlags: true,
+      showDOB: true,
+      showProviderColumn: true,
+      filterByDOS: false,
+      flagFilter: 'pts',
+      sortBy: 'default'
+    };
+    setAppliedFilters(newApplied);
     lastFetchedRef.current = null;
-    fetchData();
+    fetchData(newApplied);
   };
 
   const handleApply = () => {
+    const newApplied = {
+      dateRange, startDate, endDate, provider, adjustmentType, grouping,
+      codeFilter, codeText, filterByProductionDate, showFlags, showDOB,
+      showProviderColumn, filterByDOS, flagFilter, sortBy
+    };
+    setAppliedFilters(newApplied);
     lastFetchedRef.current = null;
-    fetchData();
+    fetchData(newApplied);
   };
 
   const filteredReportData = useMemo(() => {
     return reportData.filter(row => {
       // Provider Filter
-      if (provider !== 'all') {
-        const selectedProvObj = dropdownProviders.find(p => (p._id || p.id) === provider);
-        if (selectedProvObj) {
-          const { firstName, lastName } = getProviderFirstAndLastName(selectedProvObj);
-          const fullNameLower = `${firstName} ${lastName}`.toLowerCase().trim();
-          const initialsLower = ((firstName ? firstName[0] : '') + (lastName ? lastName.substring(0, 2) : '')).toLowerCase();
-          const abbrLower = (selectedProvObj.abbr || selectedProvObj.Abbr || '').toLowerCase();
-          const rowProvLower = (row.provider || '').toLowerCase();
+      if (appliedFilters.provider !== 'all') {
+        const rowProviderId = (row.providerId || '').toString();
+        if (rowProviderId !== appliedFilters.provider.toString()) {
+          // Fallback string matching if IDs don't align or aren't present
+          const selectedProvObj = dropdownProviders.find(p => (p._id || p.id) === appliedFilters.provider);
+          if (selectedProvObj) {
+            const { firstName, lastName } = getProviderFirstAndLastName(selectedProvObj);
+            const fullNameLower = `${firstName} ${lastName}`.toLowerCase().trim();
+            const abbrLower = (selectedProvObj.abbr || selectedProvObj.Abbr || '').toLowerCase();
+            const rowProvLower = (row.provider || '').toLowerCase();
 
-          const matches = rowProvLower.includes(fullNameLower) || 
-                          fullNameLower.includes(rowProvLower) ||
-                          (abbrLower && rowProvLower.includes(abbrLower)) ||
-                          (initialsLower && rowProvLower.includes(initialsLower));
-          if (!matches) return false;
+            const matches = rowProvLower.includes(fullNameLower) || 
+                            fullNameLower.includes(rowProvLower) ||
+                            (abbrLower && rowProvLower.includes(abbrLower));
+            if (!matches) return false;
+          } else {
+            return false;
+          }
         }
       }
 
       // Adjustment Type filter
-      if (adjustmentType !== 'all') {
-        const rowTypeLower = (row.type || row.notes || 'Adjustment').toLowerCase();
-        const selectedTypeLower = adjustmentType.toLowerCase();
-        if (!rowTypeLower.includes(selectedTypeLower)) return false;
+      if (appliedFilters.adjustmentType !== 'all') {
+        const typeLower = (row.type || '').toLowerCase();
+        const notesLower = (row.notes || '').toLowerCase();
+        const filterLower = appliedFilters.adjustmentType.toLowerCase();
+        
+        // Match explicit type or check if the note indicates the adjustment type (which is how CreditSubtractionDialog saves it)
+        if (typeLower !== filterLower && !notesLower.includes(filterLower)) {
+           return false;
+        }
       }
 
-      // Search query
-      if (codeText.trim()) {
-        const queryLower = codeText.toLowerCase().trim();
-        const patLower = (row.patient || '').toLowerCase();
-        const notesLower = (row.notes || '').toLowerCase();
-        const typeLower = (row.type || '').toLowerCase();
-        const adaLower = (row.ada || '').toLowerCase();
-        const transactionLower = (row.transaction || row.id || '').toLowerCase();
+      // Code filter
+      if (appliedFilters.codeText.trim()) {
+        const queryLower = appliedFilters.codeText.toLowerCase().trim();
+        const codeLower = (row.ada || row.code || '').toLowerCase();
 
-        const matches = patLower.includes(queryLower) ||
-                        notesLower.includes(queryLower) ||
-                        typeLower.includes(queryLower) ||
-                        adaLower.includes(queryLower) ||
-                        transactionLower.includes(queryLower);
+        const matches = codeLower.includes(queryLower);
 
-        if (codeFilter === 'filter' && !matches) return false;
-        if (codeFilter === 'exclude' && matches) return false;
+        if (appliedFilters.codeFilter === 'filter' && !matches) return false;
+        if (appliedFilters.codeFilter === 'exclude' && matches) return false;
       }
 
       // Flag Filter
-      if (flagFilter === 'with_flags') {
+      if (appliedFilters.flagFilter === 'with_flags') {
         if (!row.flags || row.flags.length === 0) return false;
-      } else if (flagFilter === 'without_flags') {
+      } else if (appliedFilters.flagFilter === 'without_flags') {
         if (row.flags && row.flags.length > 0) return false;
       }
 
@@ -304,30 +351,39 @@ export const useAdjustmentReport = () => {
       if (grouping === 'group-provider') {
         key = row.provider || 'Unassigned';
       } else if (grouping === 'group-adj') {
-        key = row.type || row.notes || 'Adjustment';
+        const rowTypeObj = adjustmentTypes.find(t => (t.DefNum || t.id)?.toString() === row.typeId?.toString());
+        key = rowTypeObj ? (rowTypeObj.type || rowTypeObj.ItemName || rowTypeObj.name) : (row.notes || 'Adjustment');
       }
       if (!groups[key]) groups[key] = [];
       groups[key].push(row);
     });
     return groups;
-  }, [sortedReportData, grouping]);
+  }, [sortedReportData, grouping, adjustmentTypes]);
 
   const getRowDisplayValues = (row) => {
     const amt = typeof row.amount !== 'undefined' ? row.amount : (row.adj ?? 0);
     const formattedAmt = amt < 0 ? `-$${Math.abs(amt).toFixed(2)}` : `$${amt.toFixed(2)}`;
     
+    const rowTypeObj = adjustmentTypes.find(t => (t.DefNum || t.id)?.toString() === row.typeId?.toString());
+    const typeName = rowTypeObj ? (rowTypeObj.type || rowTypeObj.ItemName || rowTypeObj.name) : (row.typeId || row.notes || 'Office Adjustment');
+
+    const providerName = (row.provider && row.provider !== 'Provider') ? row.provider : '-';
+    const adaCode = (row.code && row.code.trim() !== '') ? row.code : (row.ada && row.ada !== 'D0000' ? row.ada : '-');
+    const desc = (row.procedure && row.procedure !== 'Adjustment') ? row.procedure : (row.notes || row.description || '-');
+    const flagsArr = row.flags && row.flags.length > 0 ? row.flags : [];
+
     return {
       date: row.date || '',
-      flags: row.flags || ['#f5a623'],
+      flags: flagsArr,
       patient: row.patient || 'Patient',
       transaction: row.transaction || row.id || '',
-      ada: row.ada || 'D0000',
+      ada: adaCode,
       site: row.site || '',
-      description: row.notes || row.description || 'Adjustment',
-      rendering: row.provider || row.rendering || 'Provider',
-      billing: row.provider || row.billing || 'Office',
+      description: desc,
+      rendering: row.rendering && row.rendering !== 'Provider' ? row.rendering : providerName,
+      billing: row.billing && row.billing !== 'Office' && row.billing !== 'Provider' ? row.billing : providerName,
       adj: formattedAmt,
-      type: row.type || row.notes || 'Office Adjustment',
+      type: typeName,
       dob: row.dob || '05/10/1988'
     };
   };
@@ -387,48 +443,119 @@ export const useAdjustmentReport = () => {
   const handlePrint = () => {
     const tableEl = document.getElementById('adjustment-report-table');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Adjustment Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('.no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Adjustment Report</h2>');
-    printWindow.document.write(`<p>Date Range: ${dateRange} (${startDate} to ${endDate})</p>`);
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Adjustment Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Adjustment Report</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${dateRange} (${startDate} to ${endDate})</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handlePrintGroup = (groupName) => {
     const tableId = `adjustment-report-table-${groupName.replace(/\s+/g, '-')}`;
     const tableEl = document.getElementById(tableId);
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Adjustment Report - ' + groupName + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('.no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Adjustment Report - ' + groupName + '</h2>');
-    printWindow.document.write(`<p>Date Range: ${dateRange} (${startDate} to ${endDate})</p>`);
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Adjustment Report - ${groupName}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Adjustment Report - ${groupName}</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${dateRange} (${startDate} to ${endDate})</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleExportGroupCSV = (groupName, groupRows) => {
@@ -469,7 +596,8 @@ export const useAdjustmentReport = () => {
     dateRange, startDate, endDate, provider, adjustmentType, grouping,
     codeFilter, codeText, filterByProductionDate, showFlags, showDOB,
     showProviderColumn, filterByDOS, flagFilter, sortBy,
-    loading, dropdownProviders, adjustmentTypes, sortedReportData, groupedData,
+    appliedFilters,
+    loading, dropdownProviders, adjustmentTypes, reportData, sortedReportData, groupedData,
     getRowDisplayValues, getProviderLabel, handleFilterChange, handleFilterModeChange,
     handleApply, handleClear, handleExportCSV, handlePrint,
     handleExportGroupCSV, handlePrintGroup

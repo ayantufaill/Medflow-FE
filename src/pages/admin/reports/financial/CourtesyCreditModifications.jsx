@@ -16,7 +16,7 @@ const CourtesyCreditModifications = () => {
     users, setUsers,
     groupByAdj, setGroupByAdj,
     searchText, setSearchText,
-    reportData, loading, adjustmentTypes, dropdownProviders,
+    reportData, loading, adjustmentTypes, dropdownProviders, groupedData, uniqueUsers,
     handlePrint, handleClear, handleApply, handleExportCSV
   } = useCourtesyCreditModifications();
 
@@ -32,7 +32,7 @@ const CourtesyCreditModifications = () => {
         users={users} setUsers={setUsers}
         groupByAdj={groupByAdj} setGroupByAdj={setGroupByAdj}
         searchText={searchText} setSearchText={setSearchText}
-        adjustmentTypes={adjustmentTypes} dropdownProviders={dropdownProviders}
+        adjustmentTypes={adjustmentTypes} dropdownProviders={dropdownProviders} uniqueUsers={uniqueUsers}
         handleApply={handleApply} handleClear={handleClear}
       />
 
@@ -45,6 +45,7 @@ const CourtesyCreditModifications = () => {
       <CourtesyCreditModificationsTable 
         dummyData={reportData}
         loading={loading}
+        groupedData={groupedData}
       />
     </ReportLayout>
   );

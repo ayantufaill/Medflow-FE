@@ -310,23 +310,33 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, se
         showSnackbar('Authorization updated successfully', 'success');
         if (onSave) onSave(existingId);
       } else {
-        if (!treatmentPlanId) {
-           showSnackbar('Please save the treatment plan first to generate a Pre-Authorization.', 'error');
-           return;
+        let newAuth;
+        if (treatmentPlanId) {
+          newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
+            patientId,
+            order,
+            serviceDate: authData.serviceDate,
+            status: 'requested',
+            tags: tagIds,
+            notes: notesText,
+            insuranceCompanyId: authData.insuranceCompanyId,
+            items: authData.procedures || []
+          });
+        } else {
+          // Fallback to direct authorization creation if no treatment plan exists
+          newAuth = await authorizationService.requestAuthorization({
+            patientId,
+            order,
+            requestedDate: authData.serviceDate,
+            status: 'requested',
+            tags: tagIds,
+            notes: notesText,
+            insuranceCompanyId: authData.insuranceCompanyId,
+            procedures: authData.procedures || []
+          });
         }
-        // Create new authorization logic here
-        const newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
-          patientId,
-          order,
-          serviceDate: authData.serviceDate,
-          status: 'requested',
-          tags: tagIds,
-          notes: notesText,
-          insuranceCompanyId: authData.insuranceCompanyId,
-          items: authData.procedures || []
-        });
         showSnackbar('Authorization requested successfully', 'success');
-        if (onSave) onSave(newAuth._id || newAuth.id);
+        if (onSave) onSave(newAuth._id || newAuth.id || newAuth.ClaimNum);
       }
       onClose();
     } catch (error) {
@@ -347,22 +357,32 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, se
     }
 
 
-    if (!treatmentPlanId) {
-      throw new Error('Please save the treatment plan first to generate a Pre-Authorization.');
+    let newAuth;
+    if (treatmentPlanId) {
+      newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
+        patientId,
+        order,
+        serviceDate: authData.serviceDate,
+        status: 'requested',
+        tags: selectedTags.map((tag) => tag.id),
+        insuranceCompanyId: authData.insuranceCompanyId,
+        notes: notesText,
+        // map selected procedures - pass full procedure objects so backend can save details
+        items: authData.procedures || [],
+      });
+    } else {
+      newAuth = await authorizationService.requestAuthorization({
+        patientId,
+        order,
+        requestedDate: authData.serviceDate,
+        status: 'requested',
+        tags: selectedTags.map((tag) => tag.id),
+        insuranceCompanyId: authData.insuranceCompanyId,
+        notes: notesText,
+        procedures: authData.procedures || [],
+      });
     }
-
-    const newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
-      patientId,
-      order,
-      serviceDate: authData.serviceDate,
-      status: 'requested',
-      tags: selectedTags.map((tag) => tag.id),
-      insuranceCompanyId: authData.insuranceCompanyId,
-      notes: notesText,
-      // map selected procedures - pass full procedure objects so backend can save details
-      items: authData.procedures || [],
-    });
-    const newId = newAuth._id || newAuth.id;
+    const newId = newAuth._id || newAuth.id || newAuth.ClaimNum;
     setSavedAuthorizationId(newId);
     setAuthData((previous) => ({ ...previous, id: newId }));
     onSave?.(newId);

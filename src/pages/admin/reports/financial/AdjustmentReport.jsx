@@ -12,7 +12,8 @@ const AdjustmentReport = () => {
     dateRange, startDate, endDate, provider, adjustmentType, grouping,
     codeFilter, codeText, filterByProductionDate, showFlags, showDOB,
     showProviderColumn, filterByDOS, flagFilter, sortBy,
-    loading, dropdownProviders, adjustmentTypes, sortedReportData, groupedData,
+    appliedFilters,
+    loading, dropdownProviders, adjustmentTypes, reportData, sortedReportData, groupedData,
     getRowDisplayValues, getProviderLabel, handleFilterChange, handleFilterModeChange,
     handleApply, handleClear, handleExportCSV, handlePrint
   } = useAdjustmentReport();
@@ -44,6 +45,7 @@ const AdjustmentReport = () => {
         filterByDOS={filterByDOS}
         flagFilter={flagFilter}
         sortBy={sortBy}
+        reportData={reportData}
         dropdownProviders={dropdownProviders}
         adjustmentTypes={adjustmentTypes}
         getProviderLabel={getProviderLabel}
@@ -63,10 +65,10 @@ const AdjustmentReport = () => {
         loading={loading}
         sortedReportData={sortedReportData}
         groupedData={groupedData}
-        grouping={grouping}
-        showProviderColumn={showProviderColumn}
-        showFlags={showFlags}
-        showDOB={showDOB}
+        grouping={appliedFilters.grouping}
+        showProviderColumn={appliedFilters.showProviderColumn}
+        showFlags={appliedFilters.showFlags}
+        showDOB={appliedFilters.showDOB}
         getRowDisplayValues={getRowDisplayValues}
       />
     </ReportLayout>

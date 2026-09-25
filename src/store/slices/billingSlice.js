@@ -1071,7 +1071,7 @@ export const applyCourtesyCredit = createAsyncThunk(
 export const createInvoiceAdjustment = createAsyncThunk(
   "billing/createInvoiceAdjustment",
   async (
-    { patientId, invoiceId, adjustmentType, adjustmentAmount, reason },
+    { patientId, invoiceId, adjustmentType, adjustmentAmount, reason, typeId },
     { dispatch, rejectWithValue },
   ) => {
     try {
@@ -1079,6 +1079,7 @@ export const createInvoiceAdjustment = createAsyncThunk(
         patientId,
         amount: -Math.abs(adjustmentAmount),
         date: new Date(),
+        type: typeId || undefined,
         notes: `${adjustmentType} applied to Invoice #${invoiceId}${reason ? ` - ${reason}` : ""}`,
       });
       if (invoiceId) {
