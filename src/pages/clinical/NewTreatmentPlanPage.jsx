@@ -390,45 +390,92 @@ const NewTreatmentPlanPage = () => {
   };
 
   const handleDeleteItems = async (itemIdsToDelete) => {
-    if (!currentPatient || !activePlanId) return;
+    if (!currentPatient) return;
 
-    const newTreatmentPlans = treatmentPlans.filter(item => !itemIdsToDelete.includes(item.id));
+    const tpItemsToDelete = itemIdsToDelete.filter(id => !String(id).startsWith('appt-'));
+    const apptItemsToDelete = itemIdsToDelete.filter(id => String(id).startsWith('appt-'));
 
-    // Optimistic UI update
-    setTreatmentPlans(newTreatmentPlans);
+    if (tpItemsToDelete.length > 0 && activePlanId) {
+      const newTreatmentPlans = treatmentPlans.filter(item => !tpItemsToDelete.includes(item.id));
+      setTreatmentPlans(newTreatmentPlans);
 
-    // Auto-save logic
-    try {
-      setIsSaving(true);
+      try {
+        setIsSaving(true);
+        const payloadItems = newTreatmentPlans.map(item => ({
+          id: item.id,
+          procedureCode: item.code,
+          description: item.description,
+          tooth: item.tooth || '',
+          site: item.site,
+          fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+          charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+          priority: item.priority,
+          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+          icd: item.icd,
+          provider: item.provider || null,
+          preAuth: item.preAuth,
+          labCase: item.labCase,
+          insEst: item.insEst,
+          ptEst: item.ptEst,
+        }));
+        await treatmentPlanService.update(activePlanId, { items: payloadItems });
+        setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
+      } catch (error) {
+        console.error('Failed to auto-save treatment plan after deletion:', error);
+        const errData = error.response?.data?.error;
+        const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
+        setToast({ open: true, message: errMsg, type: 'error' });
+        setTreatmentPlans(treatmentPlans);
+      } finally {
+        setIsSaving(false);
+      }
+    }
 
-      const payloadItems = newTreatmentPlans.map(item => ({
-        procedureCode: item.code,
-        description: item.description,
-        tooth: item.tooth || '',
-        site: item.site,
-        fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
-        icd: item.icd,
-        provider: item.provider || null,
-        preAuth: item.preAuth,
-        labCase: item.labCase,
-        insEst: item.insEst,
-        ptEst: item.ptEst,
-      }));
+    if (apptItemsToDelete.length > 0) {
+      const newApptProcedures = appointmentProcedures.filter(item => !apptItemsToDelete.includes(item.id));
+      setAppointmentProcedures(newApptProcedures);
 
-      await treatmentPlanService.update(activePlanId, { items: payloadItems });
-      setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
-    } catch (error) {
-      console.error('Failed to auto-save treatment plan after deletion:', error);
-      const errData = error.response?.data?.error;
-      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
-      setToast({ open: true, message: errMsg, type: 'error' });
-      // Revert optimistic update
-      setTreatmentPlans(treatmentPlans);
-    } finally {
-      setIsSaving(false);
+      try {
+        setIsSaving(true);
+        const apptGroups = {};
+        apptItemsToDelete.forEach(id => {
+          const parts = String(id).split('-');
+          const apptId = parts[1];
+          const procIdOrIdx = parts[2];
+          if (!apptGroups[apptId]) apptGroups[apptId] = [];
+          apptGroups[apptId].push(procIdOrIdx);
+        });
+
+        for (const apptId of Object.keys(apptGroups)) {
+          const appt = await appointmentService.getAppointmentById(apptId);
+          if (appt) {
+            const procs = appt.customFields?.procedures || appt.procedures || [];
+            const toRemove = apptGroups[apptId];
+            const newProcs = procs.filter((p, idx) => {
+              const pId = p.id || String(idx);
+              return !toRemove.includes(String(pId));
+            });
+            
+            if (newProcs.length === 0) {
+              // Delete the appointment entirely if no procedures are left
+              await appointmentService.deleteAppointment(apptId);
+            } else {
+              const updates = { procedures: newProcs };
+              if (appt.customFields) {
+                updates.customFields = { ...appt.customFields, procedures: newProcs };
+              }
+              await appointmentService.updateAppointment(apptId, updates);
+            }
+          }
+        }
+        setToast({ open: true, message: 'Appointment procedures removed!', type: 'success' });
+      } catch (error) {
+        console.error('Failed to update appointments:', error);
+        setToast({ open: true, message: 'Failed to update appointments.', type: 'error' });
+        setAppointmentProcedures(appointmentProcedures);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 

@@ -19,7 +19,9 @@ import {
   TableRow,
   Paper,
   Select,
-  MenuItem
+  MenuItem,
+  Autocomplete,
+  Chip
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
@@ -29,9 +31,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-
-
-
+import medflowLogo from '../../../../assets/medflow-logo.png';
 const PatientMembershipPlan = () => {
   const dispatch = useDispatch();
   const reduxData = useSelector(selectMembershipPlanData) || [];
@@ -48,28 +48,11 @@ const PatientMembershipPlan = () => {
   const [apptSingleDate, setApptSingleDate] = useState('');
   
   const [showNoPlan, setShowNoPlan] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-
   const availablePlans = useMemo(() => {
     const plans = reduxData.map(item => item.planName).filter(Boolean);
     return [...new Set(plans)].sort().map(plan => ({ planName: plan }));
   }, [reduxData]);
 
-  const handleSearch = (val) => {
-    setSearchQuery(val);
-    const searchLower = val.toLowerCase();
-    
-    let filtered = availablePlans;
-    if (val) {
-      filtered = availablePlans.filter(item => 
-        (item.planName || '').toLowerCase().includes(searchLower)
-      );
-    }
-    
-    setSearchResults(filtered);
-    setShowDropdown(true);
-  };
   useEffect(() => {
     dispatch(fetchPatientMembershipPlanReport({
       searchQuery,
@@ -171,21 +154,57 @@ const PatientMembershipPlan = () => {
   const handlePrintGroup = (elementId, groupName) => {
     const tableEl = document.getElementById(elementId);
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Patient Membership Plan - ' + groupName + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Patient Membership Plan - ' + groupName + '</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Patient Membership Plan - ${groupName}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print, svg { display: none !important; }
+            h6, h5 { font-family: sans-serif; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Patient Membership Plan - ${groupName}</h2>
+          ${tableEl.outerHTML}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -345,70 +364,45 @@ const PatientMembershipPlan = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>SEARCH BY PLAN NAME:</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Box sx={{ position: 'relative', width: 300 }}>
-            <TextField 
-              fullWidth
-              size="small" 
-              placeholder="Search for plan or patient" 
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => handleSearch(searchQuery)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start" sx={{ pl: 1 }}>
-                    <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
-                  </InputAdornment>
-                ),
-                sx: { 
-                  borderRadius: '8px',
-                  backgroundColor: '#f8fafc',
-                  height: 36,
-                  fontSize: '0.75rem',
-                  '& fieldset': { borderColor: '#e2e8f0' },
-                }
-              }}
-            />
-
-            {showDropdown && searchResults.length > 0 && (
-              <Paper 
-                elevation={8} 
-                sx={{ 
-                  position: 'absolute', 
-                  top: '100%', 
-                  left: 0, 
-                  zIndex: 9999, 
-                  maxHeight: '400px', 
-                  overflowY: 'auto', 
-                  border: '1px solid #ddd',
-                  width: '300px',
-                  mt: 0.5,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          <Autocomplete
+            freeSolo
+            options={availablePlans.map(p => p.planName)}
+            value={searchQuery}
+            onInputChange={(e, val) => setSearchQuery(val)}
+            onChange={(e, val) => setSearchQuery(val || '')}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search for plan or patient"
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start" sx={{ pl: 1, mt: 0 }}>
+                        <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
                 }}
-              >
-                <Table size="small" stickyHeader>
-                  <TableBody>
-                    <TableRow sx={{ bgcolor: '#eef4ff' }}>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan Name</TableCell>
-                    </TableRow>
-                    {searchResults.map((item, idx) => (
-                      <TableRow 
-                        key={idx} 
-                        hover 
-                        sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
-                        onClick={() => {
-                          setSearchQuery(item.planName || '');
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Paper>
+                sx={{
+                  width: '320px',
+                  backgroundColor: '#f8fafc',
+                  '& .MuiInputBase-root': {
+                    minHeight: 36,
+                    fontSize: '0.75rem',
+                  },
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }}
+              />
             )}
-          </Box>
+            renderOption={(props, option) => (
+              <li {...props} style={{ fontSize: '0.8rem', padding: '8px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a3353' }}>{option}</Typography>
+              </li>
+            )}
+          />
         </Box>
       </Box>
     </>

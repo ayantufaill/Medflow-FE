@@ -35,6 +35,7 @@ import {
   selectInsuranceCoverageData,
   selectInsuranceCoverageLoading,
 } from '../../../../store/slices/patientReportSlice';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 
@@ -55,34 +56,11 @@ const PatientInsuranceCoverage = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSearchItems, setSelectedSearchItems] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-
   const DUMMY_INSURANCE = [
     { payerId: '00621', carrierName: 'Blue Cross Blue Shield of Illinois', groupName: 'VIVID SEATS, LLC', groupNumber: '300871', planName: 'BCBS IL', payerAddress: '123 Blue St, Chicago, IL', carrierPhone: '800-123-4567' },
     { payerId: '52133', carrierName: 'United Healthcare Dental', groupName: 'DOXIM', groupNumber: '1602187', planName: 'UHC ( DOXIM )', payerAddress: '456 Health Way, Minnetonka, MN', carrierPhone: '800-987-6543' },
     { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna Dental Plans', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
   ];
-
-  const handleSearch = (val) => {
-    setSearchQuery(val);
-
-    const searchPool = (allCompanies && allCompanies.length > 0) ? allCompanies : DUMMY_INSURANCE;
-    let filtered = searchPool;
-    
-    if (val) {
-      filtered = searchPool.filter(item => 
-        (item.payerId || item.id?.toString() || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.carrierName || item.name || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.planName || item.name || '').toLowerCase().includes(val.toLowerCase())
-      );
-    }
-    
-    setSearchResults(filtered);
-    setShowDropdown(true);
-  };
   const [rawReportData, setRawReportData] = useState([]);
   const [data, setData] = useState([]);
   const [grouping, setGrouping] = useState('no');
@@ -103,6 +81,7 @@ const PatientInsuranceCoverage = () => {
   useEffect(() => {
     dispatch(fetchPatientInsuranceCoverageReport({
       searchQuery,
+      searchItems: selectedSearchItems.join('||'),
       assignmentFilter,
       apptFilterType,
       apptStartDate,
@@ -122,6 +101,7 @@ const PatientInsuranceCoverage = () => {
   const handleApplyFilters = () => {
     dispatch(fetchPatientInsuranceCoverageReport({
       searchQuery,
+      searchItems: selectedSearchItems.join('||'),
       assignmentFilter,
       apptFilterType,
       apptStartDate,
@@ -132,22 +112,8 @@ const PatientInsuranceCoverage = () => {
   };
 
   useEffect(() => {
-    let filtered = rawReportData || [];
-    
-    if (selectedSearchItems.length > 0) {
-      filtered = filtered.filter((item) => {
-        return selectedSearchItems.some(selected => {
-          const sLower = selected.toLowerCase();
-          return (
-            (item.planName && item.planName.toLowerCase().includes(sLower)) ||
-            (item.payer && item.payer.toLowerCase().includes(sLower))
-          );
-        });
-      });
-    }
-
-    setData(filtered);
-  }, [rawReportData, selectedSearchItems]);
+    setData(rawReportData || []);
+  }, [rawReportData]);
 
   const groupedData = useMemo(() => {
     if (grouping === 'no') return null;
@@ -231,22 +197,57 @@ const PatientInsuranceCoverage = () => {
   const handlePrintGroup = (elementId, groupName) => {
     const tableEl = document.getElementById(elementId);
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Patient Insurance - ' + groupName + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('button, .no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Patient Insurance - ' + groupName + '</h2>');
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Patient Insurance - ${groupName}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print, svg { display: none !important; }
+            h6, h5 { font-family: sans-serif; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Patient Insurance - ${groupName}</h2>
+          ${tableEl.outerHTML}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleClearFilters = () => {
@@ -403,99 +404,92 @@ const PatientInsuranceCoverage = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>SEARCH BY PAYER OR PLAN:</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Box sx={{ position: 'relative', width: 300 }}>
-            <TextField 
-              fullWidth
-              size="small" 
-              placeholder="Search for plan, patient, or payer" 
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => handleSearch(searchQuery)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start" sx={{ pl: 1 }}>
-                    <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
-                  </InputAdornment>
-                ),
-                sx: { 
-                  borderRadius: '8px',
-                  backgroundColor: '#f8fafc',
-                  height: 36,
-                  fontSize: '0.75rem',
-                  '& fieldset': { borderColor: '#e2e8f0' },
-                }
-              }}
-            />
-
-            {showDropdown && searchResults.length > 0 && (
-              <Paper 
-                elevation={8} 
-                sx={{ 
-                  position: 'absolute', 
-                  top: '100%', 
-                  left: 0, 
-                  zIndex: 9999, 
-                  maxHeight: '400px', 
-                  overflowY: 'auto', 
-                  border: '1px solid #ddd',
-                  width: { xs: '300px', sm: '500px', md: '700px' },
-                  mt: 0.5,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          <Autocomplete
+            multiple
+            freeSolo
+            options={(allCompanies && allCompanies.length > 0) ? allCompanies : DUMMY_INSURANCE}
+            getOptionLabel={(option) => {
+              if (typeof option === 'string') return option;
+              return option.carrierName || option.name || option.planName || option.groupName || '';
+            }}
+            filterOptions={(options, params) => {
+              const { inputValue } = params;
+              const val = inputValue.toLowerCase();
+              if (!val) return options.slice(0, 50); // limit empty state
+              return options.filter(item => 
+                (item.payerId || item.id?.toString() || '').toLowerCase().includes(val) ||
+                (item.carrierName || item.name || '').toLowerCase().includes(val) ||
+                (item.groupName || '').toLowerCase().includes(val) ||
+                (item.groupNumber || '').toLowerCase().includes(val) ||
+                (item.planName || item.name || '').toLowerCase().includes(val)
+              );
+            }}
+            value={selectedSearchItems}
+            onChange={(event, newValue) => {
+              const formattedValues = newValue.map(v => typeof v === 'string' ? v : (v.carrierName || v.name || v.planName || v.groupName || ''));
+              setSelectedSearchItems([...new Set(formattedValues)]);
+              setSearchQuery('');
+            }}
+            onInputChange={(e, val) => setSearchQuery(val)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={selectedSearchItems.length === 0 ? "Search for plan, patient, or payer" : ""}
+                size="small"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start" sx={{ pl: 1, mt: selectedSearchItems.length > 0 ? 0 : 0 }}>
+                        <SearchIcon sx={{ fontSize: 18, color: '#999' }} />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
                 }}
-              >
-                <Table size="small" stickyHeader>
-                  <TableBody>
-                    <TableRow sx={{ bgcolor: '#eef4ff' }}>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer ID</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Payer</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group Name</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
-                    </TableRow>
-                    {searchResults.map((item, idx) => (
-                      <TableRow 
-                        key={idx} 
-                        hover 
-                        sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
-                        onClick={() => {
-                          const itemName = item.carrierName || item.name || item.planName || '';
-                          if (itemName && !selectedSearchItems.includes(itemName)) {
-                            setSelectedSearchItems([...selectedSearchItems, itemName]);
-                          }
-                          setSearchQuery('');
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.payerId || item.id || '-'}</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupName || '-'}</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                        <TableCell sx={{ fontSize: '0.75rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Paper>
+                sx={{
+                  width: '320px',
+                  backgroundColor: '#f8fafc',
+                  '& .MuiInputBase-root': {
+                    minHeight: 36,
+                    fontSize: '0.75rem',
+                  },
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }}
+              />
             )}
-          </Box>
-          
-          {selectedSearchItems.map((item, idx) => (
-            <Chip
-              key={idx}
-              label={item}
-              onDelete={() => setSelectedSearchItems(selectedSearchItems.filter(i => i !== item))}
-              variant="outlined"
-              size="small"
-              sx={{ 
-                borderRadius: '4px', 
-                color: '#444', 
-                borderColor: '#ddd', 
-                bgcolor: '#fff',
-                '& .MuiChip-deleteIcon': { color: '#e53935', fontSize: '16px' }
-              }}
-            />
-          ))}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  label={option}
+                  variant="outlined"
+                  size="small"
+                  sx={{ 
+                    borderRadius: '4px', 
+                    color: '#444', 
+                    borderColor: '#ddd', 
+                    bgcolor: '#fff',
+                    m: '2px',
+                    '& .MuiChip-deleteIcon': { color: '#e53935', fontSize: '16px' }
+                  }}
+                />
+              ))
+            }
+            renderOption={(props, option) => {
+              const name = option.carrierName || option.name || option.planName || '';
+              const id = option.payerId || option.id || '';
+              const group = option.groupName ? ` - Group: ${option.groupName}` : '';
+              return (
+                <li {...props} style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a3353' }}>{name}{group}</Typography>
+                    {id && <Typography sx={{ fontSize: '0.7rem', color: '#64748b' }}>Payer ID: {id}</Typography>}
+                  </Box>
+                </li>
+              );
+            }}
+          />
         </Box>
       </Box>
     </>

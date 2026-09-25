@@ -18,6 +18,7 @@ import {
 import { reportingService } from '../../../../services/reporting.service';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
 import { PAYMENT_METHODS } from '../../../../constants/financeConstants';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 import DepositSlipFilters from '../../../../components/reports/financial/DepositSlipFilters';
 import DepositSlipPreview from '../../../../components/reports/financial/DepositSlipPreview';
@@ -337,7 +338,55 @@ const DepositSlips = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById('deposit-slip-print-area');
+    if (!printContent) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Deposit Slip</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Deposit Slip</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${printContent.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+    
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 500); 
+    };
   };
 
   const handleSaveTemplate = async () => {
