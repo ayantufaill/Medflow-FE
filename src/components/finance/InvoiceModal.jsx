@@ -243,6 +243,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
+      // Store selected teeth and surfaces for duplicate detection
+      selectedTeeth: savedData.selectedTeeth,
+      selectedSurfaces: savedData.selectedSurfaces,
     };
 
     if (activePatientId) {
@@ -1196,6 +1199,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             <AddNewProcedureDialog
               onClose={() => setShowAddProcedure(false)}
               onSave={handleSaveProcedure}
+              existingProcedures={procedures}
+              maxTeeth={1}
             />
           </Box>
         </Box>

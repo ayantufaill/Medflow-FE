@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Checkbox, FormControlLabel, TextField, Grid, Divider, IconButton, Autocomplete, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Checkbox, FormControlLabel, TextField, Grid, Divider, IconButton, Autocomplete, CircularProgress, Snackbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ProcedureCategorySelectDialog from './ProcedureCategorySelectDialog';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../store/slices/feeGuideSlice';
 import { COLORS } from '../../constants/colors';
 import { NoteAdd as NoteAddIcon } from '@mui/icons-material';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
-const AddNewProcedureDialog = ({ onClose, onSave, maxTeeth = Infinity }) => {
+const AddNewProcedureDialog = ({ onClose, onSave, maxTeeth = Infinity, existingProcedures = [] }) => {
+  const { showSnackbar } = useSnackbar();
   const maxillaryUR = [1, 2, 3, 4, 5];
   const maxillaryUA = [6, 7, 8, 'Q1', '', 'Q2', 9, 10, 11];
   const maxillaryUL = [12, 13, 14, 15, 16];
@@ -523,8 +525,69 @@ const AddNewProcedureDialog = ({ onClose, onSave, maxTeeth = Infinity }) => {
                 const desc = typeof proc === 'string' ? '' : (proc.Descript || proc.name || '');
                 const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
 
+                // Check for duplicate tooth + surface + procedure
+                const selectedTeethArray = Number.isFinite(maxTeeth) ? selectedTeeth.slice(0, maxTeeth) : selectedTeeth;
+                const surfacesKey = selectedSurfaces.sort().join(',');
+                
+                // Helper to parse teeth and surfaces from a procedure object
+                const parseTeethAndSurfaces = (p) => {
+                  // If the procedure has selectedTeeth/selectedSurfaces arrays (from AppointmentLeftPanel)
+                  if (Array.isArray(p.selectedTeeth) && Array.isArray(p.selectedSurfaces)) {
+                    return {
+                      teeth: p.selectedTeeth,
+                      surfaces: p.selectedSurfaces.sort().join(',')
+                    };
+                  }
+                  // If the procedure has site field (from InvoiceModal format: "28 (MO)")
+                  if (p.site) {
+                    const siteStr = p.site;
+                    // Parse format like "28 (MO)" or "1,2,3 (MO)"
+                    const match = siteStr.match(/^([\d,]+)\s*\(([^)]+)\)$/);
+                    if (match) {
+                      const teeth = match[1].split(',').map(s => s.trim());
+                      const surfaces = match[2].split('').sort().join(',');
+                      return { teeth, surfaces };
+                    }
+                    // Fallback: try to parse as comma-separated
+                    const teeth = siteStr.split(',').map(s => s.trim());
+                    return { teeth, surfaces: '' };
+                  }
+                  return { teeth: [], surfaces: '' };
+                };
+                
+                const isDuplicate = existingProcedures.some(p => {
+                  const { teeth: procTeeth, surfaces: procSurfaces } = parseTeethAndSurfaces(p);
+                  const procCode = p.procedureCode || p.code;
+                  
+                  // Check if same procedure code
+                  if (procCode !== code) return false;
+                  
+                  // If no teeth selected for the new procedure, check for existing procedure with same code and NO teeth
+                  if (selectedTeethArray.length === 0) {
+                    // For procedures without tooth, check if there's already one with same code and no teeth
+                    if (procTeeth.length > 0) return false; // Existing has teeth, new one doesn't - not a duplicate
+                    // Both have no teeth - check surfaces match
+                    return procSurfaces === surfacesKey;
+                  }
+                  
+                  // If teeth are selected, check if any tooth matches
+                  const hasSameTooth = selectedTeethArray.some(t => procTeeth.includes(t));
+                  if (!hasSameTooth) return false;
+                  
+                  // Check if surfaces match
+                  return procSurfaces === surfacesKey;
+                });
+
+                if (isDuplicate) {
+                  showSnackbar(
+                    'This procedure already exists for the selected tooth and surface combination.',
+                    'warning'
+                  );
+                  return;
+                }
+
                 onSave({
-                  selectedTeeth: Number.isFinite(maxTeeth) ? selectedTeeth.slice(0, maxTeeth) : selectedTeeth,
+                  selectedTeeth: selectedTeethArray,
                   selectedSurfaces,
                   procedureCode: code,
                   procedureDescription: desc,
