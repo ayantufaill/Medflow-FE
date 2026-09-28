@@ -30,8 +30,9 @@ import ProductionReportActions from '../../../../components/reports/financial/Pr
 import {
   fetchReferralByPatientReport,
   selectReferralByPatient,
-  selectPatientReportLoading,
+  selectReferralByPatientLoading,
 } from '../../../../store/slices/patientReportSlice';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 
@@ -64,7 +65,7 @@ const ActionIcons = () => (
 const ReferralByPatientReport = () => {
   const dispatch = useDispatch();
   const rawReportData = useSelector(selectReferralByPatient);
-  const loading = useSelector(selectPatientReportLoading);
+  const loading = useSelector(selectReferralByPatientLoading);
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
@@ -204,25 +205,83 @@ const ReferralByPatientReport = () => {
   const handlePrint = () => {
     const tableEl = document.getElementById('referral-report-table');
     if (!tableEl) return;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Referral By Patient Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; color: #666; }');
-    printWindow.document.write('.no-print { display: none !important; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Referral By Patient Report</h2>');
-    printWindow.document.write(`<p>Date Range: ${dateRange} (${startDate} to ${endDate})</p>`);
-    printWindow.document.write(tableEl.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Referral By Patient Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; color: #666; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print, svg { display: none !important; }
+            h6, h5 { font-family: sans-serif; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0;">Referral By Patient Report</h2>
+          <p style="text-align: center;">Date Range: ${dateRange} (${startDate} to ${endDate})</p>
+          ${tableEl.outerHTML}
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
-  const handleExport = () => alert('Exporting report as CSV...');
+  const handleExport = () => {
+    const headers = ['Referral Source', 'Referred Patient', 'Phone Number', 'Email Address'];
+    const rows = data.map((row) =>
+      [
+        `"${(row.referralSource || '').replace(/"/g, '""')}"`,
+        `"${(row.patient || '').replace(/"/g, '""')}"`,
+        row.phone || '',
+        row.email || '',
+      ].join(',')
+    );
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `referral_by_patient_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSaveTemplate = (name) => alert(`Template "${name}" saved!`);
 
   const handleClearFilters = () => {

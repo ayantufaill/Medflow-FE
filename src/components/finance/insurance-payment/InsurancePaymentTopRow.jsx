@@ -141,9 +141,17 @@ const InsurancePaymentTopRow = ({
                 e.stopPropagation();
                 item.onChange?.(e);
               }}
-              sx={{ p: 0.2, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }}
+              icon={<Box sx={{ width: 16, height: 16, borderRadius: '4px', border: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }} />}
+              checkedIcon={
+                <Box sx={{ width: 16, height: 16, borderRadius: '4px', bgcolor: COLORS.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </Box>
+              }
+              sx={{ p: 0.5 }}
             />
-            <Typography sx={{ fontSize: '0.8125rem' }}>{item.label}</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: COLORS.TEXT_PRIMARY }}>{item.label}</Typography>
             {item.icon && <HelpOutlineIcon sx={{ fontSize: '0.8rem', ml: 0.5, color: '#666' }} />}
           </Box>
         ))}

@@ -74,7 +74,7 @@ const AppointmentsReport = () => {
   const handleExportCsv = () => {
     exportToCSV(reportData, [
       { header: 'Patient', key: 'patient' },
-      { header: 'Flags', key: 'flags' },
+      { header: 'Flags', key: (row) => Array.isArray(row.flags) ? row.flags.map(f => typeof f === 'object' ? (f.name || f.label) : f).join(', ') : row.flags },
       { header: 'Type', key: 'type' },
       { header: 'Status', key: 'status' },
       { header: 'Providers', key: 'providers' },
@@ -104,7 +104,9 @@ const AppointmentsReport = () => {
   const renderRow = (row, i) => (
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.flags}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>
+        {Array.isArray(row.flags) ? row.flags.map(f => typeof f === 'object' ? (f.name || f.label) : f).join(', ') : row.flags}
+      </TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.type}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.providers}</TableCell>
