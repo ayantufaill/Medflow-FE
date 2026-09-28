@@ -31,7 +31,7 @@ const PaymentLinesTable = ({ data = [] }) => {
           <TableBody>
             {data.map((row, index) => (
               <TableRow key={index} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
-                <TableCell>{row.id || row.patientId || '-'}</TableCell>
+                <TableCell>{row.patientId || '-'}</TableCell>
                 <TableCell sx={{ color: '#2262ef', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
                   {row.patient}
                 </TableCell>

@@ -7,21 +7,13 @@ import ProviderCollectionPaymentTypeTable from '../../../../components/reports/f
 
 const ProviderCollectionPerPaymentType = () => {
   const {
-    dateRange,
-    startDate,
-    endDate,
-    provider,
-    showFlags,
-    flagFilter,
-    sortBy,
+    filters,
     loading,
     dropdownProviders,
     sortedReportData,
     summaryStats,
     totals,
     getProviderLabel,
-    handleFilterChange,
-    handleFilterModeChange,
     handleApply,
     handleClear,
     handleExportCSV,
@@ -31,19 +23,11 @@ const ProviderCollectionPerPaymentType = () => {
   return (
     <ReportLayout title="Provider Collection Per Payment Type:">
       <ProviderCollectionPaymentTypeFilters 
-        dateRange={dateRange}
-        startDate={startDate}
-        endDate={endDate}
-        provider={provider}
-        showFlags={showFlags}
-        flagFilter={flagFilter}
-        sortBy={sortBy}
+        initialFilters={filters}
         dropdownProviders={dropdownProviders}
         getProviderLabel={getProviderLabel}
-        handleFilterChange={handleFilterChange}
-        handleFilterModeChange={handleFilterModeChange}
-        handleApply={handleApply}
-        handleClear={handleClear}
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
       />
 
       <ProductionReportActions 
@@ -55,7 +39,7 @@ const ProviderCollectionPerPaymentType = () => {
       <ProviderCollectionPaymentTypeTable 
         loading={loading}
         sortedReportData={sortedReportData}
-        showFlags={showFlags}
+        showFlags={filters.showFlags}
         totals={totals}
         summaryStats={summaryStats}
       />
@@ -63,4 +47,4 @@ const ProviderCollectionPerPaymentType = () => {
   );
 };
 
-export default ProviderCollectionPerPaymentType;
+export default ProviderCollectionPerPaymentType;

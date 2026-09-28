@@ -101,23 +101,7 @@ const RouteSlipDialog = () => {
   // Identify the primary appointment for the Route Slip
   let routeSlipAppt = null;
 
-  // If we have an active appointment in Redux and it belongs to this patient, use it
-  if (currentAppointment && (currentAppointment.patientId === currentPatient?._id || currentAppointment.patientId === currentPatient?.id)) {
-    routeSlipAppt = currentAppointment;
-  } else {
-    // Fallback: look for an appointment today
-    const todayAppts = patientHistory.filter(appt => dayjs(appt.appointmentDate || appt.start).isSame(dayjs(), 'day'));
-    if (todayAppts.length > 0) {
-      todayAppts.sort((a, b) => dayjs(a.appointmentDate || a.start).diff(dayjs(b.appointmentDate || b.start)));
-      routeSlipAppt = todayAppts[0];
-    }
-  }
-
-  const primaryDateStr = routeSlipAppt ? dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('dddd MMM DD, YYYY') : dayjs().format('dddd MMM DD, YYYY');
-  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('MM/DD/YYYY')}` : `APPOINTMENT OF ${dayjs().format('MM/DD/YYYY')}`;
-
   const getApptDateTime = (appt) => {
-    // Force everything into a local YYYY-MM-DD format to avoid timezone drift
     let dateStr;
     if (appt.appointmentDate) {
       dateStr = appt.appointmentDate.split('T')[0];
@@ -128,24 +112,40 @@ const RouteSlipDialog = () => {
     }
 
     let timeStr = '00:00';
-    if (appt.time) { // from calendar mapped object e.g. "6:00 PM"
+    if (appt.time) {
       const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
-      if (timeObj.isValid()) {
-        timeStr = timeObj.format('HH:mm');
-      }
+      if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
     } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
       timeStr = appt.startTime;
       if (timeStr.split(':').length === 2) timeStr += ':00';
     } else if (appt.start && typeof appt.start === 'string' && appt.start.includes('T')) {
-      // Extract the HH:mm:ss directly from the string to ignore timezone offset
       timeStr = appt.start.split('T')[1].substring(0, 8);
     }
 
     return dayjs(`${dateStr}T${timeStr}`);
   };
 
+  // If we have an active appointment in Redux and it belongs to this patient, use it
+  if (currentAppointment && (currentAppointment.patientId === currentPatient?._id || currentAppointment.patientId === currentPatient?.id)) {
+    routeSlipAppt = currentAppointment;
+  } else {
+    // Fallback: look for an appointment today
+    const todayAppts = patientHistory.filter(appt => {
+      const appointmentDateTime = getApptDateTime(appt);
+      return appointmentDateTime.isSame(dayjs(), 'day') && appointmentDateTime.isAfter(dayjs());
+    });
+    if (todayAppts.length > 0) {
+      todayAppts.sort((a, b) => dayjs(a.appointmentDate || a.start).diff(dayjs(b.appointmentDate || b.start)));
+      routeSlipAppt = todayAppts[0];
+    }
+  }
+
+  const primaryDateStr = routeSlipAppt ? dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('dddd MMM DD, YYYY') : dayjs().format('dddd MMM DD, YYYY');
+  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('MM/DD/YYYY')}` : `APPOINTMENT OF ${dayjs().format('MM/DD/YYYY')}`;
+
   // Next appointment is the first one strictly after the primary appointment
   const referenceDateTime = routeSlipAppt ? getApptDateTime(routeSlipAppt) : dayjs();
+  const now = dayjs();
   const futureAppts = patientHistory.filter(appt => {
     // Exclude the primary appointment itself safely
     if (routeSlipAppt) {
@@ -153,7 +153,8 @@ const RouteSlipDialog = () => {
       const rId = routeSlipAppt._id || routeSlipAppt.id;
       if (aId && rId && String(aId) === String(rId)) return false;
     }
-    return getApptDateTime(appt).isAfter(referenceDateTime);
+    const appointmentDateTime = getApptDateTime(appt);
+    return appointmentDateTime.isAfter(now) && appointmentDateTime.isAfter(referenceDateTime);
   });
   futureAppts.sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
   const nextAppt = futureAppts.length > 0 ? futureAppts[0] : null;

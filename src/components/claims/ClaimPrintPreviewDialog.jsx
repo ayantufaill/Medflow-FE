@@ -7,9 +7,16 @@ import {
   Typography,
   Button,
   Box,
-  CircularProgress
+  CircularProgress,
+  IconButton
 } from '@mui/material';
+import { Close as CloseIcon, Description as DescriptionIcon, Print as PrintIcon } from '@mui/icons-material';
 import { claimService } from '../../services/claim.service';
+import { COLORS } from '../../constants/colors';
+
+const TYPO = {
+  fontFamily: 'Inter, sans-serif',
+};
 
 const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -67,22 +74,41 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
       onClose={handleClose} 
       maxWidth="lg" 
       fullWidth 
-      PaperProps={{ sx: { height: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '8px', overflow: 'hidden' } }}
+      sx={{ zIndex: 1500 }}
+      PaperProps={{ 
+        sx: { 
+          height: '90vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          borderRadius: '14px', 
+          border: `1px solid ${COLORS.BORDER}`,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+          overflow: 'hidden' 
+        } 
+      }}
     >
-      <DialogTitle 
-        sx={{ 
-          bgcolor: '#5b72a9', 
-          color: 'white', 
-          textAlign: 'center', 
-          fontWeight: 600,
-          py: 1.5,
-          fontSize: '1rem'
-        }}
-      >
-        Print Preview
+      <DialogTitle sx={{
+        boxSizing: "border-box",
+        px: "25px",
+        py: "16px",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        borderBottom: `1px solid ${COLORS.BORDER}`,
+        backgroundColor: COLORS.SURFACE_TINT,
+        m: 0,
+        flexShrink: 0,
+      }}>
+        <DescriptionIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+        <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1, fontFamily: TYPO.fontFamily }}>
+          ADA 2019 Claim Form Preview ({claim?.claimNumber || claim?.id || 'Preview'})
+        </Typography>
+        <IconButton onClick={handleClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+          <CloseIcon sx={{ fontSize: "18px" }} />
+        </IconButton>
       </DialogTitle>
       
-      <DialogContent sx={{ p: 0, flexGrow: 1, display: 'flex', flexDirection: 'column', bgcolor: '#e5e7eb' }}>
+      <DialogContent sx={{ p: 0, flexGrow: 1, display: 'flex', flexDirection: 'column', bgcolor: '#f8fafc' }}>
         {loading ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             <CircularProgress />
@@ -93,8 +119,8 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
             <Button variant="outlined" onClick={onClose}>Close</Button>
           </Box>
         ) : pdfUrl ? (
-          <Box sx={{ flexGrow: 1, position: 'relative', p: 3, display: 'flex', justifyContent: 'center', overflowY: 'auto' }}>
-            <Box sx={{ width: '100%', maxWidth: '850px', height: '100%', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+          <Box sx={{ flexGrow: 1, position: 'relative', p: 1, display: 'flex', justifyContent: 'center', overflowY: 'auto' }}>
+            <Box sx={{ width: '100%', height: '100%', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
               <iframe 
                 ref={iframeRef}
                 src={pdfUrl} 
@@ -108,35 +134,45 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
         ) : null}
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, bgcolor: '#f8f9fa', borderTop: '1px solid #e5e7eb', justifyContent: 'flex-end', gap: 1 }}>
+      <DialogActions sx={{ p: 2, backgroundColor: '#ffffff', borderTop: `1px solid ${COLORS.BORDER}`, justifyContent: 'flex-end', gap: 1 }}>
         <Button 
           onClick={handleClose} 
+          variant="outlined" 
           sx={{ 
-            textTransform: 'none', 
-            color: '#6b7280', 
-            bgcolor: '#e5e7eb',
+            textTransform: 'none',
+            borderColor: COLORS.BORDER,
+            color: COLORS.TEXT_PRIMARY,
             fontWeight: 600,
-            borderRadius: '4px',
+            borderRadius: '8px',
             px: 3,
-            '&:hover': { bgcolor: '#d1d5db' }
+            py: 0.75,
+            '&:hover': {
+              borderColor: COLORS.BORDER_DARK,
+              backgroundColor: COLORS.SURFACE_HOVER,
+            },
           }}
         >
-          Cancel
+          Close 
         </Button>
         <Button
+          variant="outlined"
           onClick={handlePrint}
-          variant="contained"
           disabled={!pdfUrl || loading}
-          sx={{ 
-            textTransform: 'none', 
-            backgroundColor: '#d4bd98', 
-            color: '#fff',
+          startIcon={<PrintIcon />}
+          sx={{
+            textTransform: 'none',
+            fontSize: '0.82rem',
             fontWeight: 600,
-            borderRadius: '4px',
-            px: 4,
             boxShadow: 'none',
-            '&:hover': { backgroundColor: '#c5ae89', boxShadow: 'none' },
-            '&.Mui-disabled': { backgroundColor: '#e5e7eb', color: '#9ca3af' }
+            borderRadius: '8px',
+            px: 2,
+            py: 0.8,
+            height: 36,
+            border: '1px solid #3b82f6',
+            backgroundColor: 'transparent',
+            color: '#3b82f6',
+            '&:hover': { backgroundColor: 'rgba(59, 130, 246, 0.04)' },
+            '&.Mui-disabled': { borderColor: '#e5e7eb', color: '#9ca3af' },
           }}
         >
           Print

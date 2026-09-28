@@ -418,6 +418,7 @@ const AppointmentRightPanel = ({
       <ColorTagPicker
         selected={selectedColorTags}
         onChange={onColorTagsChange}
+        readOnly={readOnly}
       />
     </Box>
   </Box>

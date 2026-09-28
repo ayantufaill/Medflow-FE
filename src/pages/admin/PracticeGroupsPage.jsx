@@ -29,6 +29,7 @@ import {
   selectPracticeGroupMutationLoading,
   selectPracticeGroupMutationError,
 } from '../../store/slices/practiceGroupSlice';
+import { useAuth } from '../../contexts/AuthContext';
 
 const emptyGroupForm = { name: '' };
 const emptyBranchForm = { name: '', address: '', city: '', state: '', zip: '', phone: '' };
@@ -36,6 +37,10 @@ const emptyAdminForm = { firstName: '', lastName: '', email: '', branchId: '' };
 
 const PracticeGroupsPage = () => {
   const dispatch = useDispatch();
+  const { user } = useAuth();
+  const userRoles = (user?.roles || []).map((r) => (typeof r === 'string' ? r : r?.name || ''));
+  const isSuperAdmin = userRoles.includes('Super Admin');
+
   const groups = useSelector(selectPracticeGroups) || [];
   const loading = useSelector(selectPracticeGroupLoading);
   const error = useSelector(selectPracticeGroupError);
@@ -105,15 +110,19 @@ const PracticeGroupsPage = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827', mb: 0.5, letterSpacing: '-0.02em', fontSize: '1.75rem' }}>
-            Practice Groups
+            {isSuperAdmin ? 'Practice Groups' : 'My Practice Group'}
           </Typography>
           <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.9rem' }}>
-            The organizations that own your clinic branches — the Group → Branch tenant layer.
+            {isSuperAdmin
+              ? 'The organizations that own your clinic branches — the Group → Branch tenant layer.'
+              : 'Manage branches and administrators for your practice group.'}
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => setGroupDialogOpen(true)} sx={{ bgcolor: '#2362EF' }}>
-          New Group
-        </Button>
+        {isSuperAdmin && (
+          <Button variant="contained" startIcon={<Add />} onClick={() => setGroupDialogOpen(true)} sx={{ bgcolor: '#2362EF' }}>
+            New Group
+          </Button>
+        )}
       </Box>
 
       {adminSuccessMessage && (

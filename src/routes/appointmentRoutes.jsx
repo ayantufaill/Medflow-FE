@@ -18,8 +18,10 @@ import CreateRecurringAppointmentPage from '../pages/recurring-appointments/Crea
 import EditRecurringAppointmentPage from '../pages/recurring-appointments/EditRecurringAppointmentPage';
 import ViewRecurringAppointmentPage from '../pages/recurring-appointments/ViewRecurringAppointmentPage';
 
-const adminReception = (children) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
+const ALL_STAFF_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
+
+const staffScheduleRoute = (children) => (
+  <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
     <Layout>{children}</Layout>
   </ProtectedRoute>
 );
@@ -29,22 +31,19 @@ const appointmentRoutes = [
     key="/appointments"
     path="/appointments"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider']}>
+      <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
         <Layout><AppointmentsListPage /></Layout>
       </ProtectedRoute>
     }
   />,
-  <Route key="/appointments/new" path="/appointments/new" element={adminReception(<CreateAppointmentPage />)} />,
-  <Route key="/appointments/schedule" path="/appointments/schedule" element={adminReception(<SchedulePage />)} />,
-  <Route key="/appointments/calendar" path="/appointments/calendar" element={adminReception(<AppointmentCalendarPage />)} />,
-  // Clinical Staff included: this page's LeftPanel renders PurchaseProductDialog,
-  // which calls the purchase-products/unbilled-products routes Clinical Staff is
-  // gated on server-side — see navMenuItems.jsx's Appointments item comment.
+  <Route key="/appointments/new" path="/appointments/new" element={staffScheduleRoute(<CreateAppointmentPage />)} />,
+  <Route key="/appointments/schedule" path="/appointments/schedule" element={staffScheduleRoute(<SchedulePage />)} />,
+  <Route key="/appointments/calendar" path="/appointments/calendar" element={staffScheduleRoute(<AppointmentCalendarPage />)} />,
   <Route
     key="/appointments/operatory-schedule"
     path="/appointments/operatory-schedule"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider', 'Clinical Staff']}>
+      <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
         <ScheduleLayout>
           <OperatorySchedulePage />
         </ScheduleLayout>
@@ -55,20 +54,20 @@ const appointmentRoutes = [
     key="/appointments/:appointmentId"
     path="/appointments/:appointmentId"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Receptionist', 'Provider']}>
+      <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
         <Layout><ViewAppointmentPage /></Layout>
       </ProtectedRoute>
     }
   />,
-  <Route key="/appointments/:appointmentId/edit" path="/appointments/:appointmentId/edit" element={adminReception(<EditAppointmentPage />)} />,
-  <Route key="/waitlist" path="/waitlist" element={adminReception(<WaitlistListPage />)} />,
-  <Route key="/waitlist/new" path="/waitlist/new" element={adminReception(<CreateWaitlistPage />)} />,
-  <Route key="/waitlist/:waitlistEntryId" path="/waitlist/:waitlistEntryId" element={adminReception(<ViewWaitlistPage />)} />,
-  <Route key="/waitlist/:waitlistEntryId/edit" path="/waitlist/:waitlistEntryId/edit" element={adminReception(<EditWaitlistPage />)} />,
-  <Route key="/recurring-appointments" path="/recurring-appointments" element={adminReception(<RecurringAppointmentsListPage />)} />,
-  <Route key="/recurring-appointments/new" path="/recurring-appointments/new" element={adminReception(<CreateRecurringAppointmentPage />)} />,
-  <Route key="/recurring-appointments/:recurringAppointmentId" path="/recurring-appointments/:recurringAppointmentId" element={adminReception(<ViewRecurringAppointmentPage />)} />,
-  <Route key="/recurring-appointments/:recurringAppointmentId/edit" path="/recurring-appointments/:recurringAppointmentId/edit" element={adminReception(<EditRecurringAppointmentPage />)} />,
+  <Route key="/appointments/:appointmentId/edit" path="/appointments/:appointmentId/edit" element={staffScheduleRoute(<EditAppointmentPage />)} />,
+  <Route key="/waitlist" path="/waitlist" element={staffScheduleRoute(<WaitlistListPage />)} />,
+  <Route key="/waitlist/new" path="/waitlist/new" element={staffScheduleRoute(<CreateWaitlistPage />)} />,
+  <Route key="/waitlist/:waitlistEntryId" path="/waitlist/:waitlistEntryId" element={staffScheduleRoute(<ViewWaitlistPage />)} />,
+  <Route key="/waitlist/:waitlistEntryId/edit" path="/waitlist/:waitlistEntryId/edit" element={staffScheduleRoute(<EditWaitlistPage />)} />,
+  <Route key="/recurring-appointments" path="/recurring-appointments" element={staffScheduleRoute(<RecurringAppointmentsListPage />)} />,
+  <Route key="/recurring-appointments/new" path="/recurring-appointments/new" element={staffScheduleRoute(<CreateRecurringAppointmentPage />)} />,
+  <Route key="/recurring-appointments/:recurringAppointmentId" path="/recurring-appointments/:recurringAppointmentId" element={staffScheduleRoute(<ViewRecurringAppointmentPage />)} />,
+  <Route key="/recurring-appointments/:recurringAppointmentId/edit" path="/recurring-appointments/:recurringAppointmentId/edit" element={staffScheduleRoute(<EditRecurringAppointmentPage />)} />,
 ];
 
 export default appointmentRoutes;

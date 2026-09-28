@@ -19,11 +19,25 @@ import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 
 import { patientService } from "../../services/patient.service";
-import { useDispatch } from "react-redux";
-import { setSelectedAppointmentId, fetchAppointments } from "../../store/slices/appointmentSlice";
+import { appointmentService } from "../../services/appointment.service";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  setSelectedAppointmentId,
+  fetchAppointments,
+  fetchPatientHistory,
+  updateAppointmentInList,
+  invalidateAppointmentDetail,
+  setCurrentAppointment,
+  setFamilyAppointmentsDialogOpen,
+  setFamilyAppointmentsSchedulingDate,
+  setFamilyAppointmentsSchedulingTime,
+  setFamilyAppointmentsSchedulingRoomId,
+  setFamilyAppointmentsRecareDueDates,
+} from "../../store/slices/appointmentSlice";
+import { selectFamilyAppointmentsRecareDueDates } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import SendBulkTextDialog from "../../components/appointments/SendBulkTextDialog";
-import ProgressNotesDialog from "../../components/appointments/schedule/progress-notes-modal/ProgressNotesDialog";
 import RouteSlipDialog from "../../components/appointments/schedule/route-slip-modal/RouteSlipDialog";
 import FamilyAppointmentsDialog from "../../components/appointments/schedule/family-appointments-modal/FamilyAppointmentsDialog";
 import LabCasesDialog from "../../components/appointments/schedule/lab-cases-modal/LabCasesDialog";
@@ -87,6 +101,7 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const OperatorySchedulePage = () => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
+  const recareDueDates = useSelector(selectFamilyAppointmentsRecareDueDates);
 
   // ── Dropdown data (providers, rooms, appointment types) ──────────
   const { providers, rooms, appointmentTypes } = useDropdownData({
@@ -111,8 +126,9 @@ const OperatorySchedulePage = () => {
     },
   });
   const sensors = useSensors(mouseSensor, touchSensor);
-  const [activeDragData, setActiveDragData] = useState(null);
-  const [pendingItems, setPendingItems] = useState([]);
+   const [activeDragData, setActiveDragData] = useState(null);
+   const [pendingItems, setPendingItems] = useState([]);
+   const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Dynamically derive operatory columns from the rooms list.
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -134,33 +150,71 @@ const OperatorySchedulePage = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
 
-  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate } = useScheduleState();
+  const { frontendFilters, calendarView, setRouteSlipDialogOpen, selectedDate: reduxSelectedDate, setSelectedDate, familyAppointmentsDialogOpen, setFamilyAppointmentsDialogOpen, familyAppointmentsSchedulingDate, setFamilyAppointmentsSchedulingDate, familyAppointmentsSchedulingRoomId, setFamilyAppointmentsSchedulingRoomId } = useScheduleState();
   const selectedDate = useMemo(() => reduxSelectedDate ? dayjs(reduxSelectedDate) : dayjs(), [reduxSelectedDate]);
 
-  // Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
+// Deep-link support: ?date=YYYY-MM-DD&highlightAppointmentId=123 (used by notification clicks)
   // to jump the calendar to a specific date and flash the relevant appointment card.
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightAppointmentId, setHighlightAppointmentId] = useState(null);
 
+  // Compute highlightTime directly from URL params so it survives remounts
+  const urlTimeParam = searchParams.get('time');
+  const highlightTime = useMemo(() => {
+    // Check URL param first
+    if (urlTimeParam) {
+      const timeMatch = urlTimeParam.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let hour = parseInt(timeMatch[1], 10);
+        const mins = parseInt(timeMatch[2], 10);
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+        if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+        return hour * 60 + mins;
+      }
+    }
+    // Check custom event highlight (format: "time-{minutesFromStart}")
+    if (highlightAppointmentId && highlightAppointmentId.startsWith('time-')) {
+      return parseInt(highlightAppointmentId.replace('time-', ''), 10);
+    }
+    return null;
+  }, [urlTimeParam, highlightAppointmentId]);
+
+  const urlDateParam = searchParams.get('date');
+  const urlHighlightParam = searchParams.get('highlightAppointmentId');
+
+  // Apply deep-link date to schedule state whenever URL changes (only on initial load)
   useEffect(() => {
     const dateParam = searchParams.get('date');
     const highlightParam = searchParams.get('highlightAppointmentId');
+    if (!dateParam && !highlightParam) return;
 
-    if (dateParam && dayjs(dateParam).isValid()) {
-      setSelectedDate(dayjs(dateParam).toISOString());
+    if (dateParam && dayjs(dateParam).isValid() && reduxSelectedDate !== dayjs(dateParam).format("YYYY-MM-DD")) {
+      setSelectedDate(dayjs(dateParam).format("YYYY-MM-DD"));
     }
     if (highlightParam) {
       setHighlightAppointmentId(highlightParam);
     }
-    if (dateParam || highlightParam) {
-      // Clear the params from the URL so a refresh doesn't re-trigger the jump/highlight.
-      setSearchParams({}, { replace: true });
-    }
-    // Depends on searchParams (not just mount) because clicking a notification while already
-    // on this route updates the query string in place without remounting the page.
+    // Only run once on mount - don't sync URL changes back to Redux
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
+  // Scroll to highlight time when both selectedDate and highlightTime are set
+  useEffect(() => {
+    if (highlightTime != null && highlightTime >= 0) {
+      const timer = setTimeout(() => {
+        const gridNode = document.getElementById('schedule-grid-scroll-container');
+        if (gridNode) {
+          const HOUR_HEIGHT = 150;
+          const START_HOUR = 7;
+          const scrollTop = Math.max(0, ((highlightTime / 60) - START_HOUR)) * HOUR_HEIGHT;
+          gridNode.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+        // Clear the highlight after scrolling
+        setHighlightAppointmentId(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+}, [highlightTime, selectedDate]);
 
 
   const [printMenuAnchorEl, setPrintMenuAnchorEl] = useState(null);
@@ -190,16 +244,12 @@ const OperatorySchedulePage = () => {
     } else if (dragData.isBlockSlot) {
       const block = dragData.block;
       const blockId = dragData.blockId;
-      if (pendingItems.some(item => item.id === blockId)) {
-        showSnackbar("Block is already in the pending list", "info");
-        return;
-      }
       setPendingItems(prev => [...prev, {
-        id: blockId,
+        id: `${blockId}-copy-${Date.now()}`,
         type: "block",
         data: block
       }]);
-      showSnackbar(`Moved calendar block to Pending`, "success");
+      showSnackbar(`Added calendar block copy to Pending`, "success");
     }
   };
 
@@ -288,56 +338,117 @@ const OperatorySchedulePage = () => {
         setFormSaving(false);
       }
     } else if (isAppt) {
-      try {
-        setFormSaving(true);
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-
-        await updateAppointment(itemId, {
-          appointmentDate: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          roomId: roomId,
-          status: "scheduled"
-        });
-
-        showSnackbar("Appointment rescheduled successfully", "success");
-      } catch (err) {
-        if (err.status === 409 || err.response?.status === 409) {
-          const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
-          showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
-        } else {
-          const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
-          showSnackbar(msg, "error");
-        }
-      } finally {
-        setFormSaving(false);
-      }
+      setConfirmDialog({
+        message: "Are you want to move this appointment?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            setFormSaving(true);
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            await updateAppointment(itemId, {
+              appointmentDate: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              roomId: roomId,
+              status: "scheduled"
+            });
+            showSnackbar("Appointment rescheduled successfully", "success");
+          } catch (err) {
+            if (err.status === 409 || err.response?.status === 409) {
+              const conflictMsg = err.message || err.response?.data?.error?.message || err.response?.data?.message;
+              showSnackbar(conflictMsg || 'This time slot is no longer available.', 'error');
+            } else {
+              const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule appointment";
+              showSnackbar(msg, "error");
+            }
+          } finally {
+            setFormSaving(false);
+          }
+        },
+      });
+      return;
     } else if (isBlock) {
-      try {
-        // Always delete the old block, even if it's coming from pending, 
-        // because we don't delete it when moving it TO pending (to prevent data loss on refresh)
-        if (itemId && !String(itemId).startsWith("temp-")) {
-          await scheduleBlockService.deleteBlock(itemId);
-        }
+      setConfirmDialog({
+        message: "Are you want to move this block?",
+        confirmText: "Yes",
+        cancelText: "Cancel",
+        onConfirm: async () => {
+          try {
+            const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+            const newBlockData = {
+              roomId: roomId,
+              date: start.format("YYYY-MM-DD"),
+              startTime: start.format("HH:mm"),
+              endTime: end.format("HH:mm"),
+              notes: itemData.notes || "Blocked Slot",
+              color: itemData.color || "#ffe082"
+            };
+            await scheduleBlockService.createBlock(newBlockData);
+            if (dragData.isPendingItem) {
+              showSnackbar("Calendar block copy placed successfully", "success");
+            } else {
+              if (itemId && !String(itemId).startsWith("temp-")) {
+                await scheduleBlockService.deleteBlock(itemId);
+              }
+              showSnackbar("Calendar block rescheduled successfully", "success");
+            }
+            refetchScheduleBlocks();
+          } catch (err) {
+            const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
+            showSnackbar(msg, "error");
+          }
+        },
+      });
+      return;
+    } else if (dragData.isRecareBlock) {
+      // Handle recare/treatment block drop - pass data directly via initialAppointment
+      const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
+      const appointmentDate = start.format("YYYY-MM-DD");
+      const startTime = start.format("HH:mm");
+      const endTime = end.format("HH:mm");
+      const duration = dragData.durationMinutes || 60;
+      const visitType = dragData.visitType || 'recare';
 
-        const roomId = columnId.startsWith("op") ? columnId.substring(2) : columnId;
-        const newBlockData = {
-          roomId: roomId,
-          date: start.format("YYYY-MM-DD"),
-          startTime: start.format("HH:mm"),
-          endTime: end.format("HH:mm"),
-          notes: itemData.notes || "Blocked Slot",
-          color: itemData.color || "#ffe082"
-        };
+      // Pass the block data directly as initialAppointment with a template flag
+      // Use a numeric ID (no prefix) so form treats it as new appointment
+      const templateData = {
+        ...dragData,
+        id: Date.now(), // Numeric ID - no "recare-" prefix, no "appt-" prefix
+        appointmentDate: appointmentDate,
+        startTime: startTime,
+        endTime: endTime,
+        durationMinutes: duration,
+        roomId: roomId,
+        visitType: visitType,
+        isRecareTemplate: true,
+        status: 'scheduled',
+        appointmentTypeName: dragData.appointmentTypeName,
+        // Ensure customFields has the procedures and providerRows for the form
+        customFields: {
+          ...dragData.customFields,
+          visitType: visitType,
+          recareSourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
+          sourceAppointmentId: dragData.sourceProcedureBlockAppointment?._id || dragData.sourceProcedureBlockAppointment?.id || null,
+          procedures: dragData.procedures || [],
+          providerRows: dragData.providerId ? [{
+            providerId: dragData.providerId,
+            time: dragData.durationMinutes || 60
+          }] : [],
+        },
+        procedures: dragData.procedures || [],
+        providerId: dragData.providerId,
+        sourceProcedureBlockAppointment: dragData.sourceProcedureBlockAppointment || null,
+      };
 
-        await scheduleBlockService.createBlock(newBlockData);
-        showSnackbar("Calendar block rescheduled successfully", "success");
-        setPendingItems(prev => prev.filter(i => i.id !== itemId));
-        fetchScheduleBlocks();
-      } catch (err) {
-        const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to reschedule calendar block";
-        showSnackbar(msg, "error");
-      }
+      console.log('[DROP] templateData created:', JSON.stringify(templateData, null, 2));
+
+      setEditingAppointment(templateData);
+      setInitialShortlistData(null);
+      setFormOpen(true);
+      setShowExtendedOptions(false);
+      
+      showSnackbar(`${visitType.charAt(0).toUpperCase() + visitType.slice(1)} appointment ready to schedule`, "info");
     }
   };
 
@@ -370,6 +481,7 @@ const OperatorySchedulePage = () => {
         setEditingAppointment(shallowAppt);
         setFormOpen(true);
         setShowExtendedOptions(true);
+        setInitialShortlistData(null);
         return;
       }
 
@@ -384,11 +496,13 @@ const OperatorySchedulePage = () => {
           setEditingAppointment(fullAppt);
           setFormOpen(true);
           setShowExtendedOptions(true);
+          setInitialShortlistData(null);
         } catch (err) {
           console.error("Failed to load appointment full details", err);
           setEditingAppointment(shallowAppt);
           setFormOpen(true);
           setShowExtendedOptions(true);
+          setInitialShortlistData(null);
         } finally {
           setIsOpeningForm(false);
         }
@@ -406,19 +520,35 @@ const OperatorySchedulePage = () => {
     };
     window.addEventListener('block-card-clicked', handleBlockClick);
 
+    const handleNavigateToSlot = (e) => {
+      const { date, time } = e.detail;
+      if (date && dayjs(date).isValid()) {
+        setSelectedDate(dayjs(date).format("YYYY-MM-DD"));
+        // Store time to scroll to it after date change
+        const timeMatch = time?.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1], 10);
+          const mins = parseInt(timeMatch[2], 10);
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'PM' && hour < 12) hour += 12;
+          if (timeMatch[3] && timeMatch[3].toUpperCase() === 'AM' && hour === 12) hour = 0;
+          setHighlightAppointmentId(`time-${hour * 60 + mins}`);
+        }
+      }
+    };
+    window.addEventListener('navigate-to-slot', handleNavigateToSlot);
+
     return () => {
       window.removeEventListener('appointment-card-double-clicked', handleApptDoubleClick);
       window.removeEventListener('block-card-clicked', handleBlockClick);
+      window.removeEventListener('navigate-to-slot', handleNavigateToSlot);
     };
   }, []);
 
-  const fetchScheduleBlocks = useCallback(async () => {
+  const refetchScheduleBlocks = useCallback(async () => {
     try {
       const dateStr = selectedDate.format("YYYY-MM-DD");
       const blocks = await scheduleBlockService.getBlocksForDate(dateStr);
       setScheduleBlocks(blocks);
-
-      // Parse closed days from blocks
       const closedOps = {};
       blocks.forEach(block => {
         if (block.notes === "CLOSED_DAY") {
@@ -435,8 +565,27 @@ const OperatorySchedulePage = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    fetchScheduleBlocks();
-  }, [fetchScheduleBlocks]);
+    let cancelled = false;
+    const dateStr = selectedDate.format("YYYY-MM-DD");
+    scheduleBlockService.getBlocksForDate(dateStr).then(blocks => {
+      if (!cancelled) {
+        setScheduleBlocks(blocks);
+        const closedOps = {};
+        blocks.forEach(block => {
+          if (block.notes === "CLOSED_DAY") {
+            const roomId = block.roomId ? String(block.roomId).replace(/^op/, "") : "";
+            if (roomId) {
+              closedOps[`${dateStr}:op${roomId}`] = true;
+            }
+          }
+        });
+        setClosedOperatories(closedOps);
+      }
+    }).catch(err => {
+      if (!cancelled) console.error("Error fetching schedule blocks:", err);
+    });
+    return () => { cancelled = true; };
+  }, [selectedDate]);
 
   const handleToggleOperatoryStatus = useCallback(async (dateStr, columnId) => {
     if (dayjs(dateStr).isBefore(dayjs(), 'day')) {
@@ -469,12 +618,12 @@ const OperatorySchedulePage = () => {
         setClosedOperatories(prev => ({ ...prev, [key]: true }));
       }
       // Re-fetch to ensure sync with backend
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       console.error("Failed to toggle operatory status:", err);
       showSnackbar("Failed to update operatory status", "error");
     }
-  }, [closedOperatories, scheduleBlocks, fetchScheduleBlocks, showSnackbar]);
+  }, [closedOperatories, scheduleBlocks, refetchScheduleBlocks, showSnackbar]);
 
   const handleSaveBlock = async (blockData) => {
     try {
@@ -486,7 +635,7 @@ const OperatorySchedulePage = () => {
         showSnackbar("Block created successfully", "success");
       }
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to block slot";
       showSnackbar(msg, "error");
@@ -498,7 +647,7 @@ const OperatorySchedulePage = () => {
       await scheduleBlockService.deleteBlock(blockId);
       showSnackbar("Block deleted successfully", "success");
       setBlockSlotDialogOpen(false);
-      fetchScheduleBlocks();
+      refetchScheduleBlocks();
     } catch (err) {
       const msg = typeof err === "string" ? err : err.response?.data?.error?.message || err.message || "Failed to delete block";
       showSnackbar(msg, "error");
@@ -509,10 +658,9 @@ const OperatorySchedulePage = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [completeProceduresOpen, setCompleteProceduresOpen] = useState(false);
-  const [selectProductsOpen, setSelectProductsOpen] = useState(false);
-  const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
-  const [progressNotesOpen, setProgressNotesOpen] = useState(false);
-  const [loadingFormPatients, setLoadingFormPatients] = useState(false);
+   const [selectProductsOpen, setSelectProductsOpen] = useState(false);
+   const [bulkTextDialogOpen, setBulkTextDialogOpen] = useState(false);
+   const [loadingFormPatients, setLoadingFormPatients] = useState(false);
 
   const searchFormPatients = useCallback(async (search = '') => {
     try {
@@ -540,8 +688,11 @@ const OperatorySchedulePage = () => {
 
   const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
     const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-    const now = dayjs();
-    setInitialFormDateTime(dateTime || baseDate.hour(now.hour()).minute(now.minute()));
+    const defaultTime = dayjs().add(30, "minute");
+    const fallbackDateTime = baseDate.isSame(dayjs(), "day")
+      ? defaultTime
+      : baseDate.hour(defaultTime.hour()).minute(defaultTime.minute()).second(0);
+    setInitialFormDateTime(dateTime || fallbackDateTime);
     setInitialFormRoomId(roomId || null);
     setInitialShortlistData(null);
     setShowExtendedOptions(extendedOptions);
@@ -717,6 +868,8 @@ const OperatorySchedulePage = () => {
         customFields: a.customFields,
         checklists: a.checklists,
         procedures: procString,
+        totalAmount: Number(a.totalAmount ?? 0),
+        paidAmount: Number(a.paidAmount ?? 0),
       };
     } catch {
       return null;
@@ -750,6 +903,72 @@ const OperatorySchedulePage = () => {
       });
     }
   }, [fetchStartDate, fetchEndDate, fetchApptsMain]);
+
+  // Re-fetch appointments whenever a shortlist operation mutates appointment data
+  // (e.g. copy-to-shortlist writes linkedToShortlist flag back to the appointment)
+  useEffect(() => {
+    const handleShortlistUpdated = () => {
+      if (fetchApptsMain) {
+        fetchApptsMain({
+          startDate: fetchStartDate,
+          endDate: fetchEndDate,
+          limit: 500,
+        });
+      } else if (refreshAppointments) {
+        refreshAppointments();
+      }
+    };
+    window.addEventListener('shortlist-updated', handleShortlistUpdated);
+    return () => window.removeEventListener('shortlist-updated', handleShortlistUpdated);
+  }, [fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
+
+  useEffect(() => {
+    const handlePaymentCompleted = async (e) => {
+      const detail = e?.detail || e?.data;
+      const appointmentIds = detail?.appointmentIds;
+
+      if (Array.isArray(appointmentIds) && appointmentIds.length > 0) {
+        for (const aptId of appointmentIds) {
+          if (!aptId) continue;
+          dispatch(invalidateAppointmentDetail(String(aptId)));
+          try {
+            const freshApt = await appointmentService.getAppointmentById(String(aptId));
+            if (freshApt) {
+              dispatch(updateAppointmentInList(freshApt));
+              dispatch(setCurrentAppointment(freshApt));
+            }
+          } catch (err) {
+            console.error(`Failed to refresh appointment ${aptId}:`, err);
+          }
+        }
+      } else {
+        if (fetchApptsMain) {
+          fetchApptsMain({
+            startDate: fetchStartDate,
+            endDate: fetchEndDate,
+            limit: 500,
+          });
+        } else if (refreshAppointments) {
+          refreshAppointments();
+        }
+      }
+    };
+
+    window.addEventListener('payment-completed', handlePaymentCompleted);
+    window.addEventListener('appointment-financials-updated', handlePaymentCompleted);
+
+    let bc;
+    try {
+      bc = new BroadcastChannel('medflow-payments');
+      bc.onmessage = handlePaymentCompleted;
+    } catch (err) {}
+
+    return () => {
+      window.removeEventListener('payment-completed', handlePaymentCompleted);
+      window.removeEventListener('appointment-financials-updated', handlePaymentCompleted);
+      if (bc) bc.close();
+    };
+  }, [dispatch, fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
@@ -877,6 +1096,44 @@ const OperatorySchedulePage = () => {
     }
   }, [showConsult, selectedDate]);
 
+  const getAppointmentId = (appointment) => appointment?._id || appointment?.id || appointment?.appointmentId || appointment?.AptNum;
+  const getAppointmentPatientId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.patientId && typeof raw.patientId === 'object'
+      ? raw.patientId._id || raw.patientId.id || raw.patientId.PatNum
+      : raw?.patientId || raw?.patient?._id || raw?.patient?.id || raw?.patient?.PatNum;
+  };
+  const getAppointmentVisitType = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return String(raw?.customFields?.visitType || raw?.visitType || raw?.appointmentTypeName || raw?.appointmentType || '').toLowerCase();
+  };
+  const getRecareSourceAppointmentId = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    return raw?.customFields?.recareSourceAppointmentId || raw?.customFields?.sourceAppointmentId || null;
+  };
+  const getAppointmentDateValue = (appointment) => {
+    const raw = appointment?.rawAppointment || appointment;
+    const date = raw?.appointmentDate || raw?.date;
+    const time = raw?.startTime || '00:00';
+    const parsed = date ? dayjs(`${dayjs(date).format('YYYY-MM-DD')}T${time}`) : null;
+    return parsed?.isValid() ? parsed.valueOf() : 0;
+  };
+  const resolveRecareSourceAppointmentId = (formData, start) => {
+    const selectedSourceId = getRecareSourceAppointmentId(selectedAppointment) || getAppointmentId(selectedAppointment);
+    if (selectedSourceId) return selectedSourceId;
+
+    const formPatientId = String(formData.patientId || '');
+    const startValue = start?.isValid?.() ? start.valueOf() : Date.now();
+    const candidates = (reduxAppointments || [])
+      .filter((appointment) => String(getAppointmentPatientId(appointment) || '') === formPatientId)
+      .filter((appointment) => !getRecareSourceAppointmentId(appointment))
+      .filter((appointment) => getAppointmentId(appointment))
+      .filter((appointment) => getAppointmentDateValue(appointment) <= startValue)
+      .sort((a, b) => getAppointmentDateValue(b) - getAppointmentDateValue(a));
+
+    return getAppointmentId(candidates[0]) || null;
+  };
+
   const handleAddAppointmentSubmit = async (formData) => {
     const patientId = formData.patientId;
     const providerId = formData.providerId;
@@ -909,7 +1166,23 @@ const OperatorySchedulePage = () => {
         patientName: formData.patientName,
       };
 
-      if (editingAppointment && !formData.isNewRecall) {
+      const isRecareTemplate = editingAppointment?.isRecareTemplate === true;
+      const savedVisitType = String(appointmentData.customFields?.visitType || formData.customFields?.visitType || '').toLowerCase();
+      const recareSourceAppointmentId = savedVisitType === 'recare'
+        ? editingAppointment?.sourceProcedureBlockAppointment?._id ||
+          editingAppointment?.sourceProcedureBlockAppointment?.id ||
+          editingAppointment?.customFields?.recareSourceAppointmentId ||
+          editingAppointment?.customFields?.sourceAppointmentId ||
+          resolveRecareSourceAppointmentId(formData, start)
+        : null;
+      if (recareSourceAppointmentId) {
+        appointmentData.customFields = {
+          ...(appointmentData.customFields || {}),
+          recareSourceAppointmentId,
+          sourceAppointmentId: recareSourceAppointmentId,
+        };
+      }
+      if (editingAppointment && !formData.isNewRecall && !isRecareTemplate) {
         let apptId = editingAppointment._id || editingAppointment.id;
         if (typeof apptId === 'string' && apptId.startsWith('appt-')) {
           apptId = apptId.replace('appt-', '');
@@ -917,8 +1190,25 @@ const OperatorySchedulePage = () => {
         await updateAppointment(apptId, appointmentData);
         showSnackbar('Appointment updated successfully', 'success');
       } else {
-        await createAppointment(appointmentData);
+        const newAppt = await createAppointment(appointmentData);
         showSnackbar('Appointment created successfully', 'success');
+        if (newAppt) {
+          const selectedNewAppt = {
+            ...newAppt,
+            id: newAppt.id || newAppt._id,
+            sourceProcedureBlockAppointment: recareSourceAppointmentId
+              ? editingAppointment?.sourceProcedureBlockAppointment || editingAppointment
+              : null,
+          };
+          setSelectedAppointment(selectedNewAppt);
+          const newPatientId = newAppt.patientId && typeof newAppt.patientId === 'object'
+            ? newAppt.patientId._id || newAppt.patientId.id || newAppt.patientId.PatNum
+            : newAppt.patientId;
+          if (newPatientId) {
+            dispatch(fetchPatientById(newPatientId));
+            dispatch(fetchPatientHistory(newPatientId));
+          }
+        }
       }
       setFormOpen(false);
     } catch (err) {
@@ -1034,6 +1324,17 @@ const OperatorySchedulePage = () => {
         const hour = parseInt(parts[2], 10);
         const mins = parseInt(parts[3], 10);
         const minutesFromStart = (hour - START_HOUR) * 60 + mins;
+
+        if (dragData.isFamilyAppointmentsBlock) {
+          const dateStr = reduxSelectedDate || dayjs().format("YYYY-MM-DD");
+          setFamilyAppointmentsSchedulingDate(dateStr);
+          setFamilyAppointmentsSchedulingTime({ hour, mins });
+          setFamilyAppointmentsSchedulingRoomId(roomId);
+          setFamilyAppointmentsRecareDueDates({});
+          setFamilyAppointmentsDialogOpen(true);
+          return;
+        }
+
         handleDropReschedule(roomId, minutesFromStart, dragData);
       }
     }
@@ -1083,7 +1384,11 @@ const OperatorySchedulePage = () => {
 
         {/* LEFT PANEL — Static Width */}
         <Box className="no-print" sx={{ flex: '0 0 280px', width: '280px', minWidth: '280px', maxWidth: '280px', height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
-          <LeftPanel />
+          <LeftPanel 
+            selectedAppointment={selectedAppointment} 
+            onSelectAppointment={setSelectedAppointment}
+            pendingItems={pendingItems}
+          />
         </Box>
 
         {/* CENTER PANEL — Dynamic Width */}
@@ -1184,7 +1489,8 @@ const OperatorySchedulePage = () => {
           onCancel={() => { 
             setFormOpen(false); 
             setShowExtendedOptions(false); 
-            setEditingAppointment(null);
+            setEditingAppointment(null); 
+            setInitialShortlistData(null); 
           }}
           onSubmit={handleAddAppointmentSubmit}
           loading={formSaving}
@@ -1193,6 +1499,7 @@ const OperatorySchedulePage = () => {
           initialPatient={currentPatient || null}
           initialShortlistData={initialShortlistData}
           initialAppointment={editingAppointment}
+          selectedAppointmentContext={selectedAppointment}
           providers={providers || []}
           rooms={rooms || []}
           appointmentTypes={appointmentTypes || []}
@@ -1231,12 +1538,6 @@ const OperatorySchedulePage = () => {
           open={bulkTextDialogOpen}
           onClose={() => setBulkTextDialogOpen(false)}
           selectedDate={selectedDate}
-          providers={providers || []}
-        />
-
-        <ProgressNotesDialog
-          open={progressNotesOpen}
-          onClose={() => setProgressNotesOpen(false)}
           providers={providers || []}
         />
 
@@ -1455,6 +1756,21 @@ const OperatorySchedulePage = () => {
       {/* Route Slip Modal */}
       <RouteSlipDialog />
       <FamilyAppointmentsDialog />
+
+      <ConfirmationDialog
+        open={confirmDialog !== null}
+        onClose={() => setConfirmDialog(null)}
+        onConfirm={() => {
+          const cb = confirmDialog?.onConfirm;
+          setConfirmDialog(null);
+          if (cb) cb();
+        }}
+        title="Confirm Move"
+        message={confirmDialog?.message || "Are you sure?"}
+        confirmText={confirmDialog?.confirmText || "Yes"}
+        cancelText={confirmDialog?.cancelText || "Cancel"}
+        confirmColor={COLORS.ACCENT}
+      />
 
       <Backdrop
         sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 9999 }}

@@ -98,6 +98,30 @@ const ViewClaimPage = () => {
   const [providerSignature, setProviderSignature] = useState(null);
   const [patientSignature, setPatientSignature] = useState(null);
   const [savingSignatures, setSavingSignatures] = useState(false);
+  const [exporting837, setExporting837] = useState(false);
+
+  const handleExport837D = async () => {
+    try {
+      setExporting837(true);
+      await claimService.generate837D(claimId);
+      
+      const blob = await claimService.export837D(claimId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `claim_${claimId}.837`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSnackbar('837D file exported successfully', 'success');
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to export 837D file', 'error');
+    } finally {
+      setExporting837(false);
+    }
+  };
 
   const fetchClaimDocuments = useCallback(async () => {
     try {
@@ -240,6 +264,17 @@ const ViewClaimPage = () => {
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           {getStatusChip(claim.status)}
+          
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon />}
+            onClick={handleExport837D}
+            disabled={exporting837}
+          >
+            {exporting837 ? 'Exporting...' : 'Export 837D'}
+          </Button>
+
           {claim.status === 'draft' && (
             <>
               <Button

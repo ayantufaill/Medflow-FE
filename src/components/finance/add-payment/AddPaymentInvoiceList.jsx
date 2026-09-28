@@ -15,15 +15,18 @@ const AddPaymentInvoiceList = ({
     return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>Loading pending invoices...</Typography>;
   }
   if (!invoices || invoices.length === 0) {
-    return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>No pending invoices found.</Typography>;
+    return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>No pending invoices with patient balance found.</Typography>;
   }
 
-  // Use the invoices as-is — they are already filtered by the Redux thunk.
-  // The slice guarantees each invoice has at least one item with an outstanding balance.
-  const activeInvoices = invoices.filter(inv => (inv.lineItems || []).length > 0);
+  // Defensive guard: only display invoices with an outstanding patient balance (> 0)
+  const activeInvoices = (invoices || []).filter(inv => {
+    const items = inv.lineItems || [];
+    const totalPatient = items.reduce((s, i) => s + Number(i.patientBalance || 0), 0);
+    return totalPatient > 0 && items.some(i => Number(i.patientBalance || 0) > 0);
+  });
 
   if (activeInvoices.length === 0) {
-    return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>No unpaid procedures found.</Typography>;
+    return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>No pending invoices with patient balance found.</Typography>;
   }
 
   return (

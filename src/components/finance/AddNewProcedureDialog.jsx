@@ -7,7 +7,7 @@ import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading 
 import { COLORS } from '../../constants/colors';
 import { NoteAdd as NoteAddIcon } from '@mui/icons-material';
 
-const AddNewProcedureDialog = ({ onClose, onSave, existingProcedures = [] }) => {
+const AddNewProcedureDialog = ({ onClose, onSave, maxTeeth = Infinity }) => {
   const maxillaryUR = [1, 2, 3, 4, 5];
   const maxillaryUA = [6, 7, 8, 'Q1', '', 'Q2', 9, 10, 11];
   const maxillaryUL = [12, 13, 14, 15, 16];
@@ -83,9 +83,12 @@ const AddNewProcedureDialog = ({ onClose, onSave, existingProcedures = [] }) => 
 
   const handleToothClick = (tooth) => {
     if (tooth === '' || (typeof tooth === 'string' && tooth.startsWith('Q'))) return;
-    setSelectedTeeth(prev =>
-      prev.includes(tooth) ? prev.filter(t => t !== tooth) : [...prev, tooth]
-    );
+    setSelectedTeeth(prev => {
+      if (Number.isFinite(maxTeeth) && prev.length >= maxTeeth) {
+        return prev.includes(tooth) ? prev.filter(t => t !== tooth) : [tooth];
+      }
+      return prev.includes(tooth) ? prev.filter(t => t !== tooth) : [...prev, tooth];
+    });
   };
 
   const handleSurfaceClick = (surface) => {
@@ -499,21 +502,11 @@ const AddNewProcedureDialog = ({ onClose, onSave, existingProcedures = [] }) => 
                 );
                 proc = match || { ProcCode: inputValue };
               }
-              const currentCode = typeof proc === 'string' ? proc : proc?.ProcCode || proc?.code;
-              const isDuplicate = currentCode && existingProcedures.some(
-                p => p.code && p.code.toLowerCase() === currentCode.toLowerCase()
-              );
 
               return (
                 <>
-                  {isDuplicate && (
-                    <Typography sx={{ color: '#d32f2f', fontSize: '13px', fontWeight: 'bold' }}>
-                      Procedure "{currentCode}" already added.
-                    </Typography>
-                  )}
                   <Button
                     variant="contained"
-                    disabled={isDuplicate}
               onClick={() => {
                 let proc = selectedProcedure;
                 if (!proc && inputValue) {
@@ -531,7 +524,7 @@ const AddNewProcedureDialog = ({ onClose, onSave, existingProcedures = [] }) => 
                 const feeAmount = typeof proc === 'string' ? 0 : (proc.fee || 0);
 
                 onSave({
-                  selectedTeeth,
+                  selectedTeeth: Number.isFinite(maxTeeth) ? selectedTeeth.slice(0, maxTeeth) : selectedTeeth,
                   selectedSurfaces,
                   procedureCode: code,
                   procedureDescription: desc,

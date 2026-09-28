@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Redux — providers & patients
 import {
@@ -54,23 +55,24 @@ const getProviderName = (p) => {
 
 const ManualClaimDialog = ({ patient, onClose }) => {
   const dispatch = useDispatch();
+  const { showSnackbar } = useSnackbar();
 
   // ── Redux state ──────────────────────────────────────────────────────────
-  const providers      = useSelector(selectProviderDropdownList);
-  const patients       = useSelector(selectPatientList);
+  const providers = useSelector(selectProviderDropdownList);
+  const patients = useSelector(selectPatientList);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const invoicesLoading = useSelector(selectDraftInvoicesLoading);
-  const isSubmitting    = useSelector(selectClaimLoading);
+  const isSubmitting = useSelector(selectClaimLoading);
 
   // ── Local form state ─────────────────────────────────────────────────────
-  const [description,      setDescription]      = useState('');
-  const [showDescription,  setShowDescription]  = useState(false);
-  const [note,             setNote]             = useState('');
-  const [showNote,         setShowNote]         = useState(false);
+  const [description, setDescription] = useState('');
+  const [showDescription, setShowDescription] = useState(false);
+  const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(patient?._id || patient?.id || '');
-  const [selectedInsuranceId,    setSelectedInsuranceId]    = useState('');
+  const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
   const [selectedTreatingProvider, setSelectedTreatingProvider] = useState('');
-  const [selectedBillingEntity,    setSelectedBillingEntity]    = useState('');
+  const [selectedBillingEntity, setSelectedBillingEntity] = useState('');
   const [claimType, setClaimType] = useState('Manual');
 
   // ── Derived values ───────────────────────────────────────────────────────
@@ -144,33 +146,79 @@ const ManualClaimDialog = ({ patient, onClose }) => {
 
   const handleSendToBatch = async () => {
     if (!selectedInsuranceId) {
-      alert('Please select an insurance plan.');
+      showSnackbar('Please select an insurance plan.', 'warning');
       return;
     }
     if (!selectedTreatingProvider) {
-      alert('Please select a treating provider.');
+      showSnackbar('Please select a treating provider.', 'warning');
       return;
     }
     if (!selectedBillingEntity) {
-      alert('Please select a billing entity.');
+      showSnackbar('Please select a billing entity.', 'warning');
       return;
     }
 
+    const selectedInsurance = activeInsurances.find(
+      (ins) => String(ins._id || ins.id) === String(selectedInsuranceId)
+    );
+    const isSecondary =
+      selectedInsurance?.insuranceType?.toLowerCase() === 'secondary' ||
+      selectedInsurance?.ordinal === 2;
+
+    const getProcedureInsAmount = (proc) => {
+      if (isSecondary) {
+        if (proc.secondaryInsPortion !== undefined && proc.secondaryInsPortion !== null && Number(proc.secondaryInsPortion) > 0) {
+          return Number(proc.secondaryInsPortion);
+        }
+        const primIns = Number(proc.insPortion || 0);
+        const wo = Number(proc.writeoff || 0);
+        const total = Number(proc.total || proc.totalPrice || proc.charge || 0);
+        return Math.max(0, total - wo - primIns);
+      }
+      const ins = Number(proc.insPortion !== undefined && proc.insPortion !== null ? proc.insPortion : (proc.insurance || 0));
+      if (ins === 0 && Number(proc.ptPortion || 0) === 0) {
+        const wo = Number(proc.writeoff || 0);
+        const total = Number(proc.total || proc.totalPrice || proc.charge || 0);
+        return Math.max(0, total - wo);
+      }
+      return ins;
+    };
+
+    const getProcedurePtAmount = (proc) => {
+      if (isSecondary) {
+        return 0;
+      }
+      return Number(proc.ptPortion || 0);
+    };
+
+    const isProcClaimedForSelectedIns = (proc) => {
+      return isSecondary ? Boolean(proc.claimedBySecondary) : Boolean(proc.claimedByPrimary);
+    };
+
     const selectedItems = [];
     invoices.forEach((inv) => {
-      inv.lineItems.forEach((item) => {
-        if (item.checked) {
+      (inv.lineItems || []).forEach((item) => {
+        if (item.checked && !isProcClaimedForSelectedIns(item)) {
+          const itemInsAmount = getProcedureInsAmount(item);
+          const itemPtAmount = getProcedurePtAmount(item);
           selectedItems.push({
             invoiceId: inv.id,
+            invoiceNumber: inv.invoiceNumber || inv.id,
+            invoiceDate: inv.invoiceDate || '',
             itemId: item.id,
-            amount: Number(item.insAmount?.replace('$', '')) || 0,
+            code: item.cptCode || item.code || '',
+            description: item.description || item.name || item.notes || '',
+            fee: Number(item.total || item.totalPrice || item.charge || 0),
+            ptAmount: itemPtAmount,
+            insAmount: itemInsAmount,
+            amount: itemInsAmount,
           });
         }
       });
     });
 
     if (selectedItems.length === 0) {
-      alert('Please select at least one procedure to include in the claim.');
+      showSnackbar('Please select at least one procedure to include in the claim.', 'warning');
       return;
     }
 
@@ -180,7 +228,8 @@ const ManualClaimDialog = ({ patient, onClose }) => {
         insuranceId: selectedInsuranceId,
         treatingProviderId: selectedTreatingProvider,
         billingEntityId: selectedBillingEntity,
-        claimType,
+        claimType: isSecondary ? 'Secondary' : claimType,
+        insuranceType: isSecondary ? 'secondary' : 'primary',
         description,
         note,
         selectedItems,
@@ -193,10 +242,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       // Fire the same event LedgerList already listens to — triggers a full
       // ledger re-fetch so the claim shows up in each invoice's procedure rows
       window.dispatchEvent(new CustomEvent('refresh-ledger'));
-      alert('Claim successfully added to batch.');
+      showSnackbar('Claim successfully added to batch.', 'success');
       onClose();
     } else {
-      alert(result.payload || 'Failed to create manual claim. Please try again.');
+      showSnackbar(result.payload || 'Failed to create manual claim. Please try again.', 'error');
     }
   };
 
@@ -208,8 +257,53 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim()
       : '';
 
-  const linkBlue         = COLORS.ACCENT;
-  const errorRed         = '#d32f2f';
+  const selectedInsurance = activeInsurances.find(
+    (ins) => String(ins._id || ins.id) === String(selectedInsuranceId)
+  );
+  const isSecondary =
+    selectedInsurance?.insuranceType?.toLowerCase() === 'secondary' ||
+    selectedInsurance?.ordinal === 2;
+
+  const getProcedureInsAmount = (proc) => {
+    if (isSecondary) {
+      if (proc.secondaryInsPortion !== undefined && proc.secondaryInsPortion !== null && Number(proc.secondaryInsPortion) > 0) {
+        return Number(proc.secondaryInsPortion);
+      }
+      const primIns = Number(proc.primaryInsPortion ?? (proc.secondaryInsPortion ? Math.max(0, Number(proc.insPortion || 0) - Number(proc.secondaryInsPortion)) : proc.insPortion) ?? 0);
+      const wo = Number(proc.writeoff || 0);
+      const total = Number(proc.total || proc.totalPrice || proc.charge || 0);
+      return Math.max(0, total - wo - primIns);
+    }
+    const ins = Number(
+      proc.primaryInsPortion !== undefined && proc.primaryInsPortion !== null
+        ? proc.primaryInsPortion
+        : proc.secondaryInsPortion && Number(proc.secondaryInsPortion) > 0 && Number(proc.insPortion || 0) > Number(proc.secondaryInsPortion)
+          ? Number(proc.insPortion) - Number(proc.secondaryInsPortion)
+          : proc.insPortion !== undefined && proc.insPortion !== null
+            ? proc.insPortion
+            : (proc.insurance || 0)
+    );
+    if (ins === 0 && Number(proc.ptPortion || 0) === 0) {
+      const wo = Number(proc.writeoff || 0);
+      const total = Number(proc.total || proc.totalPrice || proc.charge || 0);
+      return Math.max(0, total - wo);
+    }
+    return ins;
+  };
+
+  const getProcedurePtAmount = (proc) => {
+    if (isSecondary) {
+      return 0;
+    }
+    return Number(proc.ptPortion || 0);
+  };
+
+  const isProcClaimedForSelectedIns = (proc) => {
+    return isSecondary ? Boolean(proc.claimedBySecondary) : Boolean(proc.claimedByPrimary);
+  };
+
+  const linkBlue = COLORS.ACCENT;
+  const errorRed = '#d32f2f';
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -256,10 +350,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                   {...params}
                   placeholder="Search patient..."
                   size="small"
-                  sx={{ 
-                    '& .MuiInputBase-root': { 
-                      height: '36px', 
-                      bgcolor: COLORS.SURFACE_TINT, 
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      height: '36px',
+                      bgcolor: COLORS.SURFACE_TINT,
                       borderRadius: radius.sm,
                       fontSize: '13px',
                       color: COLORS.TEXT_PRIMARY,
@@ -284,9 +378,9 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedInsuranceId(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
-                width: "150px",
+                width: "180px",
                 bgcolor: COLORS.SURFACE_TINT,
                 borderRadius: radius.sm,
                 "& .MuiSelect-select": {
@@ -305,22 +399,23 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               {activeInsurances.length === 0
                 ? <MenuItem value="" disabled>No active insurance</MenuItem>
                 : [
-                    <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
-                    ...activeInsurances.map((ins) => {
-                      const label =
-                        ins.insuranceCompany?.name ||
-                        ins.insuranceCompanyId?.name ||
-                        ins.payer ||
-                        ins.planType ||
-                        ins.plan ||
-                        'Insurance Plan';
-                      return (
-                        <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
-                          {label}
-                        </MenuItem>
-                      );
-                    }),
-                  ]
+                  <MenuItem key="default" value="" disabled>Select Insurance</MenuItem>,
+                  ...activeInsurances.map((ins) => {
+                    const label =
+                      ins.insuranceCompany?.name ||
+                      ins.insuranceCompanyId?.name ||
+                      ins.payer ||
+                      ins.planType ||
+                      ins.plan ||
+                      'Insurance Plan';
+                    const typeLabel = ins.insuranceType ? ` (${ins.insuranceType})` : (ins.ordinal === 2 ? ' (secondary)' : '');
+                    return (
+                      <MenuItem key={ins._id || ins.id} value={ins._id || ins.id}>
+                        {label}{typeLabel}
+                      </MenuItem>
+                    );
+                  }),
+                ]
               }
             </Select>
           </Box>
@@ -340,7 +435,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedTreatingProvider(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -384,7 +479,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               onChange={(e) => setSelectedBillingEntity(e.target.value)}
               displayEmpty
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -420,7 +515,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               value={claimType}
               onChange={(e) => setClaimType(e.target.value)}
               size="small"
-              sx={{ 
+              sx={{
                 height: "36px",
                 width: "130px",
                 bgcolor: COLORS.SURFACE_TINT,
@@ -454,7 +549,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             No pending procedures found for insurance billing.
           </Typography>
         ) : (
-          invoices.map((inv) => (
+          invoices.map((inv) => {
+            const visibleLineItems = (inv.lineItems || []).filter((proc) => !isProcClaimedForSelectedIns(proc));
+            if (visibleLineItems.length === 0) return null;
+            return (
             <Box key={inv.id} sx={{ mb: 2 }}>
               {/* Invoice summary row */}
               <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #eee', pb: 1, mb: 1 }}>
@@ -472,19 +570,19 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, pr: 6 }}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'right', color: errorRed }}>
-                    Patient: ${(inv.lineItems || []).reduce((sum, item) => sum + Number(item.ptAmount.replace('$', '')), 0).toFixed(2)}
+                    Patient: ${visibleLineItems.reduce((sum, item) => sum + getProcedurePtAmount(item), 0).toFixed(2)}
                   </Typography>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '130px', textAlign: 'right', color: errorRed }}>
-                    Insurance: ${(inv.lineItems || []).reduce((sum, item) => sum + Number(item.insAmount.replace('$', '')), 0).toFixed(2)}
+                    Insurance: ${visibleLineItems.reduce((sum, item) => sum + getProcedureInsAmount(item), 0).toFixed(2)}
                   </Typography>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '260px', textAlign: 'right', color: errorRed, whiteSpace: 'nowrap' }}>
-                    Total Balance: ${(inv.lineItems || []).reduce((sum, item) => sum + (Number(item.total || item.totalPrice || 0) - Number(item.writeoff || 0)), 0).toFixed(2)}
+                    Total Balance: ${visibleLineItems.reduce((sum, item) => sum + (Number(item.total || item.totalPrice || item.charge || 0) - Number(item.writeoff || 0)), 0).toFixed(2)}
                   </Typography>
                 </Box>
               </Box>
 
               {/* Line-item rows */}
-              {inv.lineItems?.map((proc) => (
+              {visibleLineItems.map((proc) => (
                 <Box key={proc.id} sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f5f5f5', py: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, pl: 2 }}>
                     <Checkbox
@@ -505,10 +603,10 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, pr: 6 }}>
                     <Typography sx={{ fontSize: '0.75rem', width: '100px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
-                      {proc.ptAmount}
+                      ${getProcedurePtAmount(proc).toFixed(2)}
                     </Typography>
                     <Typography sx={{ fontSize: '0.75rem', width: '130px', textAlign: 'right', color: COLORS.TEXT_SECONDARY }}>
-                      {proc.insAmount}
+                      ${getProcedureInsAmount(proc).toFixed(2)}
                     </Typography>
                     <Typography sx={{ fontSize: '0.75rem', width: '260px', textAlign: 'right', color: COLORS.TEXT_SECONDARY, whiteSpace: 'nowrap' }}>
                       {proc.prevAmount}
@@ -517,7 +615,8 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                 </Box>
               ))}
             </Box>
-          ))
+            );
+          })
         )}
 
       </Box>

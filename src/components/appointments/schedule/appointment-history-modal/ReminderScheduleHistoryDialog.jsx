@@ -20,7 +20,6 @@ import {
   fontSize,
   fontWeight,
   radius,
-  roundedSelectMenuProps,
 } from "../../../../constants/styles";
 import dayjs from "dayjs";
 
@@ -176,7 +175,7 @@ const ReminderScheduleHistoryDialog = ({
       fullWidth
       sx={{ zIndex: 26000 }}
       PaperProps={{
-        sx: { borderRadius: radius.lg, p: 0, maxHeight: "calc(80vh - 96px)" },
+        sx: { borderRadius: radius.lg, p: 0, maxHeight: "70vh", maxWidth: "1000px" },
       }}
     >
       <Box
@@ -237,11 +236,10 @@ const ReminderScheduleHistoryDialog = ({
             size="small"
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
-            MenuProps={
-              roundedSelectMenuProps.PaperProps
-                ? roundedSelectMenuProps
-                : undefined
-            }
+            MenuProps={{
+              disablePortal: true,
+              sx: { zIndex: 26001 },
+            }}
             sx={{
               minWidth: 120,
               fontFamily: "Inter",
@@ -279,7 +277,7 @@ const ReminderScheduleHistoryDialog = ({
             sx={{
               border: `1px solid ${COLORS.BORDER}`,
               borderRadius: radius.lg,
-              maxHeight: "calc(100vh - 280px)",
+              maxHeight: "calc(70vh - 200px)",
               overflow: "auto",
             }}
           >

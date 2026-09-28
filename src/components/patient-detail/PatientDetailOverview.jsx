@@ -38,7 +38,7 @@ import { patientValidations } from '../../validations/patientValidations';
 function SpouseInformationSectionContent({ patient, isEditMode = false, onPatientDataChange }) {
   const [spouseInfo, setSpouseInfo] = useState(patient?.spouseInfo || {});
   const [emailError, setEmailError] = useState('');
-  
+
   const isSingle = patient?.maritalStatus?.toLowerCase() === 'single';
 
   useEffect(() => {
@@ -61,7 +61,7 @@ function SpouseInformationSectionContent({ patient, isEditMode = false, onPatien
   const handleEmailChange = (e) => {
     const value = e.target.value;
     handleFieldChange('email', value);
-    
+
     if (isEditMode) {
       if (!value) {
         setEmailError('');
@@ -192,6 +192,7 @@ export default function PatientDetailOverview({
           onSendUpdateRequest={onSendUpdateRequest}
           onRequestUpdatesClick={onRequestUpdatesClick}
           patient={patient}
+          careTeamProviders={careTeamProviders}
           isEditMode={isEditMode}
         />
       </Box>
@@ -225,11 +226,30 @@ export default function PatientDetailOverview({
               onPatientDataChange={onPatientDataChange}
             />
           </SectionCard>
+        </Box>
+
+        {/* Col 2 — 28% */}
+        <Box>
+          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified" allowOverflow>
+            <ContactInformationSection
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
+          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information" allowOverflow>
+            <SpouseInformationSectionContent
+              patient={patient}
+              isEditMode={isEditMode}
+              onPatientDataChange={onPatientDataChange}
+            />
+          </SectionCard>
           <CommunicationPreferencesCard
             patient={patient}
             isEditMode={isEditMode}
             onPatientDataChange={onPatientDataChange}
           />
+
           <SectionCard
             icon={FamilyIcon}
             title="Family Members"
@@ -248,24 +268,6 @@ export default function PatientDetailOverview({
             }
           >
             <FamilyMembersSection
-              patient={patient}
-              isEditMode={isEditMode}
-              onPatientDataChange={onPatientDataChange}
-            />
-          </SectionCard>
-        </Box>
-
-        {/* Col 2 — 28% */}
-        <Box>
-          <SectionCard icon={PhoneOutlinedIcon} title="Contact Information" subtitle="Primary reach & addresses" badge="verified" allowOverflow>
-            <ContactInformationSection
-              patient={patient}
-              isEditMode={isEditMode}
-              onPatientDataChange={onPatientDataChange}
-            />
-          </SectionCard>
-          <SectionCard icon={FavoriteBorderIcon} title="Spouse Information" allowOverflow>
-            <SpouseInformationSectionContent
               patient={patient}
               isEditMode={isEditMode}
               onPatientDataChange={onPatientDataChange}

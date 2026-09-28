@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Select, MenuItem, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Select, MenuItem, Button, CircularProgress, Alert } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -16,9 +16,11 @@ const ProductivityPanel = () => {
   const [date, setDate] = useState(dayjs());
   const [panelData, setPanelData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchPanelData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get('/productivity/panel-summary', {
         params: {
@@ -27,9 +29,23 @@ const ProductivityPanel = () => {
         }
       });
       setPanelData(response.data?.data || null);
-    } catch (error) {
-      console.error('Failed to fetch productivity panel data:', error);
-      // Fallback empty data structure if the API fails or doesn't exist yet
+    } catch (err) {
+      console.error('Failed to fetch productivity panel data:', err);
+      let errorMsg = 'Failed to load productivity metrics.';
+      if (err.response?.status === 404) {
+        errorMsg = 'Productivity summary endpoint not found (/api/productivity/panel-summary).';
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        errorMsg = 'Unauthorized to access productivity metrics.';
+      } else if (err.response?.data?.error?.message) {
+        errorMsg = err.response.data.error.message;
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError(errorMsg);
+
+      // Fallback empty data structure if the API fails
       const emptyRows = [
         { id: 'P', label: 'P', value: 0, goal: 0, color: '#7cb342' },
         { id: 'C', label: 'C', value: 0, goal: 0, color: '#7cb342' },
@@ -61,8 +77,8 @@ const ProductivityPanel = () => {
       
       {/* Filters Area */}
       <Box sx={{ mb: '16px' }}>
-        <Typography sx={{ fontSize: '11px', fontWeight: fontWeight.semibold, color: COLORS.TEXT_SECONDARY, mb: '6px', textTransform: 'uppercase' }}>
-          Provider:
+        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+          provider
         </Typography>
         <Select
           MenuProps={{ sx: { zIndex: 1400 } }}
@@ -71,13 +87,23 @@ const ProductivityPanel = () => {
           value={providerId}
           onChange={(e) => setProviderId(e.target.value)}
           sx={{
-            height: "40px",
-            fontFamily: "Inter",
-            fontSize: "13px",
-            borderRadius: "8px",
-            backgroundColor: COLORS.WHITE,
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-            color: providerId ? COLORS.TEXT_PRIMARY : "#9aa3ae"
+            height: 36,
+            fontSize: '13px',
+            fontFamily: 'Inter',
+            fontWeight: 500,
+            color: '#09121f',
+            backgroundColor: '#fafbfe',
+            borderRadius: '4px',
+            '& .MuiSelect-select': {
+              py: 1,
+              pl: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#e2e8f0'
+            }
           }}
         >
           <MenuItem value="all" sx={{ fontFamily: "Inter", fontSize: "13px" }}>All</MenuItem>
@@ -125,6 +151,13 @@ const ProductivityPanel = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2, fontSize: '12px', borderRadius: radius.sm }}>
+          {error}
+        </Alert>
+      )}
 
       {/* Cards */}
       {loading && !panelData ? (

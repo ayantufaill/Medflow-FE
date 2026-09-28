@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import dayjs from "dayjs";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import SliderHeader from "./SliderHeader";
 import DemographicsPanel from "./DemographicsPanel";
 import ContactPanel from "./ContactPanel";
@@ -13,7 +13,9 @@ import HygienistPanel from "./HygienistPanel";
 import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
 import { appointmentService } from "../../services/appointment.service";
-import { selectPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
+import { fetchPatientBalance, selectPatientBalanceCache } from "../../store/slices/patientSlice";
+import { resolveFlagColor } from "../patient-flags/constants";
 
 const EMPTY_APPT = { date: "", time: "", provider: "" };
 
@@ -199,20 +201,28 @@ const toSliderShape = (patient, globalFlags = []) => {
     [];
   const derivedAppointments = deriveNextAppointments(appointments);
 
-  const dynamicTags = (patient.patientFlags || [])
-    .map(flagId => {
-      const found = globalFlags.find(f => f.id === flagId);
-      if (found) {
-        return { label: found.name, bg: found.color + '20', color: found.color, border: found.color };
-      }
-      return null;
-    })
-    .filter(Boolean);
+const dynamicTags = (patient.patientFlags || [])
+  .map(flag => {
+    // patientFlags might be strings (names) or objects with { name, color, ... }
+    const flagName = typeof flag === 'string' ? flag : (flag?.name || flag?.label || String(flag));
+    const existingColor = typeof flag === 'object' ? flag?.color : null;
+    
+    // Look up in globalFlags first (source of truth from Redux/Admin)
+    const found = (globalFlags || []).find(f => (f.name || f.label || '').toLowerCase() === String(flagName).toLowerCase());
+    const finalColor = found?.color || existingColor || resolveFlagColor(flag, globalFlags);
+    const displayName = found?.name || found?.label || flagName;
+
+    if (finalColor && finalColor !== '#cbd5e1') {
+      return { label: displayName, bg: finalColor + '20', color: finalColor, border: finalColor };
+    }
+    return { label: displayName, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+  })
+  .filter(Boolean);
 
   return {
     name,
     id,
-    rawId: patient._id || patient.id || null,
+    rawId: patient.PatNum || patient._id || patient.id || null,
     insuranceId:
       patient.primaryInsurance?._id ||
       patient.primaryInsurance?.id ||
@@ -245,11 +255,20 @@ const toSliderShape = (patient, globalFlags = []) => {
 };
 
 const PatientSlider = ({ open, onClose, patient }) => {
+  const dispatch = useDispatch();
   const { currentPatient } = usePatient();
   const sourcePatient = patient || currentPatient;
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
+
+  useEffect(() => {
+    if (open && (!globalFlags || globalFlags.length === 0)) {
+      dispatch(fetchCurrentPracticeInfo());
+    }
+  }, [open, globalFlags, dispatch]);
+
   const basePt = useMemo(() => toSliderShape(sourcePatient, globalFlags), [sourcePatient, globalFlags]);
+  const balanceCache = useSelector(selectPatientBalanceCache);
   const [fetchedAppointments, setFetchedAppointments] = useState({
     patientId: null,
     appointments: [],
@@ -289,6 +308,14 @@ const PatientSlider = ({ open, onClose, patient }) => {
     fetchAppointmentsData(patientId);
   }, [open, sourcePatient]);
 
+  // Fetch live balance data when slider opens
+  useEffect(() => {
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    if (open && patientId) {
+      dispatch(fetchPatientBalance(patientId));
+    }
+  }, [open, sourcePatient, dispatch]);
+
   // Action function sent down to SliderHeader for execution
   const handleRefresh = () => {
     const patientId = sourcePatient?._id || sourcePatient?.id;
@@ -299,23 +326,40 @@ const PatientSlider = ({ open, onClose, patient }) => {
 
   const pt = useMemo(() => {
     if (!basePt) return null;
-    if (
-      !fetchedAppointments.appointments.length ||
-      String(fetchedAppointments.patientId) !== String(basePt.rawId)
-    ) {
-      return basePt;
-    }
 
-    const derivedAppointments = deriveNextAppointments(
-      fetchedAppointments.appointments,
-    );
+    // Merge live balance data from the balance cache
+    const patientId = sourcePatient?._id || sourcePatient?.id;
+    const cachedBalance = patientId ? balanceCache?.[patientId]?.data : null;
+    const liveBalance = cachedBalance
+      ? {
+          familyBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          patientBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          lastPatientPay: cachedBalance.lastPaymentDate
+            ? dayjs(cachedBalance.lastPaymentDate).format('MM/DD/YYYY')
+            : 'No payment',
+          lastInsPay: cachedBalance.lastInsPayDate
+            ? dayjs(cachedBalance.lastInsPayDate).format('MM/DD/YYYY')
+            : 'No payment',
+        }
+      : {};
 
-    return {
-      ...basePt,
-      nextTxAppt: derivedAppointments.nextTxAppt,
-      nextHygAppt: derivedAppointments.nextHygAppt,
-    };
-  }, [basePt, fetchedAppointments]);
+    const base = (() => {
+      if (
+        !fetchedAppointments.appointments.length ||
+        String(fetchedAppointments.patientId) !== String(basePt.rawId)
+      ) {
+        return basePt;
+      }
+      const derivedAppointments = deriveNextAppointments(fetchedAppointments.appointments);
+      return {
+        ...basePt,
+        nextTxAppt: derivedAppointments.nextTxAppt,
+        nextHygAppt: derivedAppointments.nextHygAppt,
+      };
+    })();
+
+    return { ...base, ...liveBalance };
+  }, [basePt, fetchedAppointments, balanceCache, sourcePatient]);
 
   if (!pt) return null;
 

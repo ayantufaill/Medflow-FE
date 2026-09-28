@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 
-const ProductionCollectionSummaryView = ({ globalStats, providerGroups, grouping }) => {
+const ProductionCollectionSummaryView = ({ globalStats, providerGroups, dailyStats, showSummaryPerDay, grouping }) => {
   const renderStatsGrid = (prodStats, collStats, percent, heading = '') => (
     <Box 
       sx={{ 
@@ -138,23 +138,71 @@ const ProductionCollectionSummaryView = ({ globalStats, providerGroups, grouping
 
   return (
     <Box id="production-summary-view" sx={{ mt: 2 }}>
-      {grouping === 'group-provider' ? (
+      {showSummaryPerDay && dailyStats && dailyStats.length > 0 ? (
         <>
-          {Object.entries(providerGroups).map(([provName, stats]) => (
-            <Box key={provName}>
-              {renderStatsGrid(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`)}
+          {dailyStats.map((day) => (
+            <Box key={day.date} sx={{ mb: 6 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a', mb: 2, pb: 1, borderBottom: '2px solid #e2e8f0' }}>
+                Summary for {day.date}
+              </Typography>
+              
+              {grouping === 'group-provider' && day.providerGroupsStats ? (
+                <>
+                  {Object.entries(day.providerGroupsStats).map(([provName, stats]) => (
+                    <Box key={provName}>
+                      {renderStatsGrid(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`)}
+                    </Box>
+                  ))}
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mt: 3, mb: 2 }}>
+                    Total for {day.date}
+                  </Typography>
+                  {renderStatsGrid(day.globalStats.prodStats, day.globalStats.collStats, day.globalStats.percent)}
+                </>
+              ) : (
+                renderStatsGrid(day.globalStats.prodStats, day.globalStats.collStats, day.globalStats.percent)
+              )}
             </Box>
           ))}
-          
-          <Box sx={{ mt: 4, mb: 2, borderBottom: '2px solid #e2e8f0' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
-              Grand Total
+          <Box sx={{ mt: 6, mb: 2, borderBottom: '3px solid #1e293b' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a' }}>
+              GRAND TOTAL
             </Typography>
           </Box>
+          {grouping === 'group-provider' && providerGroups ? (
+            <>
+              {Object.entries(providerGroups).map(([provName, stats]) => (
+                <Box key={provName}>
+                  {renderStatsGrid(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`)}
+                </Box>
+              ))}
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mt: 3, mb: 2 }}>
+                Grand Total Overall
+              </Typography>
+            </>
+          ) : null}
           {renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent)}
         </>
       ) : (
-        renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent)
+        <>
+          {grouping === 'group-provider' && providerGroups ? (
+            <>
+              {Object.entries(providerGroups).map(([provName, stats]) => (
+                <Box key={provName}>
+                  {renderStatsGrid(stats.prodStats, stats.collStats, stats.percent, `Provider: ${provName}`)}
+                </Box>
+              ))}
+              
+              <Box sx={{ mt: 4, mb: 2, borderBottom: '2px solid #e2e8f0' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                  Grand Total
+                </Typography>
+              </Box>
+              {renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent)}
+            </>
+          ) : (
+            renderStatsGrid(globalStats.prodStats, globalStats.collStats, globalStats.percent)
+          )}
+        </>
       )}
     </Box>
   );

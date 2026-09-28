@@ -246,11 +246,13 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus }) => {
                         '& .MuiSelect-select': { py: 0, px: 0, display: 'flex', alignItems: 'center' },
                       }}
                     >
+                      <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
                       <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
                       <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
                       <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
                       <MenuItem value="Existing Other" sx={{ fontSize: '0.8rem' }}>Existing Other</MenuItem>
                       <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
+                      <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
                     </Select>
                   </Box>
                 </TableCell>

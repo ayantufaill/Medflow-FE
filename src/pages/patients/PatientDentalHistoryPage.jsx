@@ -740,6 +740,7 @@ const PatientDentalHistoryPage = () => {
                   <DentalHistorySummaryTab
                     sectionSummaries={localSectionSummaries}
                     onUpdateSectionSummary={handleUpdateSectionSummary}
+                    onUpdateItem={handleUpdateItem}
                     personalHistory={localPersonalHistory}
                     gumAndBone={localGumAndBone}
                     biteAndJawJoint={localBiteAndJawJoint}

@@ -10,7 +10,7 @@ const CreditAccountsReport = () => {
     filter, setFilter,
     includeInactive, setIncludeInactive,
     groupByCredit, setGroupByCredit,
-    reportData, loading,
+    reportData, loading, groupedData,
     handlePrint, handleClear, handleApply, handleExportCSV
   } = useCreditAccountsReport();
 
@@ -29,7 +29,7 @@ const CreditAccountsReport = () => {
         hasData={reportData.length > 0}
       />
 
-      <CreditAccountsReportTable dummyData={reportData} loading={loading} />
+      <CreditAccountsReportTable dummyData={reportData} loading={loading} groupedData={groupedData} />
     </ReportLayout>
   );
 };

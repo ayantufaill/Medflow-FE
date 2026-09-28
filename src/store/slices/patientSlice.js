@@ -106,7 +106,7 @@ export const fetchPatientBalance = createAsyncThunk(
   'patient/fetchBalance',
   async (patientId, { rejectWithValue }) => {
     try {
-      const balance = await invoiceService.getPatientBalance(patientId);
+      const balance = await patientService.getPatientBalance(patientId);
       return { patientId, balance };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch balance');
@@ -124,6 +124,31 @@ export const fetchPatientBalance = createAsyncThunk(
           return false;
         }
       }
+      return true;
+    }
+  }
+);
+
+export const fetchInsuranceUsage = createAsyncThunk(
+  'patient/fetchInsuranceUsage',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const data = await patientService.getInsuranceUsage(patientId);
+      return { patientId, data };
+    } catch (err) {
+      // 404 means the endpoint isn't implemented yet — fail silently
+      if (err.response?.status === 404 || err.response?.status === 501) {
+        return { patientId, data: null };
+      }
+      return rejectWithValue(err.response?.data?.error?.message || 'Failed to fetch insurance usage');
+    }
+  },
+  {
+    condition: (patientId, { getState }) => {
+      const { patient } = getState();
+      if (patient.insuranceUsageLoading) return false;
+      const cached = patient.insuranceUsageCache?.[patientId];
+      if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) return false;
       return true;
     }
   }
@@ -337,9 +362,15 @@ const initialState = {
   insurancesCache: {}, // { [patientId]: { data, timestamp } }
   patientInsurancesLoading: false,
 
-  // Balance cache
+  // Balance state & cache
+  patientBalance: { balance: 0, overdueAmount: 0, lastPaymentDate: null, loading: false },
   balanceCache: {}, // { [patientId]: { data, timestamp } }
   balanceLoading: false,
+
+  // Insurance usage state & cache
+  insuranceUsage: { primaryInsurance: null, secondaryInsurance: null, loading: false },
+  insuranceUsageCache: {}, // { [patientId]: { data, timestamp } }
+  insuranceUsageLoading: false,
 
   // Global Insurances
   globalInsurances: [],
@@ -383,6 +414,8 @@ const patientSlice = createSlice({
       localStorage.removeItem('selectedPatientId');
       state.currentMedicalHistory = null;
       state.currentDentalHistory = null;
+      state.patientBalance = { balance: 0, overdueAmount: 0, lastPaymentDate: null, loading: false };
+      state.insuranceUsage = { primaryInsurance: null, secondaryInsurance: null, loading: false };
     },
     clearPatientScopedData: (state) => {
       state.currentMedicalHistory = null;
@@ -406,6 +439,14 @@ const patientSlice = createSlice({
         delete state.balanceCache[patientId];
       } else {
         state.balanceCache = {};
+      }
+    },
+    invalidateInsuranceUsage: (state, action) => {
+      const patientId = action.payload;
+      if (patientId) {
+        delete state.insuranceUsageCache[patientId];
+      } else {
+        state.insuranceUsageCache = {};
       }
     },
     // Update a patient in the list after edit
@@ -489,6 +530,7 @@ const patientSlice = createSlice({
       // Fetch Patient Balance
       .addCase(fetchPatientBalance.pending, (state) => {
         state.balanceLoading = true;
+        state.patientBalance.loading = true;
       })
       .addCase(fetchPatientBalance.fulfilled, (state, action) => {
         const { patientId, balance } = action.payload;
@@ -496,10 +538,39 @@ const patientSlice = createSlice({
           data: balance,
           timestamp: Date.now(),
         };
+        state.patientBalance = {
+          balance: balance?.balance ?? 0,
+          overdueAmount: balance?.overdueAmount ?? 0,
+          lastPaymentDate: balance?.lastPaymentDate ?? null,
+          loading: false,
+        };
         state.balanceLoading = false;
       })
       .addCase(fetchPatientBalance.rejected, (state) => {
         state.balanceLoading = false;
+        state.patientBalance.loading = false;
+      })
+      // Fetch Insurance Usage
+      .addCase(fetchInsuranceUsage.pending, (state) => {
+        state.insuranceUsageLoading = true;
+        state.insuranceUsage.loading = true;
+      })
+      .addCase(fetchInsuranceUsage.fulfilled, (state, action) => {
+        const { patientId, data } = action.payload;
+        state.insuranceUsageCache[patientId] = {
+          data,
+          timestamp: Date.now(),
+        };
+        state.insuranceUsage = {
+          primaryInsurance: data?.primaryInsurance ?? null,
+          secondaryInsurance: data?.secondaryInsurance ?? null,
+          loading: false,
+        };
+        state.insuranceUsageLoading = false;
+      })
+      .addCase(fetchInsuranceUsage.rejected, (state) => {
+        state.insuranceUsageLoading = false;
+        state.insuranceUsage.loading = false;
       })
       // fetchMedicalHistoryThunk
       .addCase(fetchMedicalHistoryThunk.pending, (state) => {
@@ -541,6 +612,7 @@ export const {
   invalidatePatientDetail,
   invalidatePatientInsurances,
   invalidatePatientBalance,
+  invalidateInsuranceUsage,
   updatePatientInList,
   removePatientFromList,
 } = patientSlice.actions;
@@ -565,7 +637,12 @@ export const selectMedicalHistoryError = (state) => state.patient.medicalHistory
 export const selectCurrentDentalHistory = (state) => state.patient.currentDentalHistory;
 export const selectDentalHistoryLoading = (state) => state.patient.dentalHistoryLoading;
 export const selectDentalHistoryError = (state) => state.patient.dentalHistoryError;
+export const selectPatientBalance = (state) => state.patient.patientBalance;
 export const selectPatientBalanceCache = (state) => state.patient.balanceCache;
+export const selectPatientBalanceLoading = (state) => state.patient.balanceLoading;
+export const selectInsuranceUsage = (state) => state.patient.insuranceUsage;
+export const selectInsuranceUsageCache = (state) => state.patient.insuranceUsageCache;
+export const selectInsuranceUsageLoading = (state) => state.patient.insuranceUsageLoading;
 
 // Check if cache is valid
 export const selectIsCacheValid = (state) => {

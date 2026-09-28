@@ -12,6 +12,7 @@ import CompleteProceduresDialog from './CompleteProceduresDialog';
 import { DUMMY_PROCEDURE_OPTIONS } from '../new-appointment/constants';
 import { useDispatch } from 'react-redux';
 import { createInvoice } from '../../../store/slices/billingSlice';
+import { invalidatePatientBalance, invalidateInsuranceUsage } from '../../../store/slices/patientSlice';
 import { updateAppointmentThunk } from '../../../store/slices/appointmentSlice';
 import { claimService } from '../../../services/claim.service';
 import InvoiceModal from '../../finance/InvoiceModal';
@@ -147,8 +148,8 @@ const ChecklistSection = ({ title, items, state, onSetStatus, open, onToggleOpen
 };
 
 // Main AppointmentChecklist component
-const AppointmentChecklist = ({ patientId, appointment }) => {
-  const [preApptOpen, setPreApptOpen] = useState(true);
+const AppointmentChecklist = ({ patientId, appointment, showAllSections = true }) => {
+  const [preApptOpen, setPreApptOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   
@@ -289,6 +290,9 @@ const AppointmentChecklist = ({ patientId, appointment }) => {
           writeoff:   parseFloat((String(row.writeoff   || '')).replace(/[^0-9.-]+/g, '')) || 0,
           ptPortion:  parseFloat((String(row.ptPortion  || '')).replace(/[^0-9.-]+/g, '')) || 0,
           insPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
+          primaryInsPortion: Number(row.primaryInsPortion ?? (Number(row.secondaryInsPortion || 0) > 0 && parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) > Number(row.secondaryInsPortion || 0) ? parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) - Number(row.secondaryInsPortion || 0) : parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')))),
+          secondaryInsPortion: Number(row.secondaryInsPortion || 0),
+          totalInsPortion: parseFloat((String(row.insPortion || '')).replace(/[^0-9.-]+/g, '')) || 0,
           charge:     parseFloat((String(row.charge     || '')).replace(/[^0-9.-]+/g, '')) || 0,
           balance:    parseFloat((String(row.balance    || '')).replace(/[^0-9.-]+/g, '')) || 0,
           dbi:       Boolean(row.dbi), completed: Boolean(row.completed),
@@ -307,6 +311,12 @@ const AppointmentChecklist = ({ patientId, appointment }) => {
       
       setShowInvoiceModal(false);
       showSnackbar("Invoice saved successfully!", "success");
+
+      // Invalidate balance cache so PatientDetailsCard re-fetches immediately
+      if (patientId) {
+        dispatch(invalidatePatientBalance(String(patientId)));
+        dispatch(invalidateInsuranceUsage(String(patientId)));
+      }
       
       if (shouldAddClaim && claimRows.length > 0 && createdInvoiceId) {
         try {
@@ -431,23 +441,27 @@ const AppointmentChecklist = ({ patientId, appointment }) => {
         open={preApptOpen}
         onToggleOpen={() => setPreApptOpen(v => !v)}
       />
-      <ChecklistSection
-        title="Check-in Checklist"
-        items={CHECK_IN_ITEMS}
-        state={checkInState}
-        onSetStatus={setStatus(setCheckInState)}
-        open={checkInOpen}
-        onToggleOpen={() => setCheckInOpen(v => !v)}
-      />
-      <ChecklistSection
-        title="Check-out Checklist"
-        items={CHECK_OUT_ITEMS}
-        state={checkOutState}
-        onSetStatus={setStatus(setCheckOutState)}
-        open={checkOutOpen}
-        onToggleOpen={() => setCheckOutOpen(v => !v)}
-        onLinkClick={handleLinkClick}
-      />
+      {showAllSections && (
+        <>
+          <ChecklistSection
+            title="Check-in Checklist"
+            items={CHECK_IN_ITEMS}
+            state={checkInState}
+            onSetStatus={setStatus(setCheckInState)}
+            open={checkInOpen}
+            onToggleOpen={() => setCheckInOpen(v => !v)}
+          />
+          <ChecklistSection
+            title="Check-out Checklist"
+            items={CHECK_OUT_ITEMS}
+            state={checkOutState}
+            onSetStatus={setStatus(setCheckOutState)}
+            open={checkOutOpen}
+            onToggleOpen={() => setCheckOutOpen(v => !v)}
+            onLinkClick={handleLinkClick}
+          />
+        </>
+      )}
 
       {/* Footer */}
       <Box

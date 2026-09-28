@@ -32,18 +32,15 @@ const ACTION_BUTTONS = [
 const ContactRow = ({ icon, text }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const handleCopy = () => {
-    const textToCopy = text.replace('DOB: ', '');
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      // Open tooltip message toast popup on success
-      setShowTooltip(true);
-      
-      // Clear popup context bubble visibility after 1.5 seconds
-      setTimeout(() => {
-        setShowTooltip(false);
-      }, 1500);
-    });
-  };
+    const handleCopy = () => {
+      const textToCopy = text.replace('DOB: ', '');
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          setShowTooltip(true);
+          setTimeout(() => setShowTooltip(false), 1500);
+        });
+      }
+    };
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>

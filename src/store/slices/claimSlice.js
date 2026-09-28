@@ -88,12 +88,22 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       // Fetch all claims for the patient to know which items are already claimed
       const claimsRes = await claimService.getAllClaims({ patientId });
       const claims = claimsRes.claims || [];
-      const claimedItemIds = new Set();
+      const claimedPrimaryItemIds = new Set();
+      const claimedSecondaryItemIds = new Set();
       claims.forEach((c) => {
+        const cStatus = String(c.status || '').toLowerCase();
+        if (cStatus === 'void' || cStatus === 'voided') return;
+        const isSec = String(c.insuranceType || c.claimType || '').toLowerCase() === 'secondary';
         const procs = (c.procedures?.length > 0 ? c.procedures : c.selectedItems) || [];
         procs.forEach((p) => {
-          if (p.itemId) claimedItemIds.add(String(p.itemId));
-          if (p.ProcNum) claimedItemIds.add(String(p.ProcNum));
+          const id = String(p.itemId || p.ProcNum || p.id || p._id || '');
+          if (id) {
+            if (isSec) {
+              claimedSecondaryItemIds.add(id);
+            } else {
+              claimedPrimaryItemIds.add(id);
+            }
+          }
         });
       });
 
@@ -112,21 +122,25 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
         (lineItems || [])
           .filter((item) => {
             if (item.dbi === true) return false;
-            // Hide procedures that are already part of a claim
-            if (claimedItemIds.has(String(item.id || item.itemId || item._id))) return false;
+            const itemId = String(item.id || item.itemId || item._id);
+            // Hide procedure only if already claimed by BOTH primary and secondary
+            if (claimedPrimaryItemIds.has(itemId) && claimedSecondaryItemIds.has(itemId)) return false;
             
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
+            const secIns = Number(item.secondaryInsPortion || 0);
             const pt = Number(item.ptPortion || 0);
-            const total = Number(item.total || item.totalPrice || 0);
+            const total = Number(item.total || item.totalPrice || item.charge || 0);
             const patientBal = pt > 0 ? pt : ins > 0 ? 0 : Math.max(0, total - writeoff - ins);
-            return !(patientBal > 0 && ins === 0);
+            return !(patientBal > 0 && ins === 0 && secIns === 0);
           })
           .map((item) => {
+            const itemId = String(item.id || item.itemId || item._id);
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
+            const secIns = Number(item.secondaryInsPortion || 0);
             const pt = Number(item.ptPortion || 0);
-            const total = Number(item.total || item.totalPrice || 0);
+            const total = Number(item.total || item.totalPrice || item.charge || 0);
             const patientBal = pt > 0 ? pt : ins > 0 ? 0 : Math.max(0, total - writeoff - ins);
             const insuranceBal =
               ins === 0 && pt === 0 && patientBal === 0 ? Math.max(0, total - writeoff) : ins;
@@ -134,8 +148,14 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
             return {
               ...item,
               checked: false,
+              insPortion: ins,
+              secondaryInsPortion: secIns,
+              ptPortion: pt,
+              claimedByPrimary: claimedPrimaryItemIds.has(itemId),
+              claimedBySecondary: claimedSecondaryItemIds.has(itemId),
               ptAmount: `$${patientBal.toFixed(2)}`,
               insAmount: `$${insuranceBal.toFixed(2)}`,
+              secInsAmount: `$${secIns.toFixed(2)}`,
               prevAmount: `$${prev.toFixed(2)}`,
             };
           });

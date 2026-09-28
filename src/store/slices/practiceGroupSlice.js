@@ -40,6 +40,17 @@ export const updatePracticeGroup = createAsyncThunk(
   }
 );
 
+export const fetchGroupById = createAsyncThunk(
+  'practiceGroup/fetchById',
+  async (groupId, { rejectWithValue }) => {
+    try {
+      return await practiceGroupService.getPracticeGroupById(groupId);
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.message || 'Failed to fetch practice group');
+    }
+  }
+);
+
 export const fetchGroupUsers = createAsyncThunk(
   'practiceGroup/fetchGroupUsers',
   async (groupId, { rejectWithValue }) => {
@@ -87,6 +98,10 @@ const initialState = {
   groupUsers: [],
   groupUsersLoading: false,
   groupUsersError: null,
+
+  currentGroup: null,
+  currentGroupLoading: false,
+  currentGroupError: null,
 };
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
@@ -142,6 +157,20 @@ const practiceGroupSlice = createSlice({
         state.groupUsersLoading = false;
         state.groupUsersError = action.payload || 'Failed to load group users';
       });
+
+    builder
+      .addCase(fetchGroupById.pending, (state) => {
+        state.currentGroupLoading = true;
+        state.currentGroupError = null;
+      })
+      .addCase(fetchGroupById.fulfilled, (state, action) => {
+        state.currentGroupLoading = false;
+        state.currentGroup = action.payload || null;
+      })
+      .addCase(fetchGroupById.rejected, (state, action) => {
+        state.currentGroupLoading = false;
+        state.currentGroupError = action.payload || 'Failed to load practice group';
+      });
   },
 });
 
@@ -159,5 +188,8 @@ export const selectPracticeGroupMutationError = (state) => state.practiceGroup?.
 export const selectGroupUsers = (state) => state.practiceGroup?.groupUsers;
 export const selectGroupUsersLoading = (state) => state.practiceGroup?.groupUsersLoading;
 export const selectGroupUsersError = (state) => state.practiceGroup?.groupUsersError;
+export const selectCurrentGroup = (state) => state.practiceGroup?.currentGroup;
+export const selectCurrentGroupLoading = (state) => state.practiceGroup?.currentGroupLoading;
+export const selectCurrentGroupError = (state) => state.practiceGroup?.currentGroupError;
 
 export default practiceGroupSlice.reducer;

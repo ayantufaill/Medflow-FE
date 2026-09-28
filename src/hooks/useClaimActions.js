@@ -47,14 +47,56 @@ export const useClaimActions = (onSuccess) => {
   };
 
   const sendClaims = async (selectedIds, type = 'electronic') => {
+    setLoading(true);
+    const failed = [];
+
+    for (const id of selectedIds) {
+      try {
+        // 1. Generate the 837D EDI file on the backend (stores it in etrans)
+        await claimService.generate837D(id);
+
+        // 2. Fetch the EDI file as a blob
+        const blob = await claimService.export837D(id);
+
+        // 3. Trigger browser download
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `claim_${id}.837`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(`Failed to generate 837D for claim ${id}:`, err);
+        failed.push(id);
+      }
+    }
+
+    // 4. Only batch-submit claims that successfully generated an 837D
+    const idsToSubmit = selectedIds.filter((id) => !failed.includes(id));
+
     try {
-      setLoading(true);
-      await claimService.batchSubmitClaims(selectedIds, type);
-      showMessage(`Successfully sent ${selectedIds.length} claim(s)!`);
+      if (idsToSubmit.length > 0) {
+        await claimService.batchSubmitClaims(idsToSubmit, type);
+      }
+
+      if (failed.length > 0) {
+        showMessage(
+          `${idsToSubmit.length} claim(s) submitted with 837D downloaded. ${failed.length} claim(s) failed EDI generation and remain in Unsent.`,
+          'warning'
+        );
+      } else {
+        showMessage(
+          `Successfully sent ${selectedIds.length} claim(s)! 837D files downloaded.`,
+          'success'
+        );
+      }
+
       if (onSuccess) onSuccess();
     } catch (err) {
-      console.error(err);
-      alert("Error sending claims: " + (err.message || err));
+      console.error('Batch submit failed:', err);
+      showMessage('EDI files downloaded but failed to update claim status.', 'error');
     } finally {
       setLoading(false);
     }

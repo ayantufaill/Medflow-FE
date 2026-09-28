@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-const GenerateStatementsDialog = ({ open = true, onClose, onGenerate }) => {
+const GenerateStatementsDialog = ({ open = true, onClose, onGenerate, selectedCount = 0 }) => {
   const [statementType, setStatementType] = useState('Family');
   const [shareWithPatients, setShareWithPatients] = useState(true);
 
@@ -51,7 +51,7 @@ const GenerateStatementsDialog = ({ open = true, onClose, onGenerate }) => {
 
       <DialogContent sx={{ mt: 2, px: 4, pb: 2 }}>
         <Typography variant="body2" sx={{ color: '#64748b', mb: 4, fontFamily: 'Inter, sans-serif' }}>
-          Configure the batch statement generation settings for the selected patients.
+          Configure the batch statement generation settings for the {selectedCount} selected patient{selectedCount === 1 ? '' : 's'}.
         </Typography>
 
         <Box sx={{ mb: 3 }}>

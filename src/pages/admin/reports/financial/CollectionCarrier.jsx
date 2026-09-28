@@ -7,6 +7,7 @@ import CollectionCarrierFilters from '../../../../components/reports/financial/C
 import CollectionCarrierTable from '../../../../components/reports/financial/CollectionCarrierTable';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
 import { reportingService } from '../../../../services/reporting.service';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const CollectionCarrier = () => {
   const dispatch = useDispatch();
@@ -36,7 +37,11 @@ const CollectionCarrier = () => {
       setLoading(true);
       const res = await reportingService.getFinancialReport('collection-carrier', {
         startDate,
-        endDate
+        endDate,
+        provider: provider !== 'All' ? provider : undefined,
+        payer: payerFilter === 'Payer' && payerText.trim() ? payerText : undefined,
+        plan: payerFilter === 'Plan' && planText.trim() ? planText : undefined,
+        network: networkFilter !== 'None' ? networkFilter : undefined
       });
       setRawReportData(res || []);
     } catch (err) {
@@ -48,7 +53,7 @@ const CollectionCarrier = () => {
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, []);
 
   const providerOptions = useMemo(() => {
     return [
@@ -65,8 +70,60 @@ const CollectionCarrier = () => {
     ];
   }, [rawProviders]);
 
+  const applyModeDates = (mode) => {
+    const today = new Date();
+    const getLocalDateString = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const m = mode.toLowerCase();
+    if (m === 'daily') {
+      const todayStr = getLocalDateString(today);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (m === 'weekly' || m === 'this_week') {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(today.setDate(diff));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      setStartDate(getLocalDateString(startOfWeek));
+      setEndDate(getLocalDateString(endOfWeek));
+    } else if (m === 'monthly' || m === 'this_month') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(endOfMonth));
+    } else if (m === 'last_7_days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 7);
+      setStartDate(getLocalDateString(start));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'last_month') {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(endOfMonth));
+    } else if (m === 'year_to_date') {
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+      setStartDate(getLocalDateString(startOfYear));
+      setEndDate(getLocalDateString(today));
+    } else if (m === 'range') {
+      setEndDate(getLocalDateString(today));
+      const lastMonth = new Date(today);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      setStartDate(getLocalDateString(lastMonth));
+    }
+  };
+
   const handleFilterModeChange = (e) => {
     setDateRange(e.target.value);
+    applyModeDates(e.target.value);
   };
 
   const handleApply = () => {
@@ -85,36 +142,8 @@ const CollectionCarrier = () => {
   };
 
   const filteredCarriers = useMemo(() => {
-    let list = rawReportData;
-
-    // Filter by network
-    if (networkFilter === 'In') {
-      list = list.filter(c => ['cigna', 'delta dental', 'blue cross'].some(n => c.name.toLowerCase().includes(n)));
-    } else if (networkFilter === 'Out') {
-      list = list.filter(c => !['cigna', 'delta dental', 'blue cross'].some(n => c.name.toLowerCase().includes(n)));
-    }
-
-    // Filter by Payer
-    if (payerFilter === 'Payer' && payerText.trim() !== '') {
-      const q = payerText.toLowerCase();
-      list = list.filter(c => c.name.toLowerCase().includes(q));
-    }
-
-    // Filter by Plan
-    if (payerFilter === 'Plan' && planText.trim() !== '') {
-      const q = planText.toLowerCase();
-      list = list.map(c => {
-        if (c.name.toLowerCase().includes(q)) return c;
-        const filteredPats = c.patients.filter(p => p.name.toLowerCase().includes(q));
-        if (filteredPats.length > 0) {
-          return { ...c, patients: filteredPats };
-        }
-        return null;
-      }).filter(Boolean);
-    }
-
-    return list;
-  }, [rawReportData, networkFilter, payerFilter, payerText, planText]);
+    return rawReportData;
+  }, [rawReportData]);
 
   const handleExportCSV = () => {
     const headers = ['Carrier / Patient', 'Collection', 'Production', 'Write-off'];
@@ -160,42 +189,53 @@ const CollectionCarrier = () => {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Collection Per Carrier Report</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: sans-serif; padding: 20px; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('h2 { color: #2262ef; }');
-    printWindow.document.write('.summary-box { display: flex; gap: 20px; background: #f8fafc; padding: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 11px; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write('<h2>Collection Per Carrier Report</h2>');
-    printWindow.document.write(`<p>Date Range: ${startDate} to ${endDate}</p>`);
+    const printContent = document.getElementById('collection-carrier-print-area');
+    if (!printContent) return;
 
-    filteredCarriers.forEach(carrier => {
-      printWindow.document.write(`<h3>${carrier.name}</h3>`);
-      printWindow.document.write(`
-        <div class="summary-box">
-          <span><strong>Total Collection:</strong> ${carrier.collection}</span>
-          <span><strong>Total Production:</strong> ${carrier.production}</span>
-          <span><strong>Total Write-off:</strong> ${carrier.writeoff}</span>
-        </div>
-      `);
-      printWindow.document.write('<table><thead><tr><th>Patient</th><th>Collection</th><th>Production</th><th>Write-off</th></tr></thead><tbody>');
-      carrier.patients.forEach(p => {
-        printWindow.document.write(`<tr><td>${p.name}</td><td>${p.collection}</td><td>${p.production}</td><td>${p.writeoff}</td></tr>`);
-      });
-      printWindow.document.write('</tbody></table>');
-    });
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Collection Per Carrier Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Collection Per Carrier Report</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${startDate} to ${endDate}</p>
+          <p style="text-align: center; margin-bottom: 20px;">Provider: ${providerOptions.find(p => p.value === String(provider))?.label || 'All'}</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${printContent.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
 
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+    
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 500);
+    };
   };
 
   return (
@@ -237,7 +277,9 @@ const CollectionCarrier = () => {
           No data available for the selected filters.
         </Typography>
       ) : (
-        <CollectionCarrierTable carriers={filteredCarriers} />
+        <Box id="collection-carrier-print-area">
+                <CollectionCarrierTable carriers={filteredCarriers} />
+              </Box>
       )}
     </ReportLayout>
   );

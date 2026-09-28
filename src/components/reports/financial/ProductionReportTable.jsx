@@ -19,12 +19,14 @@ import PrintIcon from '@mui/icons-material/Print';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useSelector } from 'react-redux';
 import { selectPracticeInfo } from '../../../store/slices/practiceInfoSlice';
+import { getFlagColor } from '../../patient-flags/constants';
 const ProductionReportTable = ({
   sortedReportData,
   grouping,
   showFlags,
   showDOB = true,
   showProvider = true,
+  filterByDOS = false,
   handleExportGroupCSV,
   handlePrintGroup
 }) => {
@@ -32,9 +34,23 @@ const ProductionReportTable = ({
   const globalFlags = practiceInfo?.patientFlags || [];
 
   const resolveFlagColor = (flagVal) => {
-    const found = globalFlags.find(f => f.id === flagVal);
-    if (found) return { color: found.color, name: found.name };
-    return { color: flagVal, name: 'Flag' }; // fallback if it's already a hex color
+    if (typeof flagVal === 'object' && flagVal !== null) {
+      return { color: flagVal.color || '#cbd5e1', name: flagVal.name || 'Flag' };
+    }
+    const strVal = String(flagVal);
+    const found = globalFlags.find(f => 
+      f.id === strVal || 
+      (f.name || '').toLowerCase() === strVal.toLowerCase() || 
+      (f.label || '').toLowerCase() === strVal.toLowerCase()
+    );
+    if (found) return { color: found.color, name: found.name || found.label || strVal };
+    
+    const fallbackColor = getFlagColor(strVal);
+    if (fallbackColor !== '#cbd5e1') {
+      return { color: fallbackColor, name: strVal };
+    }
+    
+    return { color: '#cbd5e1', name: strVal };
   };
   const baseColSpan = 8;
   const leftOffset = baseColSpan - (!showDOB ? 1 : 0) - (!showProvider ? 2 : 0);
@@ -71,7 +87,7 @@ const ProductionReportTable = ({
             <Table size="small" sx={{ minWidth: 1200 }}>
               <TableHead>
                 <TableRow sx={headerRowSx}>
-                  <TableCell>Date</TableCell>
+                  <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                   <TableCell>Flags</TableCell>
                   <TableCell>Patient</TableCell>
                   {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -257,7 +273,7 @@ const ProductionReportTable = ({
                       <Table size="small" sx={{ minWidth: 1200 }}>
                         <TableHead>
                           <TableRow sx={headerRowSx}>
-                            <TableCell>Date</TableCell>
+                            <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                             <TableCell>Flags</TableCell>
                             <TableCell>Patient</TableCell>
                             {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -292,8 +308,8 @@ const ProductionReportTable = ({
                         </TableHead>
                         <TableBody>
                           {groupRows.map((row, idx) => (
-                            <TableRow key={row.procedureId || idx} sx={bodyRowSx}>
-                              <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                            <TableRow key={row.procedureId ? `${row.type || 'row'}-${row.procedureId}-${idx}` : idx} sx={bodyRowSx}>
+                              <TableCell>{(row.displayDate || row.date) ? new Date(row.displayDate || row.date).toLocaleDateString() : '-'}</TableCell>
                               <TableCell>
                               {showFlags && row.flags && row.flags.length > 0 && (
                                 <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -366,7 +382,7 @@ const ProductionReportTable = ({
             <Table size="small" sx={{ minWidth: 1200 }}>
               <TableHead>
                 <TableRow sx={headerRowSx}>
-                  <TableCell>Date</TableCell>
+                  <TableCell>{filterByDOS ? 'Date of Service' : 'Date'}</TableCell>
                   <TableCell>Flags</TableCell>
                   <TableCell>Patient</TableCell>
                   {showDOB && <TableCell>Date of Birth</TableCell>}
@@ -401,8 +417,8 @@ const ProductionReportTable = ({
               </TableHead>
               <TableBody>
                 {sortedReportData.map((row, idx) => (
-                  <TableRow key={row.procedureId || idx} sx={bodyRowSx}>
-                    <TableCell>{row.date ? new Date(row.date).toLocaleDateString() : '-'}</TableCell>
+                  <TableRow key={row.procedureId ? `${row.type || 'row'}-${row.procedureId}-${idx}` : idx} sx={bodyRowSx}>
+                    <TableCell>{(row.displayDate || row.date) ? new Date(row.displayDate || row.date).toLocaleDateString() : '-'}</TableCell>
                     <TableCell>
                       {showFlags && row.flags && row.flags.length > 0 && (
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>

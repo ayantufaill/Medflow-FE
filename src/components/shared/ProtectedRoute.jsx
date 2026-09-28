@@ -1,26 +1,24 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { CircularProgress, Box, Alert } from "@mui/material";
-import { hasRequiredRole, hasRequiredPermission } from "../../config/navMenuItems";
+import { hasRequiredRole, hasRequiredPermission, hasRequiredGroup, getUserGroups } from "../../config/navMenuItems";
 
 /**
- * ProtectedRoute Component
+ * ProtectedRoute Component with Pure 4-Group support
  *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Child components to render if access is granted
+ * @param {string[]} [props.allowedGroups] - Array of group keys (e.g. ['ADMIN_GROUP', 'CLINICAL_GROUP'])
  * @param {string[]} [props.requiredRoles] - Array of role names required to access the route (e.g., ['Admin'])
  * @param {string[]} [props.requiredPermissions] - Array of permission strings required to access the route (e.g., ['users.read'])
  * @param {boolean} [props.requireAllRoles=false] - If true, user must have ALL required roles. If false, user needs ANY of the roles.
  * @param {boolean} [props.requireAllPermissions=false] - If true, user must have ALL required permissions. If false, user needs ANY of the permissions.
- * @param {boolean} [props.requireEitherRoleOrPermission=false] - When both requiredRoles and requiredPermissions
- *   are given, the default is to require BOTH checks to pass (e.g. "must be Admin AND have X"). Set this to
- *   true to instead pass if EITHER check passes on its own (e.g. "Admin OR anyone with the group:view_analytics
- *   permission" — lets a role like Group Admin, which will never hold the 'Admin' role name, in via permission
- *   alone instead of being blocked by the role check before permissions are even considered).
+ * @param {boolean} [props.requireEitherRoleOrPermission=false] - When both requiredRoles and requiredPermissions are given
  * @param {string} [props.accessDeniedMessage] - Custom message to display when access is denied
  */
 const ProtectedRoute = ({
   children,
+  allowedGroups = [],
   requiredRoles = [],
   requiredPermissions = [],
   requireAllRoles = false,
@@ -44,7 +42,6 @@ const ProtectedRoute = ({
   }
 
   if (!isAuthenticated) {
-    // Clear any stale tokens before redirecting to prevent navigation issues
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -53,10 +50,36 @@ const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
+  // Super Admin & ADMIN_GROUP have universal platform access across all modules
+  const userRoleNames = (user?.roles || [])
+    .map((role) => (typeof role === 'string' ? role : role?.name || ''))
+    .filter(Boolean);
+
+  const groups = getUserGroups(user);
+
+  if (groups.includes('ADMIN_GROUP') || userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
+    return children;
+  }
+
+  // 1. Group-level check if specified
+  if (allowedGroups.length > 0) {
+    if (!hasRequiredGroup(user, allowedGroups)) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <Alert severity="error">{accessDeniedMessage}</Alert>
+        </Box>
+      );
+    }
+  }
+
+  // 2. Role and permission checks for fine-grained / legacy compatibility
   const roleCheckApplies = requiredRoles.length > 0;
   const permissionCheckApplies = requiredPermissions.length > 0;
 
-  // hasRequiredRole (navMenuItems.jsx) is ANY-of by design — for ALL-of, check each individually.
+  if (!roleCheckApplies && !permissionCheckApplies) {
+    return children;
+  }
+
   const passesRoles = !roleCheckApplies || (requireAllRoles
     ? requiredRoles.every((role) => hasRequiredRole(user, [role]))
     : hasRequiredRole(user, requiredRoles));
@@ -64,8 +87,8 @@ const ProtectedRoute = ({
     || hasRequiredPermission(user, requiredPermissions, requireAllPermissions);
 
   const denied = requireEitherRoleOrPermission && roleCheckApplies && permissionCheckApplies
-    ? !passesRoles && !passesPermissions // OR mode: only deny if NEITHER check passes
-    : !passesRoles || !passesPermissions; // default AND mode: deny if either applicable check fails
+    ? !passesRoles && !passesPermissions
+    : !passesRoles || !passesPermissions;
 
   if (denied) {
     return (

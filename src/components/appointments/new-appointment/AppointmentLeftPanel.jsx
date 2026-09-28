@@ -29,6 +29,7 @@ import { useSnackbar } from "../../../contexts/SnackbarContext";
 import InvoiceModal from "../../finance/InvoiceModal";
 import { useDispatch } from "react-redux";
 import { createInvoice } from "../../../store/slices/billingSlice";
+import { invalidatePatientBalance, invalidateInsuranceUsage } from "../../../store/slices/patientSlice";
 import { claimService } from "../../../services/claim.service";
 
 const AppointmentLeftPanel = ({
@@ -67,7 +68,8 @@ const AppointmentLeftPanel = ({
   onComputeNextVisit,
   onDuplicateProcedure,
   readOnly,
-  setIsRescheduling,
+  onEnterEdit,
+  isEditMode = false,
   appointmentId,
   status,
   onStatusChange,
@@ -300,6 +302,14 @@ const AppointmentLeftPanel = ({
             parseFloat(
               String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
             ) || 0,
+          primaryInsPortion:
+            Number(row.primaryInsPortion ?? (Number(row.secondaryInsPortion || 0) > 0 && parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) > Number(row.secondaryInsPortion || 0) ? parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) - Number(row.secondaryInsPortion || 0) : parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")))),
+          secondaryInsPortion:
+            Number(row.secondaryInsPortion || 0),
+          totalInsPortion:
+            parseFloat(
+              String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+            ) || 0,
           charge:
             parseFloat(String(row.charge || "").replace(/[^0-9.-]+/g, "")) || 0,
           balance:
@@ -329,6 +339,13 @@ const AppointmentLeftPanel = ({
 
       setShowInvoiceModal(false);
       showSnackbar("Invoice saved successfully!", "success");
+
+      // Invalidate balance cache so PatientDetailsCard re-fetches immediately
+      const pid = patient?.id || patient?._id || patient?.PatNum;
+      if (pid) {
+        dispatch(invalidatePatientBalance(String(pid)));
+        dispatch(invalidateInsuranceUsage(String(pid)));
+      }
 
       if (shouldAddClaim && claimRows.length > 0 && createdInvoiceId) {
         try {
@@ -373,7 +390,7 @@ const AppointmentLeftPanel = ({
     <Box
       sx={{
         flex: 1,
-        p: "20px",
+        p: isEditMode ? "0px 20px 20px 20px" : "20px",
         overflowY: "auto",
         borderRight: "1px solid #e0e5eb",
         minWidth: 0,
@@ -385,7 +402,18 @@ const AppointmentLeftPanel = ({
           opacity: readOnly ? 0.85 : 1,
         }}
       >
-        {/* Patient / Date / Time row */}
+        {isEditMode && isPatientOccupied && (
+          <Typography
+            sx={{
+              color: "#ef4444",
+              fontSize: "12px",
+              mb: "16px",
+              fontFamily: "Inter",
+            }}
+          >
+            This patient is occupied at the selected time.
+          </Typography>
+        )}
         <Box
           sx={{
             display: "flex",
@@ -394,102 +422,108 @@ const AppointmentLeftPanel = ({
             alignItems: "flex-start",
           }}
         >
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <PatientSearchField
-              patients={patients}
-              loadingPatients={loadingPatients}
-              value={patient}
-              onChange={onPatientChange}
-              onSearch={onPatientSearch}
-              error={patientError}
-            />
-            {isPatientOccupied && (
-              <Typography
-                sx={{
-                  color: "#ef4444",
-                  fontSize: "12px",
-                  mt: "6px",
-                  fontFamily: "Inter",
-                }}
-              >
-                This patient is occupied at the selected time.
-              </Typography>
-            )}
-          </Box>
-
-          <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker
-                value={apptDate}
-                onChange={(v) => v && onDateChange(v)}
-                views={["year", "month", "day"]}
-                disablePast
-                slotProps={{
-                  popper: { sx: { zIndex: 1400 } },
-                  textField: {
-                    size: "small",
-                    sx: {
-                      width: "165px",
-                      "& .MuiInputBase-root": {
-                        fontFamily: "Inter",
-                        fontSize: "13px",
-                        borderRadius: "8px",
-                        height: "40px",
-                      },
-                    },
-                  },
-                }}
+          {!isEditMode && (
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <PatientSearchField
+                patients={patients}
+                loadingPatients={loadingPatients}
+                value={patient}
+                onChange={onPatientChange}
+                onSearch={onPatientSearch}
+                error={patientError}
               />
-            </LocalizationProvider>
-          </FieldBox>
+              {isPatientOccupied && (
+                <Typography
+                  sx={{
+                    color: "#ef4444",
+                    fontSize: "12px",
+                    mt: "6px",
+                    fontFamily: "Inter",
+                  }}
+                >
+                  This patient is occupied at the selected time.
+                </Typography>
+              )}
+            </Box>
+          )}
 
-          <FieldBox label="Time" sx={{ flexShrink: 0 }}>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <TimePicker
-                value={(() => {
-                  const h = parseInt(timeHours, 10);
-                  const m = parseInt(timeMins, 10);
-                  const hour24 =
-                    amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
-                  return dayjs().hour(hour24).minute(m).second(0);
-                })()}
-                onChange={(v) => {
-                  if (!v) return;
-                  onTimeChange(v.format("hh"), v.format("mm"));
-                  onAmPmChange(v.format("A"));
-                }}
-                minTime={
-                  apptDate && dayjs(apptDate).isSame(dayjs(), "day")
-                    ? dayjs()
-                    : undefined
-                }
-                slotProps={{
-                  popper: { sx: { zIndex: 1400 } },
-                  textField: {
-                    size: "small",
-                    sx: {
-                      width: "130px",
-                      "& .MuiInputBase-root": {
-                        fontFamily: "Inter",
-                        fontSize: "13px",
-                        borderRadius: "8px",
-                        height: "40px",
-                        paddingRight: "4px",
+          {!isEditMode && (
+            <>
+              <FieldBox label="Date" sx={{ width: "165px", flexShrink: 0 }}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    value={apptDate}
+                    onChange={(v) => v && onDateChange(v)}
+                    views={["year", "month", "day"]}
+                    disablePast
+                    slotProps={{
+                      popper: { sx: { zIndex: 1400 } },
+                      textField: {
+                        size: "small",
+                        sx: {
+                          width: "165px",
+                          "& .MuiInputBase-root": {
+                            fontFamily: "Inter",
+                            fontSize: "13px",
+                            borderRadius: "8px",
+                            height: "40px",
+                          },
+                        },
                       },
-                      // hide the default left adornment gap
-                      "& .MuiInputAdornment-positionStart": { display: "none" },
-                    },
-                  },
-                  openPickerButton: {
-                    sx: { color: "#9aa3ae", padding: "4px" },
-                  },
-                  openPickerIcon: {
-                    sx: { fontSize: "16px" },
-                  },
-                }}
-              />
-            </LocalizationProvider>
-          </FieldBox>
+                    }}
+                  />
+                </LocalizationProvider>
+              </FieldBox>
+
+              <FieldBox label="Time" sx={{ flexShrink: 0 }}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <TimePicker
+                    value={(() => {
+                      const h = parseInt(timeHours, 10);
+                      const m = parseInt(timeMins, 10);
+                      const hour24 =
+                        amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
+                      return dayjs().hour(hour24).minute(m).second(0);
+                    })()}
+                    onChange={(v) => {
+                      if (!v) return;
+                      onTimeChange(v.format("hh"), v.format("mm"));
+                      onAmPmChange(v.format("A"));
+                    }}
+                    minTime={
+                      apptDate && dayjs(apptDate).isSame(dayjs(), "day")
+                        ? dayjs().startOf("minute")
+                        : undefined
+                    }
+                    slotProps={{
+                      popper: { sx: { zIndex: 1400 } },
+                      textField: {
+                        size: "small",
+                        sx: {
+                          width: "130px",
+                          "& .MuiInputBase-root": {
+                            fontFamily: "Inter",
+                            fontSize: "13px",
+                            borderRadius: "8px",
+                            height: "40px",
+                            paddingRight: "4px",
+                          },
+                          // hide the default left adornment gap
+                          "& .MuiInputAdornment-positionStart": { display: "none" },
+                        },
+                      },
+                      openPickerButton: {
+                        sx: { color: "#9aa3ae", padding: "4px" },
+                      },
+                      openPickerIcon: {
+                        sx: { fontSize: "16px" },
+                      },
+                    }}
+                  />
+                </LocalizationProvider>
+              </FieldBox>
+            </>
+          )}
         </Box>
 
         {/* Type of visit */}
@@ -685,8 +719,10 @@ const AppointmentLeftPanel = ({
           setProcedures={setProcedures}
           providers={providers}
           showExtendedOptions={showExtendedOptions}
-          setIsRescheduling={setIsRescheduling}
           isFuture={isFuture}
+          disableDelete={readOnly}
+          onEnterEdit={onEnterEdit}
+          visitType={visitType}
         />
 
         {/* Action buttons row + Complete All + Checkout — only when opened from Book button */}
@@ -716,7 +752,7 @@ const AppointmentLeftPanel = ({
                       } else {
                         if (onStatusChange) onStatusChange(previousStatus);
                       }
-                      if (setIsRescheduling) setIsRescheduling(true);
+                      if (onEnterEdit) onEnterEdit();
                     }}
                     sx={{
                       color: "#d1d5db",
@@ -751,7 +787,7 @@ const AppointmentLeftPanel = ({
                     );
                     if (!allCompleted) {
                       if (onStatusChange) onStatusChange("completed");
-                      if (setIsRescheduling) setIsRescheduling(true);
+                      if (onEnterEdit) onEnterEdit();
                     }
                   }}
                   sx={{

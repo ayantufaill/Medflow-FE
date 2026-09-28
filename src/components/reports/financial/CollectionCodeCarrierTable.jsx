@@ -77,6 +77,17 @@ const CollectionCodeCarrierTable = ({ loading, reportData }) => {
               ))
             )}
           </TableBody>
+          {reportData.length > 0 && (
+            <tfoot id="collection-carrier-footer">
+              <TableRow sx={{ '& th, & td': { fontWeight: 700, borderTop: '2px solid #e2e8f0', borderBottom: 'none', py: 1.5, backgroundColor: '#f8f9fa' } }}>
+                <TableCell colSpan={3} align="right">GRAND TOTALS</TableCell>
+                <TableCell align="right">{reportData.reduce((sum, row) => sum + (row.quantity || 0), 0)}</TableCell>
+                <TableCell align="right">${reportData.reduce((sum, row) => sum + (row.totalProduction || 0), 0).toFixed(2)}</TableCell>
+                <TableCell align="right">${reportData.reduce((sum, row) => sum + (row.totalCollection || 0), 0).toFixed(2)}</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </tfoot>
+          )}
         </Table>
       </TableContainer>
     </Box>

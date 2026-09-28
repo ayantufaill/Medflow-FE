@@ -24,6 +24,16 @@ const PreviousDepositSlipsTable = ({ displaySlips, isSlipsExpanded, setIsSlipsEx
       </Typography>
       <Collapse in={isSlipsExpanded}>
         <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          {displaySlips.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: '#64748b', mb: 0.5 }}>
+                No previous deposit slips found.
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                Create a deposit slip using the filters above to see it listed here.
+              </Typography>
+            </Box>
+          ) : (
           <TableContainer component={Paper} elevation={0}>
             <Table size="small">
               <TableHead>
@@ -35,11 +45,11 @@ const PreviousDepositSlipsTable = ({ displaySlips, isSlipsExpanded, setIsSlipsEx
               </TableHead>
               <TableBody>
                 {displaySlips.map((row, idx) => {
-                  const displayDate = row.date && !isNaN(Date.parse(row.date)) 
-                    ? new Date(row.date).toLocaleDateString() 
+                  const displayDate = row.date && !isNaN(Date.parse(row.date))
+                    ? new Date(row.date).toLocaleDateString()
                     : row.date || '-';
-                  const displayAmount = typeof row.amount === 'number' 
-                    ? `$${row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                  const displayAmount = typeof row.amount === 'number'
+                    ? `$${row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : row.amount ? `$${row.amount}` : '$0.00';
                   return (
                     <TableRow key={idx} sx={{ '& td': { fontSize: '0.75rem', py: 1.5, verticalAlign: 'middle', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
@@ -52,6 +62,7 @@ const PreviousDepositSlipsTable = ({ displaySlips, isSlipsExpanded, setIsSlipsEx
               </TableBody>
             </Table>
           </TableContainer>
+          )}
         </Box>
       </Collapse>
     </Box>

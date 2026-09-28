@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import {
   Box,
@@ -20,6 +20,7 @@ import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { createInvoiceAdjustment } from '../../store/slices/billingSlice';
 import { usePatient } from '../../hooks/redux/usePatient';
+import apiClient from '../../config/api';
 
 const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const dispatch = useDispatch();
@@ -29,6 +30,22 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Percentage");
   const [calcValue, setCalcValue] = useState("");
+  const [adjustmentTypeOptions, setAdjustmentTypeOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchDefinitions = async () => {
+      try {
+        const res = await apiClient.get('/admin-finance/definitions/1');
+        const data = res.data?.data || res.data || [];
+        if (Array.isArray(data) && data.length > 0) {
+          setAdjustmentTypeOptions(data);
+        }
+      } catch (err) {
+        // fallback silently
+      }
+    };
+    fetchDefinitions();
+  }, []);
 
   const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
   const rawDate = editTarget?.invoiceDate || editTarget?.date || editTarget?.createdAt || editTarget?.dateService;
@@ -150,12 +167,14 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     }
     
     try {
+      const selectedDef = adjustmentTypeOptions.find(o => o.type === adjustmentType);
       await dispatch(createInvoiceAdjustment({
         patientId,
         invoiceId: editTarget?.id,
         adjustmentType,
         adjustmentAmount,
-        reason
+        reason,
+        typeId: selectedDef?.id || undefined
       })).unwrap();
       
       if (onClose) onClose();
@@ -198,13 +217,21 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               sx={{ width: 150, height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
               MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
             >
-              <MenuItem value="Write Off" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Write Off</MenuItem>
-              <MenuItem value="Un-Collected" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Un-Collected</MenuItem>
-              <MenuItem value="pre payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Pre Payment</MenuItem>
-              <MenuItem value="wellness" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Wellness</MenuItem>
-              <MenuItem value="Small Balance W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Small Balance W/O</MenuItem>
-              <MenuItem value="Curtsey W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Curtsey W/O</MenuItem>
-              <MenuItem value="NON PAYMENT" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Non Payment</MenuItem>
+              {adjustmentTypeOptions.length > 0 ? (
+                adjustmentTypeOptions.map((opt) => (
+                  <MenuItem key={opt.id || opt.type} value={opt.type} sx={{ fontFamily: "Inter", fontSize: "13px" }}>{opt.type}</MenuItem>
+                ))
+              ) : (
+                <>
+                  <MenuItem value="Write Off" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Write Off</MenuItem>
+                  <MenuItem value="Un-Collected" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Un-Collected</MenuItem>
+                  <MenuItem value="pre payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Pre Payment</MenuItem>
+                  <MenuItem value="wellness" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Wellness</MenuItem>
+                  <MenuItem value="Small Balance W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Small Balance W/O</MenuItem>
+                  <MenuItem value="Curtsey W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Curtsey W/O</MenuItem>
+                  <MenuItem value="NON PAYMENT" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Non Payment</MenuItem>
+                </>
+              )}
             </Select>
           </Box>
 

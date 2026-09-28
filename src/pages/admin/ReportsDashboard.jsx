@@ -214,6 +214,8 @@ const ReportsDashboard = () => {
               <ProductionPerCode />
             ) : location.pathname === '/admin/reports/financial/collection-code-carrier' ? (
               <CollectionCodeCarrier />
+            ) : location.pathname === '/admin/reports/financial/referral-production' ? (
+              <ReferralProductionReport />
             ) : location.pathname === '/admin/reports/financial/adjustment' ? (
               <AdjustmentReport />
             ) : location.pathname === '/admin/reports/financial/courtesy-credit' ? (

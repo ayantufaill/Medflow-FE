@@ -129,7 +129,7 @@ const FinancePage = () => {
       await apiClient.post("/deposits", {
         patientId: patientId.toString(),
         amount: parseFloat(depositData.depositAmount) || 0,
-        paymentMethod: mappedMethod,
+        paymentMethod: depositData.paymentMethod,
         depositType: mappedType,
         date: new Date().toISOString(),
         notes: `Prepayment Deposit - Method: ${depositData.paymentMethod}. Account: ${depositData.toAccount || "None"}. Policy: ${depositData.policy || "None"}`,
@@ -158,6 +158,7 @@ const FinancePage = () => {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
+        type: creditData.typeId || undefined,
         notes: `Courtesy Credit - Type: ${creditData.adjustmentType}`,
       });
 
@@ -184,6 +185,7 @@ const FinancePage = () => {
         patientId: patientId.toString(),
         amount: amountVal,
         date: new Date(),
+        type: adjustmentData.typeId || undefined,
         notes: `Account Adjustment - Type: ${adjustmentData.adjustmentType}${adjustmentData.description ? `. Description: ${adjustmentData.description}` : ""}`,
       });
 

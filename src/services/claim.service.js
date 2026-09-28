@@ -7,6 +7,28 @@ import apiClient from '../config/api';
 
 export const claimService = {
   /**
+   * Generate 837D EDI file for a claim
+   * @param {string} claimId - Claim ID
+   * @returns {Promise<Object>} Generation result
+   */
+  async generate837D(claimId) {
+    const response = await apiClient.post(`/claims/${claimId}/generate-837`);
+    return response.data;
+  },
+
+  /**
+   * Export 837D EDI file for a claim
+   * @param {string} claimId - Claim ID
+   * @returns {Promise<Blob>} EDI file content
+   */
+  async export837D(claimId) {
+    const response = await apiClient.get(`/claims/${claimId}/edi-837`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
    * Get all claims with pagination and filters
    * @param {Object} options - Filter options
    * @returns {Promise<Object>} Claims data with pagination
@@ -513,7 +535,11 @@ export const claimService = {
       formData.append('attachments', file);
     });
 
-    const response = await apiClient.post(`/claims/${claimId}/attachments`, formData);
+    const response = await apiClient.post(`/claims/${claimId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };

@@ -258,6 +258,25 @@ const RecordPaymentPage = () => {
       };
 
       const payment = await paymentService.createPayment(paymentData);
+
+      const appointmentIds = payment?.appointmentIds ||
+        (primaryInvoice?.appointmentId ? [String(primaryInvoice.appointmentId)] : []);
+      const eventPayload = {
+        paymentId: payment?._id || payment?.id,
+        invoiceId: primaryInvoice._id || primaryInvoice.id,
+        patientId: selectedPatient._id || selectedPatient.id,
+        amount: totalAmount,
+        appointmentIds,
+      };
+
+      window.dispatchEvent(new CustomEvent('payment-completed', { detail: eventPayload }));
+      window.dispatchEvent(new CustomEvent('appointment-financials-updated', { detail: eventPayload }));
+      try {
+        const bc = new BroadcastChannel('medflow-payments');
+        bc.postMessage(eventPayload);
+        bc.close();
+      } catch (e) {}
+
       showSnackbar('Payment recorded successfully', 'success');
       navigate('/payments');
     } catch (err) {

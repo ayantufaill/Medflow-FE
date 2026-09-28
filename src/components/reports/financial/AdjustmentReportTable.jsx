@@ -52,9 +52,16 @@ const AdjustmentReportTable = ({
         {showFlags && (
           <TableCell>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {display.flags.map((color, i) => (
-                <Box key={i} sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
-              ))}
+              {display.flags.map((flag, i) => {
+                const color = typeof flag === 'string' ? flag : flag.color;
+                return color ? (
+                  <Box 
+                    key={i} 
+                    sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px', display: 'inline-block', mr: 0.5 }} 
+                    style={{ width: '10px', height: '10px', backgroundColor: color, borderRadius: '2px', display: 'inline-block', marginRight: '4px' }}
+                  />
+                ) : null;
+              })}
             </Box>
           </TableCell>
         )}

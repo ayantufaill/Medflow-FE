@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -10,20 +10,140 @@ import {
 } from '../ui';
 
 const ProviderCollectionPaymentTypeFilters = ({
-  dateRange,
-  startDate,
-  endDate,
-  provider,
-  showFlags,
-  flagFilter,
-  sortBy,
+  initialFilters = {
+    dateRange: 'daily',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    provider: 'all',
+    showFlags: true,
+    flagFilter: 'pts',
+    sortBy: 'default'
+  },
   dropdownProviders,
   getProviderLabel,
-  handleFilterChange,
-  handleFilterModeChange,
-  handleApply,
-  handleClear
+  onApplyFilters,
+  onClearAll
 }) => {
+  const [draftFilters, setDraftFilters] = useState(initialFilters);
+
+  const handleFilterChange = (key, value) => {
+    let safeValue = value;
+    if (value && typeof value === 'object' && !Array.isArray(value) && value.nativeEvent) {
+      safeValue = value.target !== undefined && value.target.checked !== undefined 
+        ? value.target.checked 
+        : (value.target !== undefined ? value.target.value : value);
+    }
+    setDraftFilters(prev => ({ ...prev, [key]: safeValue }));
+  };
+
+  const getLocalDateString = (d) => {
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  };
+
+  const handleFilterModeChange = (e) => {
+    const newMode = e.target.value;
+    handleFilterChange('dateRange', newMode);
+    if (newMode === 'range') return;
+
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    switch (newMode) {
+      case 'daily':
+        break;
+      case 'this_week': {
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        start = new Date(today.setDate(diff));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'this_month':
+      case 'month_to_date': {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = newMode === 'this_month' ? new Date(today.getFullYear(), today.getMonth() + 1, 0) : new Date();
+        break;
+      }
+      case 'last_7_days': {
+        start.setDate(today.getDate() - 7);
+        break;
+      }
+      case 'last_week': {
+        const day = today.getDay();
+        const diffToLastWeekStart = today.getDate() - day - 7 + (day === 0 ? -6 : 1);
+        start = new Date(new Date().setDate(diffToLastWeekStart));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      }
+      case 'last_4_weeks': {
+        start.setDate(today.getDate() - 28);
+        break;
+      }
+      case 'last_month': {
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      }
+      case 'last_3_months': {
+        start.setMonth(today.getMonth() - 3);
+        break;
+      }
+      case 'last_12_months': {
+        start.setFullYear(today.getFullYear() - 1);
+        break;
+      }
+      case 'quarter_to_date': {
+        const quarter = Math.floor(today.getMonth() / 3);
+        start = new Date(today.getFullYear(), quarter * 3, 1);
+        break;
+      }
+      case 'year_to_date': {
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+      }
+      case 'last_year': {
+        start = new Date(today.getFullYear() - 1, 0, 1);
+        end = new Date(today.getFullYear() - 1, 11, 31);
+        break;
+      }
+      default:
+        break;
+    }
+    
+    setDraftFilters(prev => ({
+      ...prev,
+      startDate: getLocalDateString(start),
+      endDate: getLocalDateString(end)
+    }));
+  };
+
+  const handleApply = () => {
+    if (onApplyFilters) onApplyFilters(draftFilters);
+  };
+
+  const handleClear = () => {
+    const defaultFilters = {
+      dateRange: 'daily',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      provider: 'all',
+      showFlags: true,
+      flagFilter: 'pts',
+      sortBy: 'default'
+    };
+    setDraftFilters(defaultFilters);
+    if (onClearAll) onClearAll();
+    if (onApplyFilters) onApplyFilters(defaultFilters);
+  };
+
+  useEffect(() => {
+    if (onApplyFilters) onApplyFilters(draftFilters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const topFilters = (
     <>
@@ -45,7 +165,7 @@ const ProviderCollectionPaymentTypeFilters = ({
           { value: 'year_to_date', label: 'Year to date' },
           { value: 'last_year', label: 'Last Year' },
         ]}
-        value={dateRange}
+        value={draftFilters.dateRange}
         onChange={handleFilterModeChange}
       />
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -53,7 +173,7 @@ const ProviderCollectionPaymentTypeFilters = ({
           start date
         </Typography>
         <DatePicker
-          value={dayjs(startDate)}
+          value={dayjs(draftFilters.startDate)}
           onChange={(newValue) => handleFilterChange('startDate', newValue ? newValue.format('YYYY-MM-DD') : '')}
           format="MM/DD/YYYY"
           slotProps={{ 
@@ -70,7 +190,7 @@ const ProviderCollectionPaymentTypeFilters = ({
           end date
         </Typography>
         <DatePicker
-          value={dayjs(endDate)}
+          value={dayjs(draftFilters.endDate)}
           onChange={(newValue) => handleFilterChange('endDate', newValue ? newValue.format('YYYY-MM-DD') : '')}
           format="MM/DD/YYYY"
           slotProps={{ 
@@ -87,7 +207,7 @@ const ProviderCollectionPaymentTypeFilters = ({
 
       <ReportSelect 
         label="FILTER REPORT BY PROVIDER" 
-        value={provider}
+        value={draftFilters.provider}
         onChange={(e) => handleFilterChange('provider', e.target.value)}
         options={[
           { value: 'all', label: 'All' },
@@ -99,7 +219,7 @@ const ProviderCollectionPaymentTypeFilters = ({
       />
       <ReportSelect 
         label="FLAG FILTER" 
-        value={flagFilter}
+        value={draftFilters.flagFilter}
         onChange={(e) => handleFilterChange('flagFilter', e.target.value)}
         options={[
           { value: 'pts', label: 'Pts With Or Without Flags' },
@@ -115,7 +235,7 @@ const ProviderCollectionPaymentTypeFilters = ({
       <ReportSelect 
         label="SORT REPORT BY" 
         labelPosition='left'
-        value={sortBy}
+        value={draftFilters.sortBy}
         onChange={(e) => handleFilterChange('sortBy', e.target.value)}
         options={[
           { value: 'default', label: 'Default' },
@@ -128,7 +248,7 @@ const ProviderCollectionPaymentTypeFilters = ({
       <Box sx={{ display: 'flex', alignItems: 'center'}}>
         <ReportCheckbox 
           label="Show Flags in Report" 
-          checked={showFlags} 
+          checked={draftFilters.showFlags} 
           onChange={(e) => handleFilterChange('showFlags', typeof e === 'boolean' ? e : e?.target?.checked)} 
         />
       </Box>

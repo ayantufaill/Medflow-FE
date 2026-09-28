@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button, DialogActions } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { COLORS } from '../../../constants/colors';
 
 const InsurancePaymentFooter = ({
@@ -7,7 +8,8 @@ const InsurancePaymentFooter = ({
   handleApplyAndPay,
   onClose,
   totalWo = 0,
-  totalPay = 0
+  totalPay = 0,
+  overpaymentAmount = 0
 }) => {
   return (
     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }}>
@@ -30,6 +32,16 @@ const InsurancePaymentFooter = ({
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#d32f2f' }}>Ins Writeoff: ${totalWo.toFixed(2)}</Typography>
+
+          {overpaymentAmount > 0.005 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: '#e3f2fd', border: '1px solid #90caf9', borderRadius: '6px', px: 1, py: 0.25 }}>
+              <InfoOutlinedIcon sx={{ fontSize: '0.9rem', color: '#1976d2' }} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1565c0' }}>
+                Ins Overpay: ${overpaymentAmount.toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: ${totalPay.toFixed(2)}</Typography>
           
           <Box sx={{ display: 'flex', gap: 1 }}>

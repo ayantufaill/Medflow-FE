@@ -35,12 +35,16 @@ const LedgerItemCard = ({
   setPrintItem,
   onEOBClick,
   onPrintClaimClick,
-  onReopenClaimClick,
+  onToggleClaimClosed,
+  closedClaimOverrides,
   handleAddProcedureClick,
   handleAttachClick,
   onEditClaimClick,
   onSendClaimClick,
   onVoidAndRecreateClick,
+  onRejectClaimClick,
+  onLockClaimClick,
+  onVoidClaimClick,
 }) => {
   const isPatientDeposit = Boolean(
     displayItem?.isPatientDeposit ||
@@ -479,6 +483,7 @@ const LedgerItemCard = ({
                 initials={displayItem.initials}
                 isPayment={detail.isPayment}
                 isClaim={detail.isClaim}
+                insuranceType={detail.insuranceType}
                 isVoided={detail.isVoided}
                 showExtendedTools={
                   !isPatientDeposit &&
@@ -518,12 +523,15 @@ const LedgerItemCard = ({
                   isAdjustment: displayItem.isAdjustment || detail.isAdjustment,
                   isPayment: detail.isPayment,
                 }}
-                eobData={detail}
+                eobData={{ ...detail, invoiceId: detail.invoiceId || displayItem.id }}
                 onPrintClaimClick={onPrintClaimClick}
-                onReopenClaimClick={onReopenClaimClick}
+                onToggleClaimClosed={onToggleClaimClosed}
                 onEditClaimClick={onEditClaimClick}
                 onSendClaimClick={onSendClaimClick}
                 onVoidAndRecreateClick={onVoidAndRecreateClick}
+                onRejectClaimClick={onRejectClaimClick}
+                onLockClaimClick={onLockClaimClick}
+                onVoidClaimClick={onVoidClaimClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);
@@ -549,6 +557,7 @@ const LedgerItemCard = ({
                 attachData={detail}
                 procedures={detail.procedures}
                 claimStatus={detail.status}
+                closedClaimOverrides={closedClaimOverrides}
                 statusResponse={detail.statusResponse}
                 isApproved={detail.isApproved}
               />

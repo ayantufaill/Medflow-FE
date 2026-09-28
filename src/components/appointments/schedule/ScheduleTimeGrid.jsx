@@ -167,7 +167,19 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
         ? appt.colorTags
         : [];
 
-  const priceStr = computedPrice > 0 ? `$${computedPrice.toFixed(2)}` : "$0.00";
+  const totalAmount = Number.isFinite(Number(appt.totalAmount))
+    ? Number(appt.totalAmount)
+    : computedPrice;
+  const paidAmount = Number.isFinite(Number(appt.paidAmount))
+    ? Number(appt.paidAmount)
+    : 0;
+
+  const formatCurrency = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? `$${num.toFixed(2)}` : "$0.00";
+  };
+
+  const priceStr = `${formatCurrency(paidAmount)} / ${formatCurrency(totalAmount)}`;
 
   return {
     id: appt._id || appt.id,
@@ -198,6 +210,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     provider: providerName,
     headerColor: mappedProvider?.color || appt.providerColor || "#2262ef",
     procedures: procString,
+    // Include the full procedures array from customFields for drag-and-drop
+    customFields: cf,
+    rawProcedures: cf.procedures && Array.isArray(cf.procedures) ? cf.procedures : [],
     description: appt.notes || appt.reason || "",
     tags: tagsArray,
     colorTags: colorTagsArray,
@@ -215,6 +230,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       appt.createdByName ||
       "",
     price: priceStr,
+    totalAmount,
+    paidAmount,
+    linkedToShortlist: Boolean(cf.linkedToShortlist),
     rawAppointment: appt,
   };
 };
@@ -594,7 +612,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           {/* One cell per column */}
           {activeColumns.map((col, idx) => {
             const roomId = `op${col._id || col.id}`;
-            const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+            const dateStr = dayjsDate.format('YYYY-MM-DD');
             const isClosed = closedOperatories[`${dateStr}:${roomId}`];
             const isPastDate = dayjs(dateStr).isBefore(dayjs(), 'day');
             const isToday = dayjs(dateStr).isSame(dayjs(), 'day');
@@ -734,7 +752,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 zIndex: isGhosted ? 3 : 2,
               }}
             >
-              <AppointmentCard appointment={gridItem} privacyMode={privacyMode} />
+              <AppointmentCard
+                appointment={gridItem}
+                privacyMode={privacyMode}
+                isLinkedToShortlist={Boolean(gridItem.linkedToShortlist)}
+              />
             </Box>
           );
         });

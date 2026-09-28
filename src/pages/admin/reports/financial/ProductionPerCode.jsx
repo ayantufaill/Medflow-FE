@@ -7,21 +7,11 @@ import { useProductionPerCode } from '../../../../hooks/reports/financial/usePro
 
 const ProductionPerCode = () => {
   const {
-    dateRange,
-    startDate,
-    endDate,
-    provider,
-    referralProvider,
-    groupBy,
-    codeFilter,
-    codeText,
-    showCollection,
+    rawReportData,
     reportData,
     loading,
     dropdownProviders,
     getProviderLabel,
-    handleFilterChange,
-    handleFilterModeChange,
     handleApply,
     handleClear,
     handleExportCSV,
@@ -31,21 +21,11 @@ const ProductionPerCode = () => {
   return (
     <ReportLayout title="Production per code:">
       <ProductionPerCodeFilters 
-        dateRange={dateRange}
-        startDate={startDate}
-        endDate={endDate}
-        provider={provider}
-        referralProvider={referralProvider}
-        groupBy={groupBy}
-        codeFilter={codeFilter}
-        codeText={codeText}
-        showCollection={showCollection}
+        reportData={rawReportData}
         dropdownProviders={dropdownProviders}
         getProviderLabel={getProviderLabel}
-        handleFilterChange={handleFilterChange}
-        handleFilterModeChange={handleFilterModeChange}
-        handleApply={handleApply}
-        handleClear={handleClear}
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
       />
 
       <ProductionReportActions 

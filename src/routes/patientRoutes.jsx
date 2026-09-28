@@ -25,53 +25,47 @@ import HomeCarePage from '../pages/patient-reports/HomeCarePage';
 import ConcernsPage from '../pages/patient-reports/ConcernsPage';
 import ShowcasePage from '../pages/patient-reports/ShowcasePage';
 
-const adminReception = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Receptionist']}>
-    <Layout hideSidebar={hideSidebar}>{children}</Layout>
-  </ProtectedRoute>
-);
+const ALL_STAFF_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
 
-// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
-// actual seeded equivalent.
-const adminProviderReception = (children, hideSidebar = false) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Provider', 'Receptionist']}>
+const staffPatientRoute = (children, hideSidebar = false) => (
+  <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const patientRoutes = [
-  <Route key="/patients" path="/patients" element={adminReception(<PatientManagementPage />)} />,
-  <Route key="/patients/new" path="/patients/new" element={adminReception(<AddPatientPage />, true)} />,
-  <Route key="/patients/import" path="/patients/import" element={adminReception(<ImportPatientsPage />)} />,
-  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={adminReception(<PatientDetailPage />)} />,
-  <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={adminReception(<EditPatientPage />)} />,
-  <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={adminReception(<ViewPatientPage />)} />,
-  <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={adminReception(<MembershipPlanPage />)} />,
-  <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={adminReception(<AddCoveragePage />, true)} />,
-  <Route key="/patients/:patientId/insurance/:insuranceId/edit" path="/patients/:patientId/insurance/:insuranceId/edit" element={adminReception(<AddCoveragePage />, true)} />,
-  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={adminReception(<InsurancePage />, true)} />,
-  <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={adminReception(<ViewPatientInsurancePage />)} />,
-  <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={adminReception(<PatientSignedDocumentsPage />)} />,
+  <Route key="/patients" path="/patients" element={staffPatientRoute(<PatientManagementPage />)} />,
+  <Route key="/patients/new" path="/patients/new" element={staffPatientRoute(<AddPatientPage />, true)} />,
+  <Route key="/patients/import" path="/patients/import" element={staffPatientRoute(<ImportPatientsPage />)} />,
+  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={staffPatientRoute(<PatientDetailPage />)} />,
+  <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={staffPatientRoute(<EditPatientPage />)} />,
+  <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={staffPatientRoute(<ViewPatientPage />)} />,
+  <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={staffPatientRoute(<MembershipPlanPage />)} />,
+  <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={staffPatientRoute(<AddCoveragePage />, true)} />,
+  <Route key="/patients/:patientId/insurance/:insuranceId/edit" path="/patients/:patientId/insurance/:insuranceId/edit" element={staffPatientRoute(<AddCoveragePage />, true)} />,
+  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={staffPatientRoute(<InsurancePage />, true)} />,
+  <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={staffPatientRoute(<ViewPatientInsurancePage />)} />,
+  <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={staffPatientRoute(<PatientSignedDocumentsPage />)} />,
   <Route
     key="/patients/:patientId/allergies/:allergyId"
     path="/patients/:patientId/allergies/:allergyId"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
+      <ProtectedRoute allowedGroups={['ADMIN_GROUP', 'CLINICAL_GROUP']}>
         <Layout><ViewPatientAllergyPage /></Layout>
       </ProtectedRoute>
     }
   />,
-  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={adminProviderReception(<PatientMedicalHistoryPage />)} />,
-  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={adminProviderReception(<PatientDentalHistoryPage />)} />,
-  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={adminProviderReception(<PatientAdditionalDocumentsPage />)} />,
-  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={adminProviderReception(<ViewDocumentPage />)} />,
-  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={adminProviderReception(<PatientReportPage />)} />,
-  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={adminProviderReception(<RiskAssessmentPage />)} />,
-  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={adminProviderReception(<HomeCarePage />)} />,
-  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={adminProviderReception(<ConcernsPage />)} />,
-  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={adminProviderReception(<ShowcasePage />)} />,
-  <Route key="/patient-reports" path="/patient-reports" element={adminProviderReception(<PatientReportsPage />)} />,
-  <Route key="/patients/:patientId" path="/patients/:patientId" element={adminReception(<RedirectToPatientDetails />)} />,
+  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={staffPatientRoute(<PatientMedicalHistoryPage />)} />,
+  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={staffPatientRoute(<PatientDentalHistoryPage />)} />,
+  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={staffPatientRoute(<PatientAdditionalDocumentsPage />)} />,
+  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={staffPatientRoute(<ViewDocumentPage />)} />,
+  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={staffPatientRoute(<PatientReportPage />)} />,
+  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={staffPatientRoute(<RiskAssessmentPage />)} />,
+  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={staffPatientRoute(<HomeCarePage />)} />,
+  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={staffPatientRoute(<ConcernsPage />)} />,
+  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={staffPatientRoute(<ShowcasePage />)} />,
+  <Route key="/patient-reports" path="/patient-reports" element={staffPatientRoute(<PatientReportsPage />)} />,
+  <Route key="/patients/:patientId" path="/patients/:patientId" element={staffPatientRoute(<RedirectToPatientDetails />)} />,
 ];
 
 export default patientRoutes;

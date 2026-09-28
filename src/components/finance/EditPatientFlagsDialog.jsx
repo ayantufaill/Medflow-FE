@@ -30,12 +30,12 @@ const EditPatientFlagsDialog = ({ onClose, onSave, initialFlags = [] }) => {
   };
 
   const billingFlags = [
-    { color: '#7dab9f', label: 'alert' },
-    { color: '#5e5ba8', label: 'old patient' },
-    { color: '#bc6c73', label: 'family & friends' },
-    { color: '#d9975b', label: 'late payment' },
-    { color: '#88b7d6', label: 'needs special care' },
-    { color: '#a6f272', label: 'TDS Member' },
+    { color: '#3b82f6', label: 'alert' },
+    { color: '#8b5cf6', label: 'old patient' },
+    { color: '#ef4444', label: 'family & friends' },
+    { color: '#ef4444', label: 'late payment' },
+    { color: '#3b82f6', label: 'needs special care' },
+    { color: '#22c55e', label: 'TDS Member' },
     { color: '#eef681', label: 'Botox/Filler' },
   ];
 

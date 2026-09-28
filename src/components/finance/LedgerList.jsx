@@ -45,6 +45,8 @@ import {
 import {
   fetchMedicalHistoryThunk,
   fetchDentalHistoryThunk,
+  fetchPatientBalance,
+  invalidatePatientBalance,
 } from "../../store/slices/patientSlice";
 import { paymentService } from "../../services/payment.service";
 
@@ -151,19 +153,23 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowAdaDialog(true);
   };
 
-  const handleReopenClaimClick = async (claim) => {
-    if (!claim?.id) return;
-    try {
-      const isClosed = ["paid", "cancelled"].includes(
-        (claim.status || "").toLowerCase(),
-      );
-      const newStatus = isClosed ? "draft" : "cancelled";
-      await claimService.updateClaim(claim.id, { status: newStatus });
-      refreshLedger();
-    } catch (err) {
-      console.error("Failed to toggle claim status", err);
-      alert("Failed to toggle claim status.");
-    }
+  // Per-claim visual open/closed state. This is presentation only — it never
+  // writes claim status; the initial value falls back to the real claim status.
+  const [closedClaimOverrides, setClosedClaimOverrides] = useState({});
+
+  const handleToggleClaimClosed = (claim) => {
+    const claimKey = claim?.id;
+    if (claimKey === undefined || claimKey === null) return;
+    setClosedClaimOverrides((prev) => {
+      const current = prev[claimKey];
+      if (current === undefined) {
+        const statusIsClosed = ["paid", "cancelled"].includes(
+          (claim.status || "").toLowerCase(),
+        );
+        return { ...prev, [claimKey]: !statusIsClosed };
+      }
+      return { ...prev, [claimKey]: !current };
+    });
   };
 
   // Local deposit edits (not server-persisted in the original code either)
@@ -632,6 +638,14 @@ const LedgerList = ({ patient, expanded, filters }) => {
             parseFloat(
               String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
             ) || 0,
+          primaryInsPortion:
+            Number(row.primaryInsPortion ?? (Number(row.secondaryInsPortion || 0) > 0 && parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) > Number(row.secondaryInsPortion || 0) ? parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) - Number(row.secondaryInsPortion || 0) : parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")))),
+          secondaryInsPortion:
+            Number(row.secondaryInsPortion || 0),
+          totalInsPortion:
+            parseFloat(
+              String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+            ) || 0,
           charge:
             parseFloat(String(row.charge || "").replace(/[^0-9.-]+/g, "")) || 0,
           balance:
@@ -713,6 +727,36 @@ const LedgerList = ({ patient, expanded, filters }) => {
     } catch (err) {
       alert("Failed to create invoice: " + (err.message || err));
     }
+  };
+
+  const handleRejectClaimClick = async (claimData) => {
+    try {
+      const claimId = claimData?.id || claimData?._id;
+      const invoiceId = claimData?.invoiceId;
+      if (!claimId) {
+        showSnackbar('No claim selected to reject', 'error');
+        return;
+      }
+      const result = await invoiceService.transferRejectedClaim(invoiceId, claimId);
+      showSnackbar(result?.message || 'Claim rejected and balance transferred to patient', 'success');
+      
+      const patientId = patient?._id || patient?.id;
+      if (patientId) {
+        dispatch(invalidatePatientBalance(patientId));
+        dispatch(fetchPatientBalance(patientId));
+      }
+      refreshLedger();
+    } catch (err) {
+      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to reject claim', 'error');
+    }
+  };
+
+  const handleLockClaimClick = async (claimData) => {
+     showSnackbar('Lock Claim not yet implemented', 'info');
+  };
+
+  const handleVoidClaimMenuClick = async (claimData) => {
+     showSnackbar('Void Claim not yet implemented', 'info');
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -820,10 +864,14 @@ const LedgerList = ({ patient, expanded, filters }) => {
             setPrintItem={setPrintItem}
             onEOBClick={handleEOBClick}
             onPrintClaimClick={handlePrintClaimClick}
-            onReopenClaimClick={handleReopenClaimClick}
+            onToggleClaimClosed={handleToggleClaimClosed}
+            closedClaimOverrides={closedClaimOverrides}
             onEditClaimClick={handleEditClaimClick}
             onSendClaimClick={handleSendClaimClick}
             onVoidAndRecreateClick={handleVoidAndRecreateClick}
+            onRejectClaimClick={handleRejectClaimClick}
+            onLockClaimClick={handleLockClaimClick}
+            onVoidClaimClick={handleVoidClaimMenuClick}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />

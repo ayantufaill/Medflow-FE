@@ -48,12 +48,13 @@ import dayjs from 'dayjs';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
 import { authorizationService } from '../../../services/authorization.service';
+import { treatmentPlanService } from '../../../services/treatment-plan.service';
 import { documentService } from '../../../services/document.service';
 import { useSnackbar } from '../../../contexts/SnackbarContext';
 import { ICON_TAGS } from '../../appointments/new-appointment/constants';
 import deleteSvg from '../../../assets/practicesetupicon/deleteicon.svg';
 
-const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures = [], onSave, onDelete }) => {
+const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, selectedProcedures = [], onSave, onDelete }) => {
   const currentPatient = useSelector(selectCurrentPatient);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const currentUser = useSelector((state) => state.auth?.user);
@@ -309,19 +310,33 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
         showSnackbar('Authorization updated successfully', 'success');
         if (onSave) onSave(existingId);
       } else {
-        // Create new authorization logic here
-        const newAuth = await authorizationService.requestAuthorization({
-          patientId,
-          order,
-          serviceDate: authData.serviceDate,
-          status: 'requested',
-          tags: tagIds,
-          notes: notesText,
-          insuranceCompanyId: authData.insuranceCompanyId,
-          procedures: authData.procedures || []
-        });
+        let newAuth;
+        if (treatmentPlanId) {
+          newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
+            patientId,
+            order,
+            serviceDate: authData.serviceDate,
+            status: 'requested',
+            tags: tagIds,
+            notes: notesText,
+            insuranceCompanyId: authData.insuranceCompanyId,
+            items: authData.procedures || []
+          });
+        } else {
+          // Fallback to direct authorization creation if no treatment plan exists
+          newAuth = await authorizationService.requestAuthorization({
+            patientId,
+            order,
+            requestedDate: authData.serviceDate,
+            status: 'requested',
+            tags: tagIds,
+            notes: notesText,
+            insuranceCompanyId: authData.insuranceCompanyId,
+            procedures: authData.procedures || []
+          });
+        }
         showSnackbar('Authorization requested successfully', 'success');
-        if (onSave) onSave(newAuth._id || newAuth.id);
+        if (onSave) onSave(newAuth._id || newAuth.id || newAuth.ClaimNum);
       }
       onClose();
     } catch (error) {
@@ -342,18 +357,32 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     }
 
 
-    const newAuth = await authorizationService.requestAuthorization({
-      patientId,
-      order,
-      serviceDate: authData.serviceDate,
-      status: 'requested',
-      tags: selectedTags.map((tag) => tag.id),
-      insuranceCompanyId: authData.insuranceCompanyId,
-      notes: notesText,
-      // map selected procedures - pass full procedure objects so backend can save details
-      procedures: authData.procedures || [],
-    });
-    const newId = newAuth._id || newAuth.id;
+    let newAuth;
+    if (treatmentPlanId) {
+      newAuth = await treatmentPlanService.generatePreAuth(treatmentPlanId, {
+        patientId,
+        order,
+        serviceDate: authData.serviceDate,
+        status: 'requested',
+        tags: selectedTags.map((tag) => tag.id),
+        insuranceCompanyId: authData.insuranceCompanyId,
+        notes: notesText,
+        // map selected procedures - pass full procedure objects so backend can save details
+        items: authData.procedures || [],
+      });
+    } else {
+      newAuth = await authorizationService.requestAuthorization({
+        patientId,
+        order,
+        requestedDate: authData.serviceDate,
+        status: 'requested',
+        tags: selectedTags.map((tag) => tag.id),
+        insuranceCompanyId: authData.insuranceCompanyId,
+        notes: notesText,
+        procedures: authData.procedures || [],
+      });
+    }
+    const newId = newAuth._id || newAuth.id || newAuth.ClaimNum;
     setSavedAuthorizationId(newId);
     setAuthData((previous) => ({ ...previous, id: newId }));
     onSave?.(newId);

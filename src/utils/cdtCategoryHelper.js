@@ -99,7 +99,7 @@ export const calculatePortionsForCategory = ({
 
   const categoryKey = getCategoryByCdtCode(code);
   const patientPct = getPatientCategoryCoverage(categoryKey, coverageTable);
-  const defaultPct = 100;
+  const defaultPct = CATEGORIES_12[categoryKey]?.defaultPct ?? 100;
 
   const pct = explicitPct !== null && explicitPct !== undefined
     ? explicitPct

@@ -398,6 +398,8 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -415,7 +417,7 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
         city: "",
         postalCode: "",
       },
-      timezone: "America/New_York",
+      timezone: "Asia/Karachi",
       logo: null,
       facebookUrl: "",
       googleBusinessUrl: "",
@@ -511,6 +513,8 @@ const Step1PracticeInfo = ({ onNext, onFinishLater }) => {
         register={register}
         errors={errors}
         control={control}
+        watch={watch}
+        setValue={setValue}
       />
 
       <OfficeLogoUpload

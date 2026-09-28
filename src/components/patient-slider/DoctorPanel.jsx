@@ -56,7 +56,7 @@ const DoctorPanel = ({ pt }) => {
   // 1. Find and format the provider name for the next appointment block
   const nextApptProviderName = useMemo(() => {
     const rawProvider = pt.nextTxAppt?.provider;
-    if (!rawProvider) return "Unknown";
+    if (rawProvider == null) return "Unknown";
 
     // If it's an object with a name already, pass it to the helper
     if (typeof rawProvider === "object") {

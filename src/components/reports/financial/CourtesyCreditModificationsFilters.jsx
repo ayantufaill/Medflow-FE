@@ -14,7 +14,7 @@ const CourtesyCreditModificationsFilters = ({
   users, setUsers,
   groupByAdj, setGroupByAdj,
   searchText, setSearchText,
-  adjustmentTypes, dropdownProviders,
+  adjustmentTypes, dropdownProviders, uniqueUsers,
   handleApply, handleClear
 }) => {
   const topFilters = (
@@ -110,7 +110,7 @@ const CourtesyCreditModificationsFilters = ({
         onChange={(e) => setUsers(e.target.value)}
         options={[
           { value: 'all', label: 'All' },
-          ...(dropdownProviders || []).map((p) => ({ value: p._id || p.id, label: `${p.userId?.firstName || p.firstName || ''} ${p.userId?.lastName || p.lastName || ''}`.trim() || p.name || 'Unknown' }))
+          ...(uniqueUsers || []).map((userName) => ({ value: userName, label: userName }))
         ]} 
         width="160px" 
       />

@@ -23,6 +23,7 @@ import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
 import { ICON_TAGS } from "../new-appointment/constants";
+import linkedIconSrc from "../../../assets/Tags/linked-icon.svg";
 
 const getPrivacyName = (fullName) => {
   if (!fullName) return "";
@@ -88,12 +89,19 @@ const BlockCard = ({ title, blockId, block }) => {
     }));
   };
 
+  const handleBlockDoubleClick = (e) => {
+    if (e.defaultPrevented) return;
+    e.stopPropagation();
+    handleBlockClick(e);
+  };
+
   return (
     <Box
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      onClick={handleBlockClick}
+      onDoubleClick={handleBlockDoubleClick}
+      onClick={(e) => { e.stopPropagation(); }}
       sx={{
         height: "100%",
       border: `1.5px dashed ${block.color ? "rgba(0,0,0,0.2)" : "#90caf9"}`,
@@ -131,7 +139,7 @@ const getSizeTier = (durationMinutes = 60) => {
   return "lg";
 };
 
-const AppointmentCard = ({ appointment, privacyMode }) => {
+const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false }) => {
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
@@ -186,6 +194,11 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
   const s = String(appointment.status || '').toLowerCase();
   const statusCfg = { bg: COLORS.APPOINTMENT_STATUS[s] || COLORS.APPOINTMENT_STATUS.unconfirmed };
   const tier = getSizeTier(appointment.durationMinutes);
+  const paidAmount = Number(appointment.paidAmount) || 0;
+  const totalAmount = Number.isFinite(Number(appointment.totalAmount))
+    ? Number(appointment.totalAmount)
+    : Number(String(appointment.price || '').replace(/[^0-9.-]/g, '')) || 0;
+  const paymentDisplay = `$${paidAmount.toFixed(2)} / $${totalAmount.toFixed(2)}`;
   const colorTags = Array.isArray(appointment.colorTags)
     ? appointment.colorTags.filter(
         (color) => typeof color === "string" && color.trim(),
@@ -378,7 +391,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                   letterSpacing: "0.7px",
                 }}
               >
-                {appointment.status}
+                {String(appointment.status || 'unconfirmed')
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, c => c.toUpperCase())}
               </Typography>
             </Box>
           )}
@@ -430,10 +445,25 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                   mt: "2px",
                 }}
               >
-                <FiberManualRecord
-                  sx={{ fontSize: "13px", color: COLORS.ACCENT }}
-                />
-                <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR }} />
+                <Tooltip title="Dental History" arrow placement="top">
+                  <FiberManualRecord
+                    sx={{ fontSize: "13px", color: COLORS.ACCENT, cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(`/patients/${appointment.patientId}/dental-history`);
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Medical History" arrow placement="top">
+                  <Add sx={{ fontSize: "14px", color: COLORS.STATUS_ERROR, cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (appointment.patientId)
+                        navigate(`/patients/${appointment.patientId}/medical-history`);
+                    }}
+                  />
+                </Tooltip>
                 <Tooltip title="Progress Notes" arrow placement="top">
                   <Description
                     sx={{
@@ -445,9 +475,9 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                       e.stopPropagation();
                       if (appointment.patientId)
                         navigate(
-                          `/clinical/progress-notes?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
+                          `/clinical-notes/create?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
                         );
-                      else navigate(`/clinical/progress-notes?appointmentId=${appointment._id || appointment.id}`);
+                      else navigate(`/clinical-notes/create?appointmentId=${appointment._id || appointment.id}`);
                     }}
                   />
                 </Tooltip>
@@ -612,15 +642,43 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                     borderRadius: "20px",
                     px: "8px",
                     py: "3px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "12px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
-                    {appointment.price}
+                    {paymentDisplay}
                   </Typography>
                 </Box>
-                {colorTags.length > 0 &&
+                {isLinkedToShortlist ? (
+                  <Tooltip title="Copied to shortlist" arrow placement="top" disableInteractive>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        px: "6px",
+                        py: "2px",
+                        borderRadius: "6px",
+                        bgcolor: "#e0f4fb",
+                        border: "1px solid #b3e5f5",
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={linkedIconSrc}
+                        alt="Linked to shortlist"
+                        sx={{ width: "13px", height: "13px" }}
+                      />
+                      <Typography
+                        sx={{ fontSize: "11px", fontWeight: 700, color: "#009edb" }}
+                      >
+                        Shortlist
+                      </Typography>
+                    </Box>
+                  </Tooltip>
+                ) : colorTags.length > 0 &&
                   (() => {
                     const visibleColorTags = colorTags.slice(0, 3);
                     const hiddenCount = colorTags.length - visibleColorTags.length;
@@ -694,12 +752,13 @@ const AppointmentCard = ({ appointment, privacyMode }) => {
                     borderRadius: "20px",
                     px: "8px",
                     py: "2px",
+                    flexShrink: 0,
                   }}
                 >
                   <Typography
-                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}
+                    sx={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap" }}
                   >
-                    {appointment.price}
+                    {paymentDisplay}
                   </Typography>
                 </Box>
               </Box>

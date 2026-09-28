@@ -35,10 +35,10 @@ import CreateVitalSignPage from '../pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
 
-// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
-// actual seeded equivalent.
-const adminProvider = (children, hideSidebar = true) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
+const CLINICAL_ALLOWED_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP'];
+
+const clinicalRoute = (children, hideSidebar = true) => (
+  <ProtectedRoute allowedGroups={CLINICAL_ALLOWED_GROUPS}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -54,36 +54,36 @@ const wrapWithBoundary = (children) => (
 );
 
 const clinicalRoutes = [
-  <Route key="/clinical" path="/clinical" element={adminProvider(<ClinicalPage />)} />,
-  <Route key="/clinical/exam" path="/clinical/exam" element={adminProvider(<ExamPage />)} />,
-  <Route key="/clinical/exam/head-neck" path="/clinical/exam/head-neck" element={adminProvider(<HeadAndNeck />)} />,
-  <Route key="/clinical/exam/tooth-structure" path="/clinical/exam/tooth-structure" element={adminProvider(<TeethStructureExam />)} />,
-  <Route key="/clinical/exam/radiographic" path="/clinical/exam/radiographic" element={adminProvider(<Radiographic />)} />,
-  <Route key="/clinical/exam/morphological" path="/clinical/exam/morphological" element={adminProvider(<Morphological />)} />,
-  <Route key="/clinical/exam/periodontal" path="/clinical/exam/periodontal" element={adminProvider(<PeriodontalExamPage />)} />,
-  <Route key="/clinical/exam/dentofacial" path="/clinical/exam/dentofacial" element={adminProvider(<ExamDentofacial />)} />,
-  <Route key="/clinical/exam/airway" path="/clinical/exam/airway" element={adminProvider(<AirwayPage />)} />,
-  <Route key="/clinical/exam/tmj" path="/clinical/exam/tmj" element={adminProvider(<DentalTmdExamPage />)} />,
-  <Route key="/clinical/diagnostic-opinion" path="/clinical/diagnostic-opinion" element={adminProvider(<BiomechanicalPage />)} />,
-  <Route key="/clinical/diagnostic-opinion/periodontal" path="/clinical/diagnostic-opinion/periodontal" element={adminProvider(<PeriodontalPage />)} />,
-  <Route key="/clinical/diagnostic-opinion/biomechanical" path="/clinical/diagnostic-opinion/biomechanical" element={adminProvider(<BiomechanicalPage />)} />,
-  <Route key="/clinical/diagnostic-opinion/functional" path="/clinical/diagnostic-opinion/functional" element={adminProvider(<FunctionalPage />)} />,
-  <Route key="/clinical/diagnostic-opinion/dentofacial" path="/clinical/diagnostic-opinion/dentofacial" element={adminProvider(<DentofacialPage />)} />,
-  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={adminProvider(<NewTreatmentPlanPage />)} />,
-  <Route key="/clinical/adjunctive-therapy" path="/clinical/adjunctive-therapy" element={adminProvider(<AdjunctiveTherapyPage />)} />,
-  <Route key="/clinical/rx" path="/clinical/rx" element={adminProvider(<RXPage />)} />,
-  <Route key="/clinical/referral" path="/clinical/referral" element={adminProvider(<ReferralPage />)} />,
-  <Route key="/clinical/progress-notes" path="/clinical/progress-notes" element={adminProvider(<ProgressNotesPage />)} />,
-  <Route key="/clinical/lab-case" path="/clinical/lab-case" element={adminProvider(<LabCasePage />)} />,
-  <Route key="/clinical/ai-conversation" path="/clinical/ai-conversation" element={adminProvider(<AIConversationPage />)} />,
-  <Route key="/clinical-notes" path="/clinical-notes" element={adminProvider(<ClinicalNotesListPage />)} />,
-  <Route key="/clinical-notes/create" path="/clinical-notes/create" element={adminProvider(<CreateClinicalNotePage />)} />,
-  <Route key="/clinical-notes/:clinicalNoteId" path="/clinical-notes/:clinicalNoteId" element={adminProvider(<ViewClinicalNotePage />)} />,
-  <Route key="/clinical-notes/:clinicalNoteId/edit" path="/clinical-notes/:clinicalNoteId/edit" element={adminProvider(<EditClinicalNotePage />)} />,
-  <Route key="/vital-signs" path="/vital-signs" element={adminProvider(wrapWithBoundary(<VitalSignsListPage />))} />,
-  <Route key="/vital-signs/create" path="/vital-signs/create" element={adminProvider(wrapWithBoundary(<CreateVitalSignPage />), false)} />,
-  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={adminProvider(wrapWithBoundary(<PatientVitalHistoryPage />), false)} />,
-  <Route key="/vital-signs/:vitalSignId/edit" path="/vital-signs/:vitalSignId/edit" element={adminProvider(wrapWithBoundary(<EditVitalSignPage />))} />,
+  <Route key="/clinical" path="/clinical" element={clinicalRoute(<ClinicalPage />)} />,
+  <Route key="/clinical/exam" path="/clinical/exam" element={clinicalRoute(<ExamPage />)} />,
+  <Route key="/clinical/exam/head-neck" path="/clinical/exam/head-neck" element={clinicalRoute(<HeadAndNeck />)} />,
+  <Route key="/clinical/exam/tooth-structure" path="/clinical/exam/tooth-structure" element={clinicalRoute(<TeethStructureExam />)} />,
+  <Route key="/clinical/exam/radiographic" path="/clinical/exam/radiographic" element={clinicalRoute(<Radiographic />)} />,
+  <Route key="/clinical/exam/morphological" path="/clinical/exam/morphological" element={clinicalRoute(<Morphological />)} />,
+  <Route key="/clinical/exam/periodontal" path="/clinical/exam/periodontal" element={clinicalRoute(<PeriodontalExamPage />)} />,
+  <Route key="/clinical/exam/dentofacial" path="/clinical/exam/dentofacial" element={clinicalRoute(<ExamDentofacial />)} />,
+  <Route key="/clinical/exam/airway" path="/clinical/exam/airway" element={clinicalRoute(<AirwayPage />)} />,
+  <Route key="/clinical/exam/tmj" path="/clinical/exam/tmj" element={clinicalRoute(<DentalTmdExamPage />)} />,
+  <Route key="/clinical/diagnostic-opinion" path="/clinical/diagnostic-opinion" element={clinicalRoute(<BiomechanicalPage />)} />,
+  <Route key="/clinical/diagnostic-opinion/periodontal" path="/clinical/diagnostic-opinion/periodontal" element={clinicalRoute(<PeriodontalPage />)} />,
+  <Route key="/clinical/diagnostic-opinion/biomechanical" path="/clinical/diagnostic-opinion/biomechanical" element={clinicalRoute(<BiomechanicalPage />)} />,
+  <Route key="/clinical/diagnostic-opinion/functional" path="/clinical/diagnostic-opinion/functional" element={clinicalRoute(<FunctionalPage />)} />,
+  <Route key="/clinical/diagnostic-opinion/dentofacial" path="/clinical/diagnostic-opinion/dentofacial" element={clinicalRoute(<DentofacialPage />)} />,
+  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={clinicalRoute(<NewTreatmentPlanPage />)} />,
+  <Route key="/clinical/adjunctive-therapy" path="/clinical/adjunctive-therapy" element={clinicalRoute(<AdjunctiveTherapyPage />)} />,
+  <Route key="/clinical/rx" path="/clinical/rx" element={clinicalRoute(<RXPage />)} />,
+  <Route key="/clinical/referral" path="/clinical/referral" element={clinicalRoute(<ReferralPage />)} />,
+  <Route key="/clinical/progress-notes" path="/clinical/progress-notes" element={clinicalRoute(<ProgressNotesPage />)} />,
+  <Route key="/clinical/lab-case" path="/clinical/lab-case" element={clinicalRoute(<LabCasePage />)} />,
+  <Route key="/clinical/ai-conversation" path="/clinical/ai-conversation" element={clinicalRoute(<AIConversationPage />)} />,
+  <Route key="/clinical-notes" path="/clinical-notes" element={clinicalRoute(<ClinicalNotesListPage />)} />,
+  <Route key="/clinical-notes/create" path="/clinical-notes/create" element={clinicalRoute(<CreateClinicalNotePage />)} />,
+  <Route key="/clinical-notes/:clinicalNoteId" path="/clinical-notes/:clinicalNoteId" element={clinicalRoute(<ViewClinicalNotePage />)} />,
+  <Route key="/clinical-notes/:clinicalNoteId/edit" path="/clinical-notes/:clinicalNoteId/edit" element={clinicalRoute(<EditClinicalNotePage />)} />,
+  <Route key="/vital-signs" path="/vital-signs" element={clinicalRoute(wrapWithBoundary(<VitalSignsListPage />))} />,
+  <Route key="/vital-signs/create" path="/vital-signs/create" element={clinicalRoute(wrapWithBoundary(<CreateVitalSignPage />), false)} />,
+  <Route key="/vital-signs/patient/:patientId" path="/vital-signs/patient/:patientId" element={clinicalRoute(wrapWithBoundary(<PatientVitalHistoryPage />), false)} />,
+  <Route key="/vital-signs/:vitalSignId/edit" path="/vital-signs/:vitalSignId/edit" element={clinicalRoute(wrapWithBoundary(<EditVitalSignPage />))} />,
 ];
 
 export default clinicalRoutes;

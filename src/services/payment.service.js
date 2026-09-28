@@ -6,6 +6,11 @@ import apiClient from '../config/api';
  */
 
 export const paymentService = {
+  async getPaymentMethodsConfig() {
+    const response = await apiClient.get('/payments/methods/config');
+    return response.data.data;
+  },
+
   /**
    * Get all payments with pagination and filters
    */

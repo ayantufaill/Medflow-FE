@@ -37,6 +37,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { appointmentService } from '../../services/appointment.service';
+import { invoiceService } from '../../services/invoice.service';
 import { authorizationService } from '../../services/authorization.service';
 import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
 
@@ -59,7 +61,7 @@ const mapPlanItems = (items, createdAt) => {
     return {
       id: item.id || idx + 1,
       priority: item.priority || '- -',
-      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'D' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
+      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'C' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
       scheduled: item.scheduled || '-',
       site: item.site || (item.tooth ? `#${item.tooth}` : '-'),
@@ -100,6 +102,12 @@ const NewTreatmentPlanPage = () => {
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
+  const [appointmentProcedures, setAppointmentProcedures] = useState([]);
+  const allProcedures = [...treatmentPlans, ...appointmentProcedures].sort((a, b) => {
+    const dateA = dayjs(a.scheduled !== '-' ? a.scheduled : a.created, ['MM/DD/YYYY']);
+    const dateB = dayjs(b.scheduled !== '-' ? b.scheduled : b.created, ['MM/DD/YYYY']);
+    return dateB.valueOf() - dateA.valueOf();
+  });
   const [isPreAuthModalOpen, setIsPreAuthModalOpen] = useState(false);
   const [createdPreAuthId, setCreatedPreAuthId] = useState(null);
   const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
@@ -127,13 +135,18 @@ const NewTreatmentPlanPage = () => {
     const fetchTreatmentPlans = async () => {
       if (!currentPatient) {
         setTreatmentPlans([]);
+        setAppointmentProcedures([]);
         setActivePlanId(null);
         return;
       }
       try {
         setIsLoading(true);
-        const res = await treatmentPlanService.getAll({ patientId: currentPatient._id || currentPatient.id });
-        const plans = res?.data?.treatmentPlans || [];
+        const patientId = currentPatient._id || currentPatient.id;
+        const [tpRes, apptRes] = await Promise.all([
+          treatmentPlanService.getAll({ patientId }),
+          appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
+        ]);
+        const plans = tpRes?.data?.treatmentPlans || [];
 
         if (plans.length > 0) {
           const activePlan = plans[0]; // Load the most recent plan
@@ -143,8 +156,79 @@ const NewTreatmentPlanPage = () => {
           setActivePlanId(null);
           setTreatmentPlans([]);
         }
+
+        const appointments = Array.isArray(apptRes) ? apptRes : (Array.isArray(apptRes?.data) ? apptRes.data : (apptRes?.data?.appointments || []));
+        const apptProcs = [];
+        appointments.forEach(appt => {
+          const procs = appt.customFields?.procedures || appt.procedures || [];
+          procs.forEach((p, idx) => {
+            if (p && p.code) {
+              const isCompleted = p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete';
+              apptProcs.push({
+                id: `appt-${appt.id || appt._id}-${p.id || idx}`,
+                priority: '- -',
+                status: isCompleted ? 'Completed' : 'Scheduled',
+                created: dayjs(appt.createdAt || appt.date).format('MM/DD/YYYY'),
+                scheduled: dayjs(appt.date).format('MM/DD/YYYY'),
+                site: p.site || p.tooth || '-',
+                tooth: p.tooth || p.site || '',
+                code: p.code,
+                description: p.treatment || p.description || '-',
+                icd: '-',
+                provider: p.provider || appt.providerId || appt.provider?._id || '-',
+                ...(() => {
+                  const rawCharge = Number(String(p.charge || p.fee || 0).replace(/[^0-9.-]+/g, ''));
+                  // Use actual values from API if available (checked-out appointments), otherwise calculate
+                  const hasActualValues = p.insPortion != null && p.insPortion !== '$0.00' && p.insPortion !== '0';
+                  const insPortion = hasActualValues
+                    ? Number(String(p.insPortion).replace(/[^0-9.-]+/g, ''))
+                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).insPortion;
+                  const ptPortion = hasActualValues
+                    ? Number(String(p.ptPart || p.ptPortion || 0).replace(/[^0-9.-]+/g, ''))
+                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).ptPortion;
+                  return {
+                    negRate: formatMoney(rawCharge, '-'),
+                    insEst: formatMoney(insPortion, '-'),
+                    ptEst: formatMoney(ptPortion, '-'),
+                  };
+                })(),
+                preAuth: '-',
+                labCase: '-'
+              });
+            }
+          });
+        });
+        setAppointmentProcedures(apptProcs);
+
+        // Enrich with real insurance estimates from backend (same as appointment form)
+        if (apptProcs.length > 0 && patientId) {
+          try {
+            const itemsForEstimate = apptProcs.map(proc => ({
+              code: proc.code,
+              charge: Number(String(proc.negRate || '0').replace(/[^0-9.-]+/g, '')) || 0,
+            }));
+            const estimates = await invoiceService.estimateInvoiceItems(patientId, itemsForEstimate);
+            if (Array.isArray(estimates) && estimates.length) {
+              const enriched = apptProcs.map((proc, idx) => {
+                const est = estimates[idx] || {};
+                const writeoffVal = est.writeoff !== undefined ? Number(est.writeoff) : (est.estimatedWriteOff !== undefined ? Number(est.estimatedWriteOff) : 0);
+                const insVal = est.insPortion !== undefined ? Number(est.insPortion) : 0;
+                const ptVal = est.ptPortion !== undefined ? Number(est.ptPortion) : 0;
+                return {
+                  ...proc,
+                  insEst: `$${(insVal || 0).toFixed(2)}`,
+                  ptEst: `$${(ptVal || 0).toFixed(2)}`,
+                  writeoff: `$${(writeoffVal || 0).toFixed(2)}`,
+                };
+              });
+              setAppointmentProcedures(enriched);
+            }
+          } catch (err) {
+            console.warn('Failed to enrich appointment procedure estimates:', err);
+          }
+        }
       } catch (err) {
-        console.error('Failed to fetch treatment plans:', err);
+        console.error('Failed to fetch treatment plans or appointments:', err);
       } finally {
         setIsLoading(false);
       }
@@ -208,7 +292,7 @@ const NewTreatmentPlanPage = () => {
     const procedureDescription = procedure.description || procedure.name || procedureCode;
 
     const rawFee = Number(procedure.fee || procedure.charge || procedure.ProcFee || 0);
-    const { insPortion: estIns, ptPortion: estPt } = calculatePortionsForCategory(procedureCode, rawFee, 0);
+    const { insPortion: estIns, ptPortion: estPt } = calculatePortionsForCategory({ charge: rawFee, code: procedureCode });
 
     const newProcedure = {
       id: newId,
@@ -306,45 +390,92 @@ const NewTreatmentPlanPage = () => {
   };
 
   const handleDeleteItems = async (itemIdsToDelete) => {
-    if (!currentPatient || !activePlanId) return;
+    if (!currentPatient) return;
 
-    const newTreatmentPlans = treatmentPlans.filter(item => !itemIdsToDelete.includes(item.id));
+    const tpItemsToDelete = itemIdsToDelete.filter(id => !String(id).startsWith('appt-'));
+    const apptItemsToDelete = itemIdsToDelete.filter(id => String(id).startsWith('appt-'));
 
-    // Optimistic UI update
-    setTreatmentPlans(newTreatmentPlans);
+    if (tpItemsToDelete.length > 0 && activePlanId) {
+      const newTreatmentPlans = treatmentPlans.filter(item => !tpItemsToDelete.includes(item.id));
+      setTreatmentPlans(newTreatmentPlans);
 
-    // Auto-save logic
-    try {
-      setIsSaving(true);
+      try {
+        setIsSaving(true);
+        const payloadItems = newTreatmentPlans.map(item => ({
+          id: item.id,
+          procedureCode: item.code,
+          description: item.description,
+          tooth: item.tooth || '',
+          site: item.site,
+          fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+          charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
+          priority: item.priority,
+          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+          icd: item.icd,
+          provider: item.provider || null,
+          preAuth: item.preAuth,
+          labCase: item.labCase,
+          insEst: item.insEst,
+          ptEst: item.ptEst,
+        }));
+        await treatmentPlanService.update(activePlanId, { items: payloadItems });
+        setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
+      } catch (error) {
+        console.error('Failed to auto-save treatment plan after deletion:', error);
+        const errData = error.response?.data?.error;
+        const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
+        setToast({ open: true, message: errMsg, type: 'error' });
+        setTreatmentPlans(treatmentPlans);
+      } finally {
+        setIsSaving(false);
+      }
+    }
 
-      const payloadItems = newTreatmentPlans.map(item => ({
-        procedureCode: item.code,
-        description: item.description,
-        tooth: item.tooth || '',
-        site: item.site,
-        fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
-        icd: item.icd,
-        provider: item.provider || null,
-        preAuth: item.preAuth,
-        labCase: item.labCase,
-        insEst: item.insEst,
-        ptEst: item.ptEst,
-      }));
+    if (apptItemsToDelete.length > 0) {
+      const newApptProcedures = appointmentProcedures.filter(item => !apptItemsToDelete.includes(item.id));
+      setAppointmentProcedures(newApptProcedures);
 
-      await treatmentPlanService.update(activePlanId, { items: payloadItems });
-      setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
-    } catch (error) {
-      console.error('Failed to auto-save treatment plan after deletion:', error);
-      const errData = error.response?.data?.error;
-      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to auto-save plan.');
-      setToast({ open: true, message: errMsg, type: 'error' });
-      // Revert optimistic update
-      setTreatmentPlans(treatmentPlans);
-    } finally {
-      setIsSaving(false);
+      try {
+        setIsSaving(true);
+        const apptGroups = {};
+        apptItemsToDelete.forEach(id => {
+          const parts = String(id).split('-');
+          const apptId = parts[1];
+          const procIdOrIdx = parts[2];
+          if (!apptGroups[apptId]) apptGroups[apptId] = [];
+          apptGroups[apptId].push(procIdOrIdx);
+        });
+
+        for (const apptId of Object.keys(apptGroups)) {
+          const appt = await appointmentService.getAppointmentById(apptId);
+          if (appt) {
+            const procs = appt.customFields?.procedures || appt.procedures || [];
+            const toRemove = apptGroups[apptId];
+            const newProcs = procs.filter((p, idx) => {
+              const pId = p.id || String(idx);
+              return !toRemove.includes(String(pId));
+            });
+            
+            if (newProcs.length === 0) {
+              // Delete the appointment entirely if no procedures are left
+              await appointmentService.deleteAppointment(apptId);
+            } else {
+              const updates = { procedures: newProcs };
+              if (appt.customFields) {
+                updates.customFields = { ...appt.customFields, procedures: newProcs };
+              }
+              await appointmentService.updateAppointment(apptId, updates);
+            }
+          }
+        }
+        setToast({ open: true, message: 'Appointment procedures removed!', type: 'success' });
+      } catch (error) {
+        console.error('Failed to update appointments:', error);
+        setToast({ open: true, message: 'Failed to update appointments.', type: 'error' });
+        setAppointmentProcedures(appointmentProcedures);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -370,7 +501,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
@@ -415,7 +546,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
@@ -546,7 +677,7 @@ const NewTreatmentPlanPage = () => {
         {activeTab === 0 && (
           <Box sx={{ p: 0 }}>
             <ChartTable
-              treatmentPlans={treatmentPlans}
+              treatmentPlans={allProcedures}
               onUpdateItemStatus={handleUpdateItemStatus}
             />
           </Box>
@@ -643,7 +774,7 @@ const NewTreatmentPlanPage = () => {
               <Box sx={{ display: 'flex', gap: 3 }}>
                 <Box sx={{ width: '100%', flexGrow: 1, minWidth: 0 }}>
                   <NewTreatmentPlanTable
-                    treatmentPlans={treatmentPlans}
+                    treatmentPlans={allProcedures}
                     onMoveToTop={handleMoveToTop}
                     onUpdateItemStatus={handleUpdateItemStatus}
                     selectedRows={selectedRows}
@@ -654,7 +785,7 @@ const NewTreatmentPlanPage = () => {
                 <Divider className="print-hide" orientation="vertical" flexItem sx={{ borderColor: '#e2e8f0' }} />
 
                 <Box className="print-hide" sx={{ width: '35%', minWidth: 0 }}>
-                  <UnplannedProceduresSidebar procedures={treatmentPlans} />
+                  <UnplannedProceduresSidebar procedures={allProcedures} />
                 </Box>
               </Box>
             </Paper>
@@ -700,8 +831,9 @@ const NewTreatmentPlanPage = () => {
         onClose={() => setIsNotesDrawerOpen(false)}
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
+        appointmentId={searchParams.get('appointmentId')}
         currentPatient={currentPatient}
-        selectedProcedures={treatmentPlans}
+        selectedProcedures={allProcedures}
       />
 
       <PreAuthModal
@@ -716,7 +848,8 @@ const NewTreatmentPlanPage = () => {
           setCreatedPreAuthId(null);
         }}
         patientId={currentPatientId}
-        selectedProcedures={treatmentPlans}
+        treatmentPlanId={activePlanId}
+        selectedProcedures={selectedRows.length > 0 ? allProcedures.filter(p => selectedRows.includes(p.id)) : allProcedures}
       />
 
       <Snackbar

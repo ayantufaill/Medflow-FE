@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Grid, TextField, FormControl, Select, MenuItem, Box, Typography } from '@mui/material';
 import { Controller } from 'react-hook-form';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
@@ -6,20 +6,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import SectionContainer from './SectionContainer';
 import FormInputLabel from './FormInputLabel';
 import { commonInputStyles } from './PracticeInformationForm';
-
-const US_STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", 
-  "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", 
-  "VA", "WA", "WV", "WI", "WY", "DC"
-];
-
-const COUNTRIES = [
-  "United States", "Canada", "United Kingdom", "Australia", "New Zealand", "Ireland", "Germany", 
-  "France", "Spain", "Italy", "Netherlands", "Sweden", "Norway", "Denmark", "Switzerland", "Austria", 
-  "Belgium", "Portugal", "Poland", "Japan", "South Korea", "China", "India", "Singapore", "Malaysia", 
-  "Philippines", "United Arab Emirates", "Saudi Arabia", "South Africa", "Brazil", "Mexico", "Argentina"
-];
+import { US_STATES, STATE_CITIES } from '../../../constants/usAddressData';
+import { TIME_ZONES, STATE_TIME_ZONES } from '../../../constants/timeZones';
 
 const selectStyles = {
   ...commonInputStyles,
@@ -30,17 +18,28 @@ const selectStyles = {
     paddingBottom: '0 !important',
     height: '100% !important',
     fontSize: '0.85rem',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   '& .MuiSelect-icon': {
     color: '#9ca3af',
   }
 };
 
-const AddressLocationForm = ({ register, errors, control }) => {
+const AddressLocationForm = ({ register, errors, control, watch, setValue }) => {
+  const selectedState = watch('address.state');
+  const availableCities = STATE_CITIES[selectedState] || [];
+
+  const timeZoneOptions = useMemo(() => {
+    const stateZones = selectedState ? STATE_TIME_ZONES[selectedState] || [] : TIME_ZONES.map((tz) => tz.value);
+    return TIME_ZONES.filter((tz) => new Set([...stateZones, 'Asia/Karachi']).has(tz.value));
+  }, [selectedState]);
+
   return (
     <SectionContainer title="Address & Location Details" icon={LocationOnOutlinedIcon}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 2.5 }}>
-        <Box sx={{ width: { xs: '100%', lg: '409px' }, flexShrink: 1 }}>
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
           <FormInputLabel label="Country" />
           <Controller
             name="address.country"
@@ -58,27 +57,13 @@ const AddressLocationForm = ({ register, errors, control }) => {
                 }}
               >
                 <MenuItem value="" disabled sx={{ display: 'none' }}>Enter your Country</MenuItem>
-                {COUNTRIES.map((c) => (
-                  <MenuItem key={c} value={c} sx={{ fontSize: '0.85rem' }}>{c}</MenuItem>
-                ))}
+                <MenuItem value="United States" sx={{ fontSize: '0.85rem' }}>United States</MenuItem>
               </TextField>
             )}
           />
         </Box>
 
-        <Box sx={{ width: { xs: '100%', lg: '370px' }, flexShrink: 1 }}>
-          <FormInputLabel label="City" required />
-          <TextField
-            fullWidth
-            placeholder="Enter your City"
-            {...register("address.city", { required: "City is required" })}
-            error={!!errors.address?.city}
-            helperText={errors.address?.city?.message}
-            sx={commonInputStyles}
-          />
-        </Box>
-
-        <Box sx={{ width: { xs: '100%', lg: '410px' }, flexShrink: 1 }}>
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
           <FormInputLabel label="State/Province" required />
           <Controller
             name="address.state"
@@ -90,6 +75,10 @@ const AddressLocationForm = ({ register, errors, control }) => {
                 fullWidth
                 {...field}
                 value={field.value || ""}
+                onChange={(e) => {
+                  field.onChange(e);
+                  setValue('address.city', "");
+                }}
                 error={!!errors.address?.state}
                 helperText={errors.address?.state?.message}
                 sx={selectStyles}
@@ -100,14 +89,45 @@ const AddressLocationForm = ({ register, errors, control }) => {
               >
                 <MenuItem value="" disabled sx={{ display: 'none' }}>Enter State/Province</MenuItem>
                 {US_STATES.map((s) => (
-                  <MenuItem key={s} value={s} sx={{ fontSize: '0.85rem' }}>{s}</MenuItem>
+                  <MenuItem key={s.value} value={s.value} sx={{ fontSize: '0.85rem' }}>{s.label}</MenuItem>
                 ))}
               </TextField>
             )}
           />
         </Box>
 
-        <Box sx={{ width: { xs: '100%', lg: '409px' }, flexShrink: 1 }}>
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
+          <FormInputLabel label="City" required />
+          <Controller
+            name="address.city"
+            control={control}
+            rules={{ required: "City is required" }}
+            render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || ""}
+                disabled={!selectedState}
+                onChange={(e) => field.onChange(e.target.value)}
+                error={!!errors.address?.city}
+                helperText={!selectedState ? "Please select a state first" : errors.address?.city?.message}
+                sx={selectStyles}
+                SelectProps={{
+                  displayEmpty: true,
+                  IconComponent: KeyboardArrowDownIcon
+                }}
+              >
+                <MenuItem value="" disabled sx={{ display: 'none' }}>Enter your City</MenuItem>
+                {availableCities.map((c) => (
+                  <MenuItem key={c} value={c} sx={{ fontSize: '0.85rem' }}>{c}</MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
+        </Box>
+
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
           <FormInputLabel label="Street" />
           <TextField
             fullWidth
@@ -119,7 +139,7 @@ const AddressLocationForm = ({ register, errors, control }) => {
           />
         </Box>
 
-        <Box sx={{ width: { xs: '100%', lg: '370px' }, flexShrink: 1 }}>
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
           <FormInputLabel label="Zip/Postal Code" />
           <TextField
             fullWidth
@@ -128,38 +148,44 @@ const AddressLocationForm = ({ register, errors, control }) => {
             error={!!errors.address?.postalCode}
             helperText={errors.address?.postalCode?.message}
             sx={commonInputStyles}
-            InputProps={{
-              endAdornment: (
-                <Box sx={{ color: '#9ca3af', display: 'flex', alignItems: 'center', mr: -0.5 }}>
-                  <KeyboardArrowDownIcon fontSize="small" />
-                </Box>
-              )
-            }}
           />
         </Box>
 
-        <Box sx={{ width: { xs: '100%', lg: '410px' }, flexShrink: 1 }}>
+        <Box sx={{ width: { xs: '100%', lg: '389px' }, flexShrink: 1 }}>
           <FormInputLabel label="Time Zone" />
-          <FormControl fullWidth error={!!errors.timezone}>
-            <Controller
-              name="timezone"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value || ""}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  placeholder="Enter your Address"
-                  sx={commonInputStyles}
-                />
-              )}
-            />
-            {errors.timezone && (
-              <Typography color="error" sx={{ fontSize: '0.75rem', mt: 0.5, mx: 1.5 }}>
-                {errors.timezone.message}
-              </Typography>
+          <Controller
+            name="timezone"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                select
+                fullWidth
+                {...field}
+                value={field.value || ""}
+                onChange={(e) => field.onChange(e.target.value)}
+                error={!!errors.timezone}
+                helperText={errors.timezone?.message}
+                sx={selectStyles}
+                SelectProps={{
+                  displayEmpty: true,
+                  IconComponent: KeyboardArrowDownIcon,
+                  renderValue: (v) => {
+                    const tz = TIME_ZONES.find((t) => t.value === v);
+                    return (
+                      <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {tz ? tz.label : v}
+                      </Box>
+                    );
+                  }
+                }}
+              >
+                <MenuItem value="" disabled sx={{ display: 'none' }}>Select Time Zone</MenuItem>
+                {timeZoneOptions.map((tz) => (
+                  <MenuItem key={tz.value} value={tz.value} sx={{ fontSize: '0.85rem' }}>{tz.label}</MenuItem>
+                ))}
+              </TextField>
             )}
-          </FormControl>
+          />
         </Box>
 
       </Box>

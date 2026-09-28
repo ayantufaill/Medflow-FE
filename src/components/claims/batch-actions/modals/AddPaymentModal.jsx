@@ -282,9 +282,7 @@ const AddPaymentModal = ({
                                 const val = parseFloat(e.target.value) || 0;
                                 setAllocations(prev => prev.map(c => {
                                   if (c.claimId === claim.claimId) {
-                                    const openAmt = parseFloat(c.openAmount) || 0;
-                                    const autoWriteOff = Math.max(0, openAmt - val);
-                                    return { ...c, allocatedPaid: val, allocatedWriteOff: autoWriteOff };
+                                    return { ...c, allocatedPaid: val };
                                   }
                                   return c;
                                 }));

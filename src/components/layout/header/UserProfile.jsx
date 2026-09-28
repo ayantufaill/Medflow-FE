@@ -13,6 +13,10 @@ import {
   selectClinicAnalyticsData,
   selectClinicAnalyticsLoading,
 } from '../../../store/slices/clinicAnalyticsSlice';
+import {
+  fetchGroupById,
+  selectCurrentGroup,
+} from '../../../store/slices/practiceGroupSlice';
 
 const UserProfile = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -23,6 +27,7 @@ const UserProfile = () => {
   const analyticsData = useSelector(selectClinicAnalyticsData);
   const analyticsLoading = useSelector(selectClinicAnalyticsLoading);
   const { branches, currentBranchId, currentBranch, setBranch, fetchBranches: loadBranches } = useBranch();
+  const currentGroup = useSelector(selectCurrentGroup);
 
   const displayName = user?.firstName || user?.lastName
     ? `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
@@ -50,6 +55,14 @@ const UserProfile = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canSwitchBranch]);
+
+  // Resolve the current practice-group name (for the profile dropdown + subtitle).
+  useEffect(() => {
+    if (user?.groupId && !currentGroup) {
+      dispatch(fetchGroupById(user.groupId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.groupId, dispatch]);
 
   const handleClick = (event) => {
     if (open) {
@@ -112,7 +125,7 @@ const UserProfile = () => {
             {displayName}
           </Typography>
           <Typography sx={{ fontSize: '11px', color: '#7a8a9a', lineHeight: 1.3 }}>
-            {roleLabel}{canSwitchBranch && currentBranch ? ` · ${currentBranch.name}` : ''}
+            {roleLabel}
           </Typography>
         </Box>
       </Box>
@@ -160,6 +173,18 @@ const UserProfile = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
+        {canSwitchBranch && currentGroup?.name && [
+          <Box key="group-label" sx={{ px: 2, pt: 1, pb: 0.5 }}>
+            <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#7a8a9a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Group
+            </Typography>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#09121f', mt: 0.5 }}>
+              {currentGroup.name}
+            </Typography>
+          </Box>,
+          <Divider key="group-divider" sx={{ my: '4px !important' }} />,
+        ]}
+
         {canSwitchBranch && branches.length > 0 && [
           <Box key="branch-label" sx={{ px: 2, pt: 1, pb: 0.5 }}>
             <Typography sx={{ fontSize: '11px', fontWeight: 700, color: '#7a8a9a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>

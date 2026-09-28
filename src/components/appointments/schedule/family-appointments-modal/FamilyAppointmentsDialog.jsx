@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -22,13 +22,19 @@ import dayjs from "dayjs";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFamilyAppointments,
+  fetchPatientHistory,
   selectFamilyAppointmentsList,
   selectFamilyAppointmentsMembers,
+  selectFamilyAppointmentsRecareDueDates,
+  selectFamilyAppointmentsSchedulingDate,
+  selectFamilyAppointmentsSchedulingTime,
+  selectFamilyAppointmentsSchedulingRoomId,
+  createAppointmentThunk,
 } from "../../../../store/slices/appointmentSlice";
 import { fetchCurrentPracticeInfo } from "../../../../store/slices/practiceInfoSlice";
 import { COLORS } from "../../../../constants/colors";
 import { fontWeight } from "../../../../constants/styles";
-import { usePatient, useScheduleState } from "../../../../hooks/redux";
+import { usePatient, useScheduleState, useAppointmentDetail } from "../../../../hooks/redux";
 
 import FamilyAppointmentsScheduledTab from './FamilyAppointmentsScheduledTab';
 import FamilyAppointmentsDueTab from './FamilyAppointmentsDueTab';
@@ -36,15 +42,33 @@ import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const FamilyAppointmentsDialog = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [selectedProcedures, setSelectedProcedures] = useState({});
 
   const dispatch = useDispatch();
   const allAppointments = useSelector(selectFamilyAppointmentsList);
   const familyMembers = useSelector(selectFamilyAppointmentsMembers);
+  const recareDueDates = useSelector(selectFamilyAppointmentsRecareDueDates);
 
   const { currentPatient: patient } = usePatient();
+  const { currentAppointment } = useAppointmentDetail();
 
   const { familyAppointmentsDialogOpen: open, setFamilyAppointmentsDialogOpen } = useScheduleState();
-  const onClose = () => setFamilyAppointmentsDialogOpen(false);
+  const schedulingDate = useSelector(selectFamilyAppointmentsSchedulingDate);
+  const schedulingTime = useSelector(selectFamilyAppointmentsSchedulingTime);
+  const schedulingRoomId = useSelector(selectFamilyAppointmentsSchedulingRoomId);
+
+  // Reset selectedProcedures whenever the dialog opens so stale selections don't persist
+  useEffect(() => {
+    if (open) {
+      setSelectedProcedures({});
+    }
+  }, [open]);
+
+  const isAnyProcedureSelected = Object.values(selectedProcedures).some(
+    (procs) => procs && procs.length > 0
+  );
+  const isScheduling = !!schedulingDate && open;
+  const onClose = () => { setFamilyAppointmentsDialogOpen(false); };
 
   // Stabilise the IDs so the callback reference doesn't change on every render
   const patientId = patient?.id || patient?._id;
@@ -60,6 +84,113 @@ const FamilyAppointmentsDialog = () => {
       dispatch(fetchCurrentPracticeInfo(true));
     }
   }, [open, fetchFamilyAppointmentsData, dispatch]);
+
+  const handleScheduleSubmit = () => {
+    let slotOffset = 0;
+    const dispatchPromises = [];
+    const dateStr = schedulingDate || dayjs().format("YYYY-MM-DD");
+    
+    const sourceApptIdFallback = currentAppointment?.id || currentAppointment?._id || currentAppointment?.appointmentId || currentAppointment?.AptNum;
+
+    Object.entries(selectedProcedures).forEach(([mid, procs]) => {
+      if (!procs || procs.length === 0) return;
+      const duration = 30 + (procs.length - 1) * 15;
+      
+      const startHour = schedulingTime ? schedulingTime.hour : 9;
+      const startMins = schedulingTime ? schedulingTime.mins : 0;
+      
+      const slotStart = dayjs(dateStr).hour(startHour).minute(startMins).add(slotOffset, 'minute');
+
+      const allMembers = [patient, ...(familyMembers || [])].filter(Boolean);
+      const memberObj = allMembers.find(m => (m.id || m._id) === mid);
+
+      // Determine providerId based on procedures or patient's preferred provider
+      let chosenProviderId = null;
+      let procSourceApptId = null;
+      for (const proc of procs) {
+        if (!chosenProviderId && (proc.providerId || proc.provider || proc.ProvNum)) {
+          chosenProviderId = proc.providerId || proc.provider || proc.ProvNum;
+        }
+        if (!procSourceApptId && proc.sourceAppointmentId) {
+          procSourceApptId = proc.sourceAppointmentId;
+        }
+      }
+      if (!chosenProviderId && memberObj) {
+        chosenProviderId = 
+          memberObj.preferredDentistId || 
+          memberObj.preferredDentist || 
+          memberObj.preferredProviderId || 
+          memberObj.providerId || 
+          memberObj.primaryProviderId ||
+          memberObj.customFields?.preferredDentist ||
+          memberObj.customFields?.preferredDentistId;
+      }
+      
+      // If chosenProviderId is an object, extract its ID
+      if (chosenProviderId && typeof chosenProviderId === 'object') {
+        chosenProviderId = chosenProviderId._id || chosenProviderId.id || chosenProviderId.ProvNum || null;
+      }
+
+      // Fallback to patient's preferred provider or current appointment's provider
+      if (!chosenProviderId && patient) {
+        chosenProviderId = patient.preferredDentistId || patient.preferredDentist || patient.preferredProviderId || patient.providerId || patient.primaryProviderId || patient.customFields?.preferredDentist || patient.customFields?.preferredDentistId;
+        if (chosenProviderId && typeof chosenProviderId === 'object') {
+          chosenProviderId = chosenProviderId._id || chosenProviderId.id || chosenProviderId.ProvNum || null;
+        }
+      }
+
+      // Final fallback to current appointment's provider
+      if (!chosenProviderId && currentAppointment) {
+        const apptProvider = currentAppointment.provider;
+        chosenProviderId = typeof apptProvider === 'object' ? (apptProvider._id || apptProvider.id || apptProvider.ProvNum) : apptProvider;
+      }
+
+      const mappedProcs = procs.map(proc => ({ 
+        ...proc,
+        code: proc.code, 
+        treatment: proc.procedureName || proc.treatment || proc.code,
+        provider: proc.provider || proc.providerId || proc.ProvNum || chosenProviderId,
+        charge: proc.charge || proc.fee || "$0.00",
+        dueDate: proc.dueDate || undefined,
+      }));
+      
+      const memberSourceApptId = procSourceApptId || sourceApptIdFallback || undefined;
+
+      const payload = {
+        patientId: mid,
+        roomId: schedulingRoomId,
+        providerId: chosenProviderId || undefined,
+        appointmentDate: slotStart.format("YYYY-MM-DD"),
+        startTime: slotStart.format("HH:mm"),
+        endTime: slotStart.add(duration, "minute").format("HH:mm"),
+        durationMinutes: duration,
+        visitType: "recare",
+        procedures: mappedProcs,
+        customFields: {
+          visitType: "recare",
+          procedures: mappedProcs,
+          preferredDentist: memberObj?.customFields?.preferredDentist || memberObj?.preferredDentistId || undefined,
+          preferredHygienist: memberObj?.customFields?.preferredHygienist || memberObj?.preferredHygienist || undefined,
+          recareSourceAppointmentId: memberSourceApptId,
+          sourceAppointmentId: memberSourceApptId,
+        },
+        status: "scheduled",
+      };
+      const createPromise = dispatch(createAppointmentThunk(payload));
+      dispatchPromises.push({ createPromise, memberId: mid });
+      slotOffset += duration;
+    });
+    
+    // Await all creations then refresh patient history for every affected patient
+    // so the ProcedureBlocks scheduled-date map is up-to-date.
+    Promise.all(dispatchPromises.map(({ createPromise }) => createPromise)).then(() => {
+      const affectedIds = new Set(dispatchPromises.map(({ memberId }) => memberId));
+      if (patientId) affectedIds.add(String(patientId));
+      affectedIds.forEach((id) => dispatch(fetchPatientHistory(id)));
+    });
+
+    setFamilyAppointmentsDialogOpen(false);
+  };
 
   const handleTabChange = (_, newValue) => setTabValue(newValue);
 
@@ -84,10 +215,6 @@ const FamilyAppointmentsDialog = () => {
         };
       })
     : [];
-
-  const dueAppointments = allAppointments
-    .filter((appt) => dayjs(appt.appointmentDate).isBefore(dayjs(), "day"))
-    .sort((a, b) => dayjs(b.appointmentDate).diff(dayjs(a.appointmentDate)));
 
   const getPatientName = (appt) => {
     if (appt.patientId?.firstName) return `${appt.patientId.firstName} ${appt.patientId.lastName}`;
@@ -253,27 +380,38 @@ const FamilyAppointmentsDialog = () => {
             }
           `}
         </style>
-        <Box className="printable-family-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+<Box className="printable-family-content" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Print-only Medflow Logo at Top Center */}
           <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3, pt: 2 } }}>
             <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
           </Box>
-          {tabValue === 0 ? (
+        {tabValue === 0 ? (
           <FamilyAppointmentsScheduledTab 
             allAppointments={allAppointments}
             groupedAppointments={groupedAppointments}
             getPatientName={getPatientName}
+            isScheduling={isScheduling}
+            selectedProcedures={selectedProcedures}
+            setSelectedProcedures={setSelectedProcedures}
+            recareDueDates={recareDueDates}
+            patientId={patientId}
+            familyMembers={familyMembers}
+            patient={patient}
+            onClose={onClose}
+            onSubmit={handleScheduleSubmit}
           />
         ) : (
           <FamilyAppointmentsDueTab 
-            dueAppointments={dueAppointments}
-            getPatientName={getPatientName}
+            recareDueDates={recareDueDates}
+            patientId={patientId}
+            familyMembers={familyMembers}
+            patient={patient}
           />
         )}
         </Box>
       </DialogContent>
 
-      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
+      {/* ── FOOTER ─────────────────────────────────────────────────── */}
       <DialogActions
         sx={{
           p: "12px 24px",

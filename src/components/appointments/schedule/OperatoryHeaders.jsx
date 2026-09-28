@@ -3,6 +3,7 @@ import { TIME_LABEL_WIDTH, COLUMN_MIN_WIDTH, OPERATORY_COLORS } from './schedule
 import { useDropdownData } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, headingSecondarySx } from '../../../constants/styles';
+import dayjs from 'dayjs';
 
 // OperatoryHeaders renders one column header per room fetched from the API.
 // Colors cycle through OPERATORY_COLORS when there are more rooms than palette entries.
@@ -10,8 +11,8 @@ import { fontSize, headingSecondarySx } from '../../../constants/styles';
 const OperatoryHeaders = ({ rooms, isCloseOpenDayMode, closedOperatories = {}, onToggleOperatoryStatus, selectedDate }) => {
   const { roomsLoading } = useDropdownData({ rooms: true });
   
-  // Format date once if we have selectedDate
-  const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : null;
+  // Format date once if we have selectedDate - use dayjs for consistent local date parsing
+  const dateStr = selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : null;
 
   return (
     <Box

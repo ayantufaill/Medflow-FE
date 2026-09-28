@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUserProfile, logoutUser, clearAuth, loginUser, seedTenantClaims } from '../store/slices/authSlice';
+import { fetchCurrentPracticeInfo } from '../store/slices/practiceInfoSlice';
 import { authService } from '../services/auth.service';
 import { decodeTenantClaims } from '../utils/tokenClaims';
 import { getErrorMessage } from '../utils/errorUtils';
@@ -30,6 +31,7 @@ export const AuthProvider = ({ children }) => {
       if (accessToken) {
         initialFetchDone.current = true;
         await dispatch(fetchUserProfile());
+        dispatch(fetchCurrentPracticeInfo());
       } else {
         dispatch(clearAuth());
       }
@@ -121,6 +123,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const resultAction = await dispatch(loginUser(credentials));
     if (loginUser.fulfilled.match(resultAction)) {
+      dispatch(fetchCurrentPracticeInfo());
       return { success: true, user: resultAction.payload };
     }
     return { success: false, error: resultAction.payload || "Login failed." };

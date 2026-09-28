@@ -14,6 +14,8 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { COLORS } from "../../constants/colors";
 
+import apiClient from "../../config/api";
+
 const MENU_PROPS = {
   disablePortal: true,
   anchorOrigin: { vertical: "bottom", horizontal: "left" },
@@ -34,37 +36,39 @@ const CourtesyCreditComponent = ({
   onClose,
   showAmountSection = true,
 }) => {
-  const [adjustmentType, setAdjustmentType] = useState("Un-Collected");
+  const [adjustmentType, setAdjustmentType] = useState("");
   const [creditAmount, setCreditAmount] = useState("0.00");
 
   // Determine button label based on context
   const buttonLabel = showAmountSection ? "Add Courtesy" : "Edit Courtesy";
 
-  // Exact options from the provided dropdown screenshot
-  const options = [
-    "Un-Collected",
-    "Professional Courtesy",
-    "Immediate Family Courtesy",
-    "OON paid",
-    "Sunbit Fee",
-    "Courtesy 3% for cash pay",
-    "Alle Rewards",
-    "Uncollect: de-escalate situation",
-    "No balance billing",
-    "Pro bono",
-    "Fee included in Invisalign treatment",
-    "Downgrade",
-    "Care Credit fee",
-    "Employee benefit",
-    "Cherry Fee",
-    "HFD Fee",
-  ];
+  const [options, setOptions] = useState([]);
+
+  React.useEffect(() => {
+    const fetchDefinitions = async () => {
+      try {
+        const res = await apiClient.get('/admin-finance/definitions/1');
+        const data = res.data?.data || res.data || [];
+        if (Array.isArray(data) && data.length > 0) {
+          setOptions(data);
+          if (!adjustmentType && data[0]) {
+            setAdjustmentType(data[0].type);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch adjustment definitions:", err);
+      }
+    };
+    fetchDefinitions();
+  }, []);
 
   const handleSave = () => {
     if (onSave) {
+      const selected = options.find(o => o.type === adjustmentType);
       onSave({
         ...adjustmentData,
-        adjustmentType,
+        adjustmentType: selected?.type || adjustmentType,
+        typeId: selected?.id || "",
         creditAmount: parseFloat(creditAmount) || 0,
         date: adjustmentData?.date || "04/15/2026",
       });
@@ -148,8 +152,8 @@ const CourtesyCreditComponent = ({
             MenuProps={MENU_PROPS}
           >
             {options.map((option) => (
-              <MenuItem key={option} value={option}>
-                {option}
+              <MenuItem key={option.id || option.type} value={option.type}>
+                {option.type}
               </MenuItem>
             ))}
           </Select>

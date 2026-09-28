@@ -10,6 +10,7 @@ const RightPanel = ({ hideAppointmentShortlist = false }) => (
       flexDirection: 'column',
       width: '100%',
       gap: '8px',
+      minHeight: 0,
     }}
   >
     {!hideAppointmentShortlist && <AppointmentShortlist />}

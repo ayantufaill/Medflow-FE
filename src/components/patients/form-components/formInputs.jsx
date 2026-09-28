@@ -26,10 +26,10 @@ export const OutlinedInput = (props) => (
 );
 
 // Same visual treatment as OutlinedInput, but for a <select>.
-export const OutlinedSelect = ({ children, ...props }) => (
+export const OutlinedSelect = ({ children, displayEmpty = true, ...props }) => (
   <TextField
     select variant="outlined" size="small" fullWidth {...props}
-    SelectProps={{ displayEmpty: true, MenuProps: roundedSelectMenuProps, ...props.SelectProps }}
+    SelectProps={{ displayEmpty, MenuProps: roundedSelectMenuProps, ...props.SelectProps }}
     sx={{
       "& .MuiOutlinedInput-root": {
         height: "42px", borderRadius: radius.md, backgroundColor: COLORS.SURFACE_INPUT, fontFamily: "Inter",

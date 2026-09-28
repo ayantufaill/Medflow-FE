@@ -4,8 +4,12 @@ import { formatDate } from './utils';
 import { InlineFieldRow, labelWidth, standardFieldSx } from './InlineField';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-import { sectionTitleSx } from '../../constants/styles';
+import { sectionTitleSx, roundedAutocompletePaperSx } from '../../constants/styles';
 import { patientValidations } from '../../validations/patientValidations';
+import { US_STATES, STATE_CITIES } from '../../constants/usAddressData';
+import WorkAddressIcon from '@mui/icons-material/Business';
+import { AddressSectionLabel } from './InlineField';
+import { Autocomplete, MenuItem } from '@mui/material';
 
 /**
  * Additional Information (and optionally Spouse Information).
@@ -36,7 +40,7 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
         processedValue = value; // Keep original if conversion fails
       }
     }
-    
+
     const updatedData = { ...localPatientData, [field]: processedValue };
     setLocalPatientData(updatedData);
     if (onPatientDataChange) {
@@ -47,7 +51,7 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
   const handleSpouseEmailChange = (e) => {
     const value = e.target.value;
     handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, email: value });
-    
+
     if (isEditMode) {
       if (!value) {
         setSpouseEmailError('');
@@ -68,75 +72,26 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <InlineFieldRow 
-          label="Referred By" 
-          value={stripPatientId(localPatientData?.customFields?.referringPatient) || localPatientData?.referralSource || ''}
-          onChange={(e) => {
-            // Update both to be safe, though normally you'd only update one depending on the UI paradigm
-            handleFieldChange('referralSource', e.target.value);
-            if (localPatientData?.customFields?.referringPatient) {
-              handleFieldChange('customFields', { ...localPatientData.customFields, referringPatient: e.target.value });
-            }
-          }}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-        {isEditMode ? (
-          <InlineFieldRow 
-            label="Last Visit Date" 
-            input={
-              <DatePicker
-                views={['year', 'month', 'day']}
-                disableFuture
-                value={localPatientData?.lastVisitDate ? dayjs(localPatientData.lastVisitDate) : null}
-                onChange={(newValue) => {
-                  handleFieldChange('lastVisitDate', newValue ? newValue.format('YYYY-MM-DD') : '');
-                }}
-                slotProps={{
-                  textField: {
-                    size: 'small',
-                    fullWidth: true,
-                    sx: standardFieldSx,
-                  }
-                }}
-              />
-            }
-          />
-        ) : (
-          <InlineFieldRow 
-            label="Last Visit Date" 
-            value={formatDate(localPatientData?.lastVisitDate)}
-            InputProps={{ readOnly: true }}
-          />
-        )}
-        <InlineFieldRow 
-          label="Portal Access" 
-          value={localPatientData?.portalAccessEnabled ? 'Yes' : 'No'}
-          onChange={(e) => handleFieldChange('portalAccessEnabled', e.target.value === 'Yes')}
-          InputProps={{ readOnly: !isEditMode }}
-        />
-      </Box>
-
       {showSpouse && (
         <>
-          <Typography variant="subtitle1" sx={{ ...sectionTitleSx, mt: 2.5 }}>
+          <Typography variant="subtitle1" sx={{ ...sectionTitleSx, mt: 0, mb: 1 }}>
             Spouse Information
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <InlineFieldRow 
-              label="Spouse Name" 
+            <InlineFieldRow
+              label="Spouse Name"
               value={localPatientData?.spouseInfo?.name || ''}
               onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, name: e.target.value })}
               InputProps={{ readOnly: !isEditMode }}
             />
-            <InlineFieldRow 
-              label="Spouse Phone" 
+            <InlineFieldRow
+              label="Spouse Phone"
               value={localPatientData?.spouseInfo?.phone || ''}
               onChange={(e) => handleFieldChange('spouseInfo', { ...localPatientData?.spouseInfo, phone: e.target.value })}
               InputProps={{ readOnly: !isEditMode }}
             />
-            <InlineFieldRow 
-              label="Email Address" 
+            <InlineFieldRow
+              label="Email Address"
               value={localPatientData?.spouseInfo?.email || ''}
               onChange={handleSpouseEmailChange}
               InputProps={{ readOnly: !isEditMode }}
@@ -146,6 +101,89 @@ export default function AdditionalInformationSection({ patient, showSpouse = tru
           </Box>
         </>
       )}
+      
+      <Typography variant="subtitle1" sx={{ ...sectionTitleSx, mt: showSpouse ? 3 : 0, mb: 1 }}>
+        Additional Information
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <InlineFieldRow
+          label="Occupation"
+          value={localPatientData?.occupation}
+          placeholder="Occupation"
+          onChange={(e) => handleFieldChange('occupation', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Patient's / Guardian's Employer"
+          value={localPatientData?.employer ?? localPatientData?.guardianEmployer}
+          placeholder="Employer"
+          onChange={(e) => handleFieldChange('employer', e.target.value)}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+
+        <AddressSectionLabel icon={WorkAddressIcon}>Work Address</AddressSectionLabel>
+        <InlineFieldRow
+          label="Country"
+          value={localPatientData?.workAddress?.country || 'United States'}
+          input={isEditMode ? (
+            <TextField select variant="outlined" size="small" fullWidth value={localPatientData?.workAddress?.country || 'United States'} onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, country: e.target.value })} sx={standardFieldSx}>
+              <MenuItem value="United States">United States</MenuItem>
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="State"
+          value={localPatientData?.workAddress?.state}
+          input={isEditMode ? (
+            <TextField select variant="outlined" size="small" fullWidth value={localPatientData?.workAddress?.state || ''} onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, state: e.target.value, city: '' })} sx={standardFieldSx}>
+              <MenuItem value="">Select state</MenuItem>
+              {US_STATES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+            </TextField>
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="City"
+          value={localPatientData?.workAddress?.city}
+          input={isEditMode ? (
+            <Autocomplete
+              options={STATE_CITIES[localPatientData?.workAddress?.state] || []}
+              value={localPatientData?.workAddress?.city || ''}
+              onChange={(_, newVal) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: newVal || '' })}
+              onInputChange={(_, newInputValue) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, city: newInputValue || '' })}
+              disabled={!localPatientData?.workAddress?.state}
+              freeSolo
+              slotProps={{ paper: { sx: roundedAutocompletePaperSx } }}
+              renderInput={(params) => (
+                <TextField {...params} variant="outlined" size="small" fullWidth placeholder={localPatientData?.workAddress?.state ? "City" : "Select state first"} sx={standardFieldSx} />
+              )}
+            />
+          ) : undefined}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Address Line 1"
+          value={localPatientData?.workAddress?.line1}
+          placeholder="Address line 1"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, line1: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Address Line 2"
+          value={localPatientData?.workAddress?.line2}
+          placeholder="Address line 2"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, line2: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+        <InlineFieldRow
+          label="Zip/Postal Code"
+          value={localPatientData?.workAddress?.postalCode}
+          placeholder="Zip/Postal Code"
+          onChange={(e) => handleFieldChange('workAddress', { ...localPatientData?.workAddress, postalCode: e.target.value })}
+          InputProps={{ readOnly: !isEditMode }}
+        />
+      </Box>
     </Box>
   );
 }

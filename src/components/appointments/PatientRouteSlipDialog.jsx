@@ -57,11 +57,13 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
 
       // Process appointments
       const today = dayjs().startOf('day');
-      const todayAppts = (apptData || []).filter(a => dayjs(a.startTime).isSame(today, 'day'));
+      const todayAppts = (apptData || []).filter(a =>
+        dayjs(a.startTime).isSame(today, 'day') && dayjs(a.startTime).isAfter(dayjs())
+      );
       setTodayAppointment(todayAppts[0] || null);
 
       const futureAppts = (apptData || [])
-        .filter(a => dayjs(a.startTime).isAfter(dayjs().endOf('day')))
+        .filter(a => dayjs(a.startTime).isAfter(dayjs()))
         .sort((a, b) => dayjs(a.startTime).diff(dayjs(b.startTime)));
       setNextAppointment(futureAppts[0] || null);
 

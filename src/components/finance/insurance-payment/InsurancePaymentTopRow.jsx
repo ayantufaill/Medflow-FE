@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Typography, Select, MenuItem, Checkbox } from '@mui/material';
+import { Box, Typography, Select, MenuItem, Checkbox, TextField } from '@mui/material';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
 import { PAYMENT_METHODS } from '../../../constants/financeConstants';
 
@@ -24,12 +25,17 @@ const InsurancePaymentTopRow = ({
   setSelectedClaim,
   paymentMethod,
   setPaymentMethod,
-  checkboxOptions
+  checkboxOptions,
+  chequeNo = '',
+  setChequeNo,
+  branchNo = '',
+  setBranchNo,
 }) => {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.8125rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
-        07/15/2022
+        {dayjs().format('MM/DD/YYYY')}
       </Typography>
       <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '0.8125rem', fontWeight: 500, ml: 1, whiteSpace: 'nowrap' }}>
         Payment claim:
@@ -79,11 +85,64 @@ const InsurancePaymentTopRow = ({
         {/* Preserve any extra ones like 'Test Jen' that were there */}
         <MenuItem value="Test Jen">Test Jen</MenuItem>
       </Select>
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+
+      <Typography sx={{ fontSize: '0.8125rem', ml: 1.5, whiteSpace: 'nowrap' }}>Cheque #:</Typography>
+      <TextField
+        variant="outlined"
+        size="small"
+        value={chequeNo}
+        onChange={(e) => setChequeNo?.(e.target.value)}
+        placeholder=""
+        sx={{
+          minWidth: 120,
+          '& .MuiOutlinedInput-root': {
+            height: '28px',
+            fontSize: '0.8125rem',
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT },
+          },
+          '& .MuiOutlinedInput-input': { py: '4px', px: '8px' },
+        }}
+      />
+
+      <Typography sx={{ fontSize: '0.8125rem', ml: 1.5, whiteSpace: 'nowrap' }}>Bank/Branch #:</Typography>
+      <TextField
+        variant="outlined"
+        size="small"
+        value={branchNo}
+        onChange={(e) => setBranchNo?.(e.target.value)}
+        placeholder=""
+        sx={{
+          minWidth: 120,
+          '& .MuiOutlinedInput-root': {
+            height: '28px',
+            fontSize: '0.8125rem',
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT },
+          },
+          '& .MuiOutlinedInput-input': { py: '4px', px: '8px' },
+        }}
+      />
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2.5 }}>
         {checkboxOptions.map((item) => (
-          <Box key={item.label} sx={{ display: 'flex', alignItems: 'center' }}>
-            <Checkbox size="small" sx={{ p: 0.2, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />
+          <Box
+            key={item.label}
+            onClick={() => item.onChange?.({ target: { checked: !item.checked } })}
+            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <Checkbox
+              size="small"
+              checked={Boolean(item.checked)}
+              onChange={(e) => {
+                e.stopPropagation();
+                item.onChange?.(e);
+              }}
+              sx={{ p: 0.2, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }}
+            />
             <Typography sx={{ fontSize: '0.8125rem' }}>{item.label}</Typography>
             {item.icon && <HelpOutlineIcon sx={{ fontSize: '0.8rem', ml: 0.5, color: '#666' }} />}
           </Box>

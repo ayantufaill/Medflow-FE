@@ -26,25 +26,26 @@ import PracticeGroupsPage from '../pages/admin/PracticeGroupsPage';
 import MyGroupPage from '../pages/admin/MyGroupPage';
 
 const adminOnly = (children, hideSidebar = true) => (
-  <ProtectedRoute requiredRoles={['Admin']}>
+  <ProtectedRoute allowedGroups={['ADMIN_GROUP']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
-// Admin, OR anyone holding the given permission (e.g. Group Admin's real
-// `group:view_analytics` permission) — Group Admin never holds the 'Admin' role
-// name, so a plain requiredRoles check would always exclude them.
+// Admin Group and Operations Group have access to reports & analytics
+const adminOrReports = (children, hideSidebar = true) => (
+  <ProtectedRoute allowedGroups={['ADMIN_GROUP', 'OPERATIONS_GROUP']}>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
 const adminOrPermission = (children, permission, hideSidebar = true) => (
-  <ProtectedRoute requiredRoles={['Admin']} requiredPermissions={[permission]} requireEitherRoleOrPermission>
+  <ProtectedRoute allowedGroups={['ADMIN_GROUP']} requiredPermissions={[permission]} requireEitherRoleOrPermission>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
-// Group Admin's own branch-reassignment screen — also open to Branch Admin (its
-// narrower single-branch sibling, scoped down client-side in MyGroupPage.jsx) and
-// to Admin for oversight.
 const groupOrBranchAdminOnly = (children, hideSidebar = true) => (
-  <ProtectedRoute requiredRoles={['Admin', 'Group Admin', 'Branch Admin']}>
+  <ProtectedRoute allowedGroups={['ADMIN_GROUP']}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -107,9 +108,9 @@ const adminRoutes = [
   <Route key="/admin/clinical-management/TreatmentPlan-Presentation" path="/admin/clinical-management/TreatmentPlan-Presentation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/informed-consent" path="/admin/clinical-management/informed-consent" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/pre-post-ops" path="/admin/clinical-management/pre-post-ops" element={adminOnly(<AdminPage />)} />,
-  <Route key="/kpi" path="/kpi" element={adminOnly(<ReportsDashboard />, true)} />,
-  <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOnly(<ReportsDashboard />, true)} />,
-  <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOnly(<AdvancedReporting />)} />,
+  <Route key="/kpi" path="/kpi" element={adminOrReports(<ReportsDashboard />, true)} />,
+  <Route key="/admin/reports/*" path="/admin/reports/*" element={adminOrReports(<ReportsDashboard />, true)} />,
+  <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOrReports(<AdvancedReporting />)} />,
   <Route key="/admin/analytics" path="/admin/analytics" element={adminOrPermission(<ClinicAnalyticsPage />, 'group:view_analytics')} />,
   <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOrPermission(<PracticeGroupsPage />, 'platform:manage_practice_groups')} />,
   <Route key="/admin/my-group" path="/admin/my-group" element={groupOrBranchAdminOnly(<MyGroupPage />)} />,

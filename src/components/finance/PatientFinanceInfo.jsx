@@ -8,6 +8,7 @@ import {
   invalidatePaymentInvoices,
   fetchLedgerItems,
 } from "../../store/slices/billingSlice";
+import { useBranch } from "../../hooks/redux/useBranch";
 import {
   Box,
   Typography,
@@ -37,24 +38,13 @@ import {
 import FinanceDialogManager from "./FinanceDialogManager";
 import apiClient from "../../config/api";
 import { claimService } from "../../services/claim.service";
-import addFlagsIcon from "../../assets/finance icons/add flag.svg";
+import { useSelector } from 'react-redux';
+import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
+import { resolveFlagColor } from '../patient-flags/constants';
 import addAccountNoteIcon from "../../assets/finance icons/add account note.svg";
+import addFlagsIcon from "../../assets/finance icons/add flag.svg";
 
 // Custom Icons have been extracted to FinanceActionIcons.jsx
-
-const flagColorMap = {
-  alert: "#7dab9f",
-  "old patient": "#5e5ba8",
-  "family & friends": "#bc6c73",
-  "late payment": "#d9975b",
-  "needs special care": "#88b7d6",
-  "TDS Member": "#a6f272",
-  "Botox/Filler": "#eef681",
-  "Bioclear Patient": "#cf5dbd",
-  "Ortho Patient": "#4d39c0",
-  "Balance Owed": "#d3562f",
-  appointment_reminder: "#94bc74",
-};
 
 const PatientFinanceInfo = forwardRef(
   (
@@ -72,6 +62,9 @@ const PatientFinanceInfo = forwardRef(
     ref,
   ) => {
     const dispatch = useDispatch();
+    const { currentBranchId } = useBranch();
+    const practiceInfo = useSelector(selectPracticeInfo);
+    const globalFlags = practiceInfo?.patientFlags || [];
     const [showShare, setShowShare] = useState(false);
     const [shareAnchorEl, setShareAnchorEl] = useState(null);
     const [showQuickPayment, setShowQuickPayment] = useState(false);
@@ -132,6 +125,7 @@ const PatientFinanceInfo = forwardRef(
       try {
         const payload = {
           patientId: parseInt(patientId, 10) || 1,
+          branchId: currentBranchId,
           notes: savePayload.description,
           items: data.map((row) => {
             let parsedDate = new Date().toISOString();
@@ -156,6 +150,14 @@ const PatientFinanceInfo = forwardRef(
                   (String(row.ptPortion) || "").replace(/[^0-9.-]+/g, ""),
                 ) || 0,
               insPortion:
+                parseFloat(
+                  (String(row.insPortion) || "").replace(/[^0-9.-]+/g, ""),
+                ) || 0,
+              primaryInsPortion:
+                Number(row.primaryInsPortion ?? (Number(row.secondaryInsPortion || 0) > 0 && parseFloat((String(row.insPortion) || "").replace(/[^0-9.-]+/g, "")) > Number(row.secondaryInsPortion || 0) ? parseFloat((String(row.insPortion) || "").replace(/[^0-9.-]+/g, "")) - Number(row.secondaryInsPortion || 0) : parseFloat((String(row.insPortion) || "").replace(/[^0-9.-]+/g, "")))),
+              secondaryInsPortion:
+                Number(row.secondaryInsPortion || 0),
+              totalInsPortion:
                 parseFloat(
                   (String(row.insPortion) || "").replace(/[^0-9.-]+/g, ""),
                 ) || 0,
@@ -302,6 +304,9 @@ const PatientFinanceInfo = forwardRef(
 
         dispatch(invalidatePaymentInvoices(patientId));
         dispatch(fetchLedgerItems(patientId));
+        window.dispatchEvent(new CustomEvent("appointment-financials-updated", {
+          detail: { patientId },
+        }));
         window.dispatchEvent(new CustomEvent("add-ledger-item"));
         setShowAddPayment(false);
         if (typeof fetchPatientData === "function") fetchPatientData();
@@ -312,6 +317,9 @@ const PatientFinanceInfo = forwardRef(
 
     const handleInsurancePaymentSave = (paymentData) => {
       console.log("Insurance payment saved:", paymentData);
+      window.dispatchEvent(new CustomEvent("appointment-financials-updated", {
+        detail: { patientId: patient?._id || patient?.id },
+      }));
       window.dispatchEvent(new CustomEvent("add-ledger-item"));
       setShowInsurancePayment(false);
     };
@@ -334,7 +342,8 @@ const PatientFinanceInfo = forwardRef(
       try {
         const payload = {
           patientId: parseInt(patientId, 10) || patientId,
-          notes: notesText,
+          branchId: currentBranchId,
+          notes: notesText || "Automated Adjustment Invoice",
           items: [
             {
               code: `ACC-${Date.now().toString().slice(-6)}`,
@@ -584,7 +593,7 @@ const PatientFinanceInfo = forwardRef(
                           width: 14,
                           height: 14,
                           borderRadius: "2px",
-                          bgcolor: flagColorMap[flag] || "#cccccc",
+                          bgcolor: resolveFlagColor(flag, globalFlags),
                           flexShrink: 0,
                           cursor: "pointer",
                         }}

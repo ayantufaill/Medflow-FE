@@ -8,20 +8,11 @@ import { useCollectionCodeCarrier } from '../../../../hooks/reports/financial/us
 
 const CollectionCodeCarrier = () => {
   const {
-    dateRange,
-    startDate,
-    endDate,
-    codeFilter,
-    codeText,
-    loading,
+    rawReportData,
     reportData,
-    setStartDate,
-    setEndDate,
-    setCodeFilter,
-    setCodeText,
-    handleFilterModeChange,
-    handleClearAll,
+    loading,
     handleApply,
+    handleClear,
     handleExportCSV,
     handlePrint
   } = useCollectionCodeCarrier();
@@ -29,18 +20,9 @@ const CollectionCodeCarrier = () => {
   return (
     <ReportLayout title="Collection per code per carrier:">
       <CollectionCodeCarrierFilters 
-        dateRange={dateRange}
-        startDate={startDate}
-        endDate={endDate}
-        codeFilter={codeFilter}
-        codeText={codeText}
-        setStartDate={setStartDate}
-        setEndDate={setEndDate}
-        setCodeFilter={setCodeFilter}
-        setCodeText={setCodeText}
-        handleFilterModeChange={handleFilterModeChange}
-        handleApply={handleApply}
-        handleClearAll={handleClearAll}
+        reportData={rawReportData}
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
       />
 
       <ProductionReportActions 
