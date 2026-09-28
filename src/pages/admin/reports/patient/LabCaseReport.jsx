@@ -274,8 +274,7 @@ const LabCaseReport = () => {
         ]} 
       />
       <ReportSelect 
-        label="All" 
-        prefix="Provider:" 
+        label="Provider" 
         value={provider} 
         onChange={(e) => setProvider(e.target.value)} 
         options={providerOptions}

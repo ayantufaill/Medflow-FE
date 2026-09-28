@@ -12,6 +12,7 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { exportToCSV } from '../../../../utils/exportUtils';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const formatRelatedInfo = (info) => {
   if (!info) return '--';
@@ -90,41 +91,91 @@ const NotificationsReport = () => {
 
   const handleExportCsv = () => {
     exportToCSV(filteredData, [
-      { header: 'Sent to Patient', key: 'sentToPatient' },
-      { header: 'Sent to User', key: 'sentToUser' },
-      { header: 'Template', key: 'template' },
-      { header: 'Status', key: 'status' },
-      { header: 'Planned On', key: 'plannedOn' },
-      { header: 'Sent On', key: 'sentOn' },
-      { header: 'Related Info', key: (row) => formatRelatedInfo(row.info) },
-      { header: 'Sent By', key: 'sentBy' },
-      { header: 'Patient Reply', key: 'reply' },
-    ], 'Notifications_Report');
+      { header: 'Date', key: 'date' },
+      { header: 'User', key: 'user' },
+      { header: 'Type', key: 'type' },
+      { header: 'Alert Title', key: 'title' },
+      { header: 'Alert Details', key: 'details' },
+      { header: 'Status', key: 'status' }
+    ], 'System_Notifications_Report');
+  };
+
+  const handlePrint = () => {
+    const printArea = document.getElementById('notifications-print-area');
+    if (!printArea) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Notifications Report</title>
+          <style>
+            body { 
+              font-family: sans-serif; 
+              font-size: 12px; 
+              background-color: #fff; 
+              color: #000; 
+              padding: 20px; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa !important; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+            .MuiTablePagination-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Notifications Report</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${printArea.innerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    };
   };
 
   const columns = [
-    { label: 'Sent to Patient' },
-    { label: 'Sent to User' },
-    { label: 'Template' },
-    { label: 'Status' },
-    { label: 'Planned On' },
-    { label: 'Sent On' },
-    { label: 'Related Info' },
-    { label: 'Sent By' },
-    { label: 'Patient Reply' },
+    { label: 'Date' },
+    { label: 'User' },
+    { label: 'Type' },
+    { label: 'Alert Title' },
+    { label: 'Alert Details' },
+    { label: 'Status' }
   ];
 
   const renderRow = (row, i) => (
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-      <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7' }}>{row.sentToPatient}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.sentToUser}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.template}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.date}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem' }}>{row.user}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem', textTransform: 'capitalize' }}>{row.type ? row.type.replace('_', ' ') : ''}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem', fontWeight: 600, color: '#1e293b' }}>{row.title}</TableCell>
+      <TableCell sx={{ fontSize: '0.7rem', color: '#64748b' }}>{row.details}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.plannedOn}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.sentOn}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{formatRelatedInfo(row.info)}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.sentBy}</TableCell>
-      <TableCell sx={{ fontSize: '0.7rem' }}>{row.reply}</TableCell>
     </TableRow>
   );
 
@@ -318,7 +369,7 @@ const NotificationsReport = () => {
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCsv}
-                onPrint={() => window.print()}
+                onPrint={handlePrint}
                 hasData={filteredData.length > 0}
               />
             </Box>
@@ -329,11 +380,13 @@ const NotificationsReport = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={filteredData} 
-              renderRow={renderRow} 
-            />
+            <div id="notifications-print-area">
+              <ReportDataTable 
+                columns={columns} 
+                data={filteredData} 
+                renderRow={renderRow} 
+              />
+            </div>
           )}
         </ReportLayout>
 
