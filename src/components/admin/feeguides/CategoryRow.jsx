@@ -45,22 +45,24 @@ const CategoryRow = ({ cat, expandedCategories, toggleCategory, expandedGroups, 
       <TableRow>
         <TableCell colSpan={7} sx={{ p: 0, borderBottom: 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <Table size="small">
-              <TableBody>
-                {cat.groups.map((group, gIdx) => (
-                  <GroupRow 
-                    key={gIdx} 
-                    group={group} 
-                    catName={cat.name}
-                    expandedGroups={expandedGroups}
-                    toggleGroup={toggleGroup}
-                    feeGuideId={feeGuideId}
-                    dispatch={dispatch}
-                    updateProcedureFee={updateProcedureFee}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+            {isExpanded && (
+              <Table size="small">
+                <TableBody>
+                  {cat.groups.map((group, gIdx) => (
+                    <GroupRow 
+                      key={gIdx} 
+                      group={group} 
+                      catName={cat.name}
+                      expandedGroups={expandedGroups}
+                      toggleGroup={toggleGroup}
+                      feeGuideId={feeGuideId}
+                      dispatch={dispatch}
+                      updateProcedureFee={updateProcedureFee}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </Collapse>
         </TableCell>
       </TableRow>

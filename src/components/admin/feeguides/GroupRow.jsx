@@ -46,19 +46,21 @@ const GroupRow = ({ group, catName, expandedGroups, toggleGroup, feeGuideId, dis
       <TableRow>
         <TableCell colSpan={7} sx={{ p: 0, borderBottom: 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <Table size="small">
-              <TableBody>
-                {group.procedures.map((proc, pIdx) => (
-                  <ProcedureRow 
-                    key={pIdx} 
-                    procedure={proc} 
-                    feeGuideId={feeGuideId}
-                    dispatch={dispatch}
-                    updateProcedureFee={updateProcedureFee}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+            {isExpanded && (
+              <Table size="small">
+                <TableBody>
+                  {group.procedures.map((proc, pIdx) => (
+                    <ProcedureRow 
+                      key={pIdx} 
+                      procedure={proc} 
+                      feeGuideId={feeGuideId}
+                      dispatch={dispatch}
+                      updateProcedureFee={updateProcedureFee}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </Collapse>
         </TableCell>
       </TableRow>

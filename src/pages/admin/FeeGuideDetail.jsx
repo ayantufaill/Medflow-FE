@@ -72,10 +72,10 @@ const FeeGuideDetail = () => {
         };
       }
       cats[catName].groups[0].procedures.push({
-        code: proc.code,
-        name: proc.name,
-        description: proc.name, // The backend doesn't give a long description, so use name
-        fee: proc.fee !== null ? `$${proc.fee.toFixed(2)}` : '$0.00'
+        code: proc.code || '',
+        name: proc.name || '',
+        description: proc.name || '',
+        fee: (proc.fee != null && !isNaN(proc.fee)) ? `$${Number(proc.fee).toFixed(2)}` : '$0.00'
       });
     });
     return Object.values(cats).sort((a, b) => a.name.localeCompare(b.name));
@@ -96,36 +96,71 @@ const FeeGuideDetail = () => {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-  const filteredData = categoryData.map(cat => {
-    const filteredGroups = cat.groups.map(group => {
-      const filteredProcedures = group.procedures.filter(proc =>
-        proc.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        proc.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      if (filteredProcedures.length > 0) {
-        return { ...group, procedures: filteredProcedures };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      if (!searchQuery) {
+        setExpandedCategories(prev => prev.length === 0 ? prev : []);
+        setExpandedGroups(prev => prev.length === 0 ? prev : []);
+      }
+    }, 300); // 300ms debounce delay
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchQuery) return categoryData;
+    const query = debouncedSearchQuery.toLowerCase();
+    return categoryData.map(cat => {
+      const filteredGroups = cat.groups.map(group => {
+        const filteredProcedures = group.procedures.filter(proc =>
+          String(proc.code || '').toLowerCase().includes(query) ||
+          String(proc.name || '').toLowerCase().includes(query) ||
+          String(proc.description || '').toLowerCase().includes(query)
+        );
+        if (filteredProcedures.length > 0) {
+          return { ...group, procedures: filteredProcedures };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (filteredGroups.length > 0) {
+        return { ...cat, groups: filteredGroups };
+      }
+      if (String(cat.name || '').toLowerCase().includes(query)) {
+        return cat;
       }
       return null;
-    }).filter(g => g !== null);
+    }).filter(Boolean);
+  }, [categoryData, debouncedSearchQuery]);
 
-    if (filteredGroups.length > 0 || cat.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return { ...cat, groups: filteredGroups };
+  const displayData = debouncedSearchQuery ? filteredData : categoryData;
+
+  // Auto-expand on search only if results are manageable to prevent DOM freezing
+  useEffect(() => {
+    if (debouncedSearchQuery && filteredData.length > 0) {
+      let totalMatch = 0;
+      filteredData.forEach(cat => {
+        cat.groups.forEach(g => {
+          totalMatch += g.procedures.length;
+        });
+      });
+
+      if (totalMatch < 100) {
+        setExpandedCategories(prev => {
+          const newCats = filteredData.map(c => c.name);
+          if (prev.length === newCats.length && prev.every((v, i) => v === newCats[i])) return prev;
+          return newCats;
+        });
+        setExpandedGroups(prev => {
+          const newGroups = filteredData.flatMap(c => c.groups.map(g => `${c.name}-${g.name}`));
+          if (prev.length === newGroups.length && prev.every((v, i) => v === newGroups[i])) return prev;
+          return newGroups;
+        });
+      }
     }
-    return null;
-  }).filter(c => c !== null);
-
-  const displayData = searchQuery ? filteredData : categoryData;
-
-  // Auto-expand on search
-  React.useEffect(() => {
-    if (searchQuery) {
-      const allCatNames = filteredData.map(c => c.name);
-      const allGroupKeys = filteredData.flatMap(c => c.groups.map(g => `${c.name}-${g.name}`));
-      setExpandedCategories(allCatNames);
-      setExpandedGroups(allGroupKeys);
-    }
-  }, [searchQuery]);
+  }, [debouncedSearchQuery, filteredData]);
 
   return (
     <Box sx={{ p: 4, backgroundColor: '#FBFCFE', borderRadius: '12px', border: '1px solid #E5E9F2', minHeight: '100vh' }}>
