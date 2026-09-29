@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Autocomplete, TextField, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -33,6 +34,7 @@ const UnsignedProgressNotesFilters = ({
   setCodeFilter,
   setCodeText,
   providers,
+  availableCodes = [],
   handleApply,
   handleClear,
 }) => {
@@ -42,6 +44,9 @@ const UnsignedProgressNotesFilters = ({
     { value: 'Recare', label: 'Recare' },
     { value: 'Treatment', label: 'Treatment' },
     { value: 'Conversation', label: 'Conversation' },
+    { value: 'Soap', label: 'Soap' },
+    { value: 'Progress', label: 'Progress' },
+    { value: 'Clinical Note', label: 'Clinical Note' },
     { value: 'General', label: 'General' },
   ];
 
@@ -109,11 +114,46 @@ const UnsignedProgressNotesFilters = ({
         width="180px"
       />
       <Box sx={{ pt: 2.5 }}>
-        <ReportSearchInput
-          placeholder="Enter code or procedure"
+        <Autocomplete
+          freeSolo
+          options={availableCodes}
           value={codeText}
-          onChange={(e) => setCodeText(e.target.value)}
-          width="250px"
+          onChange={(event, newValue) => {
+            setCodeText(newValue || '');
+          }}
+          onInputChange={(event, newInputValue) => {
+            setCodeText(newInputValue || '');
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Enter code or procedure"
+              size="small"
+              sx={{
+                width: '250px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc',
+                  minHeight: 36,
+                  paddingTop: 0,
+                  paddingBottom: 0,
+                  fontSize: '0.75rem',
+                  '& fieldset': { borderColor: '#e2e8f0' },
+                }
+              }}
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <>
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: '#94a3b8', ml: 0.5 }} />
+                    </InputAdornment>
+                    {params.InputProps.startAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
         />
       </Box>
     </>

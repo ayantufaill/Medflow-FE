@@ -225,15 +225,38 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
       if (selectedProcedures && selectedProcedures.length > 0) {
         const validProcWithProvider = selectedProcedures.find(p => p.provider && p.provider !== '-');
         if (validProcWithProvider) {
-          actualProviderId = validProcWithProvider.provider;
+          const pVal = validProcWithProvider.provider;
+          const matchedProvider = providersList.find(p => 
+            p._id === pVal || 
+            p.providerCode === pVal || 
+            `${p.userId?.firstName || p.firstName || p.FName || ''} ${p.userId?.lastName || p.lastName || p.LName || ''}`.trim() === pVal
+          );
+          if (matchedProvider) {
+             actualProviderId = matchedProvider._id || matchedProvider.ProvNum?.toString();
+          } else if (pVal === 'CB') {
+             actualProviderId = "1";
+          } else {
+             // If it's still text and not found, default to "1" to avoid backend validation error (must be int)
+             actualProviderId = isNaN(parseInt(pVal, 10)) ? "1" : pVal;
+          }
         }
       }
       
+      // Gather procedure codes explicitly so they can be shown in reports
+      const explicitProcedureCodes = selectedProcedures && selectedProcedures.length > 0
+        ? selectedProcedures.map(p => p.code).filter(c => c && c !== '-')
+        : [];
+      
+      const structuredDataToSave = {
+        ...data,
+        procedureCodes: explicitProcedureCodes
+      };
+
       const notePayload = {
         patientId: patientId || "1",
         providerId: actualProviderId,
         noteType: 'progress',
-        structuredData: data
+        structuredData: structuredDataToSave
       };
       
       // Only include appointmentId if it's a real appointment, to avoid the unique conflict error
@@ -241,10 +264,23 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
         notePayload.appointmentId = appointmentId;
       }
 
+      let savedNoteId = noteId;
+
       if (view === 'create') {
-        await clinicalNoteService.createClinicalNote(notePayload);
+        const createdNote = await clinicalNoteService.createClinicalNote(notePayload);
+        savedNoteId = createdNote._id || createdNote.id || createdNote.CommlogNum?.toString();
       } else {
         await clinicalNoteService.updateClinicalNote(noteId, notePayload);
+      }
+      
+      // Automatically sign the note if it was marked as Complete
+      if (data.isComplete && savedNoteId) {
+        try {
+          await clinicalNoteService.signClinicalNote(savedNoteId);
+        } catch (signErr) {
+          console.error('Failed to automatically sign note:', signErr);
+          // Optional: handle error specifically for signing
+        }
       }
       
       if (onSuccess) onSuccess();
