@@ -17,7 +17,8 @@ const ProgressNotesFilters = ({
   providerId,
   setProviderId,
   providers = [],
-  onApply
+  onApply,
+  onClear
 }) => {
   const handleDateRangeChange = (e) => {
     const val = e.target.value;
@@ -112,6 +113,7 @@ const ProgressNotesFilters = ({
       topRowFilters={topFilters}
       bottomRowFilters={bottomFilters}
       onApplyFilters={onApply}
+      onClearAll={onClear}
     />
   );
 };
