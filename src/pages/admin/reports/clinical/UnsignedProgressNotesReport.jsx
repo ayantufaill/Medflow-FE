@@ -23,7 +23,7 @@ const columns = [
   { label: 'Created Date' },
   { label: 'Kind' },
   { label: 'Provider' },
-  { label: '' },
+  { label: '', className: 'no-print' },
 ];
 
 const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
@@ -38,14 +38,14 @@ const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-        <TableCell align="right">
+        <TableCell align="right" className="no-print">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
             {isExpanded ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
             <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
           </Box>
         </TableCell>
       </TableRow>
-      <TableRow>
+      <TableRow className="no-print">
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #3CA2E0' }}>
@@ -143,14 +143,14 @@ const SignedRow = ({ row, index, signedExpandedRow, setSignedExpandedRow }) => {
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-        <TableCell align="right">
+        <TableCell align="right" className="no-print">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
             {isExpanded ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
             <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
           </Box>
         </TableCell>
       </TableRow>
-      <TableRow>
+      <TableRow className="no-print">
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #22c55e' }}>
@@ -290,6 +290,11 @@ const UnsignedProgressNotesReport = () => {
   }, [apiData]);
 
   const availableCodes = useMemo(() => {
+    // Use availableCodes from API if available (includes codes from all three tables, unfiltered)
+    if (apiData && !Array.isArray(apiData) && apiData.availableCodes) {
+      return apiData.availableCodes;
+    }
+    // Fallback: extract from current data
     const codes = new Set();
     const extract = (arr) => arr.forEach((item) => {
       if (item.code && item.code !== '-') codes.add(item.code);
@@ -298,7 +303,7 @@ const UnsignedProgressNotesReport = () => {
     extract(processedData.signed);
     extract(processedData.missing);
     return Array.from(codes).sort();
-  }, [processedData]);
+  }, [apiData, processedData]);
 
   const handlePrint = () => {
     const printContent = document.getElementById('unsigned-notes-print-area');
@@ -316,6 +321,7 @@ const UnsignedProgressNotesReport = () => {
             th { background-color: #f8f9fa; font-weight: bold; }
             .MuiCollapse-root { display: none !important; } /* Hide expanded rows in print */
             .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+            h6 { font-size: 16px !important; font-weight: bold !important; color: #337ab7 !important; margin: 15px 0 10px 0 !important; }
           </style>
         </head>
         <body>

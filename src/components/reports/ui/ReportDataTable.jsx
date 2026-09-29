@@ -14,7 +14,7 @@ const ReportDataTable = ({ columns, data, renderRow, loading, emptyMessage = "No
         <TableHead sx={{ backgroundColor: "rgba(240, 244, 249, 0.6)" }}>
           <TableRow sx={{ '& th': { fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif", py: 1.5, backgroundColor: 'transparent' } }}>
             {columns.map((col, idx) => (
-              <TableCell key={idx} align={col.align || 'left'} sx={col.sx} padding={col.padding || 'normal'}>
+              <TableCell key={idx} align={col.align || 'left'} sx={col.sx} padding={col.padding || 'normal'} className={col.className}>
                 {col.label}
               </TableCell>
             ))}
