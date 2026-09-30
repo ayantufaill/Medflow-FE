@@ -45,7 +45,7 @@ export const hasRequiredGroup = (user, allowedGroups) => {
   const groups = getUserGroups(user);
 
   // Administrative Group has universal platform authority
-  if (groups.includes('ADMIN_GROUP') || userRoleNames.includes('Super Admin')) {
+  if (userRoleNames.includes('Super Admin')) {
     return true;
   }
 
@@ -166,7 +166,7 @@ export const hasRequiredRole = (user, requiredRoles) => {
   const groups = getUserGroups(user);
 
   // Administrative Group has universal platform access across all modules
-  if (groups.includes('ADMIN_GROUP') || userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
+  if (userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
     return true;
   }
 
@@ -198,7 +198,9 @@ export const hasRequiredPermission = (user, requiredPermissions, requireAll = fa
 
   const consolidated = user.roles.reduce((acc, role) => {
     if (role && typeof role === 'object' && role.permissions && typeof role.permissions === 'object') {
-      return { ...acc, ...role.permissions };
+      for (const [key, val] of Object.entries(role.permissions)) {
+        if (val === true) acc[key] = true;
+      }
     }
     return acc;
   }, {});

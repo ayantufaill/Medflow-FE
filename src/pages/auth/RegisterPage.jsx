@@ -27,7 +27,6 @@ import {
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/material.css";
 import { useAuth } from "../../contexts/AuthContext";
-import { roleService } from "../../services/role.service";
 import {
   registerValidations,
   getConfirmPasswordValidation,
@@ -42,8 +41,6 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [roles, setRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
   const [verificationStep, setVerificationStep] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [resending, setResending] = useState(false);
@@ -69,23 +66,7 @@ const RegisterPage = () => {
     }
   }, [location]);
 
-  useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        setRolesLoading(true);
-        const rolesData = await roleService.getAllRoles();
-        const activeRoles = rolesData.filter((role) => role.isActive !== false);
-        setRoles(activeRoles);
-      } catch (err) {
-        console.error('Error fetching roles:', err);
-        setRoles([]);
-      } finally {
-        setRolesLoading(false);
-      }
-    };
-
-    fetchRoles();
-  }, []);
+  // Check for error from URL params (from email link redirect)
 
   const onSubmit = async (data) => {
     setError('');
@@ -237,46 +218,7 @@ const RegisterPage = () => {
                   />
                 </Grid>
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                  sx={{ flex: '1 1 auto', width: '30%' }}
-                >
-                  <FormControl fullWidth required error={!!errors.roleId}>
-                    <InputLabel id="role-select-label">Role</InputLabel>
-                    <Controller
-                      name="roleId"
-                      control={control}
-                      rules={registerValidations.roleId}
-                      render={({ field }) => (
-                        <Select
-                          {...field}
-                          labelId="role-select-label"
-                          id="roleId"
-                          label="Role"
-                          disabled={rolesLoading}
-                          value={field.value || ''}
-                        >
-                          <MenuItem value="">
-                            <em>--None--</em>
-                          </MenuItem>
-                          {roles.map((role) => (
-                            <MenuItem
-                              key={role._id || role.id}
-                              value={role._id || role.id}
-                            >
-                              {role.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      )}
-                    />
-                    {errors.roleId && (
-                      <FormHelperText>{errors.roleId.message}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Grid>
+                {/* B1.1: Role dropdown removed; the server assigns Patient automatically */}
                 <Grid item xs={12} sm={6} sx={{ flex: '1 1 auto' }}>
                   <Controller
                     name="phone"

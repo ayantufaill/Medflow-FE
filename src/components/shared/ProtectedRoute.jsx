@@ -57,7 +57,7 @@ const ProtectedRoute = ({
 
   const groups = getUserGroups(user);
 
-  if (groups.includes('ADMIN_GROUP') || userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
+  if (userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
     return children;
   }
 
