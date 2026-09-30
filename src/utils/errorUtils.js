@@ -27,7 +27,14 @@ export const getErrorMessage = (error, fallbackMessage = 'An unexpected error oc
     // 2. Standard MedFlow error payload format: { success: false, error: { message, details, code } }
     if (responseData.error) {
       if (typeof responseData.error === 'object') {
-        const { message, details } = responseData.error;
+        const { message, details, code } = responseData.error;
+
+        if (code === 'NO_BRANCH_ASSIGNED') {
+          return 'You must be assigned to at least one branch to perform this action.';
+        }
+        if (code === 'PHI_ACCESS_NOT_GRANTED') {
+          return 'You do not have permission to access these patient records. PHI access is restricted to your assigned clinics.';
+        }
 
         // If field-level validation errors exist in details
         if (details && typeof details === 'object' && !Array.isArray(details)) {
