@@ -60,5 +60,14 @@ export const roleService = {
     const response = await apiClient.delete(`/roles/${roleId}`);
     return response.data;
   },
+
+  /**
+   * Get permission catalog
+   * @returns {Promise<Object>} Permission catalog object
+   */
+  async getPermissionCatalog() {
+    const response = await apiClient.get('/permissions/catalog');
+    return response.data.data.catalog || response.data.data;
+  },
 };
 

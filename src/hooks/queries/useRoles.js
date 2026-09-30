@@ -29,6 +29,7 @@ export const roleKeys = {
   list: (filters) => [...roleKeys.lists(), { filters }],
   details: () => [...roleKeys.all, 'detail'],
   detail: (id) => [...roleKeys.details(), id],
+  catalog: () => [...roleKeys.all, 'catalog'],
 };
 
 /**
@@ -64,5 +65,20 @@ export const useRole = (roleId) => {
     },
     enabled: !!roleId, // Only fetch if roleId is provided
     staleTime: 10 * 60 * 1000,
+  });
+};
+
+/**
+ * Fetch permission catalog
+ */
+export const usePermissionCatalog = () => {
+  return useQuery({
+    queryKey: roleKeys.catalog(),
+    queryFn: async () => {
+      const catalog = await roleService.getPermissionCatalog();
+      return catalog;
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 };

@@ -11,6 +11,9 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import theme from './theme';
 import allRoutes from './routes';
+import { injectStore } from './config/api';
+
+injectStore(store);
 
 const router = createBrowserRouter(
   createRoutesFromElements(

@@ -102,6 +102,17 @@ export const userService = {
   },
 
   /**
+   * Update clinics assigned to a user
+   * @param {string} userId - User ID
+   * @param {Object} data - Clinic assignment data { defaultId, restrictedIds, accessAll }
+   * @returns {Promise<Object>}
+   */
+  async updateUserClinics(userId, data) {
+    const response = await apiClient.put(`/users/${userId}/clinics`, data);
+    return response.data.data;
+  },
+
+  /**
    * Assign role to user (Admin only)
    * @param {string} userId - User ID
    * @param {string} roleId - Role ID

@@ -8,6 +8,7 @@ import SetupPasswordPage from '../pages/auth/SetupPasswordPage';
 import RegisterVerifyPage from '../pages/auth/RegisterVerifyPage';
 import PortalLoginPage from '../pages/portal/PortalLoginPage';
 import PortalRegisterPage from '../pages/portal/PortalRegisterPage';
+import NoBranchPage from '../pages/auth/NoBranchPage';
 
 const authRoutes = [
   <Route
@@ -44,6 +45,11 @@ const authRoutes = [
     key="/portal/register"
     path="/portal/register"
     element={<PublicRoute><PortalRegisterPage /></PublicRoute>}
+  />,
+  <Route
+    key="/no-branch-assigned"
+    path="/no-branch-assigned"
+    element={<NoBranchPage />}
   />,
 ];
 

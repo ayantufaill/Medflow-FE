@@ -1,160 +1,129 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Checkbox,
   Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Checkbox,
+  FormControlLabel,
+  TextField,
+  Chip,
+  CircularProgress
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useUpdateRole } from '../../hooks/mutations/useRoleMutations';
+import { usePermissionCatalog } from '../../hooks/queries/useRoles';
 
 const RolePermissionsGrid = ({ role }) => {
   const updateRoleMutation = useUpdateRole();
+  const { data: catalog, isLoading } = usePermissionCatalog();
 
-  // Parse permissions robustly regardless of backend structure
-  const permissionsData = useMemo(() => {
-    if (!role) return [];
+  const handleToggle = (key, lockDateAware, isChecked) => {
+    let updatedPermissions = { ...(role?.permissions || {}) };
     
-    // Check if permissions is an array of objects
-    if (Array.isArray(role.permissions)) {
-      return role.permissions;
-    }
-    
-    // Check if permissions is an object mapping (e.g. { AccountCredit: { create: true, ... } })
-    if (role.permissions && typeof role.permissions === 'object') {
-      return Object.entries(role.permissions).map(([resource, actions]) => ({
-        resource,
-        ...actions
-      }));
-    }
-
-    // Check if it's named 'resources' instead of 'permissions'
-    if (Array.isArray(role.resources)) {
-      return role.resources;
-    }
-    
-    if (role.resources && typeof role.resources === 'object') {
-      return Object.entries(role.resources).map(([resource, actions]) => ({
-        resource,
-        ...actions
-      }));
-    }
-
-    return [];
-  }, [role]);
-
-  const handleToggle = (resourceName, actionName, currentValue) => {
-    let updatedRoleData = {};
-    
-    if (Array.isArray(role.permissions)) {
-      updatedRoleData.permissions = role.permissions.map(p => {
-        const name = p.resource || p.resourceName || p.name;
-        if (name === resourceName) {
-          return { ...p, [actionName]: !currentValue };
-        }
-        return p;
-      });
-    } else if (role.permissions && typeof role.permissions === 'object') {
-      updatedRoleData.permissions = {
-        ...role.permissions,
-        [resourceName]: {
-          ...role.permissions[resourceName],
-          [actionName]: !currentValue
-        }
-      };
-    } else if (Array.isArray(role.resources)) {
-      updatedRoleData.resources = role.resources.map(p => {
-        const name = p.resource || p.resourceName || p.name;
-        if (name === resourceName) {
-          return { ...p, [actionName]: !currentValue };
-        }
-        return p;
-      });
-    } else if (role.resources && typeof role.resources === 'object') {
-      updatedRoleData.resources = {
-        ...role.resources,
-        [resourceName]: {
-          ...role.resources[resourceName],
-          [actionName]: !currentValue
-        }
-      };
+    if (isChecked) {
+      if (lockDateAware) {
+        updatedPermissions[key] = { allowed: true, lockDays: null };
+      } else {
+        updatedPermissions[key] = true;
+      }
     } else {
-      return; // Cannot update if structure is unrecognized
+      delete updatedPermissions[key];
     }
 
     updateRoleMutation.mutate({
-      roleId: role.id || role._id,
-      roleData: updatedRoleData
+      roleId: role?.id || role?._id,
+      roleData: { permissions: updatedPermissions }
     });
   };
 
-  const getResourceName = (p) => p.resource || p.resourceName || p.name || 'Unknown Resource';
+  const handleLockDaysChange = (key, value) => {
+    let updatedPermissions = { ...(role?.permissions || {}) };
+    const numValue = parseInt(value, 10);
+    
+    if (updatedPermissions[key] && typeof updatedPermissions[key] === 'object') {
+      updatedPermissions[key] = {
+        ...updatedPermissions[key],
+        lockDays: isNaN(numValue) ? null : numValue
+      };
+    } else if (updatedPermissions[key] === true) {
+      updatedPermissions[key] = {
+        allowed: true,
+        lockDays: isNaN(numValue) ? null : numValue
+      };
+    }
 
-  if (permissionsData.length === 0) {
+    updateRoleMutation.mutate({
+      roleId: role?.id || role?._id,
+      roleData: { permissions: updatedPermissions }
+    });
+  };
+
+  if (isLoading) {
+    return <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>;
+  }
+
+  if (!catalog || catalog.length === 0) {
     return (
       <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-        <Typography sx={{ color: '#64748B', fontFamily: 'Inter, sans-serif', fontSize: '13px' }}>
-          No specific resource permissions found for this role.
-        </Typography>
+        <Typography>No permission catalog found.</Typography>
       </Box>
     );
   }
 
   return (
     <Box sx={{ px: 4, pb: 4, pt: 1 }}>
-      <Box sx={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#F8FAFC' }}>
-              <TableCell sx={{ fontWeight: 600, color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: '12px', borderBottom: '1px solid #E2E8F0', py: 1.5, px: 3 }}>
-                Resource
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: '12px', borderBottom: '1px solid #E2E8F0', py: 1.5 }}>
-                Create
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: '12px', borderBottom: '1px solid #E2E8F0', py: 1.5 }}>
-                Read
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: '12px', borderBottom: '1px solid #E2E8F0', py: 1.5 }}>
-                Update
-              </TableCell>
-              <TableCell align="center" sx={{ fontWeight: 600, color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: '12px', borderBottom: '1px solid #E2E8F0', py: 1.5 }}>
-                Delete
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {permissionsData.map((p, index) => {
-              const resourceName = getResourceName(p);
-              return (
-                <TableRow key={index} sx={{ '&:last-child td': { borderBottom: 0 }, '&:hover': { backgroundColor: '#F8FAFC' } }}>
-                  <TableCell sx={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#475569', borderBottom: '1px solid #F1F5F9', px: 3 }}>
-                    {resourceName}
-                  </TableCell>
-                  {['create', 'read', 'update', 'delete'].map((action) => (
-                    <TableCell key={action} align="center" sx={{ borderBottom: '1px solid #F1F5F9', py: 0.5 }}>
-                      <Checkbox
-                        checked={Boolean(p[action])}
-                        onChange={() => handleToggle(resourceName, action, p[action])}
-                        size="small"
-                        disabled={updateRoleMutation.isPending}
-                        sx={{
-                          color: '#CBD5E1',
-                          '&.Mui-checked': { color: '#2262EF' },
-                          p: 0.5
-                        }}
+      {catalog.map((moduleConfig) => (
+        <Accordion key={moduleConfig.module} sx={{ mb: 1, border: '1px solid #E2E8F0', boxShadow: 'none', '&:before': { display: 'none' } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+            <Typography sx={{ fontWeight: 600, color: '#334155' }}>{moduleConfig.module}</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {moduleConfig.permissions.map((perm) => {
+                const permValue = role?.permissions?.[perm.key];
+                const isChecked = typeof permValue === 'object' && permValue !== null ? permValue?.allowed === true : permValue === true;
+                const lockDays = typeof permValue === 'object' && permValue !== null ? permValue.lockDays : '';
+
+                return (
+                  <Box key={perm.key} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={isChecked}
+                            onChange={(e) => handleToggle(perm.key, perm.lockDateAware, e.target.checked)}
+                            disabled={updateRoleMutation.isPending}
+                          />
+                        }
+                        label={perm.label}
                       />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Box>
+                      {perm.isSensitive && (
+                        <Chip label="Sensitive" size="small" color="error" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                      )}
+                    </Box>
+                    {perm.lockDateAware && isChecked && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">Lock Days:</Typography>
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={lockDays !== null && lockDays !== undefined ? lockDays : ''}
+                          onChange={(e) => handleLockDaysChange(perm.key, e.target.value)}
+                          disabled={updateRoleMutation.isPending}
+                          sx={{ width: 80 }}
+                          placeholder="Global"
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      ))}
     </Box>
   );
 };

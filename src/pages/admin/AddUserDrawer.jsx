@@ -43,6 +43,10 @@ import { useSnackbar }        from '../../contexts/SnackbarContext';
 import { useDispatch } from 'react-redux';
 import { createUser } from '../../store/slices/userSlice';
 import { COLORS } from '../../constants/colors';
+import { useBranch } from '../../hooks/redux';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRequiredPermission } from '../../config/navMenuItems';
+import { userService } from '../../services/user.service';
 
 import adduserIcon from '../../assets/usermanagement icons/adduser1.svg';
 import personalInfoIcon from '../../assets/usermanagement icons/personalinformation.svg';
@@ -51,6 +55,7 @@ import assignRolesIcon from '../../assets/usermanagement icons/assignroles.svg';
 import CardWrapper from '../../components/admin/AddUserDrawer/CardWrapper';
 import PersonalInformationForm from '../../components/admin/AddUserDrawer/PersonalInformationForm';
 import AssignRoles from '../../components/admin/AddUserDrawer/AssignRoles';
+import AssignClinics from '../../components/admin/AssignClinics';
 import ProviderProfileForm from '../../components/admin/AddUserDrawer/ProviderProfileForm';
 import PatientProfileForm from '../../components/admin/AddUserDrawer/PatientProfileForm';
 
@@ -157,6 +162,16 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
   const [showConfirm,     setShowConfirm]     = useState(false);
   const [workingHours,    setWorkingHours]    = useState(makeDefaultWorkingHours);
 
+  const { branches } = useBranch();
+  const { user: currentUser } = useAuth();
+  
+  const isPlatformAdmin = hasRequiredPermission(currentUser, ['security.admin']) || 
+    (currentUser?.roles || []).some(r => r === 'Super Admin' || r?.name === 'Super Admin');
+
+  const [defaultClinicId, setDefaultClinicId] = useState('');
+  const [restrictedClinicIds, setRestrictedClinicIds] = useState([]);
+  const [accessAll, setAccessAll] = useState(false);
+
   const scrollBodyRef      = useRef(null);
   const providerSectionRef = useRef(null);
   const patientSectionRef  = useRef(null);
@@ -229,6 +244,9 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
     setShowPassword(false);
     setShowConfirm(false);
     setWorkingHours(makeDefaultWorkingHours());
+    setDefaultClinicId('');
+    setRestrictedClinicIds([]);
+    setAccessAll(false);
     onClose();
   };
 
@@ -324,7 +342,17 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
         };
       }
 
-      await dispatch(createUser(payload)).unwrap();
+      const createdUser = await dispatch(createUser(payload)).unwrap();
+      const userId = createdUser?.user?._id || createdUser?.user?.id || createdUser?._id || createdUser?.id;
+      
+      if (userId) {
+        await userService.updateUserClinics(userId, {
+          defaultId: defaultClinicId,
+          restrictedIds: restrictedClinicIds,
+          accessAll
+        });
+      }
+
       showSnackbar('User created successfully', 'success');
       handleClose();
       onCreated();
@@ -426,6 +454,20 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
                 selectedRoleIds={selectedRoleIds} 
                 toggleRole={toggleRole} 
                 saving={saving} 
+              />
+            </CardWrapper>
+
+            {/* ══ SECTION 2.5 — Clinics Assignment ══ */}
+            <CardWrapper title="Assign Clinics">
+              <AssignClinics
+                branches={branches}
+                defaultClinicId={defaultClinicId}
+                setDefaultClinicId={setDefaultClinicId}
+                restrictedClinicIds={restrictedClinicIds}
+                setRestrictedClinicIds={setRestrictedClinicIds}
+                accessAll={accessAll}
+                setAccessAll={setAccessAll}
+                isPlatformAdmin={isPlatformAdmin}
               />
             </CardWrapper>
 
