@@ -186,6 +186,8 @@ const ReportsDashboard = () => {
               <PatientTrackersReport />
             ) : location.pathname === '/admin/reports/patient/referral-by-patient' ? (
               <ReferralByPatientReport />
+            ) : location.pathname === '/admin/reports/patient/referral' ? (
+              <PatientsReferralReport />
             ) : location.pathname === '/admin/reports/clinical/recare' ? (
               <RecareReport />
             ) : location.pathname === '/admin/reports/clinical/unsigned-progress-notes' ? (

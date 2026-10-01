@@ -2,6 +2,7 @@ import { Route } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import PatientManagementPage from '../pages/patients/PatientManagementPage';
+import LabPatientsBasicPage from '../pages/patients/LabPatientsBasicPage';
 import AddPatientPage from '../pages/patients/AddPatientPage';
 import EditPatientPage from '../pages/patients/EditPatientPage';
 import ViewPatientPage from '../pages/patients/ViewPatientPage';
@@ -25,47 +26,83 @@ import HomeCarePage from '../pages/patient-reports/HomeCarePage';
 import ConcernsPage from '../pages/patient-reports/ConcernsPage';
 import ShowcasePage from '../pages/patient-reports/ShowcasePage';
 
-const ALL_STAFF_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
+// Full operational admin roles plus clinical/operations roles that can access
+// patient workflows. Backend permissions and branch/group scope remain the
+// source of truth for data access.
+const ALL_STAFF_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
 
-const staffPatientRoute = (children, hideSidebar = false) => (
-  <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
+// Narrower than ALL_STAFF_GROUPS: `patients.create` is only granted to
+// OPERATIONS_GROUP roles (Front Desk, Receptionist, Biller...) and the full
+// admin roles — CLINICAL_GROUP (Provider, Hygienist, etc.) can read patients
+// but was never granted permission to create one.
+const PATIENT_CREATE_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
+
+const staffPatientRoute = (children, hideSidebar = false, allowedGroups = ALL_STAFF_GROUPS) => (
+  <ProtectedRoute allowedGroups={allowedGroups}>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
+const patientReadRoute = (children, hideSidebar = false) => (
+  <ProtectedRoute
+    allowedGroups={ALL_STAFF_GROUPS}
+    requiredPermissions={['patients.read']}
+  >
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
+const basicPatientRoute = (children) => (
+  <ProtectedRoute
+    allowedGroups={ALL_STAFF_GROUPS}
+    requiredPermissions={['patients.read', 'patients.read_basic']}
+  >
+    <Layout>{children}</Layout>
+  </ProtectedRoute>
+);
+
+const patientCreateRoute = (children, hideSidebar = false) => (
+  <ProtectedRoute
+    allowedGroups={PATIENT_CREATE_GROUPS}
+    requiredPermissions={['patients.create']}
+  >
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const patientRoutes = [
-  <Route key="/patients" path="/patients" element={staffPatientRoute(<PatientManagementPage />)} />,
-  <Route key="/patients/new" path="/patients/new" element={staffPatientRoute(<AddPatientPage />, true)} />,
-  <Route key="/patients/import" path="/patients/import" element={staffPatientRoute(<ImportPatientsPage />)} />,
-  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={staffPatientRoute(<PatientDetailPage />)} />,
-  <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={staffPatientRoute(<EditPatientPage />)} />,
-  <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={staffPatientRoute(<ViewPatientPage />)} />,
-  <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={staffPatientRoute(<MembershipPlanPage />)} />,
-  <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={staffPatientRoute(<AddCoveragePage />, true)} />,
-  <Route key="/patients/:patientId/insurance/:insuranceId/edit" path="/patients/:patientId/insurance/:insuranceId/edit" element={staffPatientRoute(<AddCoveragePage />, true)} />,
-  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={staffPatientRoute(<InsurancePage />, true)} />,
-  <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={staffPatientRoute(<ViewPatientInsurancePage />)} />,
-  <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={staffPatientRoute(<PatientSignedDocumentsPage />)} />,
+  <Route key="/patients" path="/patients" element={basicPatientRoute(<PatientManagementPage labBasicComponent={<LabPatientsBasicPage />} />)} />,
+  <Route key="/patients/new" path="/patients/new" element={patientCreateRoute(<AddPatientPage />, true)} />,
+  <Route key="/patients/import" path="/patients/import" element={patientReadRoute(<ImportPatientsPage />)} />,
+  <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={patientReadRoute(<PatientDetailPage />)} />,
+  <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={patientReadRoute(<EditPatientPage />)} />,
+  <Route key="/patients/:patientId/view" path="/patients/:patientId/view" element={patientReadRoute(<ViewPatientPage />)} />,
+  <Route key="/patients/member/:patientId" path="/patients/member/:patientId" element={patientReadRoute(<MembershipPlanPage />)} />,
+  <Route key="/patients/:patientId/insurance/new" path="/patients/:patientId/insurance/new" element={patientReadRoute(<AddCoveragePage />, true)} />,
+  <Route key="/patients/:patientId/insurance/:insuranceId/edit" path="/patients/:patientId/insurance/:insuranceId/edit" element={patientReadRoute(<AddCoveragePage />, true)} />,
+  <Route key="/patients/:patientId/insurance" path="/patients/:patientId/insurance" element={patientReadRoute(<InsurancePage />, true)} />,
+  <Route key="/patients/:patientId/insurance/:insuranceId" path="/patients/:patientId/insurance/:insuranceId" element={patientReadRoute(<ViewPatientInsurancePage />)} />,
+  <Route key="/patients/:patientId/signed-documents" path="/patients/:patientId/signed-documents" element={patientReadRoute(<PatientSignedDocumentsPage />)} />,
   <Route
     key="/patients/:patientId/allergies/:allergyId"
     path="/patients/:patientId/allergies/:allergyId"
     element={
-      <ProtectedRoute allowedGroups={['ADMIN_GROUP', 'CLINICAL_GROUP']}>
+      <ProtectedRoute allowedGroups={['FULL_ADMIN_GROUP', 'CLINICAL_GROUP']}>
         <Layout><ViewPatientAllergyPage /></Layout>
       </ProtectedRoute>
     }
   />,
-  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={staffPatientRoute(<PatientMedicalHistoryPage />)} />,
-  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={staffPatientRoute(<PatientDentalHistoryPage />)} />,
-  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={staffPatientRoute(<PatientAdditionalDocumentsPage />)} />,
-  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={staffPatientRoute(<ViewDocumentPage />)} />,
-  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={staffPatientRoute(<PatientReportPage />)} />,
-  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={staffPatientRoute(<RiskAssessmentPage />)} />,
-  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={staffPatientRoute(<HomeCarePage />)} />,
-  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={staffPatientRoute(<ConcernsPage />)} />,
-  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={staffPatientRoute(<ShowcasePage />)} />,
-  <Route key="/patient-reports" path="/patient-reports" element={staffPatientRoute(<PatientReportsPage />)} />,
-  <Route key="/patients/:patientId" path="/patients/:patientId" element={staffPatientRoute(<RedirectToPatientDetails />)} />,
+  <Route key="/patients/:patientId/medical-history" path="/patients/:patientId/medical-history" element={patientReadRoute(<PatientMedicalHistoryPage />)} />,
+  <Route key="/patients/:patientId/dental-history" path="/patients/:patientId/dental-history" element={patientReadRoute(<PatientDentalHistoryPage />)} />,
+  <Route key="/patients/:patientId/additional-documents" path="/patients/:patientId/additional-documents" element={patientReadRoute(<PatientAdditionalDocumentsPage />)} />,
+  <Route key="/patients/:patientId/signed-documents/:documentId" path="/patients/:patientId/signed-documents/:documentId" element={patientReadRoute(<ViewDocumentPage />)} />,
+  <Route key="/patients/:patientId/report" path="/patients/:patientId/report" element={patientReadRoute(<PatientReportPage />)} />,
+  <Route key="/patients/:patientId/report/risk" path="/patients/:patientId/report/risk" element={patientReadRoute(<RiskAssessmentPage />)} />,
+  <Route key="/patients/:patientId/report/homecare" path="/patients/:patientId/report/homecare" element={patientReadRoute(<HomeCarePage />)} />,
+  <Route key="/patients/:patientId/report/concerns" path="/patients/:patientId/report/concerns" element={patientReadRoute(<ConcernsPage />)} />,
+  <Route key="/patients/:patientId/report/showcase" path="/patients/:patientId/report/showcase" element={patientReadRoute(<ShowcasePage />)} />,
+  <Route key="/patient-reports" path="/patient-reports" element={patientReadRoute(<PatientReportsPage />)} />,
+  <Route key="/patients/:patientId" path="/patients/:patientId" element={patientReadRoute(<RedirectToPatientDetails />)} />,
 ];
 
 export default patientRoutes;

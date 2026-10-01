@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Drawer, Box, Typography, IconButton, Divider, Chip, Button, Paper, CircularProgress, Menu, MenuItem, Checkbox, Popover, FormControl, Select } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -19,8 +20,10 @@ import { MOCK_NOTES, MOCK_NOTE_HISTORY, MOCK_FILTER_TAGS } from './notes.constan
 import dayjs from 'dayjs';
 import EditNoteForm from '../edit-note/EditNoteForm';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
+import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
 
 const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, currentPatient, selectedProcedures }) => {
+  const providersList = useSelector(selectProviderDropdownList) || [];
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilters, setActiveFilters] = useState(['Clinical']);

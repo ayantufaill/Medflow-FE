@@ -35,10 +35,19 @@ import CreateVitalSignPage from '../pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
 
-const CLINICAL_ALLOWED_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP'];
+const CLINICAL_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP'];
 
 const clinicalRoute = (children, hideSidebar = true) => (
   <ProtectedRoute allowedGroups={CLINICAL_ALLOWED_GROUPS}>
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
+const labCaseRoute = (children, hideSidebar = true) => (
+  <ProtectedRoute
+    allowedGroups={['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP']}
+    requiredPermissions={['lab-orders.read']}
+  >
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
@@ -74,7 +83,7 @@ const clinicalRoutes = [
   <Route key="/clinical/rx" path="/clinical/rx" element={clinicalRoute(<RXPage />)} />,
   <Route key="/clinical/referral" path="/clinical/referral" element={clinicalRoute(<ReferralPage />)} />,
   <Route key="/clinical/progress-notes" path="/clinical/progress-notes" element={clinicalRoute(<ProgressNotesPage />)} />,
-  <Route key="/clinical/lab-case" path="/clinical/lab-case" element={clinicalRoute(<LabCasePage />)} />,
+  <Route key="/clinical/lab-case" path="/clinical/lab-case" element={labCaseRoute(<LabCasePage />)} />,
   <Route key="/clinical/ai-conversation" path="/clinical/ai-conversation" element={clinicalRoute(<AIConversationPage />)} />,
   <Route key="/clinical-notes" path="/clinical-notes" element={clinicalRoute(<ClinicalNotesListPage />)} />,
   <Route key="/clinical-notes/create" path="/clinical-notes/create" element={clinicalRoute(<CreateClinicalNotePage />)} />,

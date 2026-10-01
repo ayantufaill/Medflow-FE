@@ -13,6 +13,7 @@ import CreateTemplateDialog from '../../../../components/admin/reports/CreateTem
 import { ReportLayout, ReportFilterBar, ReportSelect, ReportSearchInput, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { exportToCSV } from '../../../../utils/exportUtils';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 
@@ -92,6 +93,65 @@ const ProceduresReport = () => {
       { header: 'Created Date', key: 'created' },
       { header: 'Scheduled Date', key: 'scheduled' },
     ], 'Procedures_Report');
+  };
+
+  const handlePrint = () => {
+    const printArea = document.getElementById('procedures-print-area');
+    if (!printArea) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Procedures Report</title>
+          <style>
+            body { 
+              font-family: sans-serif; 
+              font-size: 12px; 
+              background-color: #fff; 
+              color: #000; 
+              padding: 20px; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa !important; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+            .MuiTablePagination-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Procedures Report</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${printArea.innerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    };
   };
 
   const topFilters = (
@@ -301,7 +361,7 @@ const ProceduresReport = () => {
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCsv}
-                onPrint={() => window.print()}
+                onPrint={handlePrint}
                 hasData={reportData.length > 0}
               />
             </Box>
@@ -312,11 +372,13 @@ const ProceduresReport = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <ReportDataTable
-              columns={columns}
-              data={reportData}
-              renderRow={renderRow}
-            />
+            <div id="procedures-print-area">
+              <ReportDataTable
+                columns={columns}
+                data={reportData}
+                renderRow={renderRow}
+              />
+            </div>
           )}
         </ReportLayout>
 

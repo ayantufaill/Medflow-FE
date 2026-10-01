@@ -43,6 +43,8 @@ const RolesManagement = () => {
 
 
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   const toggleRow = (roleId) => {
     setExpandedRows(prev => ({
       ...prev,
@@ -62,6 +64,12 @@ const RolesManagement = () => {
     }
   };
 
+  // Filter roles based on search
+  const filteredRoles = roles.filter(role => 
+    role.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+    (showInactive || !role.isInactive)
+  );
+
   return (
     <Paper sx={{ p: 3, borderRadius: 2, border: '1px solid #e0e0e0', boxShadow: 'none' }}>
       {/* Header and Controls */}
@@ -71,7 +79,16 @@ const RolesManagement = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-
+          {/* Search Box */}
+          <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '6px', px: 1.5, height: '36px' }}>
+            <input 
+              type="text" 
+              placeholder="Search roles..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ border: 'none', outline: 'none', fontFamily: 'Inter', fontSize: '13px', width: '200px' }}
+            />
+          </Box>
 
           <FormControlLabel
             control={
@@ -151,14 +168,14 @@ const RolesManagement = () => {
                     <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', color: '#64748B' }}>Loading roles...</Typography>
                   </TableCell>
                 </TableRow>
-              ) : roles.length === 0 ? (
+              ) : filteredRoles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
                     <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', color: '#64748B' }}>No roles found.</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                roles.map((role) => (
+                filteredRoles.map((role) => (
                   <React.Fragment key={role.id || role._id}>
                     <TableRow sx={{ '& > *': { borderBottom: '1px solid #E2E8F0' }, '&:hover': { backgroundColor: '#F8FAFC' } }}>
                       <TableCell sx={{ py: 1 }}>
@@ -171,7 +188,7 @@ const RolesManagement = () => {
                             {expandedRows[role.id || role._id] ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowRightIcon fontSize="small" />}
                           </IconButton>
                           <Typography sx={{ fontFamily: 'Inter', fontSize: '13px', fontWeight: 500, color: '#334155' }}>
-                            {role.name}
+                            {role.name} {role.isSystem && '(System)'}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -196,16 +213,18 @@ const RolesManagement = () => {
                           <IconButton
                             size="small"
                             onClick={() => setSelectedEditRole(role)}
-                            sx={{ color: '#3CA2E0', '&:hover': { backgroundColor: '#F0F9FF' } }}
+                            disabled={role.isSystem}
+                            sx={{ color: role.isSystem ? '#cbd5e1' : '#3CA2E0', '&:hover': { backgroundColor: role.isSystem ? 'transparent' : '#F0F9FF' } }}
                           >
-                            <img src={editIcon} alt="Edit" style={{ width: 16, height: 16 }} />
+                            <img src={editIcon} alt="Edit" style={{ width: 16, height: 16, opacity: role.isSystem ? 0.5 : 1 }} />
                           </IconButton>
                           <IconButton
                             size="small"
                             onClick={() => handleDelete(role.id || role._id)}
-                            sx={{ color: '#EF4444', '&:hover': { backgroundColor: '#FEF2F2' } }}
+                            disabled={role.isSystem}
+                            sx={{ color: role.isSystem ? '#cbd5e1' : '#EF4444', '&:hover': { backgroundColor: role.isSystem ? 'transparent' : '#FEF2F2' } }}
                           >
-                            <img src={deleteIcon} alt="Delete" style={{ width: 16, height: 16 }} />
+                            <img src={deleteIcon} alt="Delete" style={{ width: 16, height: 16, opacity: role.isSystem ? 0.5 : 1 }} />
                           </IconButton>
                         </Box>
                       </TableCell>
@@ -215,7 +234,7 @@ const RolesManagement = () => {
                     <TableRow>
                       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={2}>
                         <Collapse in={expandedRows[role.id || role._id]} timeout="auto" unmountOnExit>
-                          <RolePermissionsGrid role={role} />
+                          <RolePermissionsGrid role={role} isReadOnly={role.isSystem} />
                         </Collapse>
                       </TableCell>
                     </TableRow>

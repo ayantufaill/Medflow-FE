@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Box, Typography } from '@mui/material';
 import PatientsListPage from './PatientsListPage';
 import PatientSectionTabs from '../../components/patients/PatientSectionTabs';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRequiredPermission } from '../../config/navMenuItems';
 
 const defaultTab = 'view_all';
 
@@ -10,8 +12,9 @@ const defaultTab = 'view_all';
  * List-only page at /patients. Tabs navigate to dedicated routes (details, signed-documents, etc.).
  * Keeps this page light so the app stays fast.
  */
-const PatientManagementPage = () => {
+const PatientManagementPage = ({ labBasicComponent = null }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const urlPatientId = searchParams.get('patientId') ?? '';
   const urlTab = searchParams.get('tab') ?? defaultTab;
@@ -35,6 +38,11 @@ const PatientManagementPage = () => {
 
   const renderTabContent = () => {
     if (activeTab === 'view_all') {
+      const canReadFullPatients = hasRequiredPermission(user, ['patients.read']);
+      const canReadBasicPatients = hasRequiredPermission(user, ['patients.read_basic']);
+      if (!canReadFullPatients && canReadBasicPatients && labBasicComponent) {
+        return labBasicComponent;
+      }
       return <PatientsListPage embedded onPatientSelect={handlePatientSelect} />;
     }
     const messages = {

@@ -102,6 +102,17 @@ export const userService = {
   },
 
   /**
+   * Update clinics assigned to a user
+   * @param {string} userId - User ID
+   * @param {Object} data - Clinic assignment data { defaultId, restrictedIds, accessAll }
+   * @returns {Promise<Object>}
+   */
+  async updateUserClinics(userId, data) {
+    const response = await apiClient.put(`/users/${userId}/clinics`, data);
+    return response.data.data;
+  },
+
+  /**
    * Assign role to user (Admin only)
    * @param {string} userId - User ID
    * @param {string} roleId - Role ID
@@ -120,6 +131,24 @@ export const userService = {
    */
   async removeRole(userId, roleId) {
     const response = await apiClient.delete(`/users/${userId}/roles/${roleId}`);
+    return response.data.data;
+  },
+
+  /**
+   * New 8-role-model elevation (group_admin/branch_admin only). Separate
+   * from assignRole/removeRole above, which manage the legacy multi-role
+   * system — this sets/replaces the user's single new-model role without
+   * touching any legacy role they hold.
+   * @param {string} userId
+   * @param {string} roleSlug - e.g. 'dentist', 'front_desk'
+   * @param {string|number} [branchId] - required when the caller is a branch_admin
+   * @returns {Promise<{message: string, oldRole: string|null, newRole: string}>}
+   */
+  async elevateRole(userId, roleSlug, branchId) {
+    const response = await apiClient.patch(`/users/${userId}/role`, {
+      roleSlug,
+      ...(branchId !== undefined && branchId !== null ? { branchId } : {}),
+    });
     return response.data.data;
   },
 

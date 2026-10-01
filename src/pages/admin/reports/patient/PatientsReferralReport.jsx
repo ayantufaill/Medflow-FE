@@ -1,193 +1,405 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Button, Paper, CircularProgress } from '@mui/material';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import ReferralPatientDialog from '../../../../components/admin/reports/ReferralPatientDialog';
-import { fetchPatientsReferralReport, selectPatientsReferralData, selectPatientReportLoading } from '../../../../store/slices/patientReportSlice';
+import React, { useState, useCallback } from 'react';
+import {
+  Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
+} from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EmailIcon from '@mui/icons-material/Email';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import CloseIcon from '@mui/icons-material/Close';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import PrintIcon from '@mui/icons-material/Print';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Sector, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 
-const REFERRAL_DATA = [
-  { name: 'Review websites', value: 13, fill: '#D1A3D1' },
-  { name: 'Magazine/Newspaper', value: 12, fill: '#5C74D9' },
-  { name: 'Friend or family', value: 26, fill: '#00A8C6' },
-  { name: 'Google', value: 16, fill: '#55548C' },
-  { name: 'Other', value: 5, fill: '#F2D06B' },
-  { name: 'DR GIRBELT TARIMO', value: 3, fill: '#8CBE91' },
-  { name: 'Dr. Phoebe Test', value: 3, fill: '#D96C7C' },
+import { ReportLayout } from '../../../../components/reports/ui';
+import medflowLogo from '../../../../assets/medflow-logo.png';
+import PatientsReferralFilters from '../../../../components/reports/patient/PatientsReferralFilters';
+import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
+import { usePatientsReferral } from '../../../../hooks/reports/patient/usePatientsReferral';
+
+const PIE_COLORS = [
+  '#d8b4fe', '#7c3aed', '#3b82f6', '#1e3a5f', '#f59e0b',
+  '#22c55e', '#ef4444', '#4c1d95', '#fbbf24', '#a3a33a',
+  '#065f46', '#dc2626', '#06b6d4', '#f97316', '#8b5cf6', '#ec4899',
 ];
 
+const renderActiveShape = (props) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 10}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        stroke="#fff"
+        strokeWidth={2}
+        style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' }}
+      />
+    </g>
+  );
+};
+
 const PatientsReferralReport = () => {
-  const dispatch = useDispatch();
-  const apiData = useSelector(selectPatientsReferralData);
-  const loading = useSelector(selectPatientReportLoading);
+  const {
+    summaryData,
+    detailData,
+    trendData,
+    loading,
+    appliedFilters,
+    handleApply,
+    handleClear,
+    handleExportCSV,
+    handlePrint
+  } = usePatientsReferral();
 
-  const [activeFilter, setActiveFilter] = useState('This Year');
-  const [hoveredSlice, setHoveredSlice] = useState(null);
-  const [selectedReferral, setSelectedReferral] = useState(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogSource, setDialogSource] = useState('');
+  const [dialogPatients, setDialogPatients] = useState([]);
 
-  // Fetch from API when filter changes
-  useEffect(() => {
-    dispatch(fetchPatientsReferralReport({ filter: activeFilter, startDate, endDate }));
-  }, [dispatch, activeFilter, startDate, endDate]);
+  const pieData = summaryData.map((d, i) => ({
+    name: d.source,
+    value: d.count, // we use count for pie value
+    count: d.count,
+    color: PIE_COLORS[i % PIE_COLORS.length],
+  }));
 
-  const handleSliceClick = (entry) => {
-    setSelectedReferral(entry);
+  const onPieEnter = useCallback((_, index) => {
+    setActiveIndex(index);
+  }, []);
+
+  const onPieLeave = useCallback(() => {
+    setActiveIndex(-1);
+  }, []);
+
+  const handleSliceClick = (sourceName) => {
+    setDialogSource(sourceName);
+    const patients = detailData[sourceName] || [];
+    setDialogPatients(patients);
+    setDialogOpen(true);
   };
 
-  const currentData = useMemo(() => {
-    // If backend provided actual pie chart data, format it and use it
-    if (apiData && apiData.length > 0 && apiData[0].value !== undefined) {
-      return apiData.map(item => ({
-        name: item.name,
-        value: Number(item.value) || 0,
-        fill: item.fill || '#ccc' // fallback color if backend doesn't provide one
-      }));
-    }
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setDialogSource('');
+    setDialogPatients([]);
+  };
 
-    // Fallback logic for mock data scaling
-    let scale = 1;
-    if (activeFilter === 'Today') scale = 0.05;
-    else if (activeFilter === 'This Week') scale = 0.2;
-    else if (activeFilter === 'This Month') scale = 0.5;
-    else if (activeFilter === 'Range') scale = 0.3; 
-    
-    return REFERRAL_DATA.map(item => ({
-      ...item,
-      value: Math.max(1, Math.round(item.value * scale))
-    }));
-  }, [apiData, activeFilter]);
+  const handleDialogExportCSV = () => {
+    const headers = ['Patient Name', 'Phone', 'Email', 'Date'];
+    const rows = dialogPatients.map(p => [
+      p.name,
+      p.phone,
+      p.email,
+      p.date,
+    ]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${dialogSource.replace(/[^a-zA-Z0-9]/g, '_')}_Patients.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDialogPrint = () => {
+    const tableEl = document.getElementById('referral-dialog-table');
+    if (!tableEl) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>${dialogSource}</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Referrals from: ${dialogSource}</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${tableEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    iframe.onload = () => {
+      iframe.contentWindow.onafterprint = () => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 15000);
+    };
+
+    document.body.appendChild(iframe);
+  };
 
   return (
-    <Box sx={{ p: 2, bgcolor: '#fff', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      
-      {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        {['Today', 'This Week', 'This Month', 'This Year', 'Range'].map(filter => (
-          <Button
-            key={filter}
-            variant="contained"
-            onClick={() => setActiveFilter(filter)}
-            sx={{
-              textTransform: 'none',
-              bgcolor: activeFilter === filter ? '#d4af37' : '#e6c875',
-              color: '#fff',
-              boxShadow: 'none',
-              '&:hover': { bgcolor: '#c59d24' }
-            }}
-          >
-            {filter}
-          </Button>
-        ))}
-        {activeFilter === 'Range' && (
-          <Box sx={{ display: 'flex', gap: 1, ml: 2, alignItems: 'center' }}>
-            <input 
-              type="date" 
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '4px 8px' }}
-            />
-            <Typography variant="caption" sx={{ color: '#555' }}>to</Typography>
-            <input 
-              type="date" 
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '4px 8px' }}
-            />
+    <ReportLayout title="Patients Referral Report">
+      <PatientsReferralFilters
+        onApplyFilters={handleApply}
+        onClearAll={handleClear}
+      />
+
+      <ProductionReportActions
+        onExportCsv={handleExportCSV}
+        onPrint={handlePrint}
+        hasData={summaryData.length > 0}
+      />
+
+      {/* Chart container styling matching the new UI */}
+      <Box id="referral-production-print-area" sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', mt: 2, backgroundColor: '#fff' }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+            <Typography sx={{ color: 'text.secondary' }}>Loading...</Typography>
+          </Box>
+        ) : pieData.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+            <Typography sx={{ color: 'text.secondary' }}>No referral data found for the selected period.</Typography>
+          </Box>
+        ) : appliedFilters.showTrend ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', height: 450, width: '100%', p: 2 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis 
+                  allowDecimals={false}
+                  tick={{ fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <RechartsTooltip 
+                  formatter={(value, name) => [value, name]}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: '0.8rem' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '0.8rem', paddingTop: '10px' }} />
+                {summaryData.map((item, index) => (
+                  <Line
+                    key={item.source}
+                    type="monotone"
+                    dataKey={item.source}
+                    stroke={PIE_COLORS[index % PIE_COLORS.length]}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', height: 450, width: '100%', p: 2 }}>
+            <Box sx={{ flex: '0 0 55%', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="55%"
+                    cy="50%"
+                    innerRadius={0}
+                    outerRadius={180}
+                    paddingAngle={0}
+                    dataKey="value"
+                    stroke="#fff"
+                    strokeWidth={1}
+                    activeIndex={activeIndex >= 0 ? activeIndex : undefined}
+                    activeShape={renderActiveShape}
+                    onMouseEnter={onPieEnter}
+                    onMouseLeave={onPieLeave}
+                    onClick={(_, index) => handleSliceClick(pieData[index]?.name)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        opacity={activeIndex === -1 || activeIndex === index ? 1 : 0.4}
+                        style={{ transition: 'opacity 0.3s ease', cursor: 'pointer' }}
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    formatter={(value, name) => {
+                      const item = pieData.find(d => d.name === name);
+                      return [`${item?.count || 0} referrals`, name];
+                    }}
+                    contentStyle={{
+                      borderRadius: 8, border: 'none',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: '0.8rem',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+
+            <Box sx={{ flex: '0 0 45%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: '6px', pl: 2, overflowY: 'auto', overflowX: 'hidden', maxHeight: '100%', py: 1 }}>
+              {pieData.map((item, index) => {
+                const isHovered = activeIndex === index;
+                return (
+                  <div
+                    key={`legend-${index}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '4px 8px', borderRadius: 4, cursor: 'pointer',
+                      backgroundColor: isHovered ? 'rgba(0,0,0,0.06)' : 'transparent',
+                      transform: isHovered ? 'scale(1.03)' : 'scale(1)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onMouseLeave={() => setActiveIndex(-1)}
+                    onClick={() => handleSliceClick(item.name)}
+                  >
+                    <div style={{
+                      width: 14, height: 14, backgroundColor: item.color,
+                      borderRadius: 2, flexShrink: 0,
+                      boxShadow: isHovered ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none',
+                    }} />
+                    <span style={{
+                      fontSize: isHovered ? '0.8rem' : '0.75rem',
+                      color: item.color,
+                      fontWeight: isHovered ? 700 : 500,
+                      transition: 'all 0.2s ease',
+                    }}>
+                      {item.name} ({item.count})
+                    </span>
+                  </div>
+                );
+              })}
+            </Box>
           </Box>
         )}
       </Box>
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 4 }}>
-        <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#4a73b1', '&:hover': { bgcolor: '#385a8f' }, boxShadow: 'none' }}>
-          Download as CSV
-        </Button>
-        <Button variant="contained" sx={{ textTransform: 'none', bgcolor: '#e6c875', '&:hover': { bgcolor: '#c59d24' }, boxShadow: 'none' }}>
-          Create Template
-        </Button>
-      </Box>
-
-      {/* Chart Box */}
-      <Paper elevation={0} sx={{ border: '2px solid #4a73b1', p: 4, width: '100%', maxWidth: 900, display: 'flex', flexDirection: 'row', alignItems: 'flex-start', minHeight: 450 }}>
-        
-        {/* Title & Pie Chart side */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-          <Typography variant="h5" sx={{ color: '#4a73b1', fontWeight: 600, mb: 2 }}>
-            Patients Referral
-          </Typography>
-          
-          {loading && (
-            <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10 }}>
-              <CircularProgress />
-            </Box>
-          )}
-
-          <Box sx={{ width: '100%', height: 350, opacity: loading ? 0.5 : 1 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={currentData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={150}
-                  dataKey="value"
-                  isAnimationActive={true}
-                  onClick={(e) => handleSliceClick(e.payload.payload)}
-                  onMouseEnter={(e, index) => setHoveredSlice(index)}
-                  onMouseLeave={() => setHoveredSlice(null)}
-                >
-                  {currentData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.fill} 
-                      stroke="#fff" 
-                      strokeWidth={hoveredSlice === index ? 4 : 1}
-                      style={{ cursor: 'pointer', outline: 'none' }}
-                    />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+      <Dialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        maxWidth="md"
+        fullWidth
+        sx={{ zIndex: 9999 }}
+        PaperProps={{ sx: { borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' } }}
+      >
+        <Box sx={{ bgcolor: '#f3f8fd', py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e0e5eb' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ReceiptIcon sx={{ color: '#2563eb', fontSize: '20px' }} />
+            <Typography sx={{ color: '#09121f', fontWeight: 600, fontSize: '15px' }}>
+              Referrals from: {dialogSource}
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={handleDialogClose}
+            size="small"
+            sx={{ color: '#64748b', '&:hover': { bgcolor: '#f1f5f9' } }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        <DialogContent sx={{ px: 3, pb: 2, pt: 2, bgcolor: 'white' }}>
+          <TableContainer id="referral-dialog-table" sx={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ '& th': { fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#f8f9fa', py: 1.5, borderBottom: '1px solid #e2e8f0', color: '#4a5568', textTransform: 'uppercase' } }}>
+                  <TableCell className="no-print" sx={{ width: 100 }}></TableCell>
+                  <TableCell>Patient Name</TableCell>
+                  <TableCell>Phone</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dialogPatients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                      No patient records found for this referral source.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  dialogPatients.map((patient, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{ '& td': { fontSize: '0.8rem', py: 1.5, borderBottom: '1px solid #e2e8f0', color: '#1e293b' }, '&:last-child td': { borderBottom: 0 } }}
+                    >
+                      <TableCell className="no-print">
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#3b82f6' }}><PersonIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#10b981' }}><PhoneIcon sx={{ fontSize: 16 }} /></IconButton>
+                          <IconButton size="small" sx={{ p: 0.2, color: '#f59e0b' }}><EmailIcon sx={{ fontSize: 16 }} /></IconButton>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{patient.name}</TableCell>
+                      <TableCell>{patient.phone || 'N/A'}</TableCell>
+                      <TableCell>{patient.email || 'N/A'}</TableCell>
+                      <TableCell>{patient.date}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 3, py: 1.5, bgcolor: 'white', borderTop: '1px solid #e0e5eb' }}>
+          <Button
+            variant="contained" size="small" onClick={handleDialogExportCSV}
+            startIcon={<FileDownloadIcon />}
+            sx={{ textTransform: 'none', bgcolor: '#3CA2E0', borderRadius: '8px', px: 2, py: 0.8, boxShadow: 'none', fontWeight: 600, '&:hover': { bgcolor: '#2b8ac3', boxShadow: 'none' } }}
+          >
+            Export As CSV
+          </Button>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button
+              variant="outlined" size="small" onClick={handleDialogClose}
+              sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.8rem', px: 3, py: 0.8, borderColor: '#e0e5eb', color: '#5c646f', '&:hover': { bgcolor: '#fafbfc', borderColor: '#e0e5eb' }, borderRadius: 2 }}
+            >
+              Close
+            </Button>
+            <Button
+              variant="outlined" size="small" onClick={handleDialogPrint}
+              startIcon={<PrintIcon />}
+              sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, py: 0.8, fontWeight: 600 }}
+            >
+              Print
+            </Button>
           </Box>
         </Box>
-
-        {/* Legend Side */}
-        <Box sx={{ width: 250, display: 'flex', flexDirection: 'column', gap: 1.5, mt: 7 }}>
-          {currentData.map((entry, index) => (
-            <Box
-              key={index}
-              onClick={() => handleSliceClick(entry)}
-              onMouseEnter={() => setHoveredSlice(index)}
-              onMouseLeave={() => setHoveredSlice(null)}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                cursor: 'pointer',
-                p: 0.5,
-                borderRadius: 1,
-                bgcolor: hoveredSlice === index ? 'rgba(0,0,0,0.04)' : 'transparent',
-                transition: 'background-color 0.2s',
-              }}
-            >
-              <Box sx={{ width: 16, height: 16, borderRadius: 1, bgcolor: entry.fill }} />
-              <Typography sx={{ fontSize: '0.85rem', color: entry.fill, fontWeight: hoveredSlice === index ? 600 : 400 }}>
-                {entry.name} ({entry.value})
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-
-      </Paper>
-
-      {/* Detail Dialog */}
-      <ReferralPatientDialog 
-        open={Boolean(selectedReferral)} 
-        onClose={() => setSelectedReferral(null)}
-        referral={selectedReferral}
-      />
-    </Box>
+      </Dialog>
+    </ReportLayout>
   );
 };
 

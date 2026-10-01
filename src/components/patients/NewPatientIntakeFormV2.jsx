@@ -10,6 +10,8 @@ import {
   Stack,
   Typography,
   FormHelperText,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -91,6 +93,7 @@ const DEFAULT_VALUES = {
   preferredDentistId: "",
   preferredHygienistId: "",
   branchId: "",
+  restrictToHomeBranch: false,
   mobileNumber: "",
   homePhoneNumber: "",
   patientCountry: "United States",
@@ -599,6 +602,7 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
           ? ""
           : values.preferredHygienistId,
       branchId: values.branchId || undefined,
+      restrictToHomeBranch: values.restrictToHomeBranch || false,
       maritalStatus: values.maritalStatus,
       occupation: trimValue(values.occupation),
       employer: trimValue(values.employer) || trimValue(values.spouseEmployer),
@@ -679,8 +683,9 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
 
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               {branches.length > 0 && (
-                <Controller
-                  name="branchId"
+                <>
+                  <Controller
+                    name="branchId"
                   control={control}
                   render={({ field }) => (
                     <OutlinedSelect
@@ -704,7 +709,24 @@ const NewPatientIntakeFormV2 = ({ onSubmit, loading = false, onCancel }) => {
                     </OutlinedSelect>
                   )}
                 />
-              )}
+                <Box sx={{ mt: 1 }}>
+                  <Controller
+                    name="restrictToHomeBranch"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControlLabel
+                        control={<Switch {...field} checked={field.value} />}
+                        label={
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            Restrict access to home branch
+                          </Typography>
+                        }
+                      />
+                    )}
+                  />
+                </Box>
+              </>
+            )}
               <Box
                 sx={{
                   display: "flex",

@@ -12,6 +12,8 @@ import { ReportLayout, ReportFilterBar, ReportSelect, ReportDataTable } from '..
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchPatientDiscountEditedFeeReport, selectDiscountEditedFeeData, selectDiscountEditedFeeDataLoading } from '../../../../store/slices/patientReportSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 
@@ -22,16 +24,30 @@ const PatientDiscountEditedFeeReport = () => {
 
   const [startDate, setStartDate] = useState(dayjs('2026-05-08'));
   const [endDate, setEndDate] = useState(dayjs());
+  const [provider, setProvider] = useState('all');
+  const providerList = useSelector(selectProviderDropdownList);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const providerOptions = React.useMemo(() => [
+    { value: 'all', label: 'All' },
+    ...(providerList || []).map((p) => {
+      const first = p.userId?.firstName || p.firstName || p.FName || '';
+      const last = p.userId?.lastName || p.lastName || p.LName || '';
+      const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
+      return { value: p.ProvNum || p.id || name, label: name };
+    }),
+  ], [providerList]);
 
   const fetchReport = () => {
     dispatch(fetchPatientDiscountEditedFeeReport({
       startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
       endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
+      provider
     }));
   };
 
   useEffect(() => {
+    dispatch(fetchAllProvidersForDropdown());
     fetchReport();
   }, []);
 
@@ -74,6 +90,65 @@ const PatientDiscountEditedFeeReport = () => {
       { header: 'Discount', key: 'discount' },
       { header: 'Provider', key: 'provider' },
     ], 'Patient_Discount_Edited_Fee_Report');
+  };
+
+  const handlePrint = () => {
+    const printArea = document.getElementById('discount-edited-fee-print-area');
+    if (!printArea) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Patient By Discount Or Edited Fee Report</title>
+          <style>
+            body { 
+              font-family: sans-serif; 
+              font-size: 12px; 
+              background-color: #fff; 
+              color: #000; 
+              padding: 20px; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa !important; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+            .MuiTablePagination-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Patient By Discount Or Edited Fee Report</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${printArea.innerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    };
   };
 
   const topFilters = (
@@ -140,6 +215,12 @@ const PatientDiscountEditedFeeReport = () => {
         />
       </Box>
       </Box>
+      <ReportSelect 
+        label="Provider" 
+        value={provider} 
+        onChange={(e) => setProvider(e.target.value)} 
+        options={providerOptions}
+      />
     </>
   );
 
@@ -167,7 +248,7 @@ const PatientDiscountEditedFeeReport = () => {
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCsv}
-                onPrint={() => window.print()}
+                onPrint={handlePrint}
                 hasData={reportData.length > 0}
               />
             </Box>
@@ -178,11 +259,13 @@ const PatientDiscountEditedFeeReport = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={reportData} 
-              renderRow={renderRow} 
-            />
+            <div id="discount-edited-fee-print-area">
+              <ReportDataTable 
+                columns={columns} 
+                data={reportData} 
+                renderRow={renderRow} 
+              />
+            </div>
           )}
       </ReportLayout>
 

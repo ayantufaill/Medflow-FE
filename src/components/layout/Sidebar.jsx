@@ -25,7 +25,7 @@ import {
   Person,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { navMenuItems as menuItems, hasRequiredRole as hasRequiredRoleShared } from '../../config/navMenuItems';
+import { navMenuItems as menuItems, hasRequiredRole as hasRequiredRoleShared, hasRequiredPermission as hasRequiredPermissionShared } from '../../config/navMenuItems';
 
 // Sidebar widths for desktop expanded and collapsed states
 const DRAWER_WIDTH_EXPANDED = 280;
@@ -57,6 +57,19 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
   // Helper function to check if user has required roles (shared with UserProfile.jsx
   // via src/config/navMenuItems.js, so the two surfaces can't drift apart)
   const hasRequiredRole = (requiredRoles) => hasRequiredRoleShared(user, requiredRoles);
+  // Permission-string check, for nav items declaring `requiredPermissions` —
+  // lets a new 8-role-model user (e.g. a plain 'dentist' with no legacy role)
+  // see a nav item their permissions actually grant, without needing to be
+  // added to a hardcoded role list.
+  const hasRequiredPermission = (requiredPermissions) => hasRequiredPermissionShared(user, requiredPermissions);
+  // An item is visible if EITHER check passes — requiredRoles/requiredPermissions
+  // are alternative ways to grant access, not both required.
+  const isNavItemVisible = (item) => {
+    if (item.requiredPermissions?.length) {
+      return hasRequiredRole(item.requiredRoles) || hasRequiredPermission(item.requiredPermissions);
+    }
+    return hasRequiredRole(item.requiredRoles);
+  };
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -187,8 +200,9 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             if (item.adminOnly) {
               return hasRequiredRole(['Admin']);
             }
-            // Check if item has role restrictions
-            return hasRequiredRole(item.requiredRoles);
+            // Check if item has role restrictions (or permission strings, for
+            // new 8-role-model users — see isNavItemVisible above)
+            return isNavItemVisible(item);
           })
           .map((item) => {
             // Special handling for paths that could conflict
@@ -278,7 +292,7 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
             // All authenticated users can change their password
           },
         ]
-          .filter((item) => hasRequiredRole(item.requiredRoles))
+          .filter((item) => isNavItemVisible(item))
           .map((item) => (
             <WithTooltip key={item.text} title={item.text}>
               <ListItem disablePadding>

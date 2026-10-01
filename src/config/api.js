@@ -20,6 +20,12 @@ console.log('Mode:', import.meta.env.MODE);
 console.log('Production:', import.meta.env.PROD);
 
 
+// Store reference for interceptors
+let store;
+export const injectStore = (_store) => {
+  store = _store;
+};
+
 /**
  * Decode JWT token to get expiration time
  * @param {string} token - JWT token
@@ -63,6 +69,19 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Try to attach X-Branch-Id if store is loaded
+    try {
+      if (store) {
+        const state = store.getState();
+        const currentBranchId = state?.branch?.currentBranchId || state?.branch?.currentBranch?.id;
+        if (currentBranchId) {
+          config.headers['X-Branch-Id'] = currentBranchId;
+        }
+      }
+    } catch (err) {
+      // Ignore if store is not yet initialized
     }
 
     // Add timestamp to GET requests to prevent browser caching
@@ -212,6 +231,17 @@ apiClient.interceptors.response.use(
         }
         
         return Promise.reject(refreshError);
+      }
+    }
+
+    // Handle 403 Forbidden specifically for scope/PHI errors
+    if (error.response?.status === 403) {
+      const code = error.response?.data?.error?.code;
+      if (code === 'NO_BRANCH_ASSIGNED') {
+        if (window.location.pathname !== '/no-branch-assigned') {
+          window.location.href = '/no-branch-assigned';
+        }
+        return Promise.reject(error);
       }
     }
 

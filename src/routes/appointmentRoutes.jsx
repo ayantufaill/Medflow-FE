@@ -18,7 +18,7 @@ import CreateRecurringAppointmentPage from '../pages/recurring-appointments/Crea
 import EditRecurringAppointmentPage from '../pages/recurring-appointments/EditRecurringAppointmentPage';
 import ViewRecurringAppointmentPage from '../pages/recurring-appointments/ViewRecurringAppointmentPage';
 
-const ALL_STAFF_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
+const ALL_STAFF_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
 
 const staffScheduleRoute = (children) => (
   <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>

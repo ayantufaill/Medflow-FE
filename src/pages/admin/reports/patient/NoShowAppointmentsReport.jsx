@@ -1,47 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box, Typography, Checkbox, Button, TableCell, TableRow, CircularProgress
-} from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react';
+import { Box, Typography, TableCell, TableRow, CircularProgress } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
-
-dayjs.extend(customParseFormat);
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
-import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import { ReportLayout, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
-import { fetchNoShowAppointmentsReport, selectNoShowAppointmentsData, selectNoShowAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
-
-
+import NoShowAppointmentsFilters from '../../../../components/reports/patient/NoShowAppointmentsFilters';
+import { useNoShowAppointmentsReport } from '../../../../hooks/reports/patient/useNoShowAppointmentsReport';
 
 const NoShowAppointmentsReport = () => {
-  const dispatch = useDispatch();
-  const data = useSelector(selectNoShowAppointmentsData) || [];
-  const loading = useSelector(selectNoShowAppointmentsDataLoading);
+  const {
+    reportData,
+    loading,
+    handleApply,
+    handleExportCSV,
+    handlePrint
+  } = useNoShowAppointmentsReport();
 
-  const [startDate, setStartDate] = useState(dayjs('2026-04-08'));
-  const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
-  const [showInactive, setShowInactive] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const fetchReport = () => {
-    dispatch(fetchNoShowAppointmentsReport({
-      startDate: startDate.format('YYYY-MM-DD'),
-      endDate: endDate.format('YYYY-MM-DD'),
-      showInactive
-    }));
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, []);
-
-  const handleApply = () => {
-    fetchReport();
-  };
 
   const columns = [
     { label: 'Patient' },
@@ -71,85 +47,12 @@ const NoShowAppointmentsReport = () => {
     </TableRow>
   );
 
-  const topFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          start date
-        </Typography>
-        <DatePicker
-          value={startDate}
-          onChange={(newValue) => setStartDate(newValue)}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          end date
-        </Typography>
-        <DatePicker
-          value={endDate}
-          onChange={(newValue) => setEndDate(newValue)}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-      </Box>
-      <ReportCheckbox 
-        label="Show Inactive Patients" 
-        checked={showInactive}
-        onChange={(e) => setShowInactive(e.target.checked)}
-      />
-    </>
-  );
-
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="NoShow Appointments Report:">
           <Box className="hide-on-print" sx={{ mb: 2 }}>
-            <ReportFilterBar 
-              topRowFilters={topFilters}
+            <NoShowAppointmentsFilters 
               onApplyFilters={handleApply}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
@@ -158,28 +61,30 @@ const NoShowAppointmentsReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of appointments = {data.length})
+              (number of appointments = {reportData ? reportData.length : 0})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
-                onExportCsv={() => alert('Exporting...')}
-                onPrint={() => window.print()}
-                hasData={data.length > 0}
+                onExportCsv={handleExportCSV}
+                onPrint={handlePrint}
+                hasData={reportData && reportData.length > 0}
               />
             </Box>
           </Box>
 
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={data} 
-              renderRow={renderRow} 
-            />
-          )}
+          <Box id="noshow-appointments-print-area">
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <ReportDataTable 
+                columns={columns} 
+                data={reportData || []} 
+                renderRow={renderRow} 
+              />
+            )}
+          </Box>
         </ReportLayout>
 
         <CreateTemplateDialog 
@@ -191,4 +96,5 @@ const NoShowAppointmentsReport = () => {
     </LocalizationProvider>
   );
 };
+
 export default NoShowAppointmentsReport;

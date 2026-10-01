@@ -24,6 +24,8 @@ import AdvancedReporting from '../pages/admin/AdvancedReporting';
 import ClinicAnalyticsPage from '../pages/admin/ClinicAnalyticsPage';
 import PracticeGroupsPage from '../pages/admin/PracticeGroupsPage';
 import MyGroupPage from '../pages/admin/MyGroupPage';
+import AuditTrailPage from '../pages/admin/AuditTrailPage';
+import DataSharingSettings from '../pages/admin/DataSharingSettings';
 
 const adminOnly = (children, hideSidebar = true) => (
   <ProtectedRoute allowedGroups={['ADMIN_GROUP']}>
@@ -113,6 +115,8 @@ const adminRoutes = [
   <Route key="/admin/advanced-reporting" path="/admin/advanced-reporting" element={adminOrReports(<AdvancedReporting />)} />,
   <Route key="/admin/analytics" path="/admin/analytics" element={adminOrPermission(<ClinicAnalyticsPage />, 'group:view_analytics')} />,
   <Route key="/admin/practice-groups" path="/admin/practice-groups" element={adminOrPermission(<PracticeGroupsPage />, 'platform:manage_practice_groups')} />,
+  <Route key="/admin/audit-trail" path="/admin/audit-trail" element={adminOrPermission(<AuditTrailPage />, 'security.audit.view')} />,
+  <Route key="/admin/data-sharing" path="/admin/data-sharing" element={adminOrPermission(<DataSharingSettings />, 'sharing.manage')} />,
   <Route key="/admin/my-group" path="/admin/my-group" element={groupOrBranchAdminOnly(<MyGroupPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];

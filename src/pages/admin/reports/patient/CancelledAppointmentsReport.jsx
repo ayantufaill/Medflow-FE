@@ -1,59 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import dayjs from 'dayjs';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  Box,
-  Typography,
-  Button,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
-  CircularProgress,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import React, { useState } from 'react';
+import { Box, Typography, TableCell, TableRow, CircularProgress } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import CreateTemplateDialog from '../../../../components/admin/reports/CreateTemplateDialog';
-import { ReportLayout, ReportFilterBar, ReportCheckbox, ReportDataTable } from '../../../../components/reports/ui';
+import { ReportLayout, ReportDataTable } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
-import { fetchCancelledAppointmentsReport, selectCancelledAppointmentsData, selectCancelledAppointmentsDataLoading } from '../../../../store/slices/patientReportSlice';
-
-
+import CancelledAppointmentsFilters from '../../../../components/reports/patient/CancelledAppointmentsFilters';
+import { useCancelledAppointmentsReport } from '../../../../hooks/reports/patient/useCancelledAppointmentsReport';
 
 const CancelledAppointmentsReport = () => {
-  const dispatch = useDispatch();
-  const reportData = useSelector(selectCancelledAppointmentsData) || [];
-  const loading = useSelector(selectCancelledAppointmentsDataLoading);
+  const {
+    reportData,
+    loading,
+    handleApply,
+    handleExportCSV,
+    handlePrint
+  } = useCancelledAppointmentsReport();
 
-  const [startDate, setStartDate] = useState(dayjs());
-  const [endDate, setEndDate] = useState(dayjs());
-  const [showInactive, setShowInactive] = useState(false);
-  
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const fetchReport = () => {
-    dispatch(fetchCancelledAppointmentsReport({
-      startDate: startDate ? startDate.format('YYYY-MM-DD') : undefined,
-      endDate: endDate ? endDate.format('YYYY-MM-DD') : undefined,
-      showInactive,
-    }));
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, []);
-
-  const handleApply = () => {
-    fetchReport();
-  };
-
-  const handleExportCSV = () => alert("Exporting...");
 
   const columns = [
     { label: 'Patient' },
@@ -83,85 +47,12 @@ const CancelledAppointmentsReport = () => {
     </TableRow>
   );
 
-  const topFilters = (
-    <>
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          start date
-        </Typography>
-        <DatePicker
-          value={startDate}
-          onChange={(newValue) => setStartDate(newValue)}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: '#4a5568', mb: 0.5, display: 'block', textTransform: 'capitalize' }}>
-          end date
-        </Typography>
-        <DatePicker
-          value={endDate}
-          onChange={(newValue) => setEndDate(newValue)}
-          format="MM/DD/YYYY"
-          slotProps={{ 
-            popper: { sx: { zIndex: 1400 } },
-            textField: { 
-              size: 'small', 
-              sx: { 
-                width: '180px',
-                '& .MuiInputBase-root': { 
-                  fontFamily: 'Inter', 
-                  fontSize: '13px', 
-                  borderRadius: '4px', 
-                  height: '32px', 
-                  backgroundColor: '#fafbfe',
-                  color: '#09121f'
-                }, 
-                '& .MuiInputBase-input': { padding: '4px 10px' },
-                '& fieldset': { borderColor: '#e2e8f0' } 
-              } 
-            }
-          }}
-        />
-      </Box>
-      </Box>
-      <ReportCheckbox 
-        label="Show Inactive Patients" 
-        checked={showInactive} 
-        onChange={(e) => setShowInactive(e.target.checked)} 
-      />
-    </>
-  );
-
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <React.Fragment>
         <ReportLayout title="Cancelled Appointments Report:">
           <Box className="hide-on-print" sx={{ mb: 2 }}>
-            <ReportFilterBar 
-              topRowFilters={topFilters}
+            <CancelledAppointmentsFilters 
               onApplyFilters={handleApply}
               onCreateTemplate={() => setTemplateDialogOpen(true)}
             />
@@ -170,28 +61,30 @@ const CancelledAppointmentsReport = () => {
           {/* Summary Text and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }} className="hide-on-print">
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#333' }}>
-              (number of appointments = {reportData.length})
+              (number of appointments = {reportData ? reportData.length : 0})
             </Typography>
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCSV}
-                onPrint={() => window.print()}
-                hasData={reportData.length > 0}
+                onPrint={handlePrint}
+                hasData={reportData && reportData.length > 0}
               />
             </Box>
           </Box>
 
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={reportData} 
-              renderRow={renderRow} 
-            />
-          )}
+          <Box id="cancelled-appointments-print-area">
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <ReportDataTable 
+                columns={columns} 
+                data={reportData || []} 
+                renderRow={renderRow} 
+              />
+            )}
+          </Box>
         </ReportLayout>
 
         <CreateTemplateDialog 
@@ -203,4 +96,5 @@ const CancelledAppointmentsReport = () => {
     </LocalizationProvider>
   );
 };
+
 export default CancelledAppointmentsReport;

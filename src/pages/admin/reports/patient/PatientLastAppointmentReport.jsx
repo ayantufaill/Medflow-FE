@@ -13,6 +13,7 @@ import ProductionReportActions from '../../../../components/reports/financial/Pr
 import { exportToCSV } from '../../../../utils/exportUtils';
 import { fetchPatientLastAppointmentReport, selectLastAppointmentData, selectLastAppointmentDataLoading } from '../../../../store/slices/patientReportSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../../store/slices/providerSlice';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 
@@ -23,7 +24,7 @@ const PatientLastAppointmentReport = () => {
   const providerList = useSelector(selectProviderDropdownList);
 
   const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(dayjs('2026-05-08'));
+  const [endDate, setEndDate] = useState(dayjs());
   
   const [patientStatus, setPatientStatus] = useState('active');
   const [provider, setProvider] = useState('all');
@@ -39,7 +40,7 @@ const PatientLastAppointmentReport = () => {
       const first = p.userId?.firstName || p.firstName || p.FName || '';
       const last = p.userId?.lastName || p.lastName || p.LName || '';
       const name = `${first} ${last}`.trim() || p.providerCode || p._id || 'Unknown';
-      return { value: p.id || p.ProvNum || name, label: name };
+      return { value: p.ProvNum || p.id || name, label: name };
     }),
   ], [providerList]);
 
@@ -81,7 +82,7 @@ const PatientLastAppointmentReport = () => {
     exportToCSV(reportData, [
       { header: 'ID', key: 'id' },
       { header: 'Patient', key: 'patient' },
-      { header: 'Flags', key: (row) => row.flags?.join(', ') || '' },
+      { header: 'Flags', key: (row) => Array.isArray(row.flags) ? row.flags.map(f => typeof f === 'object' ? (f.name || f.label) : String(f)).join(', ') : '' },
       { header: 'Patient Status', key: 'status' },
       { header: 'Appt Date', key: 'apptDate' },
       { header: 'Appt Type', key: 'type' },
@@ -95,6 +96,65 @@ const PatientLastAppointmentReport = () => {
       { header: 'Permission to Email', key: 'emailPerm' },
       { header: 'Request Review', key: 'review' },
     ], 'Patient_Last_Appointment_Report');
+  };
+
+  const handlePrint = () => {
+    const printArea = document.getElementById('last-appointment-print-area');
+    if (!printArea) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Patient By Last Appointment Report</title>
+          <style>
+            body { 
+              font-family: sans-serif; 
+              font-size: 12px; 
+              background-color: #fff; 
+              color: #000; 
+              padding: 20px; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f8f9fa !important; font-weight: bold; }
+            .no-print, button, svg.MuiSvgIcon-root { display: none !important; }
+            .MuiTablePagination-root { display: none !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Patient By Last Appointment Report</h2>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 30px;">
+            ${printArea.innerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    };
   };
 
   const columns = [
@@ -119,7 +179,30 @@ const PatientLastAppointmentReport = () => {
     <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.id}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
-      {showFlags && <TableCell sx={{ fontSize: '0.7rem' }}>{row.flags?.join(', ') || ''}</TableCell>}
+      {showFlags && (
+        <TableCell>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {Array.isArray(row.flags) && row.flags.map((flag, idx) => {
+              const flagObj = typeof flag === 'object' ? flag : { name: String(flag), color: '#3b82f6' };
+              return (
+                <div 
+                  key={idx}
+                  title={flagObj.name || flagObj.label || 'Flag'}
+                  style={{ 
+                    width: '14px', 
+                    height: '14px', 
+                    backgroundColor: flagObj.color || '#cccccc', 
+                    borderRadius: '2px',
+                    border: '1px solid #d1d5db',
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact'
+                  }} 
+                />
+              );
+            })}
+          </div>
+        </TableCell>
+      )}
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.status}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.apptDate}</TableCell>
       <TableCell sx={{ fontSize: '0.7rem' }}>{row.type}</TableCell>
@@ -249,7 +332,7 @@ const PatientLastAppointmentReport = () => {
             <Box sx={{ transform: 'translateY(-4px)' }}>
               <ProductionReportActions
                 onExportCsv={handleExportCsv}
-                onPrint={() => window.print()}
+                onPrint={handlePrint}
                 hasData={reportData.length > 0}
               />
             </Box>
@@ -260,11 +343,13 @@ const PatientLastAppointmentReport = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <ReportDataTable 
-              columns={columns} 
-              data={reportData} 
-              renderRow={renderRow} 
-            />
+            <div id="last-appointment-print-area">
+              <ReportDataTable 
+                columns={columns} 
+                data={reportData} 
+                renderRow={renderRow} 
+              />
+            </div>
           )}
         </ReportLayout>
 

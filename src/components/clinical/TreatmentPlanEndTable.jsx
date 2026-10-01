@@ -24,6 +24,7 @@ const STATUS_OPTIONS = [
   { key: 'D', label: 'Diagnosed', color: '#94a3b8', bgColor: '#f1f5f9', textColor: '#475569' },
   { key: 'P', label: 'Presented', color: '#3b82f6', bgColor: '#eff6ff', textColor: '#1d4ed8' },
   { key: 'A', label: 'Accepted', color: '#0f766e', bgColor: '#ccfbf1', textColor: '#115e59' },
+  { key: 'C', label: 'Completed', color: '#22c55e', bgColor: '#f0fdf4', textColor: '#15803d' },
   { key: 'X', label: 'Rejected', color: '#ef4444', bgColor: '#fef2f2', textColor: '#991b1b' },
   { key: 'F', label: 'Future', color: '#f59e0b', bgColor: '#fef3c7', textColor: '#92400e' },
   { key: '!', label: 'Follow-up', color: '#eab308', bgColor: '#fef9c3', textColor: '#854d0e' },

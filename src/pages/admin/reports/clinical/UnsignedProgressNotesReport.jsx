@@ -14,6 +14,7 @@ import { ReportLayout, ReportDataTable } from '../../../../components/reports/ui
 import UnsignedProgressNotesFilters from '../../../../components/reports/clinical/UnsignedProgressNotesFilters';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import dayjs from 'dayjs';
+import medflowLogo from '../../../../assets/medflow-logo.png';
 
 
 // ─── Row renderers ───────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ const columns = [
   { label: 'Created Date' },
   { label: 'Kind' },
   { label: 'Provider' },
-  { label: '' },
+  { label: '', className: 'no-print' },
 ];
 
 const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
@@ -37,14 +38,14 @@ const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-        <TableCell align="right">
+        <TableCell align="right" className="no-print">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
             {isExpanded ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
             <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
           </Box>
         </TableCell>
       </TableRow>
-      <TableRow>
+      <TableRow className="no-print">
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #3CA2E0' }}>
@@ -57,6 +58,11 @@ const UnsignedRow = ({ row, index, expandedRow, setExpandedRow }) => {
                 mb: 2,
                 minHeight: 60,
               }}>
+                {row.code && row.code !== '-' && (!row.note || !row.note.startsWith('Missing note')) && (
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: '#64748b' }}>
+                    Procedure Code: {row.code}
+                  </Typography>
+                )}
                 <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.7, whiteSpace: 'pre-line', color: row.note ? '#1e293b' : '#94a3b8', fontStyle: row.note ? 'normal' : 'italic' }}>
                   {row.note || 'No note content available.'}
                 </Typography>
@@ -137,14 +143,14 @@ const SignedRow = ({ row, index, signedExpandedRow, setSignedExpandedRow }) => {
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.date}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.kind}</TableCell>
         <TableCell sx={{ fontSize: '0.75rem' }}>{row.provider}</TableCell>
-        <TableCell align="right">
+        <TableCell align="right" className="no-print">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: 'text.secondary' }}>
             {isExpanded ? <KeyboardArrowUp sx={{ fontSize: 18 }} /> : <KeyboardArrowDown sx={{ fontSize: 18 }} />}
             <Typography variant="caption" sx={{ ml: 0.5 }}>View Note</Typography>
           </Box>
         </TableCell>
       </TableRow>
-      <TableRow>
+      <TableRow className="no-print">
         <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExpanded ? '1px solid rgba(224,224,224,1)' : 'none' }}>
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box sx={{ p: 2.5, backgroundColor: '#f8fafc', borderLeft: '4px solid #22c55e' }}>
@@ -157,6 +163,11 @@ const SignedRow = ({ row, index, signedExpandedRow, setSignedExpandedRow }) => {
                 mb: 2,
                 minHeight: 60,
               }}>
+                {row.code && row.code !== '-' && (!row.note || !row.note.startsWith('Missing note')) && (
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 700, color: '#64748b' }}>
+                    Procedure Code: {row.code}
+                  </Typography>
+                )}
                 <Typography variant="body2" sx={{ fontSize: '0.8rem', lineHeight: 1.7, whiteSpace: 'pre-line', color: row.note ? '#1e293b' : '#94a3b8', fontStyle: row.note ? 'normal' : 'italic' }}>
                   {row.note || 'This is a signed progress note. Content is locked for editing.'}
                 </Typography>
@@ -219,12 +230,24 @@ const UnsignedProgressNotesReport = () => {
   const [codeText, setCodeText] = useState('');
 
   useEffect(() => {
-    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+    dispatch(fetchUnsignedProgressNotesReport({ 
+      startDate, endDate,
+      provider: providerFilter !== 'All' ? providerFilter : undefined,
+      kind: kindFilter !== 'All' ? kindFilter : undefined,
+      code: codeText || undefined,
+      codeFilterType: codeText ? codeFilter : undefined
+    }));
     dispatch(fetchAllProvidersForDropdown());
-  }, [dispatch]);
+  }, [dispatch]); // Initial load only
 
   const handleApply = () => {
-    dispatch(fetchUnsignedProgressNotesReport({ startDate, endDate }));
+    dispatch(fetchUnsignedProgressNotesReport({ 
+      startDate, endDate,
+      provider: providerFilter !== 'All' ? providerFilter : undefined,
+      kind: kindFilter !== 'All' ? kindFilter : undefined,
+      code: codeText || undefined,
+      codeFilterType: codeText ? codeFilter : undefined
+    }));
   };
 
   const handleClear = () => {
@@ -256,40 +279,81 @@ const UnsignedProgressNotesReport = () => {
   }, [providerList]);
 
   const processedData = useMemo(() => {
-    const source = (apiData || []).map((item, i) => ({
-      id: item.id || item._id || i + 1000,
-      patient: item.patient || item.patientName || 'Unknown Patient',
-      date: item.date || (item.createdAt ? dayjs(item.createdAt).format('MM/DD/YYYY') : ''),
-      kind: item.kind || item.type || 'General',
-      provider: item.provider || item.providerName || 'Unknown Provider',
-      note: item.note || item.content || '',
-    }));
+    const defaultData = { unsigned: [], signed: [], missing: [] };
+    if (!apiData || Array.isArray(apiData)) return defaultData; // If still loading old array format
+    
+    return {
+      unsigned: apiData.unsigned || [],
+      signed: apiData.signed || [],
+      missing: apiData.missing || []
+    };
+  }, [apiData]);
 
-    let filtered = source;
-
-    // Kind filter
-    if (kindFilter !== 'All') {
-      filtered = filtered.filter((r) => r.kind === kindFilter);
+  const availableCodes = useMemo(() => {
+    // Use availableCodes from API if available (includes codes from all three tables, unfiltered)
+    if (apiData && !Array.isArray(apiData) && apiData.availableCodes) {
+      return apiData.availableCodes;
     }
+    // Fallback: extract from current data
+    const codes = new Set();
+    const extract = (arr) => arr.forEach((item) => {
+      if (item.code && item.code !== '-') codes.add(item.code);
+    });
+    extract(processedData.unsigned);
+    extract(processedData.signed);
+    extract(processedData.missing);
+    return Array.from(codes).sort();
+  }, [apiData, processedData]);
 
-    // Provider filter — compare selected provider name to row's provider string
-    if (providerFilter !== 'All') {
-      const selectedName = providerNameById[providerFilter] || providerFilter;
-      filtered = filtered.filter((r) => r.provider === selectedName);
-    }
+  const handlePrint = () => {
+    const printContent = document.getElementById('unsigned-notes-print-area');
+    if (!printContent) return;
 
-    // Code filter — exclude rows whose kind matches the entered text
-    if (codeFilter === 'exclude' && codeText.trim()) {
-      const excludeTerms = codeText.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
-      filtered = filtered.filter((r) => {
-        const kindLower = r.kind.toLowerCase();
-        return !excludeTerms.some((term) => kindLower.includes(term));
-      });
-    }
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Unsigned Progress Notes Report</title>
+          <style>
+            body { font-family: sans-serif; font-size: 12px; background-color: #fff; color: #000; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+            th { background-color: #f8f9fa; font-weight: bold; }
+            .MuiCollapse-root { display: none !important; } /* Hide expanded rows in print */
+            .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
+            h6 { font-size: 16px !important; font-weight: bold !important; color: #337ab7 !important; margin: 15px 0 10px 0 !important; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
+          </div>
+          <h2 style="text-align: center; margin-top: 0; color: #1e293b;">Unsigned Progress Notes Report</h2>
+          <p style="text-align: center; margin-bottom: 20px;">Date Range: ${startDate} to ${endDate}</p>
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
+            ${printContent.outerHTML}
+          </div>
+        </body>
+      </html>
+    `;
 
-    // Backend only returns unsigned notes (ProcStatus: 2), so all results are unsigned
-    return { unsigned: filtered, signed: [] };
-  }, [apiData, kindFilter, providerFilter, providerNameById, codeFilter, codeText]);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
+
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 500);
+    };
+  };
 
   const renderUnsignedRow = (row, index) => (
     <UnsignedRow
@@ -327,6 +391,7 @@ const UnsignedProgressNotesReport = () => {
         setCodeFilter={setCodeFilter}
         setCodeText={setCodeText}
         providers={providerList}
+        availableCodes={availableCodes}
         handleApply={handleApply}
         handleClear={handleClear}
       />
@@ -352,8 +417,10 @@ const UnsignedProgressNotesReport = () => {
           link.setAttribute('download', `unsigned_progress_notes_${new Date().toISOString().split('T')[0]}.csv`);
           link.click();
         }}
-        onPrint={() => window.print()}
+        onPrint={handlePrint}
       />
+
+      <Box id="unsigned-notes-print-area">
 
       {/* Completed Procedures with Missing Progress Notes */}
       <Box sx={{ mb: 4 }}>
@@ -362,7 +429,7 @@ const UnsignedProgressNotesReport = () => {
         </Typography>
         <ReportDataTable
           columns={columns}
-          data={[]}
+          data={processedData.missing || []}
           renderRow={renderUnsignedRow}
           emptyMessage="No Data Found"
         />
@@ -393,6 +460,7 @@ const UnsignedProgressNotesReport = () => {
           renderRow={renderSignedRow}
           emptyMessage="No signed progress notes found"
         />
+      </Box>
       </Box>
     </ReportLayout>
   );

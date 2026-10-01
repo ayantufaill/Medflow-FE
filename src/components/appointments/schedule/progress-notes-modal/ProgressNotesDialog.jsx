@@ -16,6 +16,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import dayjs from "dayjs";
 import { COLORS } from '../../../../constants/colors';
 import { exportToCSV } from "../../../../utils/exportUtils";
+import medflowLogo from '../../../../assets/medflow-logo.png';
 import { clinicalNoteService } from "../../../../services/clinical-note.service";
 
 import { useDropdownData } from '../../../../hooks/redux/useDropdownData';
@@ -26,6 +27,7 @@ import {
   selectUnsignedNotes, 
   selectClinicalListLoading 
 } from "../../../../store/slices/clinicalSlice";
+import { fetchUnsignedProgressNotesReport } from "../../../../store/slices/clinicalReportSlice";
 import { 
   fetchCheckoutAppointments, 
   selectCheckoutCompleteList, 
@@ -71,6 +73,7 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   // the FIRST of the two fetchClinicalNotes calls completes, causing a flash of
   // partial data (appointments appear then vanish when the second batch arrives).
   const [isLocalLoading, setIsLocalLoading] = useState(false);
+  const [reportMissingNotes, setReportMissingNotes] = useState([]);
   // eslint-disable-next-line no-unused-vars
   const _reduxLoading = clinicalLoading || checkoutLoading; // kept to avoid selector removal lint
 
@@ -95,18 +98,32 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   ) => {
     const filters = {
       startDate: sd.format("YYYY-MM-DD"),
-      endDate: ed.format("YYYY-MM-DD"),
+      endDate: ed.format("YYYY-MM-DD") + "T23:59:59",
       providerId: pid === "All" ? "" : pid,
       noteType: k === "All" ? "" : k,
     };
 
     setIsLocalLoading(true);
     try {
-      await Promise.all([
+      const reportFilters = {
+        startDate: sd.format("YYYY-MM-DD"),
+        endDate: ed.format("YYYY-MM-DD") + "T23:59:59",
+        provider: pid === "All" ? "All" : pid,
+        kind: k === "All" ? "All" : k,
+      };
+
+      const [reportData] = await Promise.all([
+        dispatch(fetchUnsignedProgressNotesReport(reportFilters)).unwrap().catch(() => null),
         dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: true } })),
         dispatch(fetchClinicalNotes({ page: 1, limit: 100, filters: { ...filters, isSigned: false } })),
         dispatch(fetchCheckoutAppointments({ page: 1, limit: 200, ...filters })),
       ]);
+
+      if (reportData && reportData.missing) {
+        setReportMissingNotes(reportData.missing);
+      } else {
+        setReportMissingNotes([]);
+      }
     } finally {
       setIsLocalLoading(false);
     }
@@ -177,16 +194,43 @@ const ProgressNotesDialog = ({ open, onClose }) => {
     setUnsignedNotes((unsignedData || []).map(normalizeNote).filter(hasClinicalContent));
   }, [unsignedData]);
 
+  const filterKind = kind !== 'All' ? kind.toLowerCase() : null;
+  const filterProvider = providerId !== 'All' ? String(providerId) : null;
+
+  const extractId = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') return String(val._id || val.id || '');
+    return String(val);
+  };
+
+  const filteredUnsignedNotes = useMemo(() => {
+    return unsignedNotes.filter(n => {
+      if (filterKind && (n.noteType || 'Treatment').toLowerCase() !== filterKind) return false;
+      if (filterProvider && extractId(n.providerId) !== filterProvider) return false;
+      return true;
+    });
+  }, [unsignedNotes, filterKind, filterProvider]);
+
+  const filteredSignedNotes = useMemo(() => {
+    return signedNotes.filter(n => {
+      if (filterKind && (n.noteType || 'Treatment').toLowerCase() !== filterKind) return false;
+      if (filterProvider && extractId(n.providerId) !== filterProvider) return false;
+      return true;
+    });
+  }, [signedNotes, filterKind, filterProvider]);
+
   const missingNotes = useMemo(() => {
     const allFetchedNotes = [...signedNotes, ...unsignedNotes];
     const missing = [];
     const appointments = checkoutAppointments || [];
 
-    // Extract a comparable ID string from a value that may be an object or a raw string.
-    const extractId = (val) => {
-      if (!val) return null;
-      if (typeof val === 'object') return String(val._id || val.id || '');
-      return String(val);
+    const getKindByCpt = (cpt) => {
+      if (!cpt) return 'General';
+      const code = String(cpt).toUpperCase();
+      if (code.startsWith('D01') || code.startsWith('D02') || code.startsWith('D03') || code.startsWith('D04')) return 'Exam';
+      if (code.startsWith('D1')) return 'Recare';
+      if (code.startsWith('D2') || code.startsWith('D3') || code.startsWith('D4') || code.startsWith('D5') || code.startsWith('D6') || code.startsWith('D7') || code.startsWith('D8') || code.startsWith('D9')) return 'Treatment';
+      return 'General';
     };
 
     appointments.forEach(appt => {
@@ -270,6 +314,17 @@ const ProgressNotesDialog = ({ open, onClose }) => {
             else if (surfaceOnly && surfaceVal === null) surfaceVal = surfaceOnly;
           }
 
+          const procKind = getKindByCpt(p.code);
+          
+          if (filterKind && procKind.toLowerCase() !== filterKind) {
+            return;
+          }
+
+          const procProviderIdResolved = procProviderNameResolved ? extractId(p.provider) : extractId(appt.providerId);
+          if (filterProvider && procProviderIdResolved !== filterProvider) {
+            return;
+          }
+
           missing.push({
             _id: `m-${appt._id || appt.id}-${idx}`,
             patientName: appt.patientName
@@ -282,13 +337,48 @@ const ProgressNotesDialog = ({ open, onClose }) => {
             toothNumber: toothVal,
             surface: surfaceVal,
             code: p.code || null,
+            kind: procKind,
           });
         });
       }
     });
 
+    reportMissingNotes.forEach(rm => {
+      if (filterKind && (rm.kind || 'Treatment').toLowerCase() !== filterKind) return;
+      if (filterProvider && extractId(rm.providerId) !== filterProvider) return;
+
+      const exists = missing.some(m => m.patientName === rm.patient && m.code === rm.code);
+      if (!exists) {
+        missing.push({
+          _id: rm.id,
+          patientName: rm.patient,
+          appointmentDate: rm.date,
+          providerName: rm.provider,
+          providerId: rm.providerId,
+          time: "Unknown Time",
+          toothNumber: "-",
+          surface: "-",
+          code: rm.code,
+          kind: rm.kind
+        });
+      }
+    });
+
     return missing;
-  }, [signedNotes, unsignedNotes, checkoutAppointments, providers]);
+  }, [signedNotes, unsignedNotes, checkoutAppointments, providers, filterKind, filterProvider, reportMissingNotes]);
+
+  const handleClear = () => {
+    setStartDate(dayjs());
+    setEndDate(dayjs());
+    setDateRange('Today');
+    setKind('All');
+    setProviderId('All');
+    fetchData(dayjs(), dayjs(), 'All', 'All');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const handleExport = () => {
     const data = [
@@ -450,7 +540,16 @@ const ProgressNotesDialog = ({ open, onClose }) => {
             @media print {
               body * { visibility: hidden; }
               .printable-content, .printable-content * { visibility: visible; }
-              .printable-content { position: absolute; left: 0; top: 0; width: 100%; }
+              .printable-content { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                overflow: visible !important;
+                height: auto !important;
+              }
+              .MuiCollapse-root { display: none !important; }
+              .MuiCheckbox-root, input[type="checkbox"], button, .no-print, svg { display: none !important; }
             }
           `}
         </style>
@@ -470,26 +569,39 @@ const ProgressNotesDialog = ({ open, onClose }) => {
           setProviderId={setProviderId}
           providers={providers}
           onApply={() => fetchData(startDate, endDate, providerId, kind)}
+          onClear={handleClear}
         />
 
         {/* ACTIONS */}
         <ProgressNotesActions 
-          onRefresh={fetchData}
+          onRefresh={() => fetchData()}
           onExport={handleExport}
-          onPrint={() => window.print()}
+          onPrint={handlePrint}
         />
 
         </Box>
 
         {/* TABLES */}
-        <Box className="printable-content" sx={{ flexGrow: 1, overflow: 'auto', mb: "25px" }}>
+        <Box id="progress-notes-print-area" className="printable-content" sx={{ flexGrow: 1, overflow: 'auto', mb: "25px" }}>
+          <Box sx={{ display: 'none', '@media print': { display: 'block', textAlign: 'center', mb: 2 } }}>
+            <Box sx={{ textAlign: 'center', mb: 2 }}>
+              <img src={medflowLogo} style={{ height: '45px', objectFit: 'contain' }} alt="Medflow Logo" />
+            </Box>
+            <Typography variant="h6" sx={{ textAlign: 'center', mt: 0, color: '#1e293b', fontWeight: 700 }}>
+              Progress Notes
+            </Typography>
+            <Typography sx={{ textAlign: 'center', mb: 2, fontSize: '14px' }}>
+              Date Range: {startDate.format("MM/DD/YYYY")} to {endDate.format("MM/DD/YYYY")}
+            </Typography>
+          </Box>
+
           {isLocalLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}><CircularProgress /></Box>
           ) : (
             <ProgressNotesTables 
               missingNotes={missingNotes}
-              unsignedNotes={unsignedNotes}
-              signedNotes={signedNotes}
+              unsignedNotes={filteredUnsignedNotes}
+              signedNotes={filteredSignedNotes}
               expandedNoteIds={expandedNoteIds}
               toggleNoteExpansion={toggleNoteExpansion}
               editingNoteId={editingNoteId}

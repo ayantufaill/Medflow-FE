@@ -94,7 +94,7 @@ const ProgressNotesTables = ({
                 <TableCell>Created Date</TableCell>
                 <TableCell>Kind</TableCell>
                 <TableCell>Provider</TableCell>
-                <TableCell align="right"></TableCell>
+                <TableCell align="right" className="no-print"></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -107,7 +107,7 @@ const ProgressNotesTables = ({
                       <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Treatment"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>
-                      <TableCell align="right" sx={cellSx}>
+                      <TableCell align="right" sx={cellSx} className="no-print">
                         <Box sx={{ display: "flex", alignItems: "center", color: "#64748b", cursor: "pointer", justifyContent: "flex-end" }}>
                           <Typography sx={{ fontSize: "0.75rem", mr: 0.5 }}>View Note</Typography>
                           {isExpanded ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}
@@ -178,7 +178,7 @@ const ProgressNotesTables = ({
                 <TableCell>Created Date</TableCell>
                 <TableCell>Kind</TableCell>
                 <TableCell>Provider</TableCell>
-                <TableCell align="right"></TableCell>
+                <TableCell align="right" className="no-print"></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -191,7 +191,7 @@ const ProgressNotesTables = ({
                       <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Recare"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>
-                      <TableCell align="right" sx={cellSx}>
+                      <TableCell align="right" sx={cellSx} className="no-print">
                         <Box sx={{ display: "flex", alignItems: "center", color: "#64748b", cursor: "pointer", justifyContent: "flex-end" }}>
                           <Typography sx={{ fontSize: "0.75rem", mr: 0.5 }}>View Note</Typography>
                           {isExpanded ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />}

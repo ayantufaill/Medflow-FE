@@ -73,6 +73,9 @@ const UserRow = ({ user, branches, onViewUser, onEditUser, onAssignRolesUser }) 
         {!user.isActive && (
           <Chip label="Inactive" size="small" color="default" sx={{ height: 18, fontSize: '0.7rem' }} />
         )}
+        {(!user.branchIds || user.branchIds.length === 0) && user.isActive && (
+          <Chip label="No branch, will be blocked" size="small" color="error" sx={{ height: 18, fontSize: '0.7rem', fontWeight: 600 }} />
+        )}
       </Box>
 
       <Collapse in={expanded}>

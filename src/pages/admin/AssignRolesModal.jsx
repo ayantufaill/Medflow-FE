@@ -13,6 +13,10 @@ import {
   Stack,
   Button,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -24,7 +28,24 @@ import { useDispatch } from 'react-redux';
 import { fetchUserById, assignRole, removeRole } from '../../store/slices/userSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { roleService } from '../../services/role.service';
+import { userService } from '../../services/user.service';
+import { useBranch } from '../../hooks/redux';
+import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import rolesIcon from '../../assets/usermanagement icons/roles.svg';
+
+// Display labels for the new 8-role model's machine keys — the backend
+// stores/returns the bare roleKey (e.g. 'dental_assistant'); this is purely
+// cosmetic for the dropdown.
+const ROLE_KEY_LABELS = {
+  group_admin: 'Group Admin',
+  branch_admin: 'Branch Admin',
+  dentist: 'Dentist',
+  hygienist: 'Hygienist',
+  dental_assistant: 'Dental Assistant',
+  front_desk: 'Front Desk',
+  billing: 'Billing',
+  lab: 'Lab',
+};
 
 const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const { showSnackbar } = useSnackbar();
@@ -38,10 +59,21 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const [allRoles, setAllRoles] = useState([]);
   const [userRoles, setUserRoles] = useState(propUser?.roles || []);
   const fetchInProgressRef = useRef(false);
+  const { currentBranchId } = useBranch();
+
+  // New 8-role-model elevation state — separate from the legacy chip grid
+  // above, which keeps managing legacy multi-role assignment unchanged.
+  const [assignableRoles, setAssignableRoles] = useState([]);
+  const [selectedRoleKey, setSelectedRoleKey] = useState('');
+  const [currentRoleKey, setCurrentRoleKey] = useState(null);
+  const [confirmingElevation, setConfirmingElevation] = useState(false);
+  const [elevating, setElevating] = useState(false);
 
   useEffect(() => {
     setUserDetails(propUser || null);
     setUserRoles(propUser?.roles || []);
+    setCurrentRoleKey(null);
+    setSelectedRoleKey('');
     setError('');
   }, [propUser, open]);
 
@@ -55,17 +87,23 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
         setLoading(true);
         setError('');
 
-        const [userResult, rolesData] = await Promise.all([
+        const [userResult, rolesData, assignableRolesData] = await Promise.all([
           dispatch(fetchUserById(userId)).unwrap(),
           roleService.getAllRoles(),
+          roleService.getAssignableRoles(),
         ]);
 
         const userData = userResult?.user || userResult;
         if (userData) {
           setUserDetails(userData);
           setUserRoles(userData.roles || []);
+          // Of the user's roles, at most one is a new-model role (roleKey set).
+          const newModelRole = (userData.roles || []).find((r) => r?.roleKey);
+          setCurrentRoleKey(newModelRole?.roleKey || null);
+          setSelectedRoleKey(newModelRole?.roleKey || '');
         }
         setAllRoles(rolesData || []);
+        setAssignableRoles(assignableRolesData || []);
       } catch (err) {
         if (err?.name === 'ConditionError') return;
         const errorMsg = typeof err === 'string' ? err : 
@@ -115,6 +153,30 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
       showSnackbar(errorMsg, 'error');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleElevateRole = async () => {
+    if (!selectedRoleKey || selectedRoleKey === currentRoleKey) {
+      setConfirmingElevation(false);
+      return;
+    }
+    try {
+      setElevating(true);
+      setError('');
+      const result = await userService.elevateRole(userId, selectedRoleKey, currentBranchId);
+      setCurrentRoleKey(result.newRole);
+      showSnackbar(result.message || `Role changed to "${result.newRole}".`, 'success');
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      // Restore the previous selection on failure.
+      setSelectedRoleKey(currentRoleKey || '');
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Failed to change role.';
+      setError(errorMsg);
+      showSnackbar(errorMsg, 'error');
+    } finally {
+      setElevating(false);
+      setConfirmingElevation(false);
     }
   };
 
@@ -246,7 +308,56 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
               </Grid>
             </Paper>
 
-            {/* Interactive Roles Selection Section */}
+            {/* New 8-role-model elevation — a single role, separate from the
+                legacy multi-role chip grid below. Changing it signs the user
+                out of all active sessions. */}
+            <Paper
+              elevation={0}
+              sx={{
+                p: '24px', bgcolor: '#ffffff', borderRadius: '12px',
+                border: '1px solid #e2e8f0', mb: '20px',
+              }}
+            >
+              <Box sx={{ mb: '16px' }}>
+                <Typography sx={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '16px', color: '#0f172a', mb: '4px', lineHeight: 1.2 }}>
+                  Role
+                </Typography>
+                <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748b' }}>
+                  Changing this signs the user out of all active sessions immediately.
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <FormControl size="small" sx={{ minWidth: 220 }} disabled={elevating || assignableRoles.length === 0}>
+                  <InputLabel id="new-model-role-label">Role</InputLabel>
+                  <Select
+                    labelId="new-model-role-label"
+                    label="Role"
+                    value={selectedRoleKey}
+                    onChange={(e) => setSelectedRoleKey(e.target.value)}
+                  >
+                    {assignableRoles.map((role) => (
+                      <MenuItem key={role.roleKey} value={role.roleKey}>
+                        {ROLE_KEY_LABELS[role.roleKey] || role.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  disableElevation
+                  disabled={elevating || !selectedRoleKey || selectedRoleKey === currentRoleKey}
+                  onClick={() => setConfirmingElevation(true)}
+                  sx={{ textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '13px', borderRadius: '6px', height: '40px' }}
+                >
+                  Save
+                </Button>
+                {assignableRoles.length === 0 && (
+                  <Typography sx={{ fontSize: '12px', color: '#94a3b8' }}>No assignable roles found.</Typography>
+                )}
+              </Box>
+            </Paper>
+
+            {/* Interactive Roles Selection Section (legacy multi-role system) */}
             <Paper
               elevation={0}
               sx={{
@@ -347,6 +458,18 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
           Done
         </Button>
       </Box>
+
+      <ConfirmationDialog
+        open={confirmingElevation}
+        onClose={() => setConfirmingElevation(false)}
+        onConfirm={handleElevateRole}
+        onCancel={() => setConfirmingElevation(false)}
+        title="Change role?"
+        message={`Changing ${userDetails?.firstName || userDetails?.email || 'this user'}'s role to "${ROLE_KEY_LABELS[selectedRoleKey] || selectedRoleKey}" will sign them out of all active sessions. Continue?`}
+        confirmText="Change role"
+        confirmColor="primary"
+        loading={elevating}
+      />
     </Dialog>
   );
 };

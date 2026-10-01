@@ -61,7 +61,7 @@ const mapPlanItems = (items, createdAt) => {
     return {
       id: item.id || idx + 1,
       priority: item.priority || '- -',
-      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing' : (item.status === 'R' ? 'Referred' : (item.status === 'C' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
+      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing Other' : (item.status === 'R' ? 'Referred' : (item.status === 'C' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
       scheduled: item.scheduled || '-',
       site: item.site || (item.tooth ? `#${item.tooth}` : '-'),
@@ -341,7 +341,7 @@ const NewTreatmentPlanPage = () => {
             fee: itemFee,
             charge: itemFee,
             priority: item.priority,
-            status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'D' : 'P'))),
+            status: item.status === 'Planned' ? 'P' : (item.status === 'Existing Other' || item.status === 'Existing Current' || item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
             icd: item.icd,
             provider: item.provider || null,
             preAuth: item.preAuth,
@@ -525,7 +525,50 @@ const NewTreatmentPlanPage = () => {
   };
 
   const handleUpdateItemStatus = async (itemId, newStatus) => {
-    if (!currentPatient || !activePlanId) return;
+    if (!currentPatient) return;
+
+    if (String(itemId).startsWith('appt-')) {
+      const parts = String(itemId).split('-');
+      const apptId = parts[1];
+      const procIdx = parts[2];
+
+      const newApptProcs = appointmentProcedures.map(item =>
+        item.id === itemId ? { ...item, status: newStatus } : item
+      );
+      setAppointmentProcedures(newApptProcs);
+
+      try {
+        setIsSaving(true);
+        const appt = await appointmentService.getAppointmentById(apptId);
+        if (appt) {
+          const procs = appt.customFields?.procedures || appt.procedures || [];
+          let targetIdx = -1;
+          if (procs.some(p => String(p.id) === procIdx)) {
+            targetIdx = procs.findIndex(p => String(p.id) === procIdx);
+          } else {
+            targetIdx = parseInt(procIdx, 10);
+          }
+
+          if (targetIdx >= 0 && targetIdx < procs.length) {
+            procs[targetIdx].completed = (newStatus === 'Completed');
+            await appointmentService.updateAppointment(apptId, { 
+              customFields: { ...appt.customFields, procedures: procs },
+              procedures: procs 
+            });
+            setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to update appointment procedure:', error);
+        setToast({ open: true, message: 'Failed to update status.', type: 'error' });
+        setAppointmentProcedures(appointmentProcedures);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (!activePlanId) return;
 
     const newTreatmentPlans = treatmentPlans.map(item =>
       item.id === itemId ? { ...item, status: newStatus } : item
@@ -546,7 +589,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing Other' || item.status === 'Existing Current' || item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,

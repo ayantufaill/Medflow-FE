@@ -12,6 +12,8 @@ import {
   CircularProgress,
   Button,
   Grid,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -24,6 +26,11 @@ import { useDispatch } from 'react-redux';
 import { fetchUserById, updateUser } from '../../store/slices/userSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import UserForm from '../../components/users/UserForm';
+import AssignClinics from '../../components/admin/AssignClinics';
+import { useBranch } from '../../hooks/redux';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRequiredPermission } from '../../config/navMenuItems';
+import { userService } from '../../services/user.service';
 import editIcon from '../../assets/usermanagement icons/edit.svg';
 
 const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
@@ -35,6 +42,18 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [tabValue, setTabValue] = useState(0);
+
+  const { branches } = useBranch();
+  const { user: currentUser } = useAuth();
+  
+  const isPlatformAdmin = hasRequiredPermission(currentUser, ['security.admin']) || 
+    (currentUser?.roles || []).some(r => r === 'Super Admin' || r?.name === 'Super Admin');
+
+  const [defaultClinicId, setDefaultClinicId] = useState('');
+  const [restrictedClinicIds, setRestrictedClinicIds] = useState([]);
+  const [accessAll, setAccessAll] = useState(false);
+
   const fetchInProgressRef = useRef(false);
 
   useEffect(() => {
@@ -55,6 +74,9 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
         const userData = result?.user || result;
         if (userData) {
           setUserDetails(userData);
+          setDefaultClinicId(userData.defaultClinicId || '');
+          setRestrictedClinicIds(userData.branchIds || []);
+          setAccessAll(userData.accessAllBranches || false);
         }
       } catch (err) {
         if (err?.name === 'ConditionError') return;
@@ -80,6 +102,15 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
       delete userData.confirmPassword;
 
       await dispatch(updateUser({ userId, updates: userData })).unwrap();
+      
+      if (tabValue === 1) {
+        await userService.updateUserClinics(userId, {
+          defaultId: defaultClinicId,
+          restrictedIds: restrictedClinicIds,
+          accessAll
+        });
+      }
+
       showSnackbar('User updated successfully', 'success');
       if (onSuccess) onSuccess();
       onClose();
@@ -152,6 +183,13 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
         <IconButton onClick={onClose} size="small" disabled={saving} sx={{ color: '#64748b', '&:hover': { color: '#0f172a', bgcolor: 'rgba(0,0,0,0.05)' } }}>
           <CloseIcon sx={{ fontSize: '20px' }} />
         </IconButton>
+      </Box>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, bgcolor: '#f8fafc' }}>
+        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+          <Tab label="Profile" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Clinics" sx={{ textTransform: 'none', fontWeight: 600 }} />
+        </Tabs>
       </Box>
 
       {/* Modal Body */}
@@ -254,22 +292,48 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
             </Paper>
 
             {/* User Form Paper Container */}
-            <Paper
-              elevation={0}
-              sx={{
-                p: '24px', bgcolor: '#ffffff', borderRadius: '12px',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              <UserForm
-                onSubmit={onSubmit}
-                initialData={userDetails}
-                loading={saving}
-                isEditMode={true}
-                hideButtons={true}
-                formId="edit-user-form"
-              />
-            </Paper>
+            {tabValue === 0 && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: '24px', bgcolor: '#ffffff', borderRadius: '12px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <UserForm
+                  onSubmit={onSubmit}
+                  initialData={userDetails}
+                  loading={saving}
+                  isEditMode={true}
+                  hideButtons={true}
+                  formId="edit-user-form"
+                />
+              </Paper>
+            )}
+
+            {tabValue === 1 && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: '24px', bgcolor: '#ffffff', borderRadius: '12px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2, fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '16px' }}>
+                  Assign Clinics
+                </Typography>
+                <AssignClinics
+                  branches={branches}
+                  defaultClinicId={defaultClinicId}
+                  setDefaultClinicId={setDefaultClinicId}
+                  restrictedClinicIds={restrictedClinicIds}
+                  setRestrictedClinicIds={setRestrictedClinicIds}
+                  accessAll={accessAll}
+                  setAccessAll={setAccessAll}
+                  isPlatformAdmin={isPlatformAdmin}
+                />
+              </Paper>
+            )}
           </>
         )}
       </DialogContent>
@@ -294,13 +358,14 @@ const EditUserModal = ({ open, onClose, user: propUser, onSuccess }) => {
         >
           Cancel
         </Button>
-        <Button
-          type="submit"
-          form="edit-user-form"
-          variant="contained"
-          disableElevation
-          disabled={saving || !userDetails}
-          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '17px !important' }} />}
+          <Button
+            type={tabValue === 0 ? "submit" : "button"}
+            form={tabValue === 0 ? "edit-user-form" : undefined}
+            onClick={tabValue === 1 ? onSubmit : undefined}
+            variant="contained"
+            disableElevation
+            disabled={saving || !userDetails}
+            startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '17px !important' }} />}
           sx={{
             textTransform: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '13px',
             bgcolor: '#1d4ed8', color: '#ffffff', borderRadius: '6px',
