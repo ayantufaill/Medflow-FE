@@ -219,7 +219,7 @@ const ViewClinicalNotePage = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           {!clinicalNote.isSigned && (
             <>
-              {(hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+              {(hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Branch Admin'])) && (
                 <Button
                   variant="outlined"
                   startIcon={<EditIcon />}
@@ -228,7 +228,7 @@ const ViewClinicalNotePage = () => {
                   Edit
                 </Button>
               )}
-              {(hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+              {(hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Branch Admin'])) && (
                 <Button
                   variant="contained"
                   color="success"

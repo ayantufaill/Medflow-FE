@@ -35,7 +35,10 @@ import CreateVitalSignPage from '../pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
 
-const CLINICAL_ALLOWED_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP'];
+// FULL_ADMIN_GROUP, not ADMIN_GROUP: Group Admin has no clinical-data
+// permissions on the backend (clinical-notes.*, treatment-plans.*, etc.), so
+// it would see these pages only to 403.
+const CLINICAL_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP'];
 
 const clinicalRoute = (children, hideSidebar = true) => (
   <ProtectedRoute allowedGroups={CLINICAL_ALLOWED_GROUPS}>

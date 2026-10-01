@@ -21,6 +21,22 @@ export const roleService = {
   },
 
   /**
+   * New 8-role-model roles only (group_admin, branch_admin, dentist,
+   * hygienist, dental_assistant, front_desk, billing, lab) — excludes every
+   * legacy role and platform roles. Used by the role-elevation dropdown.
+   * @returns {Promise<Array>} Array of role objects, each with a `roleKey`
+   */
+  async getAssignableRoles() {
+    try {
+      const response = await apiClient.get('/roles', { params: { scope: 'assignable', limit: 100 } });
+      return response.data.data.roles || [];
+    } catch (error) {
+      console.error("Assignable roles fetch error:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Get role by ID
    * @param {string} roleId - Role ID
    * @returns {Promise<Object>} Role object

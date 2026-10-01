@@ -135,6 +135,24 @@ export const userService = {
   },
 
   /**
+   * New 8-role-model elevation (group_admin/branch_admin only). Separate
+   * from assignRole/removeRole above, which manage the legacy multi-role
+   * system — this sets/replaces the user's single new-model role without
+   * touching any legacy role they hold.
+   * @param {string} userId
+   * @param {string} roleSlug - e.g. 'dentist', 'front_desk'
+   * @param {string|number} [branchId] - required when the caller is a branch_admin
+   * @returns {Promise<{message: string, oldRole: string|null, newRole: string}>}
+   */
+  async elevateRole(userId, roleSlug, branchId) {
+    const response = await apiClient.patch(`/users/${userId}/role`, {
+      roleSlug,
+      ...(branchId !== undefined && branchId !== null ? { branchId } : {}),
+    });
+    return response.data.data;
+  },
+
+  /**
    * Delete user (Admin only)
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Success message

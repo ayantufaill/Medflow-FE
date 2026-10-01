@@ -22,6 +22,7 @@ import { SyncAlt } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranch } from '../../hooks/redux';
 import { hasRequiredRole } from '../../config/navMenuItems';
+import BranchFeatureFlags from './BranchFeatureFlags';
 import {
   fetchGroupUsers,
   fetchGroupById,
@@ -182,6 +183,9 @@ const MyGroupPage = () => {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: '1px solid #E2E8F0' }}>
         <Tab value="users" label="Users" />
         <Tab value="providers" label="Providers" />
+        {/* group_admin-only — branch_admin-only viewers manage one branch's
+            roster here, not cross-branch feature flags. */}
+        {!isBranchAdminOnly && <Tab value="featureFlags" label="Feature Flags" />}
       </Tabs>
 
       {tab === 'users' && (
@@ -238,6 +242,10 @@ const MyGroupPage = () => {
             })
           )}
         </Box>
+      )}
+
+      {tab === 'featureFlags' && !isBranchAdminOnly && (
+        <BranchFeatureFlags branches={branches} />
       )}
 
       {/* Reassign branches dialog — shared by both tabs */}

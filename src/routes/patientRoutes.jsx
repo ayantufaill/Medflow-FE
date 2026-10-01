@@ -25,17 +25,27 @@ import HomeCarePage from '../pages/patient-reports/HomeCarePage';
 import ConcernsPage from '../pages/patient-reports/ConcernsPage';
 import ShowcasePage from '../pages/patient-reports/ShowcasePage';
 
-const ALL_STAFF_GROUPS = ['ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
+// FULL_ADMIN_GROUP, not ADMIN_GROUP: Group Admin has no `patients.*`
+// permission on the backend (it's a group/branch management role, not a
+// clinical/front-desk one), so it would be shown these pages only to 403 on
+// every request. See navMenuItems.jsx's FULL_ADMIN_GROUP comment for why.
+const ALL_STAFF_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
 
-const staffPatientRoute = (children, hideSidebar = false) => (
-  <ProtectedRoute allowedGroups={ALL_STAFF_GROUPS}>
+// Narrower than ALL_STAFF_GROUPS: `patients.create` is only granted to
+// OPERATIONS_GROUP roles (Front Desk, Receptionist, Biller...) and the full
+// admin roles — CLINICAL_GROUP (Provider, Hygienist, etc.) can read patients
+// but was never granted permission to create one.
+const PATIENT_CREATE_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
+
+const staffPatientRoute = (children, hideSidebar = false, allowedGroups = ALL_STAFF_GROUPS) => (
+  <ProtectedRoute allowedGroups={allowedGroups}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const patientRoutes = [
   <Route key="/patients" path="/patients" element={staffPatientRoute(<PatientManagementPage />)} />,
-  <Route key="/patients/new" path="/patients/new" element={staffPatientRoute(<AddPatientPage />, true)} />,
+  <Route key="/patients/new" path="/patients/new" element={staffPatientRoute(<AddPatientPage />, true, PATIENT_CREATE_GROUPS)} />,
   <Route key="/patients/import" path="/patients/import" element={staffPatientRoute(<ImportPatientsPage />)} />,
   <Route key="/patients/details/:patientId" path="/patients/details/:patientId" element={staffPatientRoute(<PatientDetailPage />)} />,
   <Route key="/patients/:patientId/edit" path="/patients/:patientId/edit" element={staffPatientRoute(<EditPatientPage />)} />,
@@ -50,7 +60,7 @@ const patientRoutes = [
     key="/patients/:patientId/allergies/:allergyId"
     path="/patients/:patientId/allergies/:allergyId"
     element={
-      <ProtectedRoute allowedGroups={['ADMIN_GROUP', 'CLINICAL_GROUP']}>
+      <ProtectedRoute allowedGroups={['FULL_ADMIN_GROUP', 'CLINICAL_GROUP']}>
         <Layout><ViewPatientAllergyPage /></Layout>
       </ProtectedRoute>
     }

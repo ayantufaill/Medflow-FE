@@ -33,22 +33,34 @@ import AuthorizationsListPage from '../pages/authorizations/AuthorizationsListPa
 import CreateAuthorizationPage from '../pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from '../pages/authorizations/ViewAuthorizationPage';
 
-const OPERATIONS_ALLOWED_GROUPS = ['ADMIN_GROUP', 'OPERATIONS_GROUP'];
+// FULL_ADMIN_GROUP, not ADMIN_GROUP: Group Admin has no insurance/invoice/
+// claims/era permissions on the backend, so it would see these pages only to
+// 403. This whole domain (finance, invoices, payments, estimates, claims,
+// era) has no CLINICAL_GROUP permissions either — it's purely admin +
+// front-office/billing territory.
+const OPERATIONS_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
 
-const operationsRoute = (children, hideSidebar = false) => (
-  <ProtectedRoute allowedGroups={OPERATIONS_ALLOWED_GROUPS}>
+// Insurance, services, and authorizations are different: Provider/Doctor/
+// Hygienist hold read (and for authorizations, create) permissions for these
+// on the backend, so clinical staff should actually be able to view them —
+// they were previously locked out entirely, the opposite-direction version
+// of the Group Admin bug (hiding something a role IS allowed to use).
+const CLINICAL_READABLE_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP', 'CLINICAL_GROUP'];
+
+const operationsRoute = (children, hideSidebar = false, allowedGroups = OPERATIONS_ALLOWED_GROUPS) => (
+  <ProtectedRoute allowedGroups={allowedGroups}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const billingRoutes = [
-  <Route key="/insurance" path="/insurance" element={operationsRoute(<InsurancePage />, true)} />,
+  <Route key="/insurance" path="/insurance" element={operationsRoute(<InsurancePage />, true, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/insurance/new" path="/insurance/new" element={operationsRoute(<AddCoveragePage />, true)} />,
   <Route key="/finance" path="/finance" element={operationsRoute(<FinancePage />, true)} />,
 
-  <Route key="/services" path="/services" element={operationsRoute(<ServicesListPage />)} />,
+  <Route key="/services" path="/services" element={operationsRoute(<ServicesListPage />, false, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/services/new" path="/services/new" element={operationsRoute(<CreateServicePage />)} />,
-  <Route key="/services/:serviceId" path="/services/:serviceId" element={operationsRoute(<ViewServicePage />)} />,
+  <Route key="/services/:serviceId" path="/services/:serviceId" element={operationsRoute(<ViewServicePage />, false, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/services/:serviceId/edit" path="/services/:serviceId/edit" element={operationsRoute(<EditServicePage />)} />,
 
   <Route key="/invoices" path="/invoices" element={operationsRoute(<InvoicesListPage />)} />,
@@ -77,9 +89,9 @@ const billingRoutes = [
   <Route key="/era/unmatched" path="/era/unmatched" element={operationsRoute(<UnmatchedERAItemsPage />)} />,
   <Route key="/era/:eraId" path="/era/:eraId" element={operationsRoute(<ViewERAPage />)} />,
 
-  <Route key="/authorizations" path="/authorizations" element={operationsRoute(<AuthorizationsListPage />)} />,
-  <Route key="/authorizations/new" path="/authorizations/new" element={operationsRoute(<CreateAuthorizationPage />)} />,
-  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={operationsRoute(<ViewAuthorizationPage />)} />,
+  <Route key="/authorizations" path="/authorizations" element={operationsRoute(<AuthorizationsListPage />, false, CLINICAL_READABLE_GROUPS)} />,
+  <Route key="/authorizations/new" path="/authorizations/new" element={operationsRoute(<CreateAuthorizationPage />, false, CLINICAL_READABLE_GROUPS)} />,
+  <Route key="/authorizations/:authorizationId" path="/authorizations/:authorizationId" element={operationsRoute(<ViewAuthorizationPage />, false, CLINICAL_READABLE_GROUPS)} />,
 ];
 
 export default billingRoutes;

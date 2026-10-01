@@ -536,7 +536,7 @@ const ClinicalNotesListPage = () => {
           </ListItemIcon>
           <ListItemText>View Details</ListItemText>
         </MenuItem>
-        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Hygienist', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.update']) || hasRequiredRole(user, ['Provider', 'Hygienist', 'Admin', 'Super Admin', 'Branch Admin'])) && (
           <MenuItem onClick={() => handleEdit(actionMenu.noteId)}>
             <ListItemIcon>
               <EditIcon fontSize="small" />
@@ -544,7 +544,7 @@ const ClinicalNotesListPage = () => {
             <ListItemText>Edit</ListItemText>
           </MenuItem>
         )}
-        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.sign']) || hasRequiredRole(user, ['Provider', 'Admin', 'Super Admin', 'Branch Admin'])) && (
           <MenuItem onClick={() => handleSign(actionMenu.noteId)}>
             <ListItemIcon>
               <SignIcon fontSize="small" color="primary" />
@@ -554,7 +554,7 @@ const ClinicalNotesListPage = () => {
             </ListItemText>
           </MenuItem>
         )}
-        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.delete']) || hasRequiredRole(user, ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin'])) && (
+        {!actionMenu.isSigned && (hasRequiredPermission(user, ['clinical-notes.delete']) || hasRequiredRole(user, ['Admin', 'Super Admin', 'Branch Admin'])) && (
           <MenuItem
             onClick={() =>
               handleDelete(actionMenu.noteId, actionMenu.patientName)

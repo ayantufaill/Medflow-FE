@@ -27,8 +27,11 @@ const adminOnly = (children) => (
   </ProtectedRoute>
 );
 
-// 'Doctor' is not a real backend role (see seedRoles.ts) — 'Provider' is its
-// actual seeded equivalent.
+// Matches the backend exactly: note-template.routes.ts gates writes with
+// requireRoles('Admin', 'Provider') (reads are open to any authenticated
+// staff member). 'Doctor' doesn't need listing here — it's a separately
+// seeded role (seedRoles.ts), but requireRoles / hasRequiredRole treat it and
+// 'Provider' as aliases of each other (see ROLE_ALIASES in navMenuItems.jsx).
 const adminProvider = (children) => (
   <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
     <Layout>{children}</Layout>
