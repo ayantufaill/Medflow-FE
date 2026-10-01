@@ -55,6 +55,37 @@ export const patientService = {
     return response.data.data;
   },
 
+  async getBasicPatients(
+    page = 1,
+    limit = 10,
+    search = "",
+    status = "",
+    signal = null,
+    sortBy = "",
+    sortOrder = "",
+    branchId = "",
+  ) {
+    const params = new URLSearchParams();
+    if (page) params.append("page", page);
+    if (limit) params.append("limit", limit);
+    if (search) params.append("search", search);
+    if (status) params.append("status", status);
+    if (sortBy) params.append("sortBy", sortBy);
+    if (sortOrder) params.append("sortOrder", sortOrder);
+    if (branchId) params.append("branchId", branchId);
+
+    const config = {};
+    if (signal) {
+      config.signal = signal;
+    }
+
+    const response = await apiClient.get(
+      `/patients/basic?${params.toString()}`,
+      config,
+    );
+    return response.data.data;
+  },
+
   /**
    * Get patient by ID
    * @param {string} patientId - Patient ID

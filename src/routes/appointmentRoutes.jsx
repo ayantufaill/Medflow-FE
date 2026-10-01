@@ -18,8 +18,6 @@ import CreateRecurringAppointmentPage from '../pages/recurring-appointments/Crea
 import EditRecurringAppointmentPage from '../pages/recurring-appointments/EditRecurringAppointmentPage';
 import ViewRecurringAppointmentPage from '../pages/recurring-appointments/ViewRecurringAppointmentPage';
 
-// FULL_ADMIN_GROUP, not ADMIN_GROUP: Group Admin has no `appointments.*`
-// permission on the backend, so it would see these pages only to 403.
 const ALL_STAFF_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'];
 
 const staffScheduleRoute = (children) => (

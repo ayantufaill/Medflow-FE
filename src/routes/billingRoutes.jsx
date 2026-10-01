@@ -33,11 +33,9 @@ import AuthorizationsListPage from '../pages/authorizations/AuthorizationsListPa
 import CreateAuthorizationPage from '../pages/authorizations/CreateAuthorizationPage';
 import ViewAuthorizationPage from '../pages/authorizations/ViewAuthorizationPage';
 
-// FULL_ADMIN_GROUP, not ADMIN_GROUP: Group Admin has no insurance/invoice/
-// claims/era permissions on the backend, so it would see these pages only to
-// 403. This whole domain (finance, invoices, payments, estimates, claims,
-// era) has no CLINICAL_GROUP permissions either — it's purely admin +
-// front-office/billing territory.
+// Billing operations are available to operational admin roles and
+// front-office/billing roles. Backend permissions and branch/group scope remain
+// the source of truth for data access.
 const OPERATIONS_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
 
 // Insurance, services, and authorizations are different: Provider/Doctor/
@@ -47,47 +45,47 @@ const OPERATIONS_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
 // of the Group Admin bug (hiding something a role IS allowed to use).
 const CLINICAL_READABLE_GROUPS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP', 'CLINICAL_GROUP'];
 
-const operationsRoute = (children, hideSidebar = false, allowedGroups = OPERATIONS_ALLOWED_GROUPS) => (
-  <ProtectedRoute allowedGroups={allowedGroups}>
+const operationsRoute = (children, hideSidebar = false, allowedGroups = OPERATIONS_ALLOWED_GROUPS, requiredPermissions = []) => (
+  <ProtectedRoute allowedGroups={allowedGroups} requiredPermissions={requiredPermissions}>
     <Layout hideSidebar={hideSidebar}>{children}</Layout>
   </ProtectedRoute>
 );
 
 const billingRoutes = [
-  <Route key="/insurance" path="/insurance" element={operationsRoute(<InsurancePage />, true, CLINICAL_READABLE_GROUPS)} />,
-  <Route key="/insurance/new" path="/insurance/new" element={operationsRoute(<AddCoveragePage />, true)} />,
-  <Route key="/finance" path="/finance" element={operationsRoute(<FinancePage />, true)} />,
+  <Route key="/insurance" path="/insurance" element={operationsRoute(<InsurancePage />, true, CLINICAL_READABLE_GROUPS, ['insurance.read'])} />,
+  <Route key="/insurance/new" path="/insurance/new" element={operationsRoute(<AddCoveragePage />, true, OPERATIONS_ALLOWED_GROUPS, ['insurance.create'])} />,
+  <Route key="/finance" path="/finance" element={operationsRoute(<FinancePage />, true, OPERATIONS_ALLOWED_GROUPS, ['invoices.read'])} />,
 
   <Route key="/services" path="/services" element={operationsRoute(<ServicesListPage />, false, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/services/new" path="/services/new" element={operationsRoute(<CreateServicePage />)} />,
   <Route key="/services/:serviceId" path="/services/:serviceId" element={operationsRoute(<ViewServicePage />, false, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/services/:serviceId/edit" path="/services/:serviceId/edit" element={operationsRoute(<EditServicePage />)} />,
 
-  <Route key="/invoices" path="/invoices" element={operationsRoute(<InvoicesListPage />)} />,
-  <Route key="/invoices/new" path="/invoices/new" element={operationsRoute(<CreateInvoicePage />)} />,
-  <Route key="/invoices/:invoiceId" path="/invoices/:invoiceId" element={operationsRoute(<ViewInvoicePage />)} />,
-  <Route key="/invoices/:invoiceId/edit" path="/invoices/:invoiceId/edit" element={operationsRoute(<EditInvoicePage />)} />,
+  <Route key="/invoices" path="/invoices" element={operationsRoute(<InvoicesListPage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.read'])} />,
+  <Route key="/invoices/new" path="/invoices/new" element={operationsRoute(<CreateInvoicePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.create'])} />,
+  <Route key="/invoices/:invoiceId" path="/invoices/:invoiceId" element={operationsRoute(<ViewInvoicePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.read'])} />,
+  <Route key="/invoices/:invoiceId/edit" path="/invoices/:invoiceId/edit" element={operationsRoute(<EditInvoicePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.update'])} />,
 
-  <Route key="/payments" path="/payments" element={operationsRoute(<PaymentsListPage />)} />,
-  <Route key="/payments/new" path="/payments/new" element={operationsRoute(<RecordPaymentPage />)} />,
-  <Route key="/payments/:paymentId" path="/payments/:paymentId" element={operationsRoute(<ViewPaymentPage />)} />,
+  <Route key="/payments" path="/payments" element={operationsRoute(<PaymentsListPage />, false, OPERATIONS_ALLOWED_GROUPS, ['payments.read'])} />,
+  <Route key="/payments/new" path="/payments/new" element={operationsRoute(<RecordPaymentPage />, false, OPERATIONS_ALLOWED_GROUPS, ['payments.create'])} />,
+  <Route key="/payments/:paymentId" path="/payments/:paymentId" element={operationsRoute(<ViewPaymentPage />, false, OPERATIONS_ALLOWED_GROUPS, ['payments.read'])} />,
 
-  <Route key="/estimates" path="/estimates" element={operationsRoute(<EstimatesListPage />)} />,
-  <Route key="/estimates/new" path="/estimates/new" element={operationsRoute(<CreateEstimatePage />)} />,
-  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={operationsRoute(<EditEstimatePage />)} />,
-  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={operationsRoute(<ViewEstimatePage />)} />,
+  <Route key="/estimates" path="/estimates" element={operationsRoute(<EstimatesListPage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.read'])} />,
+  <Route key="/estimates/new" path="/estimates/new" element={operationsRoute(<CreateEstimatePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.create'])} />,
+  <Route key="/estimates/:estimateId/edit" path="/estimates/:estimateId/edit" element={operationsRoute(<EditEstimatePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.update'])} />,
+  <Route key="/estimates/:estimateId" path="/estimates/:estimateId" element={operationsRoute(<ViewEstimatePage />, false, OPERATIONS_ALLOWED_GROUPS, ['invoices.read'])} />,
 
-  <Route key="/claims" path="/claims" element={operationsRoute(<ClaimsListPage />, true)} />,
-  <Route key="/batch-actions" path="/batch-actions" element={operationsRoute(<BatchActionsPage />, true)} />,
-  <Route key="/claims/denied" path="/claims/denied" element={operationsRoute(<DeniedClaimsPage />)} />,
-  <Route key="/claims/secondary" path="/claims/secondary" element={operationsRoute(<SecondaryClaimsPage />)} />,
-  <Route key="/claims/:claimId" path="/claims/:claimId" element={operationsRoute(<ViewClaimPage />)} />,
-  <Route key="/claims/:claimId/resubmit" path="/claims/:claimId/resubmit" element={operationsRoute(<ResubmitClaimPage />)} />,
+  <Route key="/claims" path="/claims" element={operationsRoute(<ClaimsListPage />, true, OPERATIONS_ALLOWED_GROUPS, ['claims.read'])} />,
+  <Route key="/batch-actions" path="/batch-actions" element={operationsRoute(<BatchActionsPage />, true, OPERATIONS_ALLOWED_GROUPS, ['claims.process'])} />,
+  <Route key="/claims/denied" path="/claims/denied" element={operationsRoute(<DeniedClaimsPage />, false, OPERATIONS_ALLOWED_GROUPS, ['claims.read'])} />,
+  <Route key="/claims/secondary" path="/claims/secondary" element={operationsRoute(<SecondaryClaimsPage />, false, OPERATIONS_ALLOWED_GROUPS, ['claims.read'])} />,
+  <Route key="/claims/:claimId" path="/claims/:claimId" element={operationsRoute(<ViewClaimPage />, false, OPERATIONS_ALLOWED_GROUPS, ['claims.read'])} />,
+  <Route key="/claims/:claimId/resubmit" path="/claims/:claimId/resubmit" element={operationsRoute(<ResubmitClaimPage />, false, OPERATIONS_ALLOWED_GROUPS, ['claims.update'])} />,
 
-  <Route key="/era" path="/era" element={operationsRoute(<ERAListPage />)} />,
-  <Route key="/era/import" path="/era/import" element={operationsRoute(<ImportERAPage />)} />,
-  <Route key="/era/unmatched" path="/era/unmatched" element={operationsRoute(<UnmatchedERAItemsPage />)} />,
-  <Route key="/era/:eraId" path="/era/:eraId" element={operationsRoute(<ViewERAPage />)} />,
+  <Route key="/era" path="/era" element={operationsRoute(<ERAListPage />, false, OPERATIONS_ALLOWED_GROUPS, ['era.read'])} />,
+  <Route key="/era/import" path="/era/import" element={operationsRoute(<ImportERAPage />, false, OPERATIONS_ALLOWED_GROUPS, ['era.create'])} />,
+  <Route key="/era/unmatched" path="/era/unmatched" element={operationsRoute(<UnmatchedERAItemsPage />, false, OPERATIONS_ALLOWED_GROUPS, ['era.read'])} />,
+  <Route key="/era/:eraId" path="/era/:eraId" element={operationsRoute(<ViewERAPage />, false, OPERATIONS_ALLOWED_GROUPS, ['era.read'])} />,
 
   <Route key="/authorizations" path="/authorizations" element={operationsRoute(<AuthorizationsListPage />, false, CLINICAL_READABLE_GROUPS)} />,
   <Route key="/authorizations/new" path="/authorizations/new" element={operationsRoute(<CreateAuthorizationPage />, false, CLINICAL_READABLE_GROUPS)} />,

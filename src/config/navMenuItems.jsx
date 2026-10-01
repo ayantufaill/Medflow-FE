@@ -12,16 +12,9 @@ import {
 // ─── PURE 4-GROUP DEFINITIONS ────────────────────────────────────────────────
 export const USER_GROUPS = {
   ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin'],
-  // Same as ADMIN_GROUP minus Group Admin. The backend deliberately does not
-  // grant Group Admin the 'clinical.cross_branch.view' permission that every
-  // patient-data route requires (see Medflow-BE's phi.middleware.ts) —
-  // managing a group of practices isn't the same authority as reading its
-  // patients' records. Use this group (not ADMIN_GROUP) for any screen that
-  // reads/writes per-patient data (charts, appointments, insurance, finance),
-  // so Group Admin doesn't see a nav item or button that the backend will
-  // then reject. Genuinely admin-only screens (users, branches, settings)
-  // should keep using ADMIN_GROUP.
-  FULL_ADMIN_GROUP: ['Super Admin', 'Branch Admin', 'Admin'],
+  // Full operational admin roles. Group Admin remains group-scoped by backend
+  // permission and branch-access checks.
+  FULL_ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin'],
   CLINICAL_GROUP: ['Provider', 'Doctor', 'Hygienist', 'Assistant', 'Dental Assistant', 'Clinical Staff'],
   OPERATIONS_GROUP: ['Front Desk', 'Receptionist', 'Biller', 'Billing Staff', 'Lab', 'Lab Technician'],
   PATIENT_GROUP: ['Patient'],
@@ -69,56 +62,69 @@ export const navMenuItems = [
     icon: <Dashboard />,
     path: '/admin/reports',
     allowedGroups: ['ADMIN_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist', 'Lab', 'Lab Technician'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist'],
+    requiredPermissions: ['reports.read'],
   },
   {
     text: 'Patients',
     icon: <People />,
     path: '/patients',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller', 'Lab'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller', 'Lab'],
+    requiredPermissions: ['patients.read', 'patients.read_basic'],
   },
   {
     text: 'Appointments',
     icon: <CalendarToday />,
     path: '/appointments/operatory-schedule',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller', 'Lab', 'Clinical Staff'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller', 'Lab', 'Clinical Staff'],
   },
   {
     text: 'Vital Signs',
     icon: <MonitorHeart />,
     path: '/vital-signs',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant'],
   },
   {
     text: 'Patient Reports',
     icon: <Description />,
     path: '/patient-reports',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller', 'Lab'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant', 'Front Desk', 'Receptionist', 'Biller'],
+    requiredPermissions: ['patients.read'],
   },
   {
     text: 'Insurance',
     icon: <AccountBalance />,
     path: '/insurance',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Doctor', 'Hygienist', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist', 'Lab'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Doctor', 'Hygienist', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist'],
+    requiredPermissions: ['insurance.read'],
   },
   {
     text: 'Finance',
     icon: <AttachMoney />,
     path: '/finance',
     allowedGroups: ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist', 'Lab'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Biller', 'Billing Staff', 'Front Desk', 'Receptionist'],
+    requiredPermissions: ['invoices.read', 'payments.read'],
+  },
+  {
+    text: 'Lab Cases',
+    icon: <Description />,
+    path: '/clinical/lab-case',
+    allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Doctor', 'Hygienist', 'Assistant', 'Lab', 'Lab Technician'],
+    requiredPermissions: ['lab-orders.read'],
   },
   {
     text: 'Clinical',
     icon: <Description />,
     path: '/clinical',
     allowedGroups: ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant'],
+    requiredRoles: ['Admin', 'Super Admin', 'Group Admin', 'Branch Admin', 'Provider', 'Hygienist', 'Assistant'],
   },
   {
     text: 'Practice Groups',
