@@ -107,6 +107,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
   const providersList = useSelector(selectProviderDropdownList) || [];
   const procedureCodes = useSelector(selectProcedureCodes) || [];
   const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
+  const [isHeaderEditing, setIsHeaderEditing] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -135,6 +136,8 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
   }, [procedureCodes, procedure?.icd]);
 
   const [form, setForm] = useState({
+    code: '',
+    description: '',
     status: 'Planned',
     provider: '',
     prognosis: '',
@@ -147,6 +150,8 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
   useEffect(() => {
     if (!procedure) return;
     setForm({
+      code: procedure.code && procedure.code !== '-' ? procedure.code : '',
+      description: procedure.description && procedure.description !== '-' ? procedure.description : '',
       status: procedure.status || 'Planned',
       provider: getProviderValue(procedure.provider),
       prognosis: procedure.prognosis || '',
@@ -155,6 +160,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       creditToPractice: Boolean(procedure.creditToPractice),
       siteSelection: procedure.siteSelection || inferSiteSelection(procedure)
     });
+    setIsHeaderEditing(false);
   }, [procedure]);
 
   const handleChange = (field, value) => {
@@ -165,6 +171,8 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
     if (!procedure) return;
     onSave({
       ...procedure,
+      code: form.code || procedure.code || '-',
+      description: form.description || procedure.description || '-',
       status: form.status,
       provider: form.provider || null,
       prognosis: form.prognosis,
@@ -173,6 +181,18 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       creditToPractice: form.creditToPractice,
       siteSelection: form.siteSelection
     });
+  };
+
+  const handleProcedureCodeChange = (value) => {
+    const nextCode = value ? String(value.ProcCode || value.code || '') : '';
+    const nextDescription = value
+      ? String(value.Descript || value.description || value.name || value.AbbrDesc || '')
+      : '';
+    setForm((prev) => ({
+      ...prev,
+      code: nextCode,
+      description: nextDescription || prev.description
+    }));
   };
 
   return (
@@ -212,7 +232,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
             <Box sx={{ flex: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
                 <Chip
-                  label={procedure?.code || '-'}
+                  label={form.code || '-'}
                   size="small"
                   sx={{ height: 24, borderRadius: radius.sm, bgcolor: COLORS.ACCENT_BG, color: COLORS.ACCENT, fontSize: fontSize.base, fontWeight: fontWeight.bold }}
                 />
@@ -222,14 +242,81 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
                   sx={{ height: 24, borderRadius: radius.sm, bgcolor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_SECONDARY, fontSize: fontSize.base, fontWeight: fontWeight.medium }}
                 />
               </Box>
-              <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, mb: 0.5 }}>
-                {procedure?.code || '-'}
-              </Typography>
-              <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY, lineHeight: 1.5 }}>
-                {procedure?.description || '-'}
-              </Typography>
+              {isHeaderEditing ? (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '220px 1fr' }, gap: 1.5, mt: 1 }}>
+                  <Autocomplete
+                    openOnFocus
+                    popupIcon={<KeyboardArrowDownIcon sx={{ color: COLORS.TEXT_SECONDARY }} />}
+                    options={procedureCodes}
+                    loading={procedureCodesLoading}
+                    value={procedureCodes.find((code) => String(code.ProcCode || code.code) === form.code) || null}
+                    inputValue={form.code}
+                    onInputChange={(_, value, reason) => {
+                      if (reason !== 'reset') handleChange('code', value);
+                    }}
+                    onChange={(_, value) => handleProcedureCodeChange(value)}
+                    getOptionLabel={(option) => {
+                      if (typeof option === 'string') return option;
+                      return String(option?.ProcCode || option?.code || '');
+                    }}
+                    isOptionEqualToValue={(option, value) => String(option.ProcCode || option.code) === String(value.ProcCode || value.code)}
+                    renderOption={(props, option) => {
+                      const { key, ...restProps } = props;
+                      return (
+                        <Box component="li" key={key} {...restProps} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '6px !important' }}>
+                          <Typography sx={{ minWidth: 72, fontSize: fontSize.md, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
+                            {option.ProcCode || option.code}
+                          </Typography>
+                          <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY }}>
+                            {option.Descript || option.description || option.name || option.AbbrDesc || ''}
+                          </Typography>
+                        </Box>
+                      );
+                    }}
+                    slotProps={{ popper: { sx: { zIndex: 1500 } }, paper: { sx: roundedAutocompletePaperSx } }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        autoFocus
+                        placeholder="Code"
+                        sx={fieldSx}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {procedureCodesLoading ? <CircularProgress color="inherit" size={14} sx={{ mr: 0.75 }} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                  <TextField
+                    fullWidth
+                    value={form.description}
+                    onChange={(event) => handleChange('description', event.target.value)}
+                    placeholder="Description"
+                    sx={fieldSx}
+                  />
+                </Box>
+              ) : (
+                <>
+                  <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY, mb: 0.5 }}>
+                    {form.code || '-'}
+                  </Typography>
+                  <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY, lineHeight: 1.5 }}>
+                    {form.description || '-'}
+                  </Typography>
+                </>
+              )}
             </Box>
-            <IconButton size="small" sx={{ width: 32, height: 32, borderRadius: radius.md, color: COLORS.ACCENT, bgcolor: COLORS.ACCENT_BG, '&:hover': { bgcolor: 'rgba(35, 98, 239, 0.16)' } }}>
+            <IconButton
+              size="small"
+              aria-label="Edit procedure code and description"
+              onClick={() => setIsHeaderEditing((prev) => !prev)}
+              sx={{ width: 32, height: 32, borderRadius: radius.md, color: COLORS.ACCENT, bgcolor: COLORS.ACCENT_BG, '&:hover': { bgcolor: 'rgba(35, 98, 239, 0.16)' } }}
+            >
               <EditOutlinedIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>

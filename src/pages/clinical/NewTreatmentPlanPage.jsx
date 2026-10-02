@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Snackbar,
@@ -54,14 +54,16 @@ import NewTreatmentPlanTable from '../../components/clinical/new-treatment-plan/
 import EditProcedureDrawer from '../../components/clinical/new-treatment-plan/EditProcedureDrawer';
 import TreatmentPlanRouteSlipDialog from '../../components/clinical/new-treatment-plan/TreatmentPlanRouteSlipDialog';
 import AppointmentHistoryTimelineDialog from '../../components/clinical/new-treatment-plan/AppointmentHistoryTimelineDialog';
+import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable';
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
+import { useDropdownData } from '../../hooks/redux/useDropdownData';
 // AFTER
-import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
+import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById } from '../../store/slices/patientSlice';
 import { selectProviderDropdownList } from '../../store/slices/providerSlice';
 import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
@@ -77,6 +79,80 @@ const formatMoney = (val, fallback = '-') => {
     return !isNaN(num) ? `$${num.toFixed(2)}` : val;
   }
   return fallback;
+};
+
+const parseMoneyValue = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'string' && value.trim() && value !== '-') {
+    const parsed = Number(value.replace(/[^0-9.-]+/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const calculateTreatmentPlanTotals = (items = []) => {
+  return items.reduce(
+    (totals, item) => {
+      totals.negotiated += parseMoneyValue(item.negRate ?? item.charge ?? item.fee);
+      totals.insurance += parseMoneyValue(item.insEst ?? item.insPortion ?? item.insuranceAmount);
+      totals.patient += parseMoneyValue(item.ptEst ?? item.ptPortion ?? item.patientAmount);
+      return totals;
+    },
+    { negotiated: 0, insurance: 0, patient: 0 }
+  );
+};
+
+const buildTreatmentPlanTotalsPayload = (items = []) => {
+  const totals = calculateTreatmentPlanTotals(items);
+  return {
+    totalAmount: totals.negotiated,
+    insurancePortion: totals.insurance,
+    patientPortion: totals.patient,
+  };
+};
+
+const TREATMENT_PLAN_STATUS_ACTIVE = 'A';
+const TREATMENT_PLAN_STATUS_HOLD = '!';
+
+const mergePlanItemsIntoDrafts = (drafts, planId, items, extraFields = {}) => {
+  if (!planId) return drafts;
+  return drafts.map((plan) => (
+    getPlanId(plan) === String(planId)
+      ? { ...plan, ...extraFields, items }
+      : plan
+  ));
+};
+
+const mapProcedureToPayloadItem = (item) => {
+  const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
+  const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
+  const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
+  return {
+    id: item.id,
+    procedureCode: item.code,
+    description: item.description,
+    tooth: item.tooth || '',
+    site: item.site,
+    fee: itemFee,
+    charge: itemFee,
+    priority: item.priority,
+    status: statusLabelToCode(item.status),
+    icd: item.icd,
+    provider: item.provider || null,
+    prognosis: item.prognosis || '',
+    creditToPractice: Boolean(item.creditToPractice),
+    siteSelection: item.siteSelection || '',
+    scheduled: item.scheduled,
+    preAuth: item.preAuth,
+    preAuthId: item.preAuthId || null,
+    labCase: item.labCase,
+    insEst: item.insEst,
+    ptEst: item.ptEst,
+    insPortion: itemIns,
+    ptPortion: itemPt,
+    insuranceAmount: `$${itemIns.toFixed(2)}`,
+    patientAmount: `$${itemPt.toFixed(2)}`,
+  };
 };
 
 const STATUS_CODE_TO_LABEL = {
@@ -132,14 +208,113 @@ const mapPlanItems = (items, createdAt) => {
       code: item.procedureCode || item.code || '-',
       description: item.description || '-',
       icd: item.icd || '-',
-      provider: item.provider || '-',
+      provider: (() => {
+        const val = item.provider;
+        return typeof val === 'object' && val !== null ? (val.providerCode || val._id || val.name || '-') : (val || '-');
+      })(),
       negRate: formatMoney(feeVal, '-'),
       insEst: formatMoney(insVal, '-'),
       ptEst: formatMoney(ptVal, '-'),
       preAuth: item.preAuth || '-',
+      preAuthId: item.preAuthId || null,
       labCase: item.labCase || '-'
     };
   });
+};
+
+const normalizeAppointmentProcedures = (appointment) => {
+  const customFields = appointment?.customFields || {};
+  const workspace = appointment?.workspace || {};
+  const candidates = [
+    customFields.procedures,
+    workspace.procedures,
+    appointment?.procedures,
+    appointment?.procedureCodes,
+  ];
+  const rawProcedures = candidates.find((value) => Array.isArray(value) && value.length > 0) || [];
+
+  return rawProcedures
+    .map((procedure, idx) => {
+      if (typeof procedure === 'string') {
+        const code = procedure.trim();
+        return code ? { id: idx, code, description: code } : null;
+      }
+
+      if (!procedure || typeof procedure !== 'object') return null;
+
+      const code =
+        procedure.code ||
+        procedure.procedureCode ||
+        procedure.ProcCode ||
+        procedure.procCode ||
+        procedure.cdtCode ||
+        procedure.id;
+      if (!code) return null;
+
+      return {
+        ...procedure,
+        id: procedure.id || procedure._id || idx,
+        code,
+        description:
+          procedure.treatment ||
+          procedure.description ||
+          procedure.name ||
+          procedure.Descript ||
+          procedure.label ||
+          code,
+      };
+    })
+    .filter(Boolean);
+};
+
+const mapAppointmentsToTreatmentRows = (appointments = []) => {
+  const rows = [];
+  appointments.forEach((appt) => {
+    const procs = normalizeAppointmentProcedures(appt);
+    procs.forEach((p, idx) => {
+      if (p && p.code) {
+        const isCompleted = p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete';
+        const appointmentDate = appt.appointmentDate || appt.date;
+        rows.push({
+          id: `appt-${appt.id || appt._id}-${p.id || idx}`,
+          appointmentId: appt.id || appt._id,
+          appointmentDate,
+          startTime: appt.startTime || appt.time,
+          priority: '- -',
+          status: isCompleted ? 'Completed' : 'Scheduled',
+          created: dayjs(appt.createdAt || appointmentDate).format('MM/DD/YYYY'),
+          scheduled: appointmentDate ? dayjs(appointmentDate).format('MM/DD/YYYY') : '-',
+          site: p.site || p.tooth || '-',
+          tooth: p.tooth || p.site || '',
+          code: p.code,
+          description: p.description || '-',
+          icd: '-',
+          provider: (() => {
+            const getProvStr = (val) => (typeof val === 'object' && val !== null ? (val.providerCode || val._id || val.name) : val);
+            return getProvStr(p.provider) || getProvStr(appt.providerId) || getProvStr(appt.provider) || '-';
+          })(),
+          ...(() => {
+            const rawCharge = Number(String(p.charge || p.fee || 0).replace(/[^0-9.-]+/g, ''));
+            const hasActualValues = p.insPortion != null && p.insPortion !== '$0.00' && p.insPortion !== '0';
+            const insPortion = hasActualValues
+              ? Number(String(p.insPortion).replace(/[^0-9.-]+/g, ''))
+              : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).insPortion;
+            const ptPortion = hasActualValues
+              ? Number(String(p.ptPart || p.ptPortion || 0).replace(/[^0-9.-]+/g, ''))
+              : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).ptPortion;
+            return {
+              negRate: formatMoney(rawCharge, '-'),
+              insEst: formatMoney(insPortion, '-'),
+              ptEst: formatMoney(ptPortion, '-'),
+            };
+          })(),
+          preAuth: '-',
+          labCase: '-'
+        });
+      }
+    });
+  });
+  return rows;
 };
 
 const getPlanId = (plan) => String(plan?._id || plan?.id || '');
@@ -158,13 +333,20 @@ const INITIAL_MOCK_TREATMENT_PLANS = [
 
 const NewTreatmentPlanPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   useEffect(() => {
     const appointmentId = searchParams.get('appointmentId');
+    const patientId = searchParams.get('patientId');
+    
     if (appointmentId) {
       dispatch(setSelectedAppointmentId(appointmentId));
       dispatch(fetchAppointmentById(appointmentId));
+    }
+    
+    if (patientId) {
+      dispatch(fetchPatientById(patientId));
     }
   }, [searchParams, dispatch]);
 
@@ -189,6 +371,7 @@ const NewTreatmentPlanPage = () => {
   // Procedures + preAuthId for the group currently viewed in PreAuthModal
   const [activeGroupProcedures, setActiveGroupProcedures] = useState([]);
   const [activeGroupPreAuthId, setActiveGroupPreAuthId] = useState(null);
+  const [activeGroupPlanId, setActiveGroupPlanId] = useState(null);
   const [isSubmittingGroups, setIsSubmittingGroups] = useState(false);
 
   const currentPatient = useSelector(selectCurrentPatient);
@@ -196,6 +379,11 @@ const NewTreatmentPlanPage = () => {
   const currentPatientId = currentPatient?._id || currentPatient?.id;
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const providersList = useSelector(selectProviderDropdownList) || [];
+  const { providers: appointmentProviders, rooms: appointmentRooms, appointmentTypes } = useDropdownData({
+    providers: true,
+    rooms: true,
+    appointmentTypes: true,
+  });
 
 
   const [activePlanId, setActivePlanId] = useState(null);
@@ -205,6 +393,8 @@ const NewTreatmentPlanPage = () => {
   const [editingProcedure, setEditingProcedure] = useState(null);
   const [isRouteSlipOpen, setIsRouteSlipOpen] = useState(false);
   const [isAppointmentHistoryOpen, setIsAppointmentHistoryOpen] = useState(false);
+  const [isEditAppointmentOpen, setIsEditAppointmentOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
   const [isCreateDraftOpen, setIsCreateDraftOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftNameError, setDraftNameError] = useState('');
@@ -224,8 +414,135 @@ const NewTreatmentPlanPage = () => {
 
   const activeDraft = treatmentPlanDrafts.find((plan) => getPlanId(plan) === String(activePlanId));
   const activeDraftTitle = activeDraft ? getPlanTitle(activeDraft) : 'Active Treatment Plan';
+  const treatmentPlanTotals = useMemo(() => calculateTreatmentPlanTotals(allProcedures), [allProcedures]);
   const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
   const activeAppointmentForHistory = currentAppointment || (activeAppointmentId ? { _id: activeAppointmentId } : null);
+  const activeScheduledProcedure = allProcedures.find((procedure) => procedure.appointmentId || procedure._appointmentId);
+  const activeScheduleDate =
+    currentAppointment?.appointmentDate ||
+    currentAppointment?.date ||
+    activeScheduledProcedure?.appointmentDate ||
+    activeScheduledProcedure?.scheduled;
+  const activeScheduleTime =
+    currentAppointment?.startTime ||
+    currentAppointment?.time ||
+    activeScheduledProcedure?.startTime ||
+    activeScheduledProcedure?.time;
+
+  const getLinkedAppointmentId = () => (
+    activeAppointmentId || activeScheduledProcedure?.appointmentId || activeScheduledProcedure?._appointmentId
+  );
+
+  const buildScheduleUrl = (appointment = null) => {
+    const appointmentId = getLinkedAppointmentId();
+    if (!appointmentId) return null;
+
+    const scheduleDate =
+      appointment?.appointmentDate ||
+      appointment?.date ||
+      activeScheduleDate;
+    const scheduleTime =
+      appointment?.startTime ||
+      appointment?.time ||
+      activeScheduleTime;
+    const params = new URLSearchParams();
+    const parsedDate = dayjs(scheduleDate, ['YYYY-MM-DD', 'MM/DD/YYYY', 'M/D/YYYY'], true);
+    if (parsedDate.isValid()) {
+      params.set('date', parsedDate.format('YYYY-MM-DD'));
+    }
+    if (scheduleTime) {
+      params.set('time', scheduleTime);
+    }
+    params.set('highlightAppointmentId', appointmentId);
+    return `/appointments/operatory-schedule?${params.toString()}`;
+  };
+
+  const handleViewOnSchedule = async () => {
+    const appointmentId = getLinkedAppointmentId();
+    if (!appointmentId) {
+      setToast({ open: true, message: 'No appointment found.', type: 'error' });
+      return;
+    }
+
+    try {
+      const appointment = await appointmentService.getAppointmentById(appointmentId);
+      const url = buildScheduleUrl(appointment);
+      if (!url) {
+        setToast({ open: true, message: 'No appointment found.', type: 'error' });
+        return;
+      }
+      navigate(url);
+    } catch (error) {
+      console.error('Failed to load appointment for schedule view:', error);
+      setToast({ open: true, message: 'No appointment found.', type: 'error' });
+    }
+  };
+
+  const handleEditAppointmentFromPlan = async () => {
+    const appointmentId = getLinkedAppointmentId();
+    if (!appointmentId) {
+      setToast({ open: true, message: 'No appointment found.', type: 'error' });
+      return;
+    }
+
+    try {
+      const fullAppointment = await appointmentService.getAppointmentById(appointmentId);
+      const procedures = await appointmentService.getAppointmentProcedures(appointmentId).catch(() => []);
+      setEditingAppointment({
+        ...fullAppointment,
+        rawAppointment: fullAppointment,
+        procedures,
+      });
+      setIsEditAppointmentOpen(true);
+    } catch (error) {
+      console.error('Failed to load appointment for edit:', error);
+      setToast({ open: true, message: 'Appointment was not found.', type: 'error' });
+    }
+  };
+
+  const handleEditAppointmentSubmit = async (formData) => {
+    const appointmentId = editingAppointment?._id || editingAppointment?.id;
+    if (!appointmentId) return;
+
+    const start = formData.appointmentDate && formData.startTime
+      ? dayjs(`${formData.appointmentDate}T${formData.startTime}`)
+      : dayjs(editingAppointment.appointmentDate || editingAppointment.date || new Date());
+    const duration = formData.durationMinutes || 30;
+    const end = start.clone().add(duration, 'minute');
+
+    const payload = {
+      patientId: formData.patientId,
+      providerId: formData.providerId,
+      appointmentDate: start.format('YYYY-MM-DD'),
+      startTime: start.format('HH:mm'),
+      endTime: end.format('HH:mm'),
+      durationMinutes: duration,
+      chiefComplaint: formData.chiefComplaint || '',
+      notes: formData.notes || '',
+      status: formData.status || 'scheduled',
+      ...(formData.appointmentTypeId && { appointmentTypeId: formData.appointmentTypeId }),
+      ...(formData.roomId && { roomId: formData.roomId }),
+      ...(formData.customFields && { customFields: formData.customFields }),
+      patientName: formData.patientName,
+    };
+
+    try {
+      const updatedAppointment = await appointmentService.updateAppointment(appointmentId, payload);
+      await dispatch(fetchAppointmentById(appointmentId));
+      const updatedRows = mapAppointmentsToTreatmentRows([updatedAppointment]);
+      setAppointmentProcedures((prev) => [
+        ...prev.filter((row) => String(row.appointmentId || row._appointmentId) !== String(appointmentId)),
+        ...updatedRows,
+      ]);
+      setIsEditAppointmentOpen(false);
+      setEditingAppointment(null);
+      setToast({ open: true, message: 'Appointment updated successfully.', type: 'success' });
+    } catch (error) {
+      console.error('Failed to update appointment:', error);
+      const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'Failed to update appointment.';
+      setToast({ open: true, message, type: 'error' });
+    }
+  };
 
   const handleOpenAppointmentHistory = () => {
     if (!activeAppointmentId) {
@@ -293,46 +610,7 @@ const NewTreatmentPlanPage = () => {
         }
 
         const appointments = Array.isArray(apptRes) ? apptRes : (Array.isArray(apptRes?.data) ? apptRes.data : (apptRes?.data?.appointments || []));
-        const apptProcs = [];
-        appointments.forEach(appt => {
-          const procs = appt.customFields?.procedures || appt.procedures || [];
-          procs.forEach((p, idx) => {
-            if (p && p.code) {
-              const isCompleted = p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete';
-              apptProcs.push({
-                id: `appt-${appt.id || appt._id}-${p.id || idx}`,
-                priority: '- -',
-                status: isCompleted ? 'Completed' : 'Scheduled',
-                created: dayjs(appt.createdAt || appt.date).format('MM/DD/YYYY'),
-                scheduled: dayjs(appt.date).format('MM/DD/YYYY'),
-                site: p.site || p.tooth || '-',
-                tooth: p.tooth || p.site || '',
-                code: p.code,
-                description: p.treatment || p.description || '-',
-                icd: '-',
-                provider: p.provider || appt.providerId || appt.provider?._id || '-',
-                ...(() => {
-                  const rawCharge = Number(String(p.charge || p.fee || 0).replace(/[^0-9.-]+/g, ''));
-                  // Use actual values from API if available (checked-out appointments), otherwise calculate
-                  const hasActualValues = p.insPortion != null && p.insPortion !== '$0.00' && p.insPortion !== '0';
-                  const insPortion = hasActualValues
-                    ? Number(String(p.insPortion).replace(/[^0-9.-]+/g, ''))
-                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).insPortion;
-                  const ptPortion = hasActualValues
-                    ? Number(String(p.ptPart || p.ptPortion || 0).replace(/[^0-9.-]+/g, ''))
-                    : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).ptPortion;
-                  return {
-                    negRate: formatMoney(rawCharge, '-'),
-                    insEst: formatMoney(insPortion, '-'),
-                    ptEst: formatMoney(ptPortion, '-'),
-                  };
-                })(),
-                preAuth: '-',
-                labCase: '-'
-              });
-            }
-          });
-        });
+        const apptProcs = mapAppointmentsToTreatmentRows(appointments);
         setAppointmentProcedures(apptProcs);
 
         // Enrich with real insurance estimates from backend (same as appointment form)
@@ -432,10 +710,10 @@ const NewTreatmentPlanPage = () => {
     return Object.values(map);
   };
 
-  const handleOpenPreAuth = async () => {
+  const handleOpenPreAuth = async (procedureRow = null) => {
     if (!currentPatientId) return;
 
-    if (selectedRows.length === 0) {
+    if (!procedureRow && selectedRows.length === 0) {
       setToast({ open: true, message: 'Select a procedure first', type: 'error' });
       return;
     }
@@ -463,19 +741,20 @@ const NewTreatmentPlanPage = () => {
     }
 
     // Build the list of selected procedures
-    const proceduresForAuth = selectedRows.length > 0
-      ? allProcedures.filter((p) => selectedRows.includes(p.id))
-      : allProcedures;
+    const proceduresForAuth = procedureRow
+      ? [procedureRow]
+      : allProcedures.filter((p) => selectedRows.includes(p.id || p._id));
 
     const groups = groupProceduresByProvider(proceduresForAuth);
 
-    if (groups.length > 1) {
+    if (!procedureRow && groups.length > 1) {
       // Multiple providers — show the summary dialog first
       setSummaryProviderGroups(groups);
       setIsSummaryModalOpen(true);
     } else {
       // Single provider — go straight to PreAuthModal
       setActiveGroupProcedures(proceduresForAuth);
+      setActiveGroupPlanId(proceduresForAuth[0]?._planId || activePlanId);
       setActiveGroupPreAuthId(
         createdPreAuthPatientId === currentPatientId ? createdPreAuthId : null
       );
@@ -486,8 +765,58 @@ const NewTreatmentPlanPage = () => {
   /** Called when user clicks "View Pre-Auth" on a summary row */
   const handleViewPreAuthGroup = (group) => {
     setActiveGroupProcedures(group.procedures);
+    setActiveGroupPlanId(group.procedures?.[0]?._planId || activePlanId);
     setActiveGroupPreAuthId(group.preAuthId || null);
     setIsPreAuthModalOpen(true);
+  };
+
+  const applyPreAuthToProcedures = async (assignments) => {
+    const assignmentByProcedureId = new Map(
+      assignments
+        .filter((assignment) => assignment?.procedure?.id && assignment.preAuthId)
+        .map((assignment) => [
+          String(assignment.procedure.id),
+          {
+            preAuth: assignment.status || 'Requested',
+            preAuthId: String(assignment.preAuthId),
+          },
+        ])
+    );
+
+    if (assignmentByProcedureId.size === 0) return;
+
+    const updateRow = (item) => {
+      const assignment = assignmentByProcedureId.get(String(item.id));
+      return assignment ? { ...item, ...assignment } : item;
+    };
+
+    const nextTreatmentPlans = treatmentPlans.map(updateRow);
+    const nextAppointmentProcedures = appointmentProcedures.map(updateRow);
+
+    setTreatmentPlans(nextTreatmentPlans);
+    setAppointmentProcedures(nextAppointmentProcedures);
+
+    const affectedPlanIds = new Set(
+      assignments
+        .map((assignment) => assignment.procedure?._planId)
+        .filter(Boolean)
+        .map(String)
+    );
+
+    if (affectedPlanIds.size === 0) return;
+
+    await Promise.all(Array.from(affectedPlanIds).map(async (planId) => {
+      const planItems = nextTreatmentPlans.filter((item) => String(item._planId || activePlanId) === String(planId));
+      if (planItems.length === 0) return;
+
+      const payloadItems = planItems.map(mapProcedureToPayloadItem);
+      const totalsPayload = buildTreatmentPlanTotalsPayload(payloadItems);
+      await treatmentPlanService.update(planId, {
+        items: payloadItems,
+        ...totalsPayload,
+      });
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, planId, payloadItems, totalsPayload));
+    }));
   };
 
   /**
@@ -506,6 +835,7 @@ const NewTreatmentPlanPage = () => {
         : (currentPatient?.primaryInsurance?.insuranceCompany?._id || currentPatient?.primaryInsurance?.insuranceCompany?.id || null);
 
       const serviceDate = new Date();
+      const preAuthAssignments = [];
 
       for (const group of summaryProviderGroups) {
         const payload = {
@@ -538,7 +868,14 @@ const NewTreatmentPlanPage = () => {
         }
 
         group.preAuthId = created?._id || created?.id || created?.ClaimNum || null;
+        if (group.preAuthId) {
+          group.procedures.forEach((procedure) => {
+            preAuthAssignments.push({ procedure, preAuthId: group.preAuthId, status: 'Requested' });
+          });
+        }
       }
+
+      await applyPreAuthToProcedures(preAuthAssignments);
 
       const createdCount = summaryProviderGroups.filter((g) => g.preAuthId).length;
       setSummaryProviderGroups((prev) =>
@@ -582,6 +919,7 @@ const NewTreatmentPlanPage = () => {
 
     const newProcedure = {
       id: newId,
+      _planId: activePlanId,
       priority: '- -',
       status: procedure.status || 'Planned',
       created: dayjs().format('MM/DD/YYYY'),
@@ -613,8 +951,7 @@ const NewTreatmentPlanPage = () => {
       const payload = {
         patientId: currentPatient._id || currentPatient.id,
         title: `Treatment Plan - ${dayjs().format('MM/DD/YYYY')}`,
-        status: 'A',
-        totalAmount: 0,
+        status: TREATMENT_PLAN_STATUS_ACTIVE,
         items: newTreatmentPlans.map(item => {
           const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
           const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
@@ -631,6 +968,7 @@ const NewTreatmentPlanPage = () => {
             icd: item.icd,
             provider: item.provider || null,
             preAuth: item.preAuth,
+            preAuthId: item.preAuthId || null,
             labCase: item.labCase,
             insEst: item.insEst,
             ptEst: item.ptEst,
@@ -641,21 +979,22 @@ const NewTreatmentPlanPage = () => {
           };
         })
       };
+      Object.assign(payload, buildTreatmentPlanTotalsPayload(payload.items));
 
       if (activePlanId) {
         // Update existing plan
-        const res = await treatmentPlanService.update(activePlanId, { items: payload.items });
+        const res = await treatmentPlanService.update(activePlanId, {
+          items: payload.items,
+          ...buildTreatmentPlanTotalsPayload(payload.items),
+        });
         const updatedPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payload.items, buildTreatmentPlanTotalsPayload(payload.items)));
         if (updatedPlan?.items && Array.isArray(updatedPlan.items)) {
-          // Merge: replace only this plan's items in the full list
           const updatedItems = mapPlanItems(updatedPlan.items, updatedPlan.createdAt).map((item) => ({
             ...item,
             _planId: activePlanId,
           }));
-          setTreatmentPlans((prev) => [
-            ...prev.filter((item) => item._planId !== activePlanId),
-            ...updatedItems,
-          ]);
+          setTreatmentPlans(updatedItems);
         }
         setToast({ open: true, message: 'Treatment plan auto-saved!', type: 'success' });
       } else {
@@ -671,9 +1010,9 @@ const NewTreatmentPlanPage = () => {
             ...item,
             _planId: createdId,
           }));
-          // Append new plan's items to the existing list
-          setTreatmentPlans((prev) => [...prev, ...newItems]);
+          setTreatmentPlans(newItems);
         }
+        setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== String(createdId))]);
         setToast({ open: true, message: 'Treatment plan created and saved!', type: 'success' });
       }
     } catch (error) {
@@ -733,13 +1072,21 @@ const NewTreatmentPlanPage = () => {
               icd: item.icd,
               provider: item.provider || null,
               preAuth: item.preAuth,
+              preAuthId: item.preAuthId || null,
               labCase: item.labCase,
               insEst: item.insEst,
               ptEst: item.ptEst,
             }));
-            return treatmentPlanService.update(planId, { items: payloadItems });
+            return treatmentPlanService.update(planId, {
+              items: payloadItems,
+              ...buildTreatmentPlanTotalsPayload(payloadItems),
+            });
           })
         );
+        setTreatmentPlanDrafts((prev) => Object.entries(planItemsMap).reduce((drafts, [planId, items]) => {
+          const payloadItems = items.map(mapProcedureToPayloadItem);
+          return mergePlanItemsIntoDrafts(drafts, planId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems));
+        }, prev));
         setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
       } catch (error) {
         console.error('Failed to auto-save treatment plan after deletion:', error);
@@ -826,12 +1173,17 @@ const NewTreatmentPlanPage = () => {
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
+        preAuthId: item.preAuthId || null,
         labCase: item.labCase,
         insEst: item.insEst,
         ptEst: item.ptEst,
       }));
 
-      await treatmentPlanService.update(activePlanId, { items: payloadItems });
+      await treatmentPlanService.update(activePlanId, {
+        items: payloadItems,
+        ...buildTreatmentPlanTotalsPayload(payloadItems),
+      });
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
       setToast({ open: true, message: 'Procedures moved to top and plan auto-saved!', type: 'success' });
     } catch (error) {
       console.error('Failed to auto-save treatment plan after reordering:', error);
@@ -902,24 +1254,13 @@ const NewTreatmentPlanPage = () => {
     try {
       setIsSaving(true);
 
-      const payloadItems = newTreatmentPlans.map(item => ({
-        procedureCode: item.code,
-        description: item.description,
-        tooth: item.tooth || '',
-        site: item.site,
-        fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-        priority: item.priority,
-        status: statusLabelToCode(item.status),
-        icd: item.icd,
-        provider: item.provider || null,
-        preAuth: item.preAuth,
-        labCase: item.labCase,
-        insEst: item.insEst,
-        ptEst: item.ptEst,
-      }));
+      const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
 
-      await treatmentPlanService.update(activePlanId, { items: payloadItems });
+      await treatmentPlanService.update(activePlanId, {
+        items: payloadItems,
+        ...buildTreatmentPlanTotalsPayload(payloadItems),
+      });
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
       setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
     } catch (error) {
       console.error('Failed to update item status:', error);
@@ -945,6 +1286,103 @@ const NewTreatmentPlanPage = () => {
     );    setSelectedRows([]);
   };
 
+  const handleSaveAsHold = async () => {
+    if (!currentPatient) {
+      setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
+      return;
+    }
+
+    if (!activePlanId && treatmentPlans.length === 0) {
+      setToast({ open: true, message: 'Add procedures before saving a hold draft.', type: 'error' });
+      return;
+    }
+
+    const payloadItems = treatmentPlans.map(mapProcedureToPayloadItem);
+    const totalsPayload = buildTreatmentPlanTotalsPayload(payloadItems);
+
+    try {
+      setIsSaving(true);
+
+      if (activePlanId) {
+        const updatedPlan = await treatmentPlanService.update(activePlanId, {
+          status: TREATMENT_PLAN_STATUS_HOLD,
+          items: payloadItems,
+          ...totalsPayload,
+        });
+        const nextPlan = updatedPlan?.data?.treatmentPlan || updatedPlan?.treatmentPlan || updatedPlan?.data || updatedPlan;
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(
+          prev,
+          activePlanId,
+          payloadItems,
+          {
+            ...totalsPayload,
+            ...(nextPlan && typeof nextPlan === 'object' ? nextPlan : {}),
+            status: TREATMENT_PLAN_STATUS_HOLD,
+          }
+        ));
+      } else {
+        const createdPlan = await treatmentPlanService.create({
+          patientId: currentPatient._id || currentPatient.id,
+          title: `Hold - ${dayjs().format('MM/DD/YYYY h:mm A')}`,
+          status: TREATMENT_PLAN_STATUS_HOLD,
+          items: payloadItems,
+          ...totalsPayload,
+        });
+        const nextPlan = createdPlan?.data?.treatmentPlan || createdPlan?.treatmentPlan || createdPlan?.data || createdPlan;
+        const nextPlanId = getPlanId(nextPlan);
+        if (!nextPlanId) {
+          throw new Error('Hold draft was saved but the response did not include an id.');
+        }
+        setTreatmentPlanDrafts((prev) => [nextPlan, ...prev.filter((plan) => getPlanId(plan) !== String(nextPlanId))]);
+        setActivePlanId(nextPlanId);
+        setTreatmentPlans(mapPlanItems(nextPlan.items, nextPlan.createdAt).map((item) => ({ ...item, _planId: nextPlanId })));
+      }
+
+      setSelectedRows([]);
+      setToast({ open: true, message: 'Treatment plan saved as hold.', type: 'success' });
+    } catch (error) {
+      console.error('Failed to save treatment plan as hold:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to save as hold.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteDraft = async () => {
+    if (!activePlanId) {
+      setTreatmentPlans([]);
+      setSelectedRows([]);
+      setToast({ open: true, message: 'No draft selected to delete.', type: 'info' });
+      return;
+    }
+
+    const previousDrafts = treatmentPlanDrafts;
+    const previousTreatmentPlans = treatmentPlans;
+
+    setTreatmentPlanDrafts((prev) => prev.filter((plan) => getPlanId(plan) !== String(activePlanId)));
+    setActivePlanId(null);
+    setTreatmentPlans([]);
+    setSelectedRows([]);
+
+    try {
+      setIsSaving(true);
+      await treatmentPlanService.delete(activePlanId);
+      setToast({ open: true, message: 'Draft deleted.', type: 'success' });
+    } catch (error) {
+      console.error('Failed to delete treatment plan draft:', error);
+      setTreatmentPlanDrafts(previousDrafts);
+      setActivePlanId(activePlanId);
+      setTreatmentPlans(previousTreatmentPlans);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to delete draft.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCreateDraft = async () => {
     const name = draftName.trim();
     if (!name) {
@@ -959,11 +1397,20 @@ const NewTreatmentPlanPage = () => {
 
     try {
       setIsCreatingDraft(true);
+      if (activePlanId) {
+        const currentItems = treatmentPlans.map(mapProcedureToPayloadItem);
+        await treatmentPlanService.update(activePlanId, {
+          items: currentItems,
+          ...buildTreatmentPlanTotalsPayload(currentItems),
+        });
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, currentItems, buildTreatmentPlanTotalsPayload(currentItems)));
+      }
+
       const res = await treatmentPlanService.create({
         patientId: currentPatient._id || currentPatient.id,
         title: name,
-        status: 'A',
-        totalAmount: 0,
+        status: TREATMENT_PLAN_STATUS_ACTIVE,
+        ...buildTreatmentPlanTotalsPayload([]),
         items: []
       });
       const createdPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data || res;
@@ -973,7 +1420,7 @@ const NewTreatmentPlanPage = () => {
         throw new Error('Draft was created but the response did not include an id.');
       }
 
-      setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== createdId)]);
+      setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== String(createdId))]);
       setActivePlanId(createdId);
       setTreatmentPlans(mapPlanItems(createdPlan.items, createdPlan.createdAt).map((i) => ({ ...i, _planId: createdId }))); 
       setSelectedRows([]);
@@ -987,37 +1434,6 @@ const NewTreatmentPlanPage = () => {
     } finally {
       setIsCreatingDraft(false);
     }
-  };
-
-  const mapProcedureToPayloadItem = (item) => {
-    const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
-    const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
-    const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
-    return {
-      id: item.id,
-      procedureCode: item.code,
-      description: item.description,
-      tooth: item.tooth || '',
-      site: item.site,
-      fee: itemFee,
-      charge: itemFee,
-      priority: item.priority,
-      status: statusLabelToCode(item.status),
-      icd: item.icd,
-      provider: item.provider || null,
-      prognosis: item.prognosis || '',
-      creditToPractice: Boolean(item.creditToPractice),
-      siteSelection: item.siteSelection || '',
-      scheduled: item.scheduled,
-      preAuth: item.preAuth,
-      labCase: item.labCase,
-      insEst: item.insEst,
-      ptEst: item.ptEst,
-      insPortion: itemIns,
-      ptPortion: itemPt,
-      insuranceAmount: `$${itemIns.toFixed(2)}`,
-      patientAmount: `$${itemPt.toFixed(2)}`,
-    };
   };
 
   const handleSaveEditedProcedure = async (updatedProcedure) => {
@@ -1085,9 +1501,12 @@ const NewTreatmentPlanPage = () => {
 
     try {
       setIsSaving(true);
+      const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
       await treatmentPlanService.update(activePlanId, {
-        items: newTreatmentPlans.map(mapProcedureToPayloadItem)
+        items: payloadItems,
+        ...buildTreatmentPlanTotalsPayload(payloadItems),
       });
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
       setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
     } catch (error) {
       console.error('Failed to update treatment plan procedure:', error);
@@ -1195,6 +1614,8 @@ const NewTreatmentPlanPage = () => {
             <ChartTable
               treatmentPlans={allProcedures}
               onUpdateItemStatus={handleUpdateItemStatus}
+              onEditItem={setEditingProcedure}
+              onDeleteItems={handleDeleteItems}
             />
           </Box>
         )}
@@ -1288,7 +1709,7 @@ const NewTreatmentPlanPage = () => {
                     <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
                   </IconButton>
                   <Tooltip title="Pre-Auth">
-                    <IconButton size="small" onClick={handleOpenPreAuth}>
+                    <IconButton size="small" onClick={() => handleOpenPreAuth()}>
                       <Box component="img" src={addClaimSvg} alt="add claim" sx={{ width: 22, height: 22 }} />
                     </IconButton>
                   </Tooltip>
@@ -1356,13 +1777,31 @@ const NewTreatmentPlanPage = () => {
               <Box sx={{ display: 'flex', gap: 3 }}>
                 <Box sx={{ width: '100%', flexGrow: 1, minWidth: 0 }}>
                   <NewTreatmentPlanTable
-                    treatmentPlans={allProcedures}
+                      appointment={currentAppointment}
+                      appointmentTypes={appointmentTypes}
+                      onUpdateAppointment={async (updates) => {
+                        if (!currentAppointment?._id && !currentAppointment?.id) return;
+                        try {
+                          await appointmentService.updateAppointment(currentAppointment._id || currentAppointment.id, updates);
+                          dispatch(fetchAppointmentById(currentAppointment._id || currentAppointment.id));
+                        } catch (err) {
+                          console.error('Failed to update appointment', err);
+                        }
+                      }}
+                      treatmentPlans={allProcedures}
+                    totals={treatmentPlanTotals}
+                    formatMoney={formatMoney}
                     onDeleteItems={handleDeleteItems}
                     onEditItem={setEditingProcedure}
                     onMoveToTop={handleMoveToTop}
                     onPrintRouteSlip={() => setIsRouteSlipOpen(true)}
                     onViewHistory={handleOpenAppointmentHistory}
+                    onViewSchedule={handleViewOnSchedule}
+                    onEditAppointment={handleEditAppointmentFromPlan}
+                    onSendPreAuth={handleOpenPreAuth}
                     onUpdateItemStatus={handleUpdateItemStatus}
+                    onSaveAsHold={handleSaveAsHold}
+                    onDeleteDraft={handleDeleteDraft}
                     selectedRows={selectedRows}
                     setSelectedRows={setSelectedRows}
                   />
@@ -1424,6 +1863,26 @@ const NewTreatmentPlanPage = () => {
         open={isAppointmentHistoryOpen}
         onClose={() => setIsAppointmentHistoryOpen(false)}
         appointment={activeAppointmentForHistory}
+      />
+      <AddNewPatientAppointmentForm
+        open={isEditAppointmentOpen}
+        onCancel={() => {
+          setIsEditAppointmentOpen(false);
+          setEditingAppointment(null);
+        }}
+        onSubmit={handleEditAppointmentSubmit}
+        loading={false}
+        initialAppointment={editingAppointment}
+        initialPatient={currentPatient || null}
+        providers={appointmentProviders || providersList || []}
+        rooms={appointmentRooms || []}
+        appointmentTypes={appointmentTypes || []}
+        appointments={[]}
+        scheduleBlocks={[]}
+        patients={currentPatient ? [currentPatient] : []}
+        loadingPatients={false}
+        onPatientSearch={() => {}}
+        showExtendedOptions={false}
       />
       <Dialog
         open={isCreateDraftOpen}
@@ -1536,9 +1995,12 @@ const NewTreatmentPlanPage = () => {
         open={isPreAuthModalOpen}
         onClose={() => setIsPreAuthModalOpen(false)}
         preAuthId={activeGroupPreAuthId}
-        onSave={(newId) => {
+        onSave={async (newId) => {
           setCreatedPreAuthId(newId);
           setCreatedPreAuthPatientId(currentPatientId);
+          await applyPreAuthToProcedures(
+            activeGroupProcedures.map((procedure) => ({ procedure, preAuthId: newId, status: 'Requested' }))
+          );
           // Reflect the saved preAuthId back into the matching summary group
           setSummaryProviderGroups((prev) =>
             prev.map((g) =>
@@ -1553,7 +2015,7 @@ const NewTreatmentPlanPage = () => {
           setActiveGroupPreAuthId(null);
         }}
         patientId={currentPatientId}
-        treatmentPlanId={activePlanId}
+        treatmentPlanId={activeGroupPlanId || activePlanId}
         selectedProcedures={activeGroupProcedures}
       />
 

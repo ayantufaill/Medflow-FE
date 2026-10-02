@@ -109,13 +109,7 @@ const fieldLabel = (field) => {
 };
 
 const getActorInitials = (entry) => {
-  const actor =
-    entry?.actor?.name ||
-    entry?.actorName ||
-    entry?.user?.name ||
-    entry?.userName ||
-    entry?.user ||
-    'SO';
+  const actor = getActorName(entry) || 'SO';
   const parts = String(actor).trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   return String(actor).slice(0, 2).toUpperCase();
@@ -432,7 +426,7 @@ const AppointmentHistoryTimelineDialog = ({ open, onClose, appointment }) => {
               <Box key={event.id} sx={{ display: 'flex', alignItems: 'flex-start', position: 'relative' }}>
                 <Box sx={{ width: 32, mr: 1.75, display: 'flex', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
                   {index < normalizedEvents.length - 1 && (
-                    <Box sx={{ position: 'absolute', top: 32, bottom: -22, width: 1, bgcolor: '#dbe3ef' }} />
+                    <Box sx={{ position: 'absolute', top: 32, bottom: -22, width: '2px', bgcolor: '#dbe3ef' }} />
                   )}
                   <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: COLORS.AVATAR_BG, color: COLORS.AVATAR_TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, fontFamily: 'Inter, sans-serif', zIndex: 1 }}>
                     {event.initials}
