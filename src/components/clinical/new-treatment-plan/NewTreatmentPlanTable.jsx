@@ -77,7 +77,7 @@ const NEW_TEMPLATE_OPTIONS = [
 
 const PROCEDURE_TABLE_MIN_WIDTH = 1120;
 
-const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onMoveToTop, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
+const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onEditFees, onMoveToTop, onPrintEstimate, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const currentVisitStatus = appointment?.status || 'Unconfirmed';
   const getCatId = (val) => (typeof val === 'object' && val !== null ? (val._id || val.id || val.name) : val);
@@ -174,6 +174,7 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
   };
 
   const handleEditFees = () => {
+    if (procedureMenu.row && onEditFees) onEditFees(procedureMenu.row);
     handleProcedureMenuClose();
   };
 
@@ -265,7 +266,13 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
           >
             <HistoryIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> History
           </MenuItem>
-          <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
+          <MenuItem
+            onClick={() => {
+              setActionMenuAnchor(null);
+              onPrintEstimate?.();
+            }}
+            sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}
+          >
             <EstimateIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> Print Estimate
           </MenuItem>
           <MenuItem

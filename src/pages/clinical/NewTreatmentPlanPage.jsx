@@ -52,6 +52,8 @@ import NewTreatmentPlanOdontogram from '../../components/clinical/new-treatment-
 import NewTreatmentPlanProcedures from '../../components/clinical/new-treatment-plan/NewTreatmentPlanProcedures';
 import NewTreatmentPlanTable from '../../components/clinical/new-treatment-plan/NewTreatmentPlanTable';
 import EditProcedureDrawer from '../../components/clinical/new-treatment-plan/EditProcedureDrawer';
+import EditFeesDrawer from '../../components/clinical/new-treatment-plan/EditFeesDrawer';
+import TreatmentPlanEstimatePrintDialog from '../../components/clinical/new-treatment-plan/TreatmentPlanEstimatePrintDialog';
 import TreatmentPlanRouteSlipDialog from '../../components/clinical/new-treatment-plan/TreatmentPlanRouteSlipDialog';
 import AppointmentHistoryTimelineDialog from '../../components/clinical/new-treatment-plan/AppointmentHistoryTimelineDialog';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
@@ -215,6 +217,16 @@ const mapPlanItems = (items, createdAt) => {
       negRate: formatMoney(feeVal, '-'),
       insEst: formatMoney(insVal, '-'),
       ptEst: formatMoney(ptVal, '-'),
+      ucrFee: item.ucrFee ?? null,
+      negotiatedRate: item.negotiatedRate ?? feeVal,
+      insuranceEstimate: insVal,
+      patientEstimate: ptVal,
+      deductible: item.deductible ?? 0,
+      noBillInsurance: Boolean(item.noBillInsurance),
+      preAuthStatus: item.preAuthStatus || '',
+      preAuthNumber: item.preAuthNumber || '',
+      downgradedCode: item.downgradedCode || '',
+      estimateSource: item.estimateSource || 'Auto',
       preAuth: item.preAuth || '-',
       preAuthId: item.preAuthId || null,
       labCase: item.labCase || '-'
@@ -295,7 +307,7 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
           })(),
           ...(() => {
             const rawCharge = Number(String(p.charge || p.fee || 0).replace(/[^0-9.-]+/g, ''));
-            const hasActualValues = p.insPortion != null && p.insPortion !== '$0.00' && p.insPortion !== '0';
+            const hasActualValues = p.insPortion != null && (p.estimateSource === 'Manual' || (p.insPortion !== '$0.00' && p.insPortion !== '0'));
             const insPortion = hasActualValues
               ? Number(String(p.insPortion).replace(/[^0-9.-]+/g, ''))
               : calculatePortionsForCategory({ charge: rawCharge, code: p.code }).insPortion;
@@ -306,6 +318,16 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
               negRate: formatMoney(rawCharge, '-'),
               insEst: formatMoney(insPortion, '-'),
               ptEst: formatMoney(ptPortion, '-'),
+              ucrFee: p.ucrFee ?? null,
+              negotiatedRate: rawCharge,
+              insuranceEstimate: insPortion,
+              patientEstimate: ptPortion,
+              deductible: p.deductible ?? 0,
+              noBillInsurance: Boolean(p.noBillInsurance),
+              preAuthStatus: p.preAuthStatus || '',
+              preAuthNumber: p.preAuthNumber || '',
+              downgradedCode: p.downgradedCode || '',
+              estimateSource: p.estimateSource || 'Auto',
             };
           })(),
           preAuth: '-',
@@ -391,6 +413,8 @@ const NewTreatmentPlanPage = () => {
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
   const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState(null);
+  const [editingFeesProcedure, setEditingFeesProcedure] = useState(null);
+  const [isEstimatePrintOpen, setIsEstimatePrintOpen] = useState(false);
   const [isRouteSlipOpen, setIsRouteSlipOpen] = useState(false);
   const [isAppointmentHistoryOpen, setIsAppointmentHistoryOpen] = useState(false);
   const [isEditAppointmentOpen, setIsEditAppointmentOpen] = useState(false);
@@ -1436,6 +1460,81 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const handleSaveEditedFees = async (fees) => {
+    const selected = editingFeesProcedure;
+    if (!selected) return;
+    try {
+      setIsSaving(true);
+      if (String(selected.id).startsWith('appt-')) {
+        const appointmentId = selected.appointmentId;
+        const appointment = await appointmentService.getAppointmentById(appointmentId);
+        const procedures = normalizeAppointmentProcedures(appointment);
+        const targetId = String(selected.id).slice(`appt-${appointmentId}-`.length);
+        const index = procedures.findIndex((procedure, position) => String(procedure.id ?? position) === targetId);
+        if (index < 0) throw new Error('Appointment procedure was not found.');
+        const updated = [...procedures];
+        updated[index] = {
+          ...updated[index],
+          ...fees,
+          charge: fees.negotiatedRate,
+          fee: fees.negotiatedRate,
+          insPortion: fees.insuranceEstimate,
+          ptPortion: fees.patientEstimate,
+          ptPart: fees.patientEstimate,
+          estimateSource: 'Manual',
+        };
+        const saved = await appointmentService.updateAppointment(appointmentId, {
+          customFields: { ...(appointment.customFields || {}), procedures: updated },
+          procedures: updated,
+        });
+        const refreshed = await appointmentService.getAppointmentById(appointmentId).catch(() => saved);
+        const rows = mapAppointmentsToTreatmentRows([refreshed]);
+        setAppointmentProcedures((previous) => previous.map((row) => rows.find((next) => next.id === row.id) || row));
+      } else {
+        const planId = selected._planId || activePlanId;
+        if (!planId) throw new Error('Treatment plan was not found.');
+        const result = await treatmentPlanService.updateItemFees(planId, selected.id, fees);
+        const rows = mapPlanItems(result.items).map((row) => ({ ...row, _planId: planId }));
+        setTreatmentPlans(rows);
+        setTreatmentPlanDrafts((previous) => mergePlanItemsIntoDrafts(previous, planId, result.items, {
+          totalAmount: result.totalAmount,
+          insurancePortion: result.insurancePortion,
+          patientPortion: result.patientPortion,
+        }));
+      }
+      setEditingFeesProcedure(null);
+      setToast({ open: true, message: 'Procedure fees updated successfully!', type: 'success' });
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Failed to update procedure fees.';
+      setToast({ open: true, message, type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRevertFees = async () => {
+    const selected = editingFeesProcedure;
+    if (!selected || String(selected.id).startsWith('appt-')) return;
+    try {
+      setIsSaving(true);
+      const planId = selected._planId || activePlanId;
+      const result = await treatmentPlanService.reestimateItemFees(planId, selected.id);
+      const rows = mapPlanItems(result.items).map((row) => ({ ...row, _planId: planId }));
+      setTreatmentPlans(rows);
+      setTreatmentPlanDrafts((previous) => mergePlanItemsIntoDrafts(previous, planId, result.items, {
+        totalAmount: result.totalAmount,
+        insurancePortion: result.insurancePortion,
+        patientPortion: result.patientPortion,
+      }));
+      setEditingFeesProcedure(null);
+      setToast({ open: true, message: 'Automatic estimates restored.', type: 'success' });
+    } catch (error) {
+      setToast({ open: true, message: error.response?.data?.message || error.message || 'Could not recalculate estimates.', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSaveEditedProcedure = async (updatedProcedure) => {
     if (!currentPatient || !updatedProcedure?.id) return;
 
@@ -1793,7 +1892,9 @@ const NewTreatmentPlanPage = () => {
                     formatMoney={formatMoney}
                     onDeleteItems={handleDeleteItems}
                     onEditItem={setEditingProcedure}
+                    onEditFees={setEditingFeesProcedure}
                     onMoveToTop={handleMoveToTop}
+                    onPrintEstimate={() => setIsEstimatePrintOpen(true)}
                     onPrintRouteSlip={() => setIsRouteSlipOpen(true)}
                     onViewHistory={handleOpenAppointmentHistory}
                     onViewSchedule={handleViewOnSchedule}
@@ -1851,6 +1952,21 @@ const NewTreatmentPlanPage = () => {
       </Box>
 
       <ArchiveDrawer open={isArchiveDrawerOpen} onClose={() => setIsArchiveDrawerOpen(false)} />
+      <TreatmentPlanEstimatePrintDialog
+        open={isEstimatePrintOpen}
+        onClose={() => setIsEstimatePrintOpen(false)}
+        patient={currentPatient}
+        appointment={{
+          ...(currentAppointment || {}),
+          appointmentDate: activeScheduleDate,
+          startTime: activeScheduleTime,
+          endTime: currentAppointment?.endTime || activeScheduledProcedure?.endTime,
+          provider: currentAppointment?.provider || currentAppointment?.providerId || activeScheduledProcedure?.provider,
+        }}
+        procedures={allProcedures}
+        appointmentTypes={appointmentTypes}
+        planTitle={activeDraftTitle}
+      />
       <TreatmentPlanRouteSlipDialog
         open={isRouteSlipOpen}
         onClose={() => setIsRouteSlipOpen(false)}
@@ -1968,6 +2084,15 @@ const NewTreatmentPlanPage = () => {
         procedure={editingProcedure}
         onClose={() => setEditingProcedure(null)}
         onSave={handleSaveEditedProcedure}
+      />
+      <EditFeesDrawer
+        key={editingFeesProcedure?.id || 'closed'}
+        open={Boolean(editingFeesProcedure)}
+        procedure={editingFeesProcedure}
+        onClose={() => setEditingFeesProcedure(null)}
+        onSave={handleSaveEditedFees}
+        onRevert={String(editingFeesProcedure?.id || '').startsWith('appt-') ? undefined : handleRevertFees}
+        saving={isSaving}
       />
       <NotesDrawer
         open={isNotesDrawerOpen}
