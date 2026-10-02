@@ -1,6 +1,19 @@
 import { Box, Typography, TextField, MenuItem, Stack } from "@mui/material";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 import FormInput from './FormInput';
+
+const dateFieldSx = {
+  bgcolor: '#f8f9fc',
+  '& .MuiInputBase-root': {
+    fontSize: '14px',
+    height: '36px'
+  },
+  '& fieldset': { borderColor: '#DFE5EC' },
+};
 
 const RenewalSection = ({ 
   formData, 
@@ -40,27 +53,51 @@ const RenewalSection = ({
       <Box sx={{ p: 1.5 }}>
       <Stack spacing={1.5} sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: '0 1 210px', maxWidth: 210, minWidth: 0 }}>
             <FormInput
               label="Policy Started"
               required
-              type="date"
-              InputLabelProps={{ shrink: true }}
-              value={formData.policyStarted || ''}
-              onChange={(e) => handleRenewalChange('policyStarted', e.target.value)}
-              error={!!errors.policyStarted}
-              helperText={errors.policyStarted}
+              renderInput={() => (
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    format="MM/DD/YYYY"
+                    value={formData.policyStarted ? dayjs(formData.policyStarted) : null}
+                    onChange={(newValue) => handleRenewalChange('policyStarted', newValue ? newValue.format('YYYY-MM-DD') : '')}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        error: !!errors.policyStarted,
+                        helperText: errors.policyStarted,
+                        sx: dateFieldSx
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              )}
             />
           </Box>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: '0 1 210px', maxWidth: 210, minWidth: 0 }}>
             <FormInput
               label="Policy Ends"
-              type="date"
-              InputLabelProps={{ shrink: true }}
-              value={formData.policyEnds || ''}
-              onChange={(e) => handleRenewalChange('policyEnds', e.target.value)}
-              error={!!errors.policyEnds}
-              helperText={errors.policyEnds}
+              renderInput={() => (
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    format="MM/DD/YYYY"
+                    value={formData.policyEnds ? dayjs(formData.policyEnds) : null}
+                    onChange={(newValue) => handleRenewalChange('policyEnds', newValue ? newValue.format('YYYY-MM-DD') : '')}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        size: 'small',
+                        error: !!errors.policyEnds,
+                        helperText: errors.policyEnds,
+                        sx: dateFieldSx
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
+              )}
             />
           </Box>
         </Box>

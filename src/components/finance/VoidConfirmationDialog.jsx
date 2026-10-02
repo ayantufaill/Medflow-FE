@@ -3,11 +3,18 @@ import BaseDialog from '../shared/BaseDialog';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 
-const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
+const VoidConfirmationDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  title = 'Void Adjustment',
+  message = 'Are you sure you want to void this adjustment? This action cannot be undone.',
+  confirmLabel = 'Void',
+}) => (
   <BaseDialog
     open={open}
     onClose={onClose}
-    title="Void Adjustment"
+    title={title}
     actions={
       <>
         <Button
@@ -43,13 +50,13 @@ const VoidConfirmationDialog = ({ open, onClose, onConfirm }) => (
             '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }, // Darker Danger Red
           }}
         >
-          Void
+          {confirmLabel}
         </Button>
       </>
     }
   >
     <Typography variant="body2" sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '14px', textAlign: 'center', py: 2 }}>
-      Are you sure you want to void this adjustment? This action cannot be undone.
+      {message}
     </Typography>
   </BaseDialog>
 );

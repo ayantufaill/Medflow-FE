@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Checkbox, Select,
   MenuItem, TextField, Autocomplete, DialogTitle, IconButton,
+  Chip, Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import Lock from '@mui/icons-material/Lock';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
@@ -73,7 +75,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
   const [selectedTreatingProvider, setSelectedTreatingProvider] = useState('');
   const [selectedBillingEntity, setSelectedBillingEntity] = useState('');
-  const [claimType, setClaimType] = useState('Manual');
+  const [claimType, setClaimType] = useState('Electronic');
 
   // ── Derived values ───────────────────────────────────────────────────────
   const patientId = selectedPatientId || patient?._id || patient?.id;
@@ -137,10 +139,26 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   };
 
   const handleInvoiceToggle = (invoiceId) => {
+    const inv = invoices.find((i) => String(i.id) === String(invoiceId));
+    if (inv?.lockedByClaim) {
+      showSnackbar(
+        `Invoice #${inv.invoiceNumber || inv.id} has locked claim ${inv.lockedByClaim.claimNumber}. It cannot be claimed again until that claim is paid or unlocked.`,
+        'warning'
+      );
+      return;
+    }
     dispatch(toggleInvoiceChecked({ patientId, invoiceId }));
   };
 
   const handleProcedureToggle = (invoiceId, itemId) => {
+    const inv = invoices.find((i) => String(i.id) === String(invoiceId));
+    if (inv?.lockedByClaim) {
+      showSnackbar(
+        `Invoice #${inv.invoiceNumber || inv.id} has locked claim ${inv.lockedByClaim.claimNumber}. It cannot be claimed again until that claim is paid or unlocked.`,
+        'warning'
+      );
+      return;
+    }
     dispatch(toggleLineItemChecked({ patientId, invoiceId, itemId }));
   };
 
@@ -197,6 +215,8 @@ const ManualClaimDialog = ({ patient, onClose }) => {
 
     const selectedItems = [];
     invoices.forEach((inv) => {
+      // Locked invoices are frozen until their claim is paid or unlocked.
+      if (inv.lockedByClaim) return;
       (inv.lineItems || []).forEach((item) => {
         if (item.checked && !isProcClaimedForSelectedIns(item)) {
           const itemInsAmount = getProcedureInsAmount(item);
@@ -437,7 +457,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               size="small"
               sx={{
                 height: "36px",
-                width: "130px",
+                width: "170px",
                 bgcolor: COLORS.SURFACE_TINT,
                 borderRadius: radius.sm,
                 "& .MuiSelect-select": {
@@ -481,7 +501,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
               size="small"
               sx={{
                 height: "36px",
-                width: "130px",
+                width: "170px",
                 bgcolor: COLORS.SURFACE_TINT,
                 borderRadius: radius.sm,
                 "& .MuiSelect-select": {
@@ -510,14 +530,14 @@ const ManualClaimDialog = ({ patient, onClose }) => {
 
           {/* Claim Type */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>Type:</Typography>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap' }}>Type:</Typography>
             <Select
               value={claimType}
               onChange={(e) => setClaimType(e.target.value)}
               size="small"
               sx={{
                 height: "36px",
-                width: "130px",
+                width: "170px",
                 bgcolor: COLORS.SURFACE_TINT,
                 borderRadius: radius.sm,
                 "& .MuiSelect-select": {
@@ -553,20 +573,34 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             const visibleLineItems = (inv.lineItems || []).filter((proc) => !isProcClaimedForSelectedIns(proc));
             if (visibleLineItems.length === 0) return null;
             return (
-            <Box key={inv.id} sx={{ mb: 2 }}>
+            <Box key={inv.id} sx={{ mb: 2, opacity: inv.lockedByClaim ? 0.6 : 1 }}>
               {/* Invoice summary row */}
               <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #eee', pb: 1, mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                   <Checkbox
                     size="small"
                     sx={{ p: 0.5 }}
-                    checked={inv.checked}
+                    checked={inv.lockedByClaim ? false : inv.checked}
+                    disabled={Boolean(inv.lockedByClaim)}
                     onChange={() => handleInvoiceToggle(inv.id)}
                   />
                   <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: '#333' }}>
                     Invoice #{inv.invoiceNumber || inv.id} :{' '}
                     {inv.invoiceDate ? dayjs(inv.invoiceDate).format('MM/DD/YYYY') : 'N/A'} for {selectedPatientName}
                   </Typography>
+                  {inv.lockedByClaim && (
+                    <Tooltip
+                      title={`Claim ${inv.lockedByClaim.claimNumber} is locked. This invoice cannot be claimed again until that claim is paid or unlocked.`}
+                      placement="top"
+                    >
+                      <Chip
+                        icon={<Lock sx={{ fontSize: '14px !important' }} />}
+                        label="Locked claim"
+                        size="small"
+                        sx={{ ml: 1, height: 22, fontSize: '0.6875rem', bgcolor: '#F3F4F6', color: '#4B5563' }}
+                      />
+                    </Tooltip>
+                  )}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, pr: 6 }}>
                   <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'right', color: errorRed }}>
@@ -588,7 +622,8 @@ const ManualClaimDialog = ({ patient, onClose }) => {
                     <Checkbox
                       size="small"
                       sx={{ p: 0.5 }}
-                      checked={proc.checked}
+                      checked={inv.lockedByClaim ? false : proc.checked}
+                      disabled={Boolean(inv.lockedByClaim)}
                       onChange={() => handleProcedureToggle(inv.id, proc.id)}
                     />
                     <Typography sx={{ fontSize: '0.75rem', width: '60px', color: COLORS.TEXT_SECONDARY, ml: 1 }}>

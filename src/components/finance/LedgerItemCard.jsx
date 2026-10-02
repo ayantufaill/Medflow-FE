@@ -45,6 +45,7 @@ const LedgerItemCard = ({
   onRejectClaimClick,
   onLockClaimClick,
   onVoidClaimClick,
+  onChangeClaimStatusClick,
 }) => {
   const isPatientDeposit = Boolean(
     displayItem?.isPatientDeposit ||
@@ -485,6 +486,12 @@ const LedgerItemCard = ({
                 isClaim={detail.isClaim}
                 insuranceType={detail.insuranceType}
                 isVoided={detail.isVoided}
+                isLocked={detail.isLocked}
+                hideClaimStatus={
+                  detail.isClaim &&
+                  detail.isVoided &&
+                  displayItem.details.filter((d) => d.isClaim).length <= 1
+                }
                 showExtendedTools={
                   !isPatientDeposit &&
                   !detail.isClaim &&
@@ -532,6 +539,7 @@ const LedgerItemCard = ({
                 onRejectClaimClick={onRejectClaimClick}
                 onLockClaimClick={onLockClaimClick}
                 onVoidClaimClick={onVoidClaimClick}
+                onChangeClaimStatusClick={onChangeClaimStatusClick}
                 isAdjustment={displayItem.isAdjustment}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);

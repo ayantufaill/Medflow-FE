@@ -26,6 +26,8 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
 import {
@@ -51,6 +53,14 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [dupWarning, setDupWarning] = useState("");
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
+
+  // Selection is tracked by EXCLUSION, not inclusion. `procedures` is rebuilt
+  // wholesale from `invoiceData` in the effect below and appended to as rows
+  // are added, so an inclusion Set would have to be re-synced in every one of
+  // those places and would silently leave a newly added row unselected.
+  // Defaulting to "not excluded" also preserves the previous behaviour, where
+  // every listed procedure went onto the invoice.
+  const [unselectedIds, setUnselectedIds] = useState(() => new Set());
 
   useEffect(() => {
     console.log("InvoiceModal debug - invoiceData:", invoiceData);
@@ -159,8 +169,27 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     }
   }, [invoiceData, patient, reduxPatient]);
 
+  // Only ticked rows reach the invoice.
+  const selectedProcedures = procedures.filter((p) => !unselectedIds.has(p.id));
+
   // Procedures eligible for a claim: only those where dbi is false
-  const claimProcedures = procedures.filter((p) => !p.dbi);
+  const claimProcedures = selectedProcedures.filter((p) => !p.dbi);
+
+  const allSelected =
+    procedures.length > 0 && selectedProcedures.length === procedures.length;
+
+  const toggleProcedureSelected = (procedureId) =>
+    setUnselectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(procedureId)) next.delete(procedureId);
+      else next.add(procedureId);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setUnselectedIds(
+      allSelected ? new Set(procedures.map((p) => p.id)) : new Set(),
+    );
 
   // Providers from Redux (cached — won't re-fetch if already loaded)
   const providersList = useSelector(selectProviderDropdownList);
@@ -265,6 +294,23 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   const handleDeleteProcedure = (procedureId) => {
     setProcedures((prev) => prev.filter((p) => p.id !== procedureId));
+  };
+
+  const handleDateChange = (procedureId, newDate) => {
+    // dayjs() with no argument returns NOW, so a row arriving without a date
+    // would silently pick up today. Only null when there is genuinely nothing
+    // to parse, and never overwrite an existing date with an invalid one.
+    const parsed = newDate ? dayjs(newDate) : null;
+    if (parsed && !parsed.isValid()) return;
+
+    setProcedures((prev) =>
+      prev.map((p) => {
+        if (p.id !== procedureId) return p;
+        // Persist as YYYY-MM-DD, the same shape a newly added procedure uses,
+        // so the backend receives one date format regardless of origin.
+        return { ...p, date: parsed ? parsed.format("YYYY-MM-DD") : null };
+      }),
+    );
   };
 
   const handleAmountChange = async (procedureId, field, value) => {
@@ -669,6 +715,29 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                   <TableRow>
                     <TableCell
                       sx={{
+                        py: 1,
+                        width: "36px",
+                        textAlign: "center",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={allSelected}
+                        indeterminate={
+                          selectedProcedures.length > 0 && !allSelected
+                        }
+                        onChange={toggleSelectAll}
+                        sx={{
+                          p: 0,
+                          color: "#cbd5e1",
+                          "&.Mui-checked": { color: COLORS.ACCENT },
+                          "&.MuiCheckbox-indeterminate": { color: COLORS.ACCENT },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell
+                      sx={{
                         fontSize: "11px",
                         color: COLORS.TEXT_SECONDARY,
                         fontWeight: 600,
@@ -768,13 +837,57 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                       BALANCE
                     </TableCell>
                     <TableCell sx={{ py: 1 }}></TableCell>
+                    <TableCell sx={{ py: 1 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {procedures.map((row) => (
                     <TableRow key={row.id}>
+                      <TableCell
+                        sx={{ py: 1, textAlign: "center", verticalAlign: "top" }}
+                      >
+                        <Checkbox
+                          size="small"
+                          checked={!unselectedIds.has(row.id)}
+                          onChange={() => toggleProcedureSelected(row.id)}
+                          sx={{
+                            p: 0,
+                            color: "#cbd5e1",
+                            "&.Mui-checked": { color: COLORS.ACCENT },
+                          }}
+                        />
+                      </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
-                        {row.date}
+                        <DatePicker
+                          size="small"
+                          format="MM/DD/YYYY"
+                          value={row.date ? dayjs(row.date) : null}
+                          onChange={(value) => handleDateChange(row.id, value)}
+                          slotProps={{
+                            // The calendar renders in a portal at the document
+                            // body, so it inherits the default theme z-index
+                            // (1300) and lands behind these overlays, which sit
+                            // at 130000 (finance/ledger) and 140000
+                            // (appointments). Must clear the highest of them.
+                            popper: {
+                              sx: { zIndex: 150000 },
+                            },
+                            textField: {
+                              size: "small",
+                              sx: {
+                                width: "160px",
+                                "& .MuiInputBase-input": {
+                                  py: 0.5,
+                                  px: 1,
+                                  fontSize: "12px",
+                                },
+                              },
+                            },
+                          }}
+                          sx={{
+                            "& .MuiInputBase-root": { fontSize: "12px" },
+                          }}
+                        />
                       </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
                         {row.code}
@@ -884,6 +997,33 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                           </Box>
                         </Box>
                       </TableCell>
+                      <TableCell sx={{ py: 1, textAlign: "center" }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleDeleteProcedure(row.id)}
+                          sx={{
+                            fontFamily: "Inter",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            textTransform: "none",
+                            borderRadius: "8px",
+                            border: "1px solid #ef4444",
+                            color: "#ef4444",
+                            px: "10px",
+                            py: "2px",
+                            minWidth: "0",
+                            bgcolor: "white",
+                            whiteSpace: "nowrap",
+                            "&:hover": {
+                              borderColor: "#dc2626",
+                              backgroundColor: "#fef2f2",
+                            },
+                          }}
+                        >
+                          Incomplete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -984,8 +1124,14 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             size="small"
             onClick={() => {
               if (onSave)
-                onSave({ procedures, addClaim, claimProcedures, description });
+                onSave({
+                  procedures: selectedProcedures,
+                  addClaim,
+                  claimProcedures,
+                  description,
+                });
             }}
+            disabled={selectedProcedures.length === 0}
             sx={{
               bgcolor: COLORS.ACCENT,
               color: "#fff",
@@ -994,6 +1140,10 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               borderRadius: "8px",
               fontWeight: 600,
               "&:hover": { bgcolor: "#1565c0" },
+              "&.Mui-disabled": {
+                bgcolor: "#cbd5e1",
+                color: "#fff",
+              },
             }}
           >
             Add New Invoice

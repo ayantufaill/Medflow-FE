@@ -61,17 +61,9 @@ const FinanceActions = ({
     handleInsuranceCoverageClose();
   };
 
-  // Add Claim dialog (dropdown state)
-  const [addClaimAnchorEl, setAddClaimAnchorEl] = useState(null);
-  const handleAddClaimClick = (e) => setAddClaimAnchorEl(e.currentTarget);
-  const handleAddClaimClose = () => setAddClaimAnchorEl(null);
-  const handleAddClaimSelect = (type) => {
-    handleAddClaimClose();
-    if (type === 'manual') {
-      onTriggerPatientFinanceIcon?.('claim');
-    } else if (type === 'electronic') {
-      onTriggerPatientFinanceIcon?.('electronicClaim');
-    }
+  // Add Claim opens the manual claim dialog directly
+  const handleAddClaimClick = () => {
+    onTriggerPatientFinanceIcon?.('claim');
   };
 
   // Past Statements dialog
@@ -249,25 +241,6 @@ const FinanceActions = ({
         onClose={() => setShowPastStatements(false)}
         patient={patient}
       />
-
-      {/* Add Claim Dropdown Menu */}
-      <Menu
-        anchorEl={addClaimAnchorEl}
-        open={Boolean(addClaimAnchorEl)}
-        onClose={handleAddClaimClose}
-        PaperProps={{
-          sx: {
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            minWidth: 150,
-            '& .MuiMenuItem-root': {
-              fontSize: '0.875rem'
-            }
-          }
-        }}
-      >
-        <MenuItem onClick={() => handleAddClaimSelect('manual')}>Manual Claim</MenuItem>
-        <MenuItem onClick={() => handleAddClaimSelect('electronic')}>Electronic Claim</MenuItem>
-      </Menu>
 
       <PatientPrintOptions
         anchorEl={printAnchorEl}

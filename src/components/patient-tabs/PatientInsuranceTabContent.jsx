@@ -40,6 +40,10 @@ import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
 import InsuranceTabs from '../insurance/InsuranceTabs';
+import ImportedCoverageBanner from '../insurance/ImportedCoverageBanner';
+import FamilyCoverageBanner from '../insurance/FamilyCoverageBanner';
+import FamilyCoverageMatrix from '../insurance/components/FamilyCoverageMatrix';
+import { getCoverageAmounts } from '../insurance/utils/insuranceHelpers';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 import {
@@ -48,45 +52,7 @@ import {
   selectInsuranceUsageCache,
 } from '../../store/slices/patientSlice';
 
-const parseAmount = (val) => {
-  if (val === null || val === undefined || val === '') return null;
-  if (typeof val === 'number') return isNaN(val) ? null : val;
-  const cleaned = String(val).replace(/[^0-9.-]+/g, "");
-  if (!cleaned) return null;
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? null : num;
-};
-
-const getCoverageAmounts = (ins, usage) => {
-  let coverageLimits = ins?.coverageLimits;
-  if (typeof coverageLimits === 'string') {
-    try {
-      coverageLimits = JSON.parse(coverageLimits);
-    } catch {
-      coverageLimits = null;
-    }
-  }
-  const limitsInd = coverageLimits?.individual;
-  
-  const rawUsed = 
-    usage?.usedAmount ??
-    limitsInd?.usedAmount ?? 
-    ins?.usedAmount ?? 
-    ins?.copayAmount;
-    
-  const rawMax = 
-    usage?.annualMax ??
-    limitsInd?.annualMax ?? 
-    ins?.individualAnnualMax ?? 
-    ins?.deductibleAmount;
-
-  const usedAmount = parseAmount(rawUsed) ?? 0;
-  const maxAmount = parseAmount(rawMax) ?? 0;
-
-  return { usedAmount, maxAmount };
-};
-
-const CoverageRow = ({ 
+const CoverageRow = ({
   ins, 
   companies, 
   getInsuranceCompanyName, 
@@ -357,6 +323,14 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
 
   const inactiveInsurances = localInsurances.filter((i) => !i.isActive);
 
+  // Household members already imply "family with coverage" — the matrix itself
+  // confirms per-policy detail, this banner is just a nudge to go look.
+  const hasHousehold = Array.isArray(patient?.household) && patient.household.length > 0;
+  // Reuses the same inactive-coverage set the "Imported Coverage" button/modal
+  // already treats as pending import, so the banner and the modal never disagree.
+  const hasImportedCoverage = inactiveInsurances.length > 0;
+  const isFamilyTab = tabValue === 1 || tabValue === 3;
+
   const handleInsuranceAdd = () => {
     navigate(`/patients/${patientId}/insurance/new`);
   };
@@ -586,11 +560,36 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
         </Box>
       </Box>
 
+      {(hasHousehold || hasImportedCoverage) && (
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+          {hasHousehold && (
+            <Box sx={{ flex: 1, minWidth: 320 }}>
+              <FamilyCoverageBanner onReview={() => setTabValue(1)} />
+            </Box>
+          )}
+          {hasImportedCoverage && (
+            <Box sx={{ flex: 1, minWidth: 320 }}>
+              <ImportedCoverageBanner onReview={() => setImportedCoverageModalOpen(true)} />
+            </Box>
+          )}
+        </Box>
+      )}
+
       <Box sx={{ pt: 0, display: 'flex', gap: 2 }}>
         <Box sx={{ flex: 1 }}>
           <InsuranceTabs tabValue={tabValue} onTabChange={(e, val) => setTabValue(val)} />
 
-          {filteredTabInsurances.length === 0 ? (
+          {isFamilyTab ? (
+            <FamilyCoverageMatrix
+              patient={patient}
+              patientId={patientId}
+              patientInsurances={displayInsurances}
+              getInsuranceCompanyName={getInsuranceCompanyName}
+              showArchived={tabValue === 3}
+              onViewPolicy={(member, ins) => navigate(`/patients/${member.id}/insurance/${ins._id || ins.id}/edit`)}
+              onChanged={fetchInsurancesAndCompanies}
+            />
+          ) : filteredTabInsurances.length === 0 ? (
             <Box
               sx={{
                 display: 'flex',

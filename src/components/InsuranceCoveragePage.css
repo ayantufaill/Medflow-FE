@@ -1,0 +1,394 @@
+/* ─────────────────────────────────────────────────────────────
+   Insurance Coverage — family coverage matrix
+   Flat, compact presentation. Borders only: no shadows, no
+   gradients, no decorative surfaces.
+   ───────────────────────────────────────────────────────────── */
+
+.icp-page {
+  --icp-border: #e8eaed;
+  --icp-border-strong: #d5d9de;
+  --icp-text: #37414d;
+  --icp-text-strong: #1f2933;
+  --icp-text-muted: #8a94a0;
+  --icp-accent: #2362ef;
+
+  background: #ffffff;
+  color: var(--icp-text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 20px 24px 28px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.icp-page *,
+.icp-page *::before,
+.icp-page *::after {
+  box-sizing: border-box;
+}
+
+/* ── Notifications ─────────────────────────────────────────── */
+
+.icp-notifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.icp-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.icp-notification--family {
+  background: #fdf6e3;
+  border-color: #f0e2bd;
+}
+
+.icp-notification--imported {
+  background: #eef4fe;
+  border-color: #d5e3fb;
+}
+
+.icp-notification__icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.icp-notification--family .icp-notification__icon {
+  background: #f7e9c4;
+  color: #a9761a;
+}
+
+.icp-notification--imported .icp-notification__icon {
+  background: #d8e6fd;
+  color: #1b52cf;
+}
+
+.icp-notification__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.icp-notification__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--icp-text-strong);
+}
+
+.icp-notification__text {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--icp-text);
+}
+
+.icp-notification__action {
+  flex: 0 0 auto;
+  align-self: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+}
+
+.icp-notification__action--family {
+  background: #f2dfae;
+  border-color: #e3cb92;
+  color: #8a6414;
+}
+
+.icp-notification__action--imported {
+  background: #d5e3fb;
+  border-color: #bcd3f7;
+  color: #1b52cf;
+}
+
+.icp-notification__action:hover {
+  filter: brightness(0.97);
+}
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+
+.icp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--icp-border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.icp-tab {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--icp-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.icp-tab:hover {
+  color: var(--icp-text);
+}
+
+.icp-tab--active {
+  color: var(--icp-text-strong);
+  font-weight: 600;
+  border-bottom-color: var(--icp-border-strong);
+}
+
+/* ── Matrix ────────────────────────────────────────────────── */
+
+.icp-table {
+  --icp-member-col: 210px;
+  --icp-policy-col: minmax(0, 1fr);
+}
+
+.icp-row {
+  display: grid;
+  grid-template-columns: var(--icp-member-col) repeat(var(--icp-policy-count, 1), var(--icp-policy-col));
+  border-bottom: 1px solid var(--icp-border);
+}
+
+.icp-row:last-child {
+  border-bottom: 0;
+}
+
+/* Header */
+
+.icp-row--head {
+  border-bottom: 1px solid var(--icp-border-strong);
+}
+
+.icp-row--head .icp-cell {
+  padding: 0 16px 10px;
+  vertical-align: bottom;
+}
+
+.icp-cell--member {
+  padding: 16px;
+}
+
+.icp-cell--policy {
+  padding: 16px;
+  border-left: 1px solid var(--icp-border);
+}
+
+.icp-header-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--icp-text-muted);
+}
+
+.icp-header-policy {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #5f6b78;
+}
+
+/* Member cell */
+
+.icp-member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--icp-text-strong);
+}
+
+.icp-member-dob {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--icp-text-muted);
+}
+
+.icp-subscriber {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #17803d;
+}
+
+.icp-subscriber__check {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #17803d;
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* ── Policy card ───────────────────────────────────────────── */
+
+.icp-policy {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.icp-policy-card {
+  border: 1px solid var(--icp-border);
+  border-radius: 6px;
+  padding: 12px 14px 0;
+  background: #ffffff;
+}
+
+.icp-policy-card__label {
+  font-size: 11.5px;
+  color: var(--icp-text-muted);
+}
+
+.icp-policy-card__amount {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--icp-text-strong);
+}
+
+.icp-policy-card__actions {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--icp-border);
+}
+
+.icp-policy-action {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--icp-accent);
+  cursor: pointer;
+}
+
+.icp-policy-action:hover {
+  text-decoration: underline;
+}
+
+.icp-policy-action--deactivate {
+  color: #c2410c;
+}
+
+.icp-policy-divider {
+  width: 1px;
+  height: 12px;
+  margin: 0 10px;
+  background: var(--icp-border-strong);
+}
+
+/* Inactive cell */
+
+.icp-policy-na {
+  font-size: 12px;
+  color: var(--icp-text-muted);
+}
+
+.icp-activate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  background: #ffffff;
+  border: 1px solid var(--icp-border-strong);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--icp-text);
+  cursor: pointer;
+  text-align: center;
+}
+
+.icp-activate:hover {
+  border-color: var(--icp-accent);
+  color: var(--icp-accent);
+}
+
+.icp-activate__plus {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .icp-notifications {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .icp-page {
+    padding: 16px;
+  }
+
+  /* Collapse the matrix into stacked patient sections rather than letting the
+     three columns compress into unreadable slivers. */
+  .icp-row--head {
+    display: none;
+  }
+
+  .icp-row {
+    display: block;
+    padding: 4px 0 14px;
+  }
+
+  .icp-cell--member,
+  .icp-cell--policy {
+    border-left: 0;
+    padding: 12px 0;
+  }
+
+  .icp-cell--policy::before {
+    content: attr(data-policy-label);
+    display: block;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #5f6b78;
+  }
+}

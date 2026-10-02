@@ -105,7 +105,7 @@ const FinanceDialogManager = ({
       )}
 
       {showNewInvoice && (
-        <DialogWrapper onClose={() => setShowNewInvoice(false)}>
+        <DialogWrapper onClose={() => setShowNewInvoice(false)} maxWidth="1400px">
           <InvoiceModal patient={patient} onSave={handleInvoiceModalSave} onClose={() => setShowNewInvoice(false)} />
         </DialogWrapper>
       )}

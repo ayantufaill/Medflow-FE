@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -47,6 +47,7 @@ import {
 import dayjs from 'dayjs';
 import { useSelector } from 'react-redux';
 import { selectCurrentPatient, selectPatientInsurancesCache } from '../../../store/slices/patientSlice';
+import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { authorizationService } from '../../../services/authorization.service';
 import { treatmentPlanService } from '../../../services/treatment-plan.service';
 import { documentService } from '../../../services/document.service';
@@ -58,6 +59,30 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, se
   const currentPatient = useSelector(selectCurrentPatient);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const currentUser = useSelector((state) => state.auth?.user);
+  const providersList = useSelector(selectProviderDropdownList) || [];
+
+  const getProviderLabel = (value) => {
+    if (!value) return '';
+    if (typeof value === 'object') {
+      const name = [value.firstName, value.lastName].filter(Boolean).join(' ').trim();
+      return name || value.preferredName || value.providerCode || value._id || '';
+    }
+    const match = providersList.find(
+      (p) => String(p._id) === String(value) || String(p.providerCode) === String(value)
+    );
+    if (match) return getProviderLabel(match);
+    return value;
+  };
+
+  // Provider(s) of the procedures selected for this pre-auth
+  const procedureProviderName = useMemo(() => {
+    const labels = (selectedProcedures || [])
+      .map((proc) => getProviderLabel(proc.provider || proc.providerId || proc.prov))
+      .filter(Boolean);
+    if (labels.length === 0) return '';
+    const unique = [...new Set(labels)];
+    return unique.join(', ');
+  }, [selectedProcedures, providersList]);
 
   const [tabValue, setTabValue] = useState(0);
   const [order, setOrder] = useState('Primary');
@@ -204,9 +229,9 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, treatmentPlanId, se
           patientInsuranceId = currentPatient.primaryInsurance.insuranceCompany._id || currentPatient.primaryInsurance.insuranceCompany.id || null;
         }
 
+        // Providers come from the procedures selected for this pre-auth, then the patient's provider
         const patientProviderName = currentPatient?.priProv?.name || currentPatient?.priProv || currentPatient?.provider?.name || currentPatient?.provider || currentPatient?.primaryProvider?.name;
-        const fallbackProvider = currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.name : selectedProcedures?.[0]?.provider || 'No Provider Assigned';
-        const primaryProvider = patientProviderName || fallbackProvider;
+        const primaryProvider = procedureProviderName || getProviderLabel(patientProviderName);
 
         if (preAuthId) {
           // Fetch existing Pre-Auth

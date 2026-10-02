@@ -155,7 +155,18 @@ const InsuranceDatePicker = ({ value, onChange, error, id }) => {
   );
 };
 
-const ProcedureCodeSearchAutocomplete = ({ value, onChange, onRemove }) => {
+// `isCodeRow` is a client-only flag the API strips on save, so persisted rows
+// must be recognized by their `typeKey` (`code:D1234`) or a CDT-code pattern.
+const isCodeRow = (row) => {
+  if (!row) return false;
+  if (row.isCodeRow) return true;
+  if (typeof row.typeKey === 'string' && row.typeKey.toLowerCase().startsWith('code:')) {
+    return true;
+  }
+  return /^D?\d{4,5}$/i.test(String(row.type || '').trim());
+};
+
+const ProcedureCodeSearchAutocomplete = ({ value, onChange, onRemove, readOnly = false }) => {
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -190,6 +201,11 @@ const ProcedureCodeSearchAutocomplete = ({ value, onChange, onRemove }) => {
         freeSolo
         options={options}
         loading={loading}
+        slotProps={{
+          popper: {
+            sx: { minWidth: 320, maxWidth: 420 },
+          },
+        }}
         value={selectedOption}
         inputValue={inputValue}
         onInputChange={(event, newInputValue) => {
@@ -279,9 +295,11 @@ const ProcedureCodeSearchAutocomplete = ({ value, onChange, onRemove }) => {
           />
         )}
       />
-      <IconButton size="small" onClick={onRemove} sx={{ p: 0.5, color: '#ef4444' }}>
-        <DeleteIcon sx={{ fontSize: 16 }} />
-      </IconButton>
+      {!readOnly && (
+        <IconButton size="small" onClick={onRemove} sx={{ p: 0.5, color: '#ef4444' }}>
+          <DeleteIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      )}
     </Box>
   );
 };
@@ -361,7 +379,8 @@ const DeductiblesTable = ({
   handleAddDeductibleRow,
   handleRemoveDeductibleRow,
   tableHeaderStyle,
-  blueHeader
+  blueHeader,
+  readOnly = false
 }) => {
   // Use formData.deductibles if available, otherwise use default structure
   const deductibles = formData.deductibles?.length > 0 ? formData.deductibles : DEFAULT_DEDUCTIBLES;
@@ -414,11 +433,12 @@ const DeductiblesTable = ({
             {deductibles.map((row, index) => (
               <TableRow key={index} sx={{ '&:hover': { bgcolor: '#fafbfd' } }}>
                 <TableCell sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 500, color: '#1e293b', borderBottom: '1px solid #f0f0f0', py: 2 }}>
-                  {row.isCodeRow ? (
+                  {isCodeRow(row) && !readOnly ? (
                     <ProcedureCodeSearchAutocomplete
                       value={row.type}
                       onChange={(newVal) => handleDeductibleChange(index, 'type', newVal)}
                       onRemove={() => handleRemoveDeductibleRow && handleRemoveDeductibleRow(index)}
+                      readOnly={readOnly}
                     />
                   ) : (
                     row.type
@@ -487,6 +507,7 @@ const DeductiblesTable = ({
               </TableRow>
             ))}
             {/* Add Deductible by Procedure Code Row */}
+            {!readOnly && (
             <TableRow>
               <TableCell colSpan={7} sx={{ py: 2, borderBottom: 'none' }}>
                 <Typography 
@@ -497,6 +518,7 @@ const DeductiblesTable = ({
                 </Typography>
               </TableCell>
             </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
