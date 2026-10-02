@@ -33,7 +33,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const emptyGroupForm = { name: '' };
 const emptyBranchForm = { name: '', address: '', city: '', state: '', zip: '', phone: '' };
-const emptyAdminForm = { firstName: '', lastName: '', email: '', branchId: '' };
+const emptyAdminForm = { firstName: '', lastName: '', email: '', branchId: '', password: '', confirmPassword: '' };
 
 const PracticeGroupsPage = () => {
   const dispatch = useDispatch();
@@ -56,6 +56,15 @@ const PracticeGroupsPage = () => {
   const [adminDialogGroup, setAdminDialogGroup] = useState(null);
   const [adminForm, setAdminForm] = useState(emptyAdminForm);
   const [adminSuccessMessage, setAdminSuccessMessage] = useState('');
+  const adminPasswordValid = adminForm.password.length >= 8
+    && /[A-Z]/.test(adminForm.password) && /[a-z]/.test(adminForm.password)
+    && /[0-9]/.test(adminForm.password) && /[!@#$%^&*(),.?":{}|<>]/.test(adminForm.password);
+  const adminPasswordMismatch = adminForm.password !== adminForm.confirmPassword;
+  const closeAdminDialog = () => {
+    if (mutationLoading) return;
+    setAdminDialogGroup(null);
+    setAdminForm(emptyAdminForm);
+  };
 
   const [editDialogGroup, setEditDialogGroup] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', isActive: true });
@@ -92,14 +101,15 @@ const PracticeGroupsPage = () => {
   };
 
   const handleCreateAdmin = async () => {
+    if (!adminPasswordValid || adminPasswordMismatch || mutationLoading) return;
     // Backend expects the branch reference as `clinicId`, not `branchId` (confirmed
     // via a real 400 validation response) — keep the form's own state named
     // `branchId` for clarity since it's a branch picker, just rename on the wire.
-    const { branchId, ...rest } = adminForm;
-    const payload = { ...rest, clinicId: branchId };
+    const { branchId, firstName, lastName, email, password } = adminForm;
+    const payload = { firstName, lastName, email, password, clinicId: branchId };
     const result = await dispatch(createGroupAdmin({ groupId: adminDialogGroup.id, payload }));
     if (createGroupAdmin.fulfilled.match(result)) {
-      setAdminSuccessMessage(`Group Admin created for ${adminDialogGroup.name}.`);
+      setAdminSuccessMessage(`Group Admin created for ${adminDialogGroup.name} and active. Sign out, then log in with ${adminForm.email} and the password you entered. No email activation is needed.`);
       setAdminDialogGroup(null);
       setAdminForm(emptyAdminForm);
     }
@@ -315,7 +325,7 @@ const PracticeGroupsPage = () => {
       </Dialog>
 
       {/* Add Group Admin dialog */}
-      <Dialog open={!!adminDialogGroup} onClose={() => setAdminDialogGroup(null)} fullWidth maxWidth="xs">
+      <Dialog open={!!adminDialogGroup} onClose={closeAdminDialog} fullWidth maxWidth="xs">
         <DialogTitle>Add Group Admin — {adminDialogGroup?.name}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           {mutationError && <Alert severity="error">{mutationError}</Alert>}
@@ -339,6 +349,29 @@ const PracticeGroupsPage = () => {
             value={adminForm.email}
             onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
           />
+          <Alert severity="info">Set a password to activate this account immediately. No email invitation is required.</Alert>
+          <TextField
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            required
+            fullWidth
+            value={adminForm.password}
+            error={!!adminForm.password && !adminPasswordValid}
+            helperText="Use at least 8 characters with uppercase and lowercase letters, a number, and a special character such as !, @, or #."
+            onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+          />
+          <TextField
+            label="Confirm Password"
+            type="password"
+            autoComplete="new-password"
+            required
+            fullWidth
+            value={adminForm.confirmPassword}
+            error={!!adminForm.confirmPassword && adminPasswordMismatch}
+            helperText={adminForm.confirmPassword && adminPasswordMismatch ? 'Passwords do not match.' : ''}
+            onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
+          />
           <TextField
             select
             label="Branch"
@@ -352,11 +385,11 @@ const PracticeGroupsPage = () => {
           </TextField>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAdminDialogGroup(null)}>Cancel</Button>
+          <Button onClick={closeAdminDialog} disabled={mutationLoading}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleCreateAdmin}
-            disabled={!adminForm.firstName || !adminForm.lastName || !adminForm.email || !adminForm.branchId || mutationLoading}
+            disabled={!adminForm.firstName || !adminForm.lastName || !adminForm.email || !adminForm.branchId || !adminPasswordValid || adminPasswordMismatch || mutationLoading}
           >
             Create
           </Button>

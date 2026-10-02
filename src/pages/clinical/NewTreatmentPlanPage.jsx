@@ -1,16 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Snackbar, Alert, Tabs, Tab, Grid, Paper, IconButton, Divider, MenuItem, Menu, Button, Tooltip, GlobalStyles } from '@mui/material';
+import {
+  Box,
+  Snackbar,
+  Alert,
+  Tabs,
+  Tab,
+  Paper,
+  IconButton,
+  Divider,
+  MenuItem,
+  Menu,
+  Button,
+  Tooltip,
+  GlobalStyles,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Typography,
+  CircularProgress
+} from '@mui/material';
 import { COLORS } from '../../constants/colors';
 import dayjs from 'dayjs';
 import {
   ShieldOutlined as ShieldIcon,
-  IosShare as ShareIcon,
+  TabletMacOutlined as KioskIcon,
+  SmsOutlined as SmsIcon,
   PrintOutlined as PrintIcon,
   ArchiveOutlined as ArchiveIcon,
   KeyboardArrowDown as ExpandMoreIcon,
   AddCircleOutline as AddCircleOutlineIcon,
-  ContentCopy as ContentCopyIcon
+  ContentCopy as ContentCopyIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { OutlinedSelect } from '../../components/patients/form-components/formInputs';
@@ -27,6 +50,9 @@ import NewTreatmentPlanHeader from '../../components/clinical/new-treatment-plan
 import NewTreatmentPlanOdontogram from '../../components/clinical/new-treatment-plan/NewTreatmentPlanOdontogram';
 import NewTreatmentPlanProcedures from '../../components/clinical/new-treatment-plan/NewTreatmentPlanProcedures';
 import NewTreatmentPlanTable from '../../components/clinical/new-treatment-plan/NewTreatmentPlanTable';
+import EditProcedureDrawer from '../../components/clinical/new-treatment-plan/EditProcedureDrawer';
+import TreatmentPlanRouteSlipDialog from '../../components/clinical/new-treatment-plan/TreatmentPlanRouteSlipDialog';
+import AppointmentHistoryTimelineDialog from '../../components/clinical/new-treatment-plan/AppointmentHistoryTimelineDialog';
 import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable';
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
@@ -35,7 +61,7 @@ import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
 // AFTER
 import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
-import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
+import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 import { appointmentService } from '../../services/appointment.service';
 import { invoiceService } from '../../services/invoice.service';
@@ -51,6 +77,41 @@ const formatMoney = (val, fallback = '-') => {
   return fallback;
 };
 
+const STATUS_CODE_TO_LABEL = {
+  P: 'Planned',
+  S: 'Scheduled',
+  U: 'Unplanned',
+  R: 'Referred',
+  C: 'Completed',
+  EC: 'Existing Current',
+  EO: 'Existing Other',
+};
+
+const normalizeStatusLabel = (status) => STATUS_CODE_TO_LABEL[status] || status || 'Planned';
+
+const statusLabelToCode = (status) => {
+  switch (status) {
+    case 'Scheduled':
+      return 'S';
+    case 'Unplanned':
+      return 'U';
+    case 'Rejected':
+      return 'R';
+    case 'Referred':
+      return 'R';
+    case 'Completed':
+      return 'C';
+    case 'Existing Current':
+      return 'EC';
+    case 'Existing Other':
+    case 'Existing':
+      return 'EO';
+    case 'Planned':
+    default:
+      return 'P';
+  }
+};
+
 const mapPlanItems = (items, createdAt) => {
   if (!items || !Array.isArray(items)) return [];
   return items.map((item, idx) => {
@@ -61,7 +122,7 @@ const mapPlanItems = (items, createdAt) => {
     return {
       id: item.id || idx + 1,
       priority: item.priority || '- -',
-      status: item.status === 'P' ? 'Planned' : (item.status === 'EO' ? 'Existing Other' : (item.status === 'R' ? 'Referred' : (item.status === 'C' ? 'Completed' : (item.status === 'S' ? 'Scheduled' : (item.status || 'Planned'))))),
+      status: normalizeStatusLabel(item.status),
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
       scheduled: item.scheduled || '-',
       site: item.site || (item.tooth ? `#${item.tooth}` : '-'),
@@ -77,6 +138,13 @@ const mapPlanItems = (items, createdAt) => {
       labCase: item.labCase || '-'
     };
   });
+};
+
+const getPlanId = (plan) => String(plan?._id || plan?.id || '');
+
+const getPlanTitle = (plan) => {
+  const title = plan?.title || plan?.name || plan?.Heading;
+  return title && String(title).trim() ? String(title).trim() : 'Active Treatment Plan';
 };
 
 const INITIAL_MOCK_TREATMENT_PLANS = [
@@ -101,6 +169,7 @@ const NewTreatmentPlanPage = () => {
   const [showOdontogram, setShowOdontogram] = useState(true);
   const [selectedTeeth, setSelectedTeeth] = useState([]);
   const [selectedSurfaces, setSelectedSurfaces] = useState([]);
+  const [treatmentPlanDrafts, setTreatmentPlanDrafts] = useState([]);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [appointmentProcedures, setAppointmentProcedures] = useState([]);
   const allProcedures = [...treatmentPlans, ...appointmentProcedures].sort((a, b) => {
@@ -113,6 +182,7 @@ const NewTreatmentPlanPage = () => {
   const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
 
   const currentPatient = useSelector(selectCurrentPatient);
+  const currentAppointment = useSelector(selectCurrentAppointment);
   const currentPatientId = currentPatient?._id || currentPatient?.id;
   const insurancesCache = useSelector(selectPatientInsurancesCache);
 
@@ -121,19 +191,56 @@ const NewTreatmentPlanPage = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
   const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+  const [editingProcedure, setEditingProcedure] = useState(null);
+  const [isRouteSlipOpen, setIsRouteSlipOpen] = useState(false);
+  const [isAppointmentHistoryOpen, setIsAppointmentHistoryOpen] = useState(false);
+  const [isCreateDraftOpen, setIsCreateDraftOpen] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftNameError, setDraftNameError] = useState('');
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(1); // 0: Charts, 1: Treatment Plan, 2: Perio Charts
   const [showPerioChart, setShowPerioChart] = useState(false);
 
+  const [shareMenuAnchorEl, setShareMenuAnchorEl] = useState(null);
+  const handleShareMenuClose = () => setShareMenuAnchorEl(null);
+
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState(null);
   const handleAddMenuClick = (event) => setAddMenuAnchorEl(event.currentTarget);
   const handleAddMenuClose = () => setAddMenuAnchorEl(null);
 
+  const activeDraft = treatmentPlanDrafts.find((plan) => getPlanId(plan) === String(activePlanId));
+  const activeDraftTitle = activeDraft ? getPlanTitle(activeDraft) : 'Active Treatment Plan';
+  const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
+  const activeAppointmentForHistory = currentAppointment || (activeAppointmentId ? { _id: activeAppointmentId } : null);
+
+  const handleOpenAppointmentHistory = () => {
+    if (!activeAppointmentId) {
+      setToast({ open: true, message: 'No appointment is selected for history.', type: 'error' });
+      return;
+    }
+    setIsAppointmentHistoryOpen(true);
+  };
+
+  const openCreateDraftDialog = () => {
+    handleAddMenuClose();
+    setDraftName(`Plan ${dayjs().format('M.D.YYYY HH:mm:ss')}`);
+    setDraftNameError('');
+    setIsCreateDraftOpen(true);
+  };
+
+  const closeCreateDraftDialog = () => {
+    if (isCreatingDraft) return;
+    setIsCreateDraftOpen(false);
+    setDraftNameError('');
+  };
+
   useEffect(() => {
     const fetchTreatmentPlans = async () => {
       if (!currentPatient) {
+        setTreatmentPlanDrafts([]);
         setTreatmentPlans([]);
         setAppointmentProcedures([]);
         setActivePlanId(null);
@@ -146,11 +253,12 @@ const NewTreatmentPlanPage = () => {
           treatmentPlanService.getAll({ patientId }),
           appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
         ]);
-        const plans = tpRes?.data?.treatmentPlans || [];
+        const plans = tpRes?.data?.treatmentPlans || tpRes?.treatmentPlans || [];
+        setTreatmentPlanDrafts(plans);
 
         if (plans.length > 0) {
           const activePlan = plans[0]; // Load the most recent plan
-          setActivePlanId(activePlan._id);
+          setActivePlanId(getPlanId(activePlan));
           setTreatmentPlans(mapPlanItems(activePlan.items, activePlan.createdAt));
         } else {
           setActivePlanId(null);
@@ -341,7 +449,7 @@ const NewTreatmentPlanPage = () => {
             fee: itemFee,
             charge: itemFee,
             priority: item.priority,
-            status: item.status === 'Planned' ? 'P' : (item.status === 'Existing Other' || item.status === 'Existing Current' || item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+            status: statusLabelToCode(item.status),
             icd: item.icd,
             provider: item.provider || null,
             preAuth: item.preAuth,
@@ -410,7 +518,7 @@ const NewTreatmentPlanPage = () => {
           fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
           charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
           priority: item.priority,
-          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+          status: statusLabelToCode(item.status),
           icd: item.icd,
           provider: item.provider || null,
           preAuth: item.preAuth,
@@ -501,7 +609,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+        status: statusLabelToCode(item.status),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
@@ -589,7 +697,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing Other' || item.status === 'Existing Current' || item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+        status: statusLabelToCode(item.status),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
@@ -612,32 +720,180 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const handleSelectTreatmentPlan = (event) => {
+    const nextPlanId = event.target.value;
+    const nextPlan = treatmentPlanDrafts.find((plan) => getPlanId(plan) === String(nextPlanId));
+    setActivePlanId(nextPlanId || null);
+    setTreatmentPlans(nextPlan ? mapPlanItems(nextPlan.items, nextPlan.createdAt) : []);
+    setSelectedRows([]);
+  };
+
+  const handleCreateDraft = async () => {
+    const name = draftName.trim();
+    if (!name) {
+      setDraftNameError('Treatment plan name is required.');
+      return;
+    }
+
+    if (!currentPatient) {
+      setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
+      return;
+    }
+
+    try {
+      setIsCreatingDraft(true);
+      const res = await treatmentPlanService.create({
+        patientId: currentPatient._id || currentPatient.id,
+        title: name,
+        status: 'A',
+        totalAmount: 0,
+        items: []
+      });
+      const createdPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data || res;
+      const createdId = getPlanId(createdPlan);
+
+      if (!createdId) {
+        throw new Error('Draft was created but the response did not include an id.');
+      }
+
+      setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== createdId)]);
+      setActivePlanId(createdId);
+      setTreatmentPlans(mapPlanItems(createdPlan.items, createdPlan.createdAt));
+      setSelectedRows([]);
+      setIsCreateDraftOpen(false);
+      setToast({ open: true, message: 'Draft created successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to create treatment plan draft:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to create draft.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  };
+
+  const mapProcedureToPayloadItem = (item) => {
+    const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
+    const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
+    const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
+    return {
+      id: item.id,
+      procedureCode: item.code,
+      description: item.description,
+      tooth: item.tooth || '',
+      site: item.site,
+      fee: itemFee,
+      charge: itemFee,
+      priority: item.priority,
+      status: statusLabelToCode(item.status),
+      icd: item.icd,
+      provider: item.provider || null,
+      prognosis: item.prognosis || '',
+      creditToPractice: Boolean(item.creditToPractice),
+      siteSelection: item.siteSelection || '',
+      scheduled: item.scheduled,
+      preAuth: item.preAuth,
+      labCase: item.labCase,
+      insEst: item.insEst,
+      ptEst: item.ptEst,
+      insPortion: itemIns,
+      ptPortion: itemPt,
+      insuranceAmount: `$${itemIns.toFixed(2)}`,
+      patientAmount: `$${itemPt.toFixed(2)}`,
+    };
+  };
+
+  const handleSaveEditedProcedure = async (updatedProcedure) => {
+    if (!currentPatient || !updatedProcedure?.id) return;
+
+    if (String(updatedProcedure.id).startsWith('appt-')) {
+      const parts = String(updatedProcedure.id).split('-');
+      const apptId = parts[1];
+      const procIdOrIdx = parts[2];
+      const previousAppointmentProcedures = appointmentProcedures;
+      const newAppointmentProcedures = appointmentProcedures.map((item) =>
+        item.id === updatedProcedure.id ? updatedProcedure : item
+      );
+      setAppointmentProcedures(newAppointmentProcedures);
+      setEditingProcedure(null);
+
+      try {
+        setIsSaving(true);
+        const appt = await appointmentService.getAppointmentById(apptId);
+        const procs = appt?.customFields?.procedures || appt?.procedures || [];
+        const targetIdx = procs.some((p) => String(p.id) === procIdOrIdx)
+          ? procs.findIndex((p) => String(p.id) === procIdOrIdx)
+          : parseInt(procIdOrIdx, 10);
+
+        if (targetIdx >= 0 && targetIdx < procs.length) {
+          const updatedProcs = [...procs];
+          updatedProcs[targetIdx] = {
+            ...updatedProcs[targetIdx],
+            code: updatedProcedure.code,
+            procedureCode: updatedProcedure.code,
+            treatment: updatedProcedure.description,
+            description: updatedProcedure.description,
+            provider: updatedProcedure.provider,
+            status: updatedProcedure.status,
+            completed: updatedProcedure.status === 'Completed',
+            icd: updatedProcedure.icd,
+            prognosis: updatedProcedure.prognosis,
+            creditToPractice: updatedProcedure.creditToPractice,
+            siteSelection: updatedProcedure.siteSelection
+          };
+          await appointmentService.updateAppointment(apptId, {
+            customFields: { ...appt.customFields, procedures: updatedProcs },
+            procedures: updatedProcs
+          });
+          setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+        }
+      } catch (error) {
+        console.error('Failed to update appointment procedure:', error);
+        setAppointmentProcedures(previousAppointmentProcedures);
+        setToast({ open: true, message: 'Failed to update procedure.', type: 'error' });
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (!activePlanId) return;
+
+    const previousTreatmentPlans = treatmentPlans;
+    const newTreatmentPlans = treatmentPlans.map((item) =>
+      item.id === updatedProcedure.id ? updatedProcedure : item
+    );
+    setTreatmentPlans(newTreatmentPlans);
+    setEditingProcedure(null);
+
+    try {
+      setIsSaving(true);
+      await treatmentPlanService.update(activePlanId, {
+        items: newTreatmentPlans.map(mapProcedureToPayloadItem)
+      });
+      setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to update treatment plan procedure:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update procedure.');
+      setTreatmentPlans(previousTreatmentPlans);
+      setToast({ open: true, message: errMsg, type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Treatment Plan',
-          text: `Check out this treatment plan for ${currentPatient?.firstName || ''} ${currentPatient?.lastName || ''}`,
-          url: window.location.href,
-        });
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Error sharing:', error);
-          setToast({ open: true, message: 'Failed to share plan.', type: 'error' });
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        setToast({ open: true, message: 'Link copied to clipboard!', type: 'success' });
-      } catch (err) {
-        setToast({ open: true, message: 'Sharing not supported on this browser.', type: 'error' });
-      }
-    }
+  const handleShareSelection = (destination) => {
+    handleShareMenuClose();
+    setToast({
+      open: true,
+      message: `${destination} delivery is not available yet.`,
+      type: 'info',
+    });
   };
 
   return (
@@ -732,7 +988,19 @@ const NewTreatmentPlanPage = () => {
               <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ width: 260 }}>
                   <OutlinedSelect
-                    value="active"
+                    value={activePlanId || ''}
+                    onChange={handleSelectTreatmentPlan}
+                    SelectProps={{
+                      displayEmpty: true,
+                      renderValue: (selected) => (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 400, color: '#0f172a', fontSize: '0.875rem', minWidth: 0 }}>
+                          <RadioButtonCheckedIcon sx={{ color: '#10b981', fontSize: '1rem', flexShrink: 0 }} />
+                          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {selected ? activeDraftTitle : 'Active Treatment Plan'}
+                          </Box>
+                        </Box>
+                      )
+                    }}
                     sx={{
                       bgcolor: '#fff',
                       '& .MuiSelect-select': { display: 'flex', alignItems: 'center', gap: 1.5, py: 0, px: 1.5, minHeight: '32px !important' },
@@ -740,12 +1008,24 @@ const NewTreatmentPlanPage = () => {
                       '& .MuiOutlinedInput-notchedOutline': { borderRadius: '8px' }
                     }}
                   >
-                    <MenuItem value="active" sx={{ py: 0.5 }}>
+                    {treatmentPlanDrafts.length === 0 && (
+                      <MenuItem value="" sx={{ py: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 400, color: '#0f172a', fontSize: '0.875rem' }}>
+                          <RadioButtonCheckedIcon sx={{ color: '#10b981', fontSize: '1rem' }} />
+                          Active Treatment Plan
+                        </Box>
+                      </MenuItem>
+                    )}
+                    {treatmentPlanDrafts.map((plan) => (
+                      <MenuItem key={getPlanId(plan)} value={getPlanId(plan)} sx={{ py: 0.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 400, color: '#0f172a', fontSize: '0.875rem' }}>
                         <RadioButtonCheckedIcon sx={{ color: '#10b981', fontSize: '1rem' }} />
-                        Active Treatment Plan
+                          <Box component="span" sx={{ maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {getPlanTitle(plan)}
+                          </Box>
                       </Box>
                     </MenuItem>
+                    ))}
                   </OutlinedSelect>
                 </Box>
 
@@ -769,7 +1049,7 @@ const NewTreatmentPlanPage = () => {
                     }
                   }}
                 >
-                  <MenuItem onClick={handleAddMenuClose} sx={{ gap: 1.5, py: 1.25, fontSize: '0.875rem', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
+                  <MenuItem onClick={openCreateDraftDialog} sx={{ gap: 1.5, py: 1.25, fontSize: '0.875rem', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
                     <AddCircleOutlineIcon sx={{ fontSize: '1.25rem', color: '#334155' }} />
                     New draft
                   </MenuItem>
@@ -796,10 +1076,52 @@ const NewTreatmentPlanPage = () => {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Share">
-                    <IconButton size="small" onClick={handleShare}>
+                    <IconButton
+                      id="clinical-share-button"
+                      size="small"
+                      aria-label="Share treatment plan"
+                      aria-haspopup="menu"
+                      aria-controls={shareMenuAnchorEl ? 'clinical-share-menu' : undefined}
+                      aria-expanded={shareMenuAnchorEl ? 'true' : undefined}
+                      onClick={(event) => setShareMenuAnchorEl(event.currentTarget)}
+                    >
                       <Box component="img" src={shareSvg} alt="share" sx={{ width: 22, height: 22 }} />
                     </IconButton>
                   </Tooltip>
+                  <Menu
+                    id="clinical-share-menu"
+                    anchorEl={shareMenuAnchorEl}
+                    open={Boolean(shareMenuAnchorEl)}
+                    onClose={handleShareMenuClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    MenuListProps={{ 'aria-labelledby': 'clinical-share-button' }}
+                    PaperProps={{
+                      sx: {
+                        mt: 1,
+                        minWidth: 200,
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)',
+                        '& .MuiMenuItem-root': {
+                          gap: 1.5,
+                          py: 1.25,
+                          fontSize: '0.875rem',
+                          color: '#0f172a',
+                          fontFamily: 'Inter, sans-serif',
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem onClick={() => handleShareSelection('Kiosk')}>
+                      <KioskIcon sx={{ fontSize: '1.25rem', color: '#334155' }} />
+                      Send to Kiosk
+                    </MenuItem>
+                    <MenuItem onClick={() => handleShareSelection('SMS')}>
+                      <SmsIcon sx={{ fontSize: '1.25rem', color: '#334155' }} />
+                      Send to SMS
+                    </MenuItem>
+                  </Menu>
                   <Tooltip title="Print">
                     <IconButton size="small" onClick={handlePrint}>
                       <Box component="img" src={printSvg} alt="print" sx={{ width: 22, height: 22 }} />
@@ -818,7 +1140,11 @@ const NewTreatmentPlanPage = () => {
                 <Box sx={{ width: '100%', flexGrow: 1, minWidth: 0 }}>
                   <NewTreatmentPlanTable
                     treatmentPlans={allProcedures}
+                    onDeleteItems={handleDeleteItems}
+                    onEditItem={setEditingProcedure}
                     onMoveToTop={handleMoveToTop}
+                    onPrintRouteSlip={() => setIsRouteSlipOpen(true)}
+                    onViewHistory={handleOpenAppointmentHistory}
                     onUpdateItemStatus={handleUpdateItemStatus}
                     selectedRows={selectedRows}
                     setSelectedRows={setSelectedRows}
@@ -869,6 +1195,104 @@ const NewTreatmentPlanPage = () => {
       </Box>
 
       <ArchiveDrawer open={isArchiveDrawerOpen} onClose={() => setIsArchiveDrawerOpen(false)} />
+      <TreatmentPlanRouteSlipDialog
+        open={isRouteSlipOpen}
+        onClose={() => setIsRouteSlipOpen(false)}
+        patient={currentPatient}
+        appointment={currentAppointment}
+        procedures={allProcedures}
+        planTitle={activeDraftTitle}
+      />
+      <AppointmentHistoryTimelineDialog
+        open={isAppointmentHistoryOpen}
+        onClose={() => setIsAppointmentHistoryOpen(false)}
+        appointment={activeAppointmentForHistory}
+      />
+      <Dialog
+        open={isCreateDraftOpen}
+        onClose={closeCreateDraftDialog}
+        fullWidth
+        maxWidth="xs"
+        sx={{ zIndex: 10000 }}
+        PaperProps={{
+          sx: {
+            borderRadius: '8px',
+            boxShadow: '0 24px 64px rgba(15, 23, 42, 0.24)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
+          <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+            Create draft
+          </Typography>
+          <IconButton onClick={closeCreateDraftDialog} disabled={isCreatingDraft} sx={{ width: 30, height: 30, color: '#2563eb' }}>
+            <CloseIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 2.25, bgcolor: '#fff' }}>
+          <Typography sx={{ mb: 1, fontFamily: 'Inter, sans-serif', fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }}>
+            Treatment Plan Name <Box component="span" sx={{ color: '#ef4444' }}>*</Box>
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            value={draftName}
+            disabled={isCreatingDraft}
+            error={Boolean(draftNameError)}
+            helperText={draftNameError}
+            onChange={(event) => {
+              setDraftName(event.target.value);
+              if (draftNameError) setDraftNameError('');
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleCreateDraft();
+              }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                height: 34,
+                borderRadius: '4px',
+                fontFamily: 'Inter, sans-serif',
+                bgcolor: '#fff',
+                '& fieldset': { borderColor: '#d8dee8' },
+                '&:hover fieldset': { borderColor: '#94a3b8' },
+                '&.Mui-focused fieldset': { borderColor: '#2563eb', borderWidth: '1.2px' },
+              },
+              '& .MuiOutlinedInput-input': { py: 0.75, px: 1.25, fontSize: '0.8125rem' },
+              '& .MuiFormHelperText-root': { mx: 0, fontSize: '0.75rem' }
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', gap: 1 }}>
+          <Button
+            onClick={closeCreateDraftDialog}
+            disabled={isCreatingDraft}
+            variant="outlined"
+            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', borderColor: '#d8dee8', color: '#2563eb', fontWeight: 600, boxShadow: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateDraft}
+            disabled={isCreatingDraft}
+            variant="contained"
+            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', bgcolor: '#2563eb', fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' } }}
+          >
+            {isCreatingDraft ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <EditProcedureDrawer
+        open={Boolean(editingProcedure)}
+        procedure={editingProcedure}
+        onClose={() => setEditingProcedure(null)}
+        onSave={handleSaveEditedProcedure}
+      />
       <NotesDrawer
         open={isNotesDrawerOpen}
         onClose={() => setIsNotesDrawerOpen(false)}
