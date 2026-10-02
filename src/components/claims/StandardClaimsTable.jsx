@@ -1250,9 +1250,11 @@ export const StandardClaimsTable = ({
                           <Table size="small" sx={{ mb: 1, border: '1px solid #e2e8f0', '& .MuiTableCell-root': { borderBottom: '1px solid #e2e8f0' } }}>
                             <TableHead>
                               <TableRow sx={{ backgroundColor: '#eef4ff' }}>
-                                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
-                                  DOS
-                                </TableCell>
+                                {activeTab !== 5 && (
+                                  <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
+                                    DOS
+                                  </TableCell>
+                                )}
                                 <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 1, color: '#1e293b' }}>
                                   Tooth #
                                 </TableCell>
@@ -1276,9 +1278,11 @@ export const StandardClaimsTable = ({
                             <TableBody>
                               {claim.procedures.map((proc, index) => (
                                 <TableRow key={index} sx={{ backgroundColor: '#fff' }}>
-                                  <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
-                                    {proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : (claim.createdDate ? new Date(claim.createdDate).toLocaleDateString() : '-')}
-                                  </TableCell>
+                                  {activeTab !== 5 && (
+                                    <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
+                                      {proc.dateOfService ? new Date(proc.dateOfService).toLocaleDateString() : (claim.createdDate ? new Date(claim.createdDate).toLocaleDateString() : '-')}
+                                    </TableCell>
+                                  )}
                                   <TableCell sx={{ fontSize: "0.75rem", py: 1 }}>
                                     {Array.isArray(proc.tooth || proc.toothNum || proc.site) 
                                       ? (proc.tooth || proc.toothNum || proc.site).join(', ') 

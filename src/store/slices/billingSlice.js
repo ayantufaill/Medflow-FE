@@ -384,6 +384,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 ? "Status Response (A0): The claim is in process"
                 : ""),
             attachments: claim.attachments || [],
+            hasAttachment: Boolean(claim.hasAttachment),
             eobs: claim.eobs || [],
             title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || "Insurance"}(${claim.insuranceCompany?.payerId || "00000"}) :`,
             amount: `$${finalClaimAmount.toFixed(2)}`,
@@ -848,6 +849,7 @@ export const fetchInvoiceDetails = createAsyncThunk(
             claimNumber: claim.claimNumber || claim.id || claim._id,
             status: claim.statusDisplay || claim.status,
             attachments: claim.attachments || [],
+            hasAttachment: Boolean(claim.hasAttachment),
             eobs: claim.eobs || [],
             title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status}) with: ${claim.insuranceCompany?.name || "Insurance"}`,
             amount: `$${specificAmount.toFixed(2)}`,

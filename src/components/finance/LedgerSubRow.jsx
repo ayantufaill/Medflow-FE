@@ -101,6 +101,17 @@ const LedgerSubRow = ({
   const textPrimaryColor = isVoided || isClosedClaim ? "#FFFFFF" : "#1A1A1A";
   const textSecondaryColor = isVoided || isClosedClaim ? "#E0E0E0" : "#6B778C";
 
+  // Attachment presence. The ledger's claims come from GET /claims (getAllClaims),
+  // which decorates each row with a `hasAttachment` boolean via
+  // attachDocumentsToPagedClaims. `attachmentColor` is NOT present here — it is
+  // only added by the outstanding/predetermination endpoints — so this keys off
+  // hasAttachment, with array fallbacks in case the shape changes.
+  const hasAttachment = Boolean(
+    attachData?.hasAttachment ||
+      attachData?.attachments?.length ||
+      attachData?.documents?.length,
+  );
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
       <Box
@@ -419,7 +430,10 @@ const LedgerSubRow = ({
           ) : isClaim ? (
             <Stack direction="row" spacing={1} alignItems="center">
               {/* Attachment */}
-              <Tooltip title="Attach Files" placement="top">
+              <Tooltip
+                title={hasAttachment ? "Attachment sent" : "No Attachment"}
+                placement="top"
+              >
                 <Box
                   sx={{
                     width: 22,
@@ -434,7 +448,12 @@ const LedgerSubRow = ({
                   }}
                   onClick={() => onAttachClick?.(attachData)}
                 >
-                  <AttachFileOutlined sx={{ fontSize: 16, color: "#1A1A1A" }} />
+                  <AttachFileOutlined
+                    sx={{
+                      fontSize: 16,
+                      color: hasAttachment ? "#2f855a" : "#3182ce",
+                    }}
+                  />
                 </Box>
               </Tooltip>
               {/* Arrows pointing in */}
