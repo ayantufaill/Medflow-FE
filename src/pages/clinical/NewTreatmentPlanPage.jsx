@@ -23,6 +23,7 @@ import archiveSvg from '../../assets/clinicalicons/saveexamicon.svg';
 import medflowLogo from '../../assets/medflow-logo.png';
 
 import PreAuthModal from '../../components/clinical/new-treatment-plan/PreAuthModal';
+import PreAuthCreationSummaryModal from '../../components/clinical/new-treatment-plan/PreAuthCreationSummaryModal';
 import NewTreatmentPlanHeader from '../../components/clinical/new-treatment-plan/NewTreatmentPlanHeader';
 import NewTreatmentPlanOdontogram from '../../components/clinical/new-treatment-plan/NewTreatmentPlanOdontogram';
 import NewTreatmentPlanProcedures from '../../components/clinical/new-treatment-plan/NewTreatmentPlanProcedures';
@@ -35,6 +36,7 @@ import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
 // AFTER
 import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances } from '../../store/slices/patientSlice';
+import { selectProviderDropdownList } from '../../store/slices/providerSlice';
 import { setSelectedAppointmentId, fetchAppointmentById } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 import { appointmentService } from '../../services/appointment.service';
@@ -112,9 +114,18 @@ const NewTreatmentPlanPage = () => {
   const [createdPreAuthId, setCreatedPreAuthId] = useState(null);
   const [createdPreAuthPatientId, setCreatedPreAuthPatientId] = useState(null);
 
+  // Multi-provider summary dialog state
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryProviderGroups, setSummaryProviderGroups] = useState([]);
+  // Procedures + preAuthId for the group currently viewed in PreAuthModal
+  const [activeGroupProcedures, setActiveGroupProcedures] = useState([]);
+  const [activeGroupPreAuthId, setActiveGroupPreAuthId] = useState(null);
+  const [isSubmittingGroups, setIsSubmittingGroups] = useState(false);
+
   const currentPatient = useSelector(selectCurrentPatient);
   const currentPatientId = currentPatient?._id || currentPatient?.id;
   const insurancesCache = useSelector(selectPatientInsurancesCache);
+  const providersList = useSelector(selectProviderDropdownList) || [];
 
 
   const [activePlanId, setActivePlanId] = useState(null);
@@ -143,15 +154,37 @@ const NewTreatmentPlanPage = () => {
         setIsLoading(true);
         const patientId = currentPatient._id || currentPatient.id;
         const [tpRes, apptRes] = await Promise.all([
-          treatmentPlanService.getAll({ patientId }),
+          // Ask for a large page: the API defaults to 10, and a newly created
+          // plan can otherwise fall outside the first page and never be read.
+          treatmentPlanService.getAll({ patientId, limit: 100 }),
           appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
         ]);
-        const plans = tpRes?.data?.treatmentPlans || [];
+        // getAll already unwraps response.data.data -> { treatmentPlans, pagination }
+        const plans = tpRes?.treatmentPlans || [];
 
         if (plans.length > 0) {
-          const activePlan = plans[0]; // Load the most recent plan
+          // Pick the plan with the highest numeric _id as the "active" one —
+          // used as the default target for new-procedure saves and pre-auth generation.
+          const activePlan = plans.reduce((latest, plan) => {
+            const planNum = Number(plan._id);
+            const latestNum = Number(latest._id);
+            if (!Number.isFinite(planNum)) return latest;
+            if (!Number.isFinite(latestNum)) return plan;
+            return planNum > latestNum ? plan : latest;
+          }, plans[0]);
+
           setActivePlanId(activePlan._id);
-          setTreatmentPlans(mapPlanItems(activePlan.items, activePlan.createdAt));
+
+          // Flatten ALL items from ALL plans so every treatment plan record is
+          // visible in the table after a page refresh, not just the active one.
+          const allItems = plans.flatMap((plan) =>
+            mapPlanItems(plan.items, plan.createdAt).map((item) => ({
+              ...item,
+              // Tag each item with its source plan so saves/deletes hit the right plan
+              _planId: plan._id,
+            }))
+          );
+          setTreatmentPlans(allItems);
         } else {
           setActivePlanId(null);
           setTreatmentPlans([]);
@@ -252,8 +285,58 @@ const NewTreatmentPlanPage = () => {
       setSelectedSurfaces([...selectedSurfaces, lbl]);
     }
   };
+  /**
+   * Resolves a procedure's provider (id, code or object) to a display name.
+   */
+  const getProviderName = (value) => {
+    if (!value) return '';
+    if (typeof value === 'object') {
+      return value.name || value.preferredName || value.providerCode || value._id || '';
+    }
+    const match = providersList.find(
+      (p) => String(p._id) === String(value) || String(p.providerCode) === String(value)
+    );
+    if (match) {
+      const name = [match.firstName, match.lastName].filter(Boolean).join(' ').trim();
+      return name || match.preferredName || match.providerCode || match._id;
+    }
+    return value;
+  };
+
+  /**
+   * Groups an array of procedure objects by their provider value.
+   * Returns an array of group objects shaped for PreAuthCreationSummaryModal.
+   */
+  const groupProceduresByProvider = (procedures) => {
+    const map = {};
+    procedures.forEach((proc) => {
+      const providerKey = getProviderName(
+        proc.provider || proc.providerId || proc.prov
+      ) || 'Unknown';
+      if (!map[providerKey]) {
+        map[providerKey] = {
+          provider: providerKey,
+          codes: [],
+          procedures: [],
+          preAuthId: null,
+          status: 'Draft',
+          date: new Date(),
+        };
+      }
+      const code = proc.code || proc.procedureCode || proc.ProcCode;
+      if (code && code !== '-') map[providerKey].codes.push(code);
+      map[providerKey].procedures.push(proc);
+    });
+    return Object.values(map);
+  };
+
   const handleOpenPreAuth = async () => {
     if (!currentPatientId) return;
+
+    if (selectedRows.length === 0) {
+      setToast({ open: true, message: 'Select a procedure first', type: 'error' });
+      return;
+    }
 
     let insurances = insurancesCache?.[currentPatientId]?.data;
 
@@ -271,17 +354,118 @@ const NewTreatmentPlanPage = () => {
       setToast({ open: true, message: 'This patient has no insurance on file. Add an insurance plan before creating a Pre-Auth.', type: 'error' });
       return;
     }
+
     if (createdPreAuthPatientId !== currentPatientId) {
       setCreatedPreAuthId(null);
       setCreatedPreAuthPatientId(null);
     }
 
+    // Build the list of selected procedures
+    const proceduresForAuth = selectedRows.length > 0
+      ? allProcedures.filter((p) => selectedRows.includes(p.id))
+      : allProcedures;
+
+    const groups = groupProceduresByProvider(proceduresForAuth);
+
+    if (groups.length > 1) {
+      // Multiple providers — show the summary dialog first
+      setSummaryProviderGroups(groups);
+      setIsSummaryModalOpen(true);
+    } else {
+      // Single provider — go straight to PreAuthModal
+      setActiveGroupProcedures(proceduresForAuth);
+      setActiveGroupPreAuthId(
+        createdPreAuthPatientId === currentPatientId ? createdPreAuthId : null
+      );
+      setIsPreAuthModalOpen(true);
+    }
+  };
+
+  /** Called when user clicks "View Pre-Auth" on a summary row */
+  const handleViewPreAuthGroup = (group) => {
+    setActiveGroupProcedures(group.procedures);
+    setActiveGroupPreAuthId(group.preAuthId || null);
     setIsPreAuthModalOpen(true);
+  };
+
+  /**
+   * Submits one pre-auth per provider group, since providers are billed separately.
+   * Each group only carries its own procedures.
+   */
+  const handleSubmitProviderGroups = async () => {
+    if (summaryProviderGroups.length === 0) return;
+
+    setIsSubmittingGroups(true);
+    try {
+      const patientInsurances = insurancesCache?.[currentPatientId]?.data || [];
+      const primaryIns = patientInsurances.find((ins) => ins.insuranceType === 'primary') || patientInsurances[0];
+      const insuranceCompanyId = primaryIns
+        ? (primaryIns.insuranceCompanyId?._id || primaryIns.insuranceCompany?._id || primaryIns.insuranceCompanyId || primaryIns.insuranceCompany || null)
+        : (currentPatient?.primaryInsurance?.insuranceCompany?._id || currentPatient?.primaryInsurance?.insuranceCompany?.id || null);
+
+      const serviceDate = new Date();
+
+      for (const group of summaryProviderGroups) {
+        const payload = {
+          patientId: currentPatientId,
+          order: 'Primary',
+          status: 'requested',
+          insuranceCompanyId,
+          billingProvider: group.provider,
+          treatmentProvider: group.provider,
+        };
+
+        // Resolve the plan ID that owns this group's procedures.
+        // Each procedure carries _planId (set during flatMap on load); fall back
+        // to activePlanId only if unavailable.
+        const groupPlanId = group.procedures?.[0]?._planId || activePlanId;
+
+        let created;
+        if (groupPlanId) {
+          created = await treatmentPlanService.generatePreAuth(groupPlanId, {
+            ...payload,
+            serviceDate,
+            items: group.procedures,
+          });
+        } else {
+          created = await authorizationService.requestAuthorization({
+            ...payload,
+            requestedDate: serviceDate,
+            procedures: group.procedures,
+          });
+        }
+
+        group.preAuthId = created?._id || created?.id || created?.ClaimNum || null;
+      }
+
+      const createdCount = summaryProviderGroups.filter((g) => g.preAuthId).length;
+      setSummaryProviderGroups((prev) =>
+        prev.map((g) => ({ ...g, status: g.preAuthId ? 'requested' : g.status }))
+      );
+      setIsSummaryModalOpen(false);
+      setToast({
+        open: true,
+        message: `${createdCount} Pre-Auth${createdCount === 1 ? '' : 's'} submitted successfully (one per provider).`,
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to submit pre-auths per provider:', error);
+      const errData = error.response?.data?.error;
+      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to submit pre-auths.');
+      setToast({ open: true, message: errMsg, type: 'error' });
+    } finally {
+      setIsSubmittingGroups(false);
+    }
   };
 
   const handleAddProcedure = async (procedure) => {
     if (!currentPatient) {
       setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
+      return;
+    }
+
+    if (!procedure.provider) {
+      setToast({ open: true, message: 'Please select a provider first.', type: 'error' });
       return;
     }
 
@@ -361,7 +545,15 @@ const NewTreatmentPlanPage = () => {
         const res = await treatmentPlanService.update(activePlanId, { items: payload.items });
         const updatedPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
         if (updatedPlan?.items && Array.isArray(updatedPlan.items)) {
-          setTreatmentPlans(mapPlanItems(updatedPlan.items, updatedPlan.createdAt));
+          // Merge: replace only this plan's items in the full list
+          const updatedItems = mapPlanItems(updatedPlan.items, updatedPlan.createdAt).map((item) => ({
+            ...item,
+            _planId: activePlanId,
+          }));
+          setTreatmentPlans((prev) => [
+            ...prev.filter((item) => item._planId !== activePlanId),
+            ...updatedItems,
+          ]);
         }
         setToast({ open: true, message: 'Treatment plan auto-saved!', type: 'success' });
       } else {
@@ -373,7 +565,12 @@ const NewTreatmentPlanPage = () => {
           setActivePlanId(createdId);
         }
         if (createdPlan?.items && Array.isArray(createdPlan.items)) {
-          setTreatmentPlans(mapPlanItems(createdPlan.items, createdPlan.createdAt));
+          const newItems = mapPlanItems(createdPlan.items, createdPlan.createdAt).map((item) => ({
+            ...item,
+            _planId: createdId,
+          }));
+          // Append new plan's items to the existing list
+          setTreatmentPlans((prev) => [...prev, ...newItems]);
         }
         setToast({ open: true, message: 'Treatment plan created and saved!', type: 'success' });
       }
@@ -395,30 +592,54 @@ const NewTreatmentPlanPage = () => {
     const tpItemsToDelete = itemIdsToDelete.filter(id => !String(id).startsWith('appt-'));
     const apptItemsToDelete = itemIdsToDelete.filter(id => String(id).startsWith('appt-'));
 
-    if (tpItemsToDelete.length > 0 && activePlanId) {
-      const newTreatmentPlans = treatmentPlans.filter(item => !tpItemsToDelete.includes(item.id));
+    if (tpItemsToDelete.length > 0) {
+      const newTreatmentPlans = treatmentPlans.filter((item) => !tpItemsToDelete.includes(item.id));
       setTreatmentPlans(newTreatmentPlans);
 
       try {
         setIsSaving(true);
-        const payloadItems = newTreatmentPlans.map(item => ({
-          id: item.id,
-          procedureCode: item.code,
-          description: item.description,
-          tooth: item.tooth || '',
-          site: item.site,
-          fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-          charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
-          priority: item.priority,
-          status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
-          icd: item.icd,
-          provider: item.provider || null,
-          preAuth: item.preAuth,
-          labCase: item.labCase,
-          insEst: item.insEst,
-          ptEst: item.ptEst,
-        }));
-        await treatmentPlanService.update(activePlanId, { items: payloadItems });
+
+        // Group remaining items by their source plan and update each plan separately
+        const planItemsMap = {};
+        newTreatmentPlans
+          .filter((item) => !String(item.id).startsWith('appt-'))
+          .forEach((item) => {
+            const planId = item._planId || activePlanId;
+            if (!planId) return;
+            if (!planItemsMap[planId]) planItemsMap[planId] = [];
+            planItemsMap[planId].push(item);
+          });
+
+        // Also collect the plans whose items were all deleted (send empty array)
+        const deletedItems = treatmentPlans.filter((item) => tpItemsToDelete.includes(item.id));
+        deletedItems.forEach((item) => {
+          const planId = item._planId || activePlanId;
+          if (planId && !planItemsMap[planId]) planItemsMap[planId] = [];
+        });
+
+        await Promise.all(
+          Object.entries(planItemsMap).map(([planId, items]) => {
+            const payloadItems = items.map((item) => ({
+              id: item.id,
+              procedureCode: item.code,
+              description: item.description,
+              tooth: item.tooth || '',
+              site: item.site,
+              fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, '')) : 0,
+              charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, '')) : 0,
+              priority: item.priority,
+              status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+              icd: item.icd,
+              provider: item.provider || null,
+              preAuth: item.preAuth,
+              labCase: item.labCase,
+              insEst: item.insEst,
+              ptEst: item.ptEst,
+            }));
+            return treatmentPlanService.update(planId, { items: payloadItems });
+          })
+        );
+
         setToast({ open: true, message: 'Procedures removed and plan auto-saved!', type: 'success' });
       } catch (error) {
         console.error('Failed to auto-save treatment plan after deletion:', error);
@@ -501,7 +722,7 @@ const NewTreatmentPlanPage = () => {
         fee: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         charge: item.negRate !== '-' && item.negRate ? Number(item.negRate.replace(/[^0-9.-]+/g, "")) : 0,
         priority: item.priority,
-        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
+        status: item.status === 'Planned' ? 'P' : (item.status === 'Existing Other' || item.status === 'Existing Current' || item.status === 'Existing' ? 'EO' : (item.status === 'Referred' ? 'R' : (item.status === 'Completed' ? 'C' : 'P'))),
         icd: item.icd,
         provider: item.provider || null,
         preAuth: item.preAuth,
@@ -879,20 +1100,41 @@ const NewTreatmentPlanPage = () => {
         selectedProcedures={allProcedures}
       />
 
+      {/* Summary dialog — shown when multiple providers are detected */}
+      <PreAuthCreationSummaryModal
+        open={isSummaryModalOpen}
+        onClose={() => setIsSummaryModalOpen(false)}
+        onDone={() => setIsSummaryModalOpen(false)}
+        onSubmit={handleSubmitProviderGroups}
+        isSubmitting={isSubmittingGroups}
+        providerGroups={summaryProviderGroups}
+        onViewPreAuth={handleViewPreAuthGroup}
+      />
+
+      {/* Full Pre-Auth editor — opened directly (single provider) or from a summary row */}
       <PreAuthModal
         open={isPreAuthModalOpen}
         onClose={() => setIsPreAuthModalOpen(false)}
-        preAuthId={createdPreAuthPatientId === currentPatientId ? createdPreAuthId : null}
+        preAuthId={activeGroupPreAuthId}
         onSave={(newId) => {
           setCreatedPreAuthId(newId);
           setCreatedPreAuthPatientId(currentPatientId);
+          // Reflect the saved preAuthId back into the matching summary group
+          setSummaryProviderGroups((prev) =>
+            prev.map((g) =>
+              g.procedures === activeGroupProcedures
+                ? { ...g, preAuthId: newId, status: 'requested' }
+                : g
+            )
+          );
         }}
         onDelete={() => {
           setCreatedPreAuthId(null);
+          setActiveGroupPreAuthId(null);
         }}
         patientId={currentPatientId}
         treatmentPlanId={activePlanId}
-        selectedProcedures={selectedRows.length > 0 ? allProcedures.filter(p => selectedRows.includes(p.id)) : allProcedures}
+        selectedProcedures={activeGroupProcedures}
       />
 
       <Snackbar
