@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAllProvidersForDropdown,
@@ -37,6 +37,19 @@ import {
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
 
+// Shape a row into the payload the estimator expects. The estimator builds ONE
+// deductible ledger per request and drains it across every item, so callers must
+// send the whole invoice — pricing a single line in isolation hands it a fresh
+// full pool and re-sells deductible the other lines already consumed.
+const toEstimateItem = (p) => ({
+  code: p.code,
+  charge:
+    parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
+  allowedFee: p.allowedFee !== undefined ? Number(p.allowedFee) : undefined,
+  originalFee: p.originalFee !== undefined ? Number(p.originalFee) : undefined,
+  dbi: Boolean(p.dbi),
+});
+
 const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const dispatch = useDispatch();
   const reduxPatient = useSelector((state) => state.patient?.currentPatient || state.patient?.selectedPatient);
@@ -53,6 +66,13 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   const [dupWarning, setDupWarning] = useState("");
   const [description, setDescription] = useState("");
   const [showDescription, setShowDescription] = useState(false);
+  // handleAmountChange fires on every keystroke, and each call re-prices the whole
+  // invoice server-side. Debounce so typing a charge is one request, not one per
+  // character. The local calculatePortionsForCategory pass below still runs
+  // synchronously, so the table keeps updating as you type.
+  const estimateTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(estimateTimer.current), []);
 
   // Selection is tracked by EXCLUSION, not inclusion. `procedures` is rebuilt
   // wholesale from `invoiceData` in the effect below and appended to as rows
@@ -243,13 +263,20 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
+      // Store selected teeth and surfaces for duplicate detection
+      selectedTeeth: savedData.selectedTeeth,
+      selectedSurfaces: savedData.selectedSurfaces,
     };
 
     if (activePatientId) {
       try {
+        // Send every existing line plus the new one so the deductible pool is
+        // shared. The new line is priced last, so it reads the balance its
+        // predecessors left rather than the full limit.
         const estimates = await invoiceService.estimateInvoiceItems(
           activePatientId,
           [
+            ...procedures.map(toEstimateItem),
             {
               code: newProcedure.code,
               charge: fee,
@@ -259,7 +286,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           ],
         );
         if (estimates && estimates.length > 0) {
-          const est = estimates[0];
+          const est = estimates[estimates.length - 1];
           console.log("Got estimate from backend for new procedure:", est);
           const sec = Number(est.secondaryInsPortion || 0);
           const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
@@ -402,19 +429,30 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           ) || 0;
         const baseFee =
           updatedProcedure.allowedFee ?? updatedProcedure.originalFee;
-        const estimates = await invoiceService.estimateInvoiceItems(
-          patient._id,
-          [
-            {
-              code: updatedProcedure.code,
-              charge: numCharge,
-              allowedFee: baseFee,
-              originalFee: baseFee,
-            },
-          ],
+        // Price the whole invoice, not just this line, so the shared deductible
+        // pool is drained in the same order the estimator would drain it. Merge
+        // back only the edited row, but at ITS index in the batch.
+        const batch = procedures.map((p) =>
+          p.id === procedureId
+            ? {
+                code: updatedProcedure.code,
+                charge: numCharge,
+                allowedFee: baseFee,
+                originalFee: baseFee,
+                dbi: Boolean(updatedProcedure.dbi),
+              }
+            : toEstimateItem(p),
         );
-        if (estimates && estimates.length > 0) {
-          const est = estimates[0];
+        const editedIndex = procedures.findIndex((p) => p.id === procedureId);
+        clearTimeout(estimateTimer.current);
+        estimateTimer.current = setTimeout(async () => {
+          try {
+          const estimates = await invoiceService.estimateInvoiceItems(
+            patient._id,
+            batch,
+          );
+          if (estimates && estimates.length > 0 && editedIndex > -1) {
+            const est = estimates[editedIndex];
           setProcedures((prev) =>
             prev.map((p) => {
               if (p.id !== procedureId) return p;
@@ -440,7 +478,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           );
         }
       } catch (err) {
-        console.warn("Failed to fetch estimate after charge change:", err);
+          console.warn("Failed to fetch estimate after charge change:", err);
+        }
+      }, 600);
+      } catch (err) {
+        console.warn("Failed to build estimate payload:", err);
       }
     }
   };
@@ -1196,6 +1238,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             <AddNewProcedureDialog
               onClose={() => setShowAddProcedure(false)}
               onSave={handleSaveProcedure}
+              existingProcedures={procedures}
+              maxTeeth={1}
             />
           </Box>
         </Box>

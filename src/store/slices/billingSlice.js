@@ -549,7 +549,7 @@ export const fetchLedgerItems = createAsyncThunk(
         }
         const adjustedInvBal = Math.max(
           0,
-          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt - (Number(invoice.writeoffAmount) || 0),
+          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
         );
 
         const ptPaidDisplay = totalPtPaidAmt;
