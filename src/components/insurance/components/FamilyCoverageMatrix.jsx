@@ -11,6 +11,7 @@ import {
   getPolicyKey,
   getPolicyLabel,
 } from '../utils/insuranceHelpers';
+import DependentsDialog from './DependentsDialog';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
@@ -109,6 +110,9 @@ export default function FamilyCoverageMatrix({
   // Bumped after any activate/deactivate so the other members' coverages are
   // re-fetched — their records live outside the parent's Redux cache.
   const [refreshToken, setRefreshToken] = useState(0);
+  // Which empty cell opened the Dependents dialog, so Activate there knows
+  // which member/policy pair to submit.
+  const [dependentDialog, setDependentDialog] = useState({ open: false, member: null, policy: null });
 
   // Self first, then the household — mirrors how the family is listed everywhere
   // else in patient detail (FamilyMembersSection, FamilyLedgerTable).
@@ -213,13 +217,22 @@ export default function FamilyCoverageMatrix({
     }
   };
 
+  // "Activate Insurance Policy On This Patient" opens the Dependents dialog
+  // rather than submitting straight away — relationship, renewal month and
+  // the subscriber all need confirming per the household, not just copied.
+  const handleActivateForMember = (member, policy) => {
+    setDependentDialog({ open: true, member, policy });
+  };
+
   /**
    * Attach a member to a policy the rest of the family already has by cloning
-   * the carrier/group identity off an existing record. Member-specific fields
-   * (benefit usage, ordinal) are deliberately left to the API defaults — only
-   * the policy identity is shared between household members.
+   * the carrier/group identity off an existing record, with the relationship,
+   * renewal month and subscriber the Dependents dialog confirmed. Benefit
+   * usage and ordinal are deliberately left to the API defaults — only the
+   * policy identity and the dialog's answers travel to the new member.
    */
-  const handleActivateForMember = async (member, policy) => {
+  const handleConfirmActivate = async ({ relationshipToPatient, renewalMonth, subscriberName, subscriberDateOfBirth }) => {
+    const { member, policy } = dependentDialog;
     const cellKey = `${member.id}:${policy.key}`;
     setBusyCell(cellKey);
     const src = policy.template;
@@ -235,11 +248,10 @@ export default function FamilyCoverageMatrix({
         groupNumber: src.groupNumber,
         groupName: src.groupName,
         employerName: src.employerName,
-        // The subscriber travels with the policy; the new member is only "self"
-        // when they are the policy holder themselves.
-        subscriberName: src.subscriberName,
-        subscriberDateOfBirth: src.subscriberDateOfBirth,
-        relationshipToPatient: isSubscriber(src, member) ? 'self' : 'other',
+        subscriberName: subscriberName || src.subscriberName,
+        subscriberDateOfBirth: subscriberDateOfBirth || src.subscriberDateOfBirth,
+        relationshipToPatient,
+        renewalMonth,
         effectiveDate: src.effectiveDate || formatDateForPayload(dayjs()),
         expirationDate: src.expirationDate || undefined,
         copayAmount: 0,
@@ -248,6 +260,7 @@ export default function FamilyCoverageMatrix({
         verificationStatus: 'pending',
       });
       showSnackbar(`Policy activated for ${member.name}`, 'success');
+      setDependentDialog({ open: false, member: null, policy: null });
       onChanged?.();
       setRefreshToken((t) => t + 1);
     } catch (err) {
@@ -353,6 +366,17 @@ export default function FamilyCoverageMatrix({
           </Box>
         ))}
       </Box>
+
+      <DependentsDialog
+        key={`${dependentDialog.member?.id || 'none'}:${dependentDialog.policy?.key || 'none'}`}
+        open={dependentDialog.open}
+        onClose={() => setDependentDialog({ open: false, member: null, policy: null })}
+        member={dependentDialog.member}
+        policy={dependentDialog.policy}
+        familyMembers={members}
+        onConfirm={handleConfirmActivate}
+        submitting={Boolean(dependentDialog.member && busyCell === `${dependentDialog.member.id}:${dependentDialog.policy?.key}`)}
+      />
     </Box>
   );
 }
