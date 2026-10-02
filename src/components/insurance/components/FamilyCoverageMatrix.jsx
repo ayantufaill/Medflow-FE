@@ -218,20 +218,28 @@ export default function FamilyCoverageMatrix({
   };
 
   // "Activate Insurance Policy On This Patient" opens the Dependents dialog
-  // rather than submitting straight away — relationship, renewal month and
+  // rather than submitting straight away — relationship, starting month and
   // the subscriber all need confirming per the household, not just copied.
   const handleActivateForMember = (member, policy) => {
     setDependentDialog({ open: true, member, policy });
   };
 
   /**
-   * Attach a member to a policy the rest of the family already has by cloning
-   * the carrier/group identity off an existing record, with the relationship,
-   * renewal month and subscriber the Dependents dialog confirmed. Benefit
-   * usage and ordinal are deliberately left to the API defaults — only the
-   * policy identity and the dialog's answers travel to the new member.
+   * Attach ONE family member to a policy the rest of the household already
+   * has. This only ever creates a record for `dependentDialog.member` — the
+   * member whose "Activate" cell opened the dialog — never for any other
+   * family member on the same policy, even though they share the same
+   * carrier/policyNumber below.
+   *
+   * Sending the exact same policyNumber + insuranceCompanyId as the source
+   * record is what makes this a true "shared family policy" rather than a
+   * duplicate: the BE's createPatientInsurance Smart-Links onto the existing
+   * insplan/inssub by matching SubscriberID (policyNumber) + carrier
+   * (patient-insurance.service.ts), so only a new per-patient patplan row is
+   * created — the underlying policy itself, and every other member's row on
+   * it, is left untouched.
    */
-  const handleConfirmActivate = async ({ relationshipToPatient, renewalMonth, subscriberName, subscriberDateOfBirth }) => {
+  const handleConfirmActivate = async ({ relationshipToPatient, renewalMonth, effectiveDate, subscriberName, subscriberDateOfBirth }) => {
     const { member, policy } = dependentDialog;
     const cellKey = `${member.id}:${policy.key}`;
     setBusyCell(cellKey);
@@ -252,7 +260,7 @@ export default function FamilyCoverageMatrix({
         subscriberDateOfBirth: subscriberDateOfBirth || src.subscriberDateOfBirth,
         relationshipToPatient,
         renewalMonth,
-        effectiveDate: src.effectiveDate || formatDateForPayload(dayjs()),
+        effectiveDate: effectiveDate || src.effectiveDate || formatDateForPayload(dayjs()),
         expirationDate: src.expirationDate || undefined,
         copayAmount: 0,
         deductibleAmount: maxAmount || src.deductibleAmount || 1500,

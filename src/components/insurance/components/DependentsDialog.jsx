@@ -12,7 +12,9 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, People as PeopleIcon } from '@mui/icons-material';
+import dayjs from 'dayjs';
 import FormInput from './FormInput';
+import { formatDateForPayload } from '../../../utils/dateUtils';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
@@ -31,11 +33,13 @@ const RELATIONSHIP_OPTIONS = [
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
- * Confirms the three things a shared family policy needs before it can be
- * attached to a new dependent: how that dependent relates to the subscriber,
- * which month the policy renews, and who the subscriber actually is (editable
- * in case the policy template guessed wrong). Opened from the "Activate
- * Insurance Policy On This Patient" cell in FamilyCoverageMatrix.
+ * Confirms what a shared family policy needs before it can be attached to a
+ * new dependent: how that dependent relates to the subscriber, which month
+ * their coverage starts, and who the subscriber actually is (editable in case
+ * the policy template guessed wrong). Opened from the "Activate Insurance
+ * Policy On This Patient" cell in FamilyCoverageMatrix, and submitting here
+ * creates a record for `member` ONLY — every other family member on this
+ * policy is left untouched.
  */
 export default function DependentsDialog({
   open,
@@ -46,19 +50,17 @@ export default function DependentsDialog({
   onConfirm,
   submitting = false,
 }) {
-  // Seeded once from the policy's own subscriber/renewal month at mount time.
-  // The parent remounts this component (via a `key` on member+policy) each
-  // time a different cell opens the dialog, so these lazy initializers are
-  // all the "reset on reopen" behavior needs — no effect required.
+  // Seeded once at mount time — the parent remounts this component (via a
+  // `key` on member+policy) each time a different cell opens the dialog, so
+  // these lazy initializers are all the "reset on reopen" behavior needs.
   const [relationship, setRelationship] = useState(() => {
     const subscriber = (policy?.template?.subscriberName || '').trim();
     const isMemberTheSubscriber = subscriber && member?.name && subscriber.toLowerCase() === member.name.trim().toLowerCase();
     return isMemberTheSubscriber ? 'self' : 'child';
   });
-  const [renewalMonth, setRenewalMonth] = useState(() => {
-    const monthIndex = Number(policy?.template?.renewalMonth);
-    return monthIndex >= 1 && monthIndex <= 12 ? MONTHS[monthIndex - 1] : 'January';
-  });
+  // Starting month defaults to today — most activations are "cover them as of
+  // now" — not the policy's own renewal cycle, which is a separate concept.
+  const [startingMonth, setStartingMonth] = useState(() => dayjs().format('MMMM'));
   const [subscriberName, setSubscriberName] = useState(
     () => (policy?.template?.subscriberName || '').trim() || familyMembers.find((m) => m.isSelf)?.name || ''
   );
@@ -67,13 +69,19 @@ export default function DependentsDialog({
     (m) => m.name.trim().toLowerCase() === subscriberName.trim().toLowerCase()
   );
 
-  const canSubmit = Boolean(relationship) && Boolean(renewalMonth) && Boolean(subscriberName.trim()) && !submitting;
+  const canSubmit = Boolean(relationship) && Boolean(startingMonth) && Boolean(subscriberName.trim()) && !submitting;
 
   const handleActivate = () => {
     if (!canSubmit) return;
+    const monthIndex = MONTHS.indexOf(startingMonth); // 0-based
+    // Starting month only (no year field in this dialog) — anchor it to the
+    // current year, same convention ImportedCoverageModal/RenewalSection use
+    // for their month-only renewal pickers.
+    const effectiveDate = dayjs().month(monthIndex).startOf('month');
     onConfirm({
       relationshipToPatient: relationship,
-      renewalMonth: MONTHS.indexOf(renewalMonth) + 1,
+      renewalMonth: monthIndex + 1,
+      effectiveDate: formatDateForPayload(effectiveDate),
       subscriberName: subscriberName.trim(),
       subscriberDateOfBirth: subscriberMatch?.dateOfBirth,
     });
@@ -136,10 +144,10 @@ export default function DependentsDialog({
           <Box sx={{ flex: 1 }}>
             <FormInput
               select
-              label="Month"
+              label="Starting Month"
               required
-              value={renewalMonth}
-              onChange={(e) => setRenewalMonth(e.target.value)}
+              value={startingMonth}
+              onChange={(e) => setStartingMonth(e.target.value)}
             >
               {MONTHS.map((m) => (
                 <MenuItem key={m} value={m} sx={{ fontSize: '14px' }}>{m}</MenuItem>
