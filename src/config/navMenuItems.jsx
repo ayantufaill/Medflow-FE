@@ -10,14 +10,25 @@ import {
 } from '@mui/icons-material';
 
 // ─── PURE 4-GROUP DEFINITIONS ────────────────────────────────────────────────
+// Each group lists both the legacy display names ('Group Admin') and the
+// new-model role keys ('group_admin') the backend returns for accounts created
+// with the 8-role model — mirrors USER_GROUPS in Medflow-BE
+// src/types/user-group.types.ts. Without the keys those accounts resolve to no
+// group and every protected page shows "Access denied".
 export const USER_GROUPS = {
-  ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin'],
+  ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin', 'group_admin', 'branch_admin'],
   // Full operational admin roles. Group Admin remains group-scoped by backend
   // permission and branch-access checks.
-  FULL_ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin'],
-  CLINICAL_GROUP: ['Provider', 'Doctor', 'Hygienist', 'Assistant', 'Dental Assistant', 'Clinical Staff'],
-  OPERATIONS_GROUP: ['Front Desk', 'Receptionist', 'Biller', 'Billing Staff', 'Lab', 'Lab Technician'],
-  PATIENT_GROUP: ['Patient'],
+  FULL_ADMIN_GROUP: ['Super Admin', 'Group Admin', 'Branch Admin', 'Admin', 'group_admin', 'branch_admin'],
+  CLINICAL_GROUP: [
+    'Provider', 'Doctor', 'Hygienist', 'Assistant', 'Dental Assistant', 'Clinical Staff',
+    'dentist', 'hygienist', 'dental_assistant',
+  ],
+  OPERATIONS_GROUP: [
+    'Front Desk', 'Receptionist', 'Biller', 'Billing Staff', 'Lab', 'Lab Technician',
+    'front_desk', 'billing', 'lab',
+  ],
+  PATIENT_GROUP: ['Patient', 'patient'],
 };
 
 export const getUserGroups = (user) => {
@@ -175,6 +186,17 @@ export const ROLE_ALIASES = {
   'Doctor': ['Provider'],
   'Lab': ['Lab Technician'],
   'Lab Technician': ['Lab'],
+  // New-model role keys → the legacy names they correspond to, so items whose
+  // requiredRoles list legacy names also match 8-role-model accounts. Mirrors
+  // NEW_MODEL_ROLE_EQUIVALENTS in Medflow-BE src/types/user-group.types.ts.
+  'group_admin': ['Group Admin'],
+  'branch_admin': ['Branch Admin'],
+  'dentist': ['Provider', 'Doctor'],
+  'hygienist': ['Hygienist', 'Clinical Staff'],
+  'dental_assistant': ['Dental Assistant', 'Assistant', 'Clinical Staff'],
+  'front_desk': ['Front Desk', 'Receptionist'],
+  'billing': ['Biller', 'Billing Staff'],
+  'lab': ['Lab', 'Lab Technician'],
 };
 
 // Returns true if `user` holds at least one role in `requiredRoles` (or if the item
@@ -228,6 +250,12 @@ export const hasRequiredPermission = (user, requiredPermissions, requireAll = fa
     }
     return acc;
   }, {});
+  // The profile's effective permission list includes what a role inherits on the
+  // backend (a group_admin gets branch_admin's set live), which the role objects
+  // above don't carry on their own.
+  if (Array.isArray(user.permissions)) {
+    for (const key of user.permissions) consolidated[key] = true;
+  }
 
   if (consolidated['*'] === true) return true;
 
