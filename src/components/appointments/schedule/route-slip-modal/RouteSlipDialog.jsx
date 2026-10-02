@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,6 +18,13 @@ import { COLORS } from '../../../../constants/colors';
 import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail } from '../../../../hooks/redux';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectPatientHistoryList, fetchPatientHistory } from '../../../../store/slices/appointmentSlice';
+import {
+  fetchPatientById,
+  fetchPatientBalance,
+  fetchPatientInsurances,
+  selectPatientBalanceCache,
+  selectPatientInsurancesCache,
+} from '../../../../store/slices/patientSlice';
 import { providerLabel } from '../../new-appointment/helpers';
 
 import { SectionHeader, InfoRow, SectionContainer } from './RouteSlipShared';
@@ -30,7 +37,8 @@ const RouteSlipDialog = () => {
   const { currentPatient } = usePatient();
   const { currentAppointment } = useAppointmentDetail();
   const patientHistory = useSelector(selectPatientHistoryList) || [];
-  const printRef = useRef(null);
+  const balanceCache = useSelector(selectPatientBalanceCache);
+  const insurancesCache = useSelector(selectPatientInsurancesCache);
   const dispatch = useDispatch();
 
   const OPERATORY_COLUMNS = useMemo(() => {
@@ -44,10 +52,14 @@ const RouteSlipDialog = () => {
   }, [rooms]);
 
   useEffect(() => {
-    if (routeSlipDialogOpen && currentPatient && (currentPatient._id || currentPatient.id)) {
-      dispatch(fetchPatientHistory(currentPatient._id || currentPatient.id));
+    const patientId = currentPatient?._id || currentPatient?.id || currentAppointment?.patientId?._id || currentAppointment?.patientId;
+    if (routeSlipDialogOpen && patientId) {
+      dispatch(fetchPatientById(patientId));
+      dispatch(fetchPatientHistory(patientId));
+      dispatch(fetchPatientBalance(patientId));
+      dispatch(fetchPatientInsurances({ patientId, activeOnly: true }));
     }
-  }, [routeSlipDialogOpen, currentPatient, dispatch]);
+  }, [routeSlipDialogOpen, currentPatient, currentAppointment, dispatch]);
 
   const handleClose = () => {
     setRouteSlipDialogOpen(false);
@@ -57,12 +69,43 @@ const RouteSlipDialog = () => {
     window.print();
   };
 
-  // Mocked data if patient is missing
-  const patientName = currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : 'No patient selected';
-  const address = currentPatient?.address ? `${currentPatient.address.street || currentPatient.address.addressLine1 || ''}, ${currentPatient.address.city || ''}, ${currentPatient.address.state || ''}, ${currentPatient.address.zip || currentPatient.address.postalCode || ''}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',') : '--';
+  const patientId = currentPatient?._id || currentPatient?.id || currentAppointment?.patientId?._id || currentAppointment?.patientId;
+  const patientBalance = patientId ? balanceCache?.[patientId]?.data : null;
+  const patientInsurances = patientId ? (insurancesCache?.[patientId]?.data || []) : [];
+
+  const formatMoney = (value) => {
+    const amount = Number(value || 0);
+    return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  };
+
+  const formatAddress = (addr) => {
+    if (!addr) return '--';
+    if (typeof addr === 'string') return addr || '--';
+    return [
+      addr.street,
+      addr.addressLine1,
+      addr.line1,
+      addr.address1,
+      addr.addressLine2,
+      addr.line2,
+      addr.city,
+      addr.state,
+      addr.zip,
+      addr.postalCode,
+    ].filter(Boolean).join(', ') || '--';
+  };
+
+  const fullName = (person) => {
+    if (!person) return '';
+    if (typeof person === 'string') return person;
+    return person.name || person.fullName || `${person.firstName || ''} ${person.lastName || ''}`.trim();
+  };
+
+  const patientName = fullName(currentPatient) || currentPatient?.patientName || 'No patient selected';
+  const address = formatAddress(currentPatient?.address || currentPatient?.homeAddress || currentPatient?.contact?.address);
   const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? dayjs(currentPatient.dateOfBirth || currentPatient.dob).format('MM/DD/YYYY') : '--';
-  const email = currentPatient?.email || currentPatient?.emailAddress || '--';
-  const phone = currentPatient?.phonePrimary || currentPatient?.mobileNumber || currentPatient?.phone || currentPatient?.mobile || '--';
+  const email = currentPatient?.email || currentPatient?.emailAddress || currentPatient?.contact?.email || '--';
+  const phone = currentPatient?.phonePrimary || currentPatient?.mobileNumber || currentPatient?.mobilePhone || currentPatient?.phone || currentPatient?.mobile || currentPatient?.contact?.phone || '--';
 
   const getProviderName = (providerData) => {
     if (!providerData) return '--';
@@ -96,7 +139,25 @@ const RouteSlipDialog = () => {
   const ph = currentPatient?.preferredHygienist || currentPatient?.preferredHygienistId;
   const preferredHygienistName = getProviderName(ph);
 
-  const activeInsurance = currentPatient?.paymentMethod?.paidBy || currentPatient?.primaryInsurance?.name || currentPatient?.insuranceName || currentPatient?.coverages?.[0]?.insuranceCompany?.name || currentPatient?.insurance?.[0]?.name || currentPatient?.insurancePlan || null;
+  const referringSource = currentPatient?.referringSource?.name || currentPatient?.referringSource || currentPatient?.referralSource?.name || currentPatient?.referralSource || currentPatient?.howDidYouHearAboutUs || '--';
+  const totalOutstanding = patientBalance?.totalOutstanding ?? patientBalance?.familyTotalOutstanding ?? patientBalance?.balance ?? currentPatient?.balance ?? 0;
+  const individualOutstanding = patientBalance?.individualOutstanding ?? patientBalance?.patientOutstanding ?? patientBalance?.patientBalance ?? patientBalance?.balance ?? 0;
+  const insuranceOutstanding = patientBalance?.insuranceOutstanding ?? patientBalance?.insuranceBalance ?? patientBalance?.pendingInsurance ?? 0;
+
+  const activeInsuranceRows = patientInsurances.length > 0
+    ? patientInsurances
+    : (currentPatient?.coverages || currentPatient?.insurance || currentPatient?.insurances || []).filter(Boolean);
+
+  const getInsuranceName = (insurance) => (
+    insurance?.insuranceCompany?.name ||
+    insurance?.carrier?.name ||
+    insurance?.payer?.name ||
+    insurance?.plan?.name ||
+    insurance?.planName ||
+    insurance?.name ||
+    insurance?.insuranceName ||
+    '--'
+  );
 
   // Identify the primary appointment for the Route Slip
   let routeSlipAppt = null;
@@ -126,7 +187,9 @@ const RouteSlipDialog = () => {
   };
 
   // If we have an active appointment in Redux and it belongs to this patient, use it
-  if (currentAppointment && (currentAppointment.patientId === currentPatient?._id || currentAppointment.patientId === currentPatient?.id)) {
+  const currentAppointmentPatientId = currentAppointment?.patientId?._id || currentAppointment?.patientId?.id || currentAppointment?.patientId;
+
+  if (currentAppointment && patientId && String(currentAppointmentPatientId) === String(patientId)) {
     routeSlipAppt = currentAppointment;
   } else {
     // Fallback: look for an appointment today
@@ -309,7 +372,7 @@ const RouteSlipDialog = () => {
                 <Box sx={{ pl: { sm: 6, md: 10 } }}>
                   <InfoRow label="Preferred Dentist" value={preferredDentistName} />
                   <InfoRow label="Preferred Hygienist" value={preferredHygienistName} />
-                  <InfoRow label="Referring Sources" value="--" />
+                  <InfoRow label="Referring Sources" value={referringSource} />
 
                 </Box>
               </Grid>
@@ -322,18 +385,27 @@ const RouteSlipDialog = () => {
           <Box sx={{ flex: 1 }}>
             <SectionHeader title="ACCOUNT" />
             <SectionContainer sx={{ height: '100px' }}>
-              <InfoRow label="Total Outstanding" value="$0.00" alignValue="right" />
-              <InfoRow label="Individual Outstanding" value="$0.00" alignValue="right" />
-              <InfoRow label="Insurance Outstanding" value="$0.00" alignValue="right" />
+              <InfoRow label="Total Outstanding" value={formatMoney(totalOutstanding)} alignValue="right" />
+              <InfoRow label="Individual Outstanding" value={formatMoney(individualOutstanding)} alignValue="right" />
+              <InfoRow label="Insurance Outstanding" value={formatMoney(insuranceOutstanding)} alignValue="right" />
             </SectionContainer>
           </Box>
           <Box sx={{ flex: 1 }}>
             <SectionHeader title="INSURANCE" />
-            <SectionContainer sx={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {activeInsurance ? (
-                <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 500 }}>
-                  {activeInsurance}
-                </Typography>
+            <SectionContainer sx={{ minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {activeInsuranceRows.length > 0 ? (
+                activeInsuranceRows.map((insurance, index) => (
+                  <Box key={insurance._id || insurance.id || index} sx={{ mb: index === activeInsuranceRows.length - 1 ? 0 : 1 }}>
+                    <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 600 }}>
+                      {getInsuranceName(insurance)}
+                    </Typography>
+                    <Typography sx={{ color: '#64748b', fontSize: '12px' }}>
+                      ID: {insurance.subscriberId || insurance.memberId || insurance.policyNumber || '--'}
+                      {' | '}
+                      Group: {insurance.groupNumber || insurance.groupId || '--'}
+                    </Typography>
+                  </Box>
+                ))
               ) : (
                 <Typography sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
                   No active insurance

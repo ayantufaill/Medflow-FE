@@ -29,6 +29,8 @@ import {
   Sync as SyncIcon,
   EventNoteOutlined as EventIcon,
   EditOutlined as EditOutlineIcon,
+  MonetizationOnOutlined as FeesIcon,
+  PostAddOutlined as PreAuthIcon,
   MenuBookOutlined as HistoryIcon,
   RequestQuoteOutlined as EstimateIcon,
   AssignmentIndOutlined as RouteSlipIcon,
@@ -72,11 +74,12 @@ const NEW_TEMPLATE_OPTIONS = [
   'OR Follow Up'
 ];
 
-const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onUpdateItemStatus, selectedRows, setSelectedRows }) => {
+const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onEditItem, onMoveToTop, onPrintRouteSlip, onViewHistory, onUpdateItemStatus, selectedRows, setSelectedRows }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [currentVisitStatus, setCurrentVisitStatus] = useState('Unconfirmed');
   const [selectedNewTemplate, setSelectedNewTemplate] = useState('New Patient Exam 12yo+');
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [procedureMenu, setProcedureMenu] = useState({ anchorEl: null, row: null });
   const providersList = useSelector(selectProviderDropdownList) || [];
 
   const getProviderName = (providerId) => {
@@ -128,6 +131,39 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
       setSelectedRows([...selectedRows, id]);
     }
   };
+
+  const handleProcedureMenuOpen = (event, row) => {
+    setProcedureMenu({ anchorEl: event.currentTarget, row });
+  };
+
+  const handleProcedureMenuClose = () => {
+    setProcedureMenu({ anchorEl: null, row: null });
+  };
+
+  const handleEditProcedure = () => {
+    if (procedureMenu.row && onEditItem) {
+      onEditItem(procedureMenu.row);
+    }
+    handleProcedureMenuClose();
+  };
+
+  const handleEditFees = () => {
+    handleProcedureMenuClose();
+  };
+
+  const handleSendPreAuth = () => {
+    handleProcedureMenuClose();
+  };
+
+  const handleDeleteProcedure = () => {
+    const rowId = procedureMenu.row?.id;
+    handleProcedureMenuClose();
+    if (rowId && onDeleteItems) {
+      onDeleteItems([rowId]);
+      setSelectedRows(selectedRows.filter((selectedId) => selectedId !== rowId));
+    }
+  };
+
   return (
     <Box sx={{ height: '100%' }}>
       {/* Phase / Visit Header Row */}
@@ -179,13 +215,25 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
           <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
             <EditOutlineIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> Edit
           </MenuItem>
-          <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
+          <MenuItem
+            onClick={() => {
+              setActionMenuAnchor(null);
+              onViewHistory?.();
+            }}
+            sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}
+          >
             <HistoryIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> History
           </MenuItem>
           <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
             <EstimateIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> Print Estimate
           </MenuItem>
-          <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
+          <MenuItem
+            onClick={() => {
+              setActionMenuAnchor(null);
+              onPrintRouteSlip?.();
+            }}
+            sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}
+          >
             <RouteSlipIcon sx={{ fontSize: '1.25rem', color: '#0f172a' }} /> Print Route Slip
           </MenuItem>
           <MenuItem onClick={() => setActionMenuAnchor(null)} sx={{ minHeight: 'auto', py: 1, px: 2, fontSize: '13px', fontFamily: 'Inter', color: '#334155', gap: 1.5 }}>
@@ -255,6 +303,7 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
                     }}
                   >
                     <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
+                    <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
                     <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
                     <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
                     <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
@@ -282,13 +331,63 @@ const NewTreatmentPlanTable = ({ treatmentPlans, onDeleteItems, onMoveToTop, onU
                   ) : '-'}
                 </TableCell>
                 <TableCell align="right">
-                  <IconButton size="small"><MoreVertIcon fontSize="small" /></IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label={`Procedure actions for ${row.code || 'procedure'}`}
+                    aria-haspopup="menu"
+                    aria-expanded={procedureMenu.row?.id === row.id ? 'true' : undefined}
+                    onClick={(event) => handleProcedureMenuOpen(event, row)}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+      <Menu
+        anchorEl={procedureMenu.anchorEl}
+        open={Boolean(procedureMenu.anchorEl)}
+        onClose={handleProcedureMenuClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            mt: 0.5,
+            minWidth: 160,
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            boxShadow: '0 8px 18px rgba(15, 23, 42, 0.12)',
+            '& .MuiMenuItem-root': {
+              gap: 1.1,
+              minHeight: 32,
+              py: 0.75,
+              px: 1.5,
+              fontSize: '12px',
+              fontFamily: 'Inter, sans-serif',
+              color: '#0f172a',
+            },
+          },
+        }}
+      >
+        <MenuItem onClick={handleEditProcedure}>
+          <EditOutlineIcon sx={{ fontSize: 18, color: '#0f172a' }} />
+          Edit Procedure
+        </MenuItem>
+        <MenuItem onClick={handleEditFees}>
+          <FeesIcon sx={{ fontSize: 18, color: '#0f172a' }} />
+          Edit Fees
+        </MenuItem>
+        <MenuItem onClick={handleSendPreAuth}>
+          <PreAuthIcon sx={{ fontSize: 18, color: '#0f172a' }} />
+          Send Pre-Auth
+        </MenuItem>
+        <MenuItem onClick={handleDeleteProcedure} sx={{ color: '#dc2626 !important' }}>
+          <DeleteOutlineIcon sx={{ fontSize: 18, color: '#dc2626' }} />
+          Delete Procedure
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };
