@@ -46,6 +46,8 @@ import Questionnaires from './Questionnaires';
 import DigitalForms from './DigitalForms';
 import ScheduleGapFills from './ScheduleGapFills';
 import ReviewSettings from './ReviewSettings';
+import EmailMessaging from './EmailMessaging';
+import Automations from './Automations';
 import AdjustmentTypes from './AdjustmentTypes';
 import FeeGuides from './FeeGuides';
 import FeeGuideDetail from './FeeGuideDetail';
@@ -99,6 +101,8 @@ const PATIENT_COMMUNICATION_SUB_TABS = [
   { label: 'Digital Forms', path: '/admin/patient-communication/digital-forms' },
   { label: 'Schedule Gap Fills', path: '/admin/patient-communication/gap-fills' },
   { label: 'Review Settings', path: '/admin/patient-communication/review-settings' },
+  { label: 'Email & Messaging', path: '/admin/patient-communication/email-messaging' },
+  { label: 'Automations', path: '/admin/patient-communication/automations' },
 ];
 
 const FINANCIAL_MANAGEMENT_SUB_TABS = [
@@ -435,6 +439,10 @@ const AdminPage = () => {
             <ScheduleGapFills />
           ) : location.pathname === '/admin/patient-communication/review-settings' ? (
             <ReviewSettings />
+          ) : location.pathname.startsWith('/admin/patient-communication/email-messaging') ? (
+            <EmailMessaging />
+          ) : location.pathname === '/admin/patient-communication/automations' ? (
+            <Automations />
           ) : (
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="h5" sx={{ color: 'text.secondary', mt: 10 }}>
