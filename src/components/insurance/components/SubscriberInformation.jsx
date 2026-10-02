@@ -7,7 +7,9 @@ import {
   CalendarToday as CalendarIcon,
   PeopleOutline as PeopleIcon,
   Edit as EditIcon,
-  InfoOutlined as InfoIcon
+  InfoOutlined as InfoIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
 } from "@mui/icons-material";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -228,11 +230,30 @@ const SubscriberInformation = ({
         {/* SSN */}
         <FormInput
           label="Subscriber Social Security Number"
-          type="password"
+          type={showSsn ? 'text' : 'password'}
           placeholder="•••-••-••••"
           value={formData.subscriber?.ssn || ''}
           onChange={(e) => handleSubscriberChange('ssn', e.target.value)}
-          sx={{ '& .MuiInputBase-root': { letterSpacing: '2px' } }}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip title={showSsn ? 'Hide SSN' : 'Show SSN'}>
+                  <IconButton
+                    aria-label="toggle SSN visibility"
+                    size="small"
+                    edge="end"
+                    onClick={() => setShowSsn((prev) => !prev)}
+                    sx={{ color: '#6b7280' }}
+                  >
+                    {showSsn ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            )
+          }}
+          sx={{
+            '& .MuiInputBase-root': { letterSpacing: showSsn ? 'normal' : '2px' }
+          }}
         />
 
         {/* Date of Birth */}

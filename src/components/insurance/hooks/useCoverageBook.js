@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { feeService } from '../../../services/fee.service';
-import { getProcedureType } from '../utils/insuranceHelpers';
+import { getProcedureType, DOWNGRADE_CODE_MAP } from '../utils/insuranceHelpers';
 
 export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData) => {
   const [loading, setLoading] = useState(false);
@@ -54,6 +54,14 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
         teethLimit: override?.teethLimit ?? '',
         hasDowngrade: override?.hasDowngrade ?? false,
         downgrade: override?.downgrade ?? '',
+        // Teeth selected for the downgraded code (which may have no fee-guide row).
+        downgradeTeeth: (() => {
+          const dgCode = override?.downgrade || DOWNGRADE_CODE_MAP[String(proc.code || '').toUpperCase()] || '';
+          if (!dgCode) return '';
+          const dgOverride = (coverageData || []).find((item) => item.code === dgCode);
+          if (!dgOverride) return '';
+          return dgOverride.teethLimit || (Array.isArray(dgOverride.teeth) ? dgOverride.teeth.join(', ') : '');
+        })(),
         nc: override?.nc ?? false,
         flatPlanPortion: override?.flatPlanPortion ?? ''
       };
@@ -76,8 +84,11 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
   const toggleType = useCallback((type) => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] })), []);
   const toggleGroup = useCallback((groupKey) => setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] })), []);
 
+  // Accepts either (code, field, value) or (code, { field: value, ... }) so a
+  // single update can set several fields at once.
   const handleFieldChange = useCallback((code, field, value) => {
     if (!setCoverageData) return;
+    const patch = (typeof field === 'object' && field !== null) ? field : { [field]: value };
     setCoverageData(prevData => {
       const newData = [...(prevData || [])];
 
@@ -87,9 +98,9 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
         matchingProcs.forEach(proc => {
           const index = newData.findIndex(item => item.code === proc.code);
           if (index >= 0) {
-            newData[index] = { ...newData[index], [field]: value };
+            newData[index] = { ...newData[index], ...patch };
           } else {
-            newData.push({ ...proc, [field]: value });
+            newData.push({ ...proc, ...patch });
           }
         });
       } else if (code.startsWith('GROUP|')) {
@@ -98,23 +109,36 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
         matchingProcs.forEach(proc => {
           const index = newData.findIndex(item => item.code === proc.code);
           if (index >= 0) {
-            newData[index] = { ...newData[index], [field]: value };
+            newData[index] = { ...newData[index], ...patch };
           } else {
-            newData.push({ ...proc, [field]: value });
+            newData.push({ ...proc, ...patch });
           }
         });
       } else {
         const index = newData.findIndex(item => item.code === code);
         if (index >= 0) {
-          newData[index] = { ...newData[index], [field]: value };
+          newData[index] = { ...newData[index], ...patch };
         } else {
+          // Downgrade codes may not exist in the fee guide, so fall back to a
+          // bare row keyed by the code rather than dropping the override.
           const item = mergedData.find(i => i.code === code);
-          if (item) newData.push({ ...item, [field]: value });
+          newData.push(item ? { ...item, ...patch } : { code, ...patch });
         }
       }
       return newData;
     });
   }, [mergedData, setCoverageData]);
+
+  // Downgrade codes may not be part of the fee guide, so fall back to the saved
+  // override row (and finally a bare `{ code }`) instead of bailing out.
+  const findProcForTeeth = useCallback((code) => {
+    if (!code) return null;
+    return (
+      mergedData.find((p) => p.code === code) ||
+      (coverageData || []).find((item) => item.code === code) ||
+      { code }
+    );
+  }, [mergedData, coverageData]);
 
   const handleToothToggle = useCallback((tooth) => {
     if (!activeToothSelection) return;
@@ -141,7 +165,7 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
       return;
     }
 
-    const proc = mergedData.find(p => p.code === activeToothSelection);
+    const proc = findProcForTeeth(activeToothSelection);
     if (!proc) return;
     
     let currentTeeth = [];
@@ -168,7 +192,7 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
     const updatedLimit = currentTeeth.join(', ');
     handleFieldChange(activeToothSelection, 'teethLimit', updatedLimit);
     handleFieldChange(activeToothSelection, 'teeth', currentTeeth);
-  }, [activeToothSelection, mergedData, handleFieldChange, bulkTeethSelection]);
+  }, [activeToothSelection, mergedData, handleFieldChange, bulkTeethSelection, findProcForTeeth]);
 
   const isToothSelected = useCallback((tooth) => {
     if (!activeToothSelection) return false;
@@ -177,7 +201,7 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
       return bulkTeethSelection.includes(String(tooth).trim());
     }
 
-    const proc = mergedData.find(p => p.code === activeToothSelection);
+    const proc = findProcForTeeth(activeToothSelection);
     if (!proc) return false;
     let list = [];
     if (Array.isArray(proc.teeth)) {
@@ -186,7 +210,7 @@ export const useCoverageBook = (open, feeGuideId, coverageData, setCoverageData)
       list = String(proc.teethLimit).split(',').map(t => t.trim()).filter(Boolean);
     }
     return list.includes(String(tooth).trim());
-  }, [activeToothSelection, mergedData, bulkTeethSelection]);
+  }, [activeToothSelection, mergedData, bulkTeethSelection, findProcForTeeth]);
 
   return {
     loading,

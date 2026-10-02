@@ -45,8 +45,11 @@ const CoverageBookSummary = ({
     );
   };
 
+  // Accepts either (code, field, value) or (code, { field: value, ... }) so a
+  // single update can set several fields at once without stale-state clobbering.
   const handleFieldChange = (code, field, value) => {
     if (!onCoverageDataChange) return;
+    const patch = typeof field === 'object' && field !== null ? field : { [field]: value };
     let updatedData = Array.isArray(coverageData) ? [...coverageData] : [];
     if (!updatedData || updatedData.length === 0) {
       updatedData = rowData.map((r) => ({ ...r }));
@@ -55,10 +58,10 @@ const CoverageBookSummary = ({
       (item) => item.code === code || item.rowKey === `proc-${code}`,
     );
     if (idx >= 0) {
-      updatedData[idx] = { ...updatedData[idx], [field]: value };
+      updatedData[idx] = { ...updatedData[idx], ...patch };
     } else {
       const template = rowData.find((r) => r.code === code) || { code };
-      const newRow = { ...template, rowKey: `proc-${code}`, [field]: value };
+      const newRow = { ...template, rowKey: `proc-${code}`, ...patch };
       updatedData.push(newRow);
     }
     onCoverageDataChange(updatedData);
@@ -78,8 +81,12 @@ const CoverageBookSummary = ({
     if (existingIndex >= 0) {
       proc = { ...updatedData[existingIndex] };
     } else {
+      // Downgrade codes may not exist in the default row list, so fall back to a
+      // bare row keyed by the code rather than dropping the selection.
       const templateRow = rowData.find((r) => r.code === activeToothSelection);
-      proc = { ...templateRow, rowKey: `proc-${activeToothSelection}` };
+      proc = templateRow
+        ? { ...templateRow, rowKey: `proc-${activeToothSelection}` }
+        : { code: activeToothSelection, rowKey: `proc-${activeToothSelection}` };
     }
 
     let currentTeeth = [];
@@ -190,6 +197,7 @@ const CoverageBookSummary = ({
                     index={row.code}
                     handleFieldChange={handleFieldChange}
                     setActiveToothSelection={setActiveToothSelection}
+                    getRowData={getRowData}
                   />
                 );
               })}

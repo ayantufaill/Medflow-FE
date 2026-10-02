@@ -31,3 +31,20 @@ export const getProcedureType = (codeStr) => {
   }
   return 'Other';
 };
+
+/**
+ * Crown procedures that downgrade to a cheaper alternative when the downgrade
+ * flag is checked. Keyed by the procedure's own CDT code.
+ */
+export const DOWNGRADE_CODE_MAP = {
+  D2391: 'D2140',
+  D2392: 'D2150',
+  D2393: 'D2160',
+  D2394: 'D2161',
+  D2740: 'D2791',
+  D2750: 'D2790',
+};
+
+/** Returns the auto-assigned downgrade code for a procedure, or '' if none. */
+export const getDowngradeCode = (code) =>
+  DOWNGRADE_CODE_MAP[String(code || '').trim().toUpperCase()] || '';
