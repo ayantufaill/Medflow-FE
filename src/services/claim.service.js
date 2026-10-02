@@ -512,6 +512,30 @@ export const claimService = {
   },
 
   /**
+   * Void a claim. The claim is kept for auditing but stops counting toward
+   * the invoice, so the ledger only shows it with "include voided transactions".
+   * @param {string} claimId - Claim ID
+   * @param {string} note - Optional void note
+   * @returns {Promise<Object>} Voided claim
+   */
+  async voidClaim(claimId, note) {
+    const response = await apiClient.post(`/claims/${claimId}/void`, { note });
+    return response.data.data.claim;
+  },
+
+  /**
+   * Lock or unlock a claim. A locked claim freezes its invoice: no further claim
+   * can be built for it until the locked claim is paid or unlocked.
+   * @param {string} claimId - Claim ID
+   * @param {boolean} isLocked - true to lock, false to unlock
+   * @returns {Promise<Object>} Updated claim
+   */
+  async setClaimLock(claimId, isLocked) {
+    const response = await apiClient.patch(`/claims/${claimId}/lock`, { isLocked });
+    return response.data.data.claim;
+  },
+
+  /**
    * Fetch the generated ADA claim PDF
    * @param {string} claimId 
    * @returns {Promise<Blob>} The PDF file blob

@@ -386,7 +386,7 @@ export const fetchLedgerItems = createAsyncThunk(
             attachments: claim.attachments || [],
             hasAttachment: Boolean(claim.hasAttachment),
             eobs: claim.eobs || [],
-            title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || "Insurance"}(${claim.insuranceCompany?.payerId || "00000"}) :`,
+            title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || "Insurance"}(${claim.insuranceCompany?.payerId || "00000"})${claim.isVoided ? " (VOIDED)" : ""} :`,
             amount: `$${finalClaimAmount.toFixed(2)}`,
             insuranceType: effectiveInsuranceType,
             ClaimType: isSecondaryClaim ? 'Secondary' : claim.claimType,
@@ -394,6 +394,9 @@ export const fetchLedgerItems = createAsyncThunk(
             isClaim: true,
             isPayment: false,
             isApproved,
+            isVoided: Boolean(claim.isVoided),
+            isLocked: Boolean(claim.isLocked),
+            lockedDate: claim.lockedDate || null,
             procedures: specificProcedures,
           };
         });
@@ -438,16 +441,21 @@ export const fetchLedgerItems = createAsyncThunk(
             String(p.status || "").toLowerCase() !== "void" &&
             String(p.status || "").toLowerCase() !== "voided"
         );
+        // Voided claims are retained for the "include voided transactions" view but
+        // must not hold insurance money out of the invoice any more.
+        const isLiveClaim = (c) =>
+          !c.isVoided && String(c.status || "").toLowerCase() !== "void";
+
         const hasInsurancePayment = totalInsPaidAmt > 0 || hasInsurancePaymentRecord;
         const hasPendingClaim = claimsMapped.some(
-          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void"
+          (c) => !c.isApproved && isLiveClaim(c)
         );
         const hasPrimaryClaim = claimsMapped.some(
-          (c) => String(c.status || "").toLowerCase() !== "void" && 
+          (c) => isLiveClaim(c) &&
                  String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
         );
         const hasSecondaryClaim = claimsMapped.some(
-          (c) => String(c.status || "").toLowerCase() !== "void" && 
+          (c) => isLiveClaim(c) &&
                  String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
         );
 
@@ -467,7 +475,7 @@ export const fetchLedgerItems = createAsyncThunk(
         let totalPendingClaimAmount = 0;
         
         const pendingPrimaryClaim = claimsMapped.find(
-          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void" && 
+          (c) => !c.isApproved && isLiveClaim(c) &&
                  String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
         );
         if (pendingPrimaryClaim) {
@@ -475,7 +483,7 @@ export const fetchLedgerItems = createAsyncThunk(
         }
 
         const pendingSecondaryClaim = claimsMapped.find(
-          (c) => !c.isApproved && String(c.status || "").toLowerCase() !== "void" && 
+          (c) => !c.isApproved && isLiveClaim(c) &&
                  String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
         );
         if (pendingSecondaryClaim) {
@@ -1030,6 +1038,39 @@ export const transferOutstandingToPatient = createAsyncThunk(
       return rejectWithValue(
         err.response?.data?.error?.message ||
           "Failed to transfer outstanding balance to patient",
+      );
+    }
+  },
+);
+
+/**
+ * Shift what the patient still owes on a line item back onto the insurance
+ * estimate - the reverse of transferOutstandingToPatient.
+ */
+export const transferOutstandingToInsurance = createAsyncThunk(
+  "billing/transferOutstandingToInsurance",
+  async (
+    { invoiceId, procedureId, patientId, skipFetch },
+    { dispatch, rejectWithValue },
+  ) => {
+    try {
+      await apiClient.post(
+        `/invoices/${invoiceId}/items/${procedureId}/transfer-outstanding-to-insurance`,
+      );
+      if (!skipFetch) {
+        try {
+          dispatch(invalidateLedger(patientId));
+        } catch (e) {
+          // ignore if action isn't available for some reason
+        }
+        await dispatch(fetchLedgerItems(patientId));
+        await dispatch(fetchInvoiceDetails({ patientId, invoiceId }));
+      }
+      return { procedureId, invoiceId };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.error?.message ||
+          "Failed to transfer outstanding patient balance to insurance",
       );
     }
   },
