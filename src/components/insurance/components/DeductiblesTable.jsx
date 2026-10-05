@@ -125,7 +125,7 @@ const InsuranceDatePicker = ({ value, onChange, error, id }) => {
           <DateCalendar
             value={parseToDayjs(value)}
             onChange={(newVal) => {
-              const formatted = newVal && newVal.isValid() ? newVal.format('MM/DD/YYYY') : '';
+              const formatted = newVal && newVal.isValid() ? newVal.format('MM-DD-YYYY') : '';
               onChange(formatted);
               handleClose();
             }}
@@ -326,6 +326,16 @@ const formatDateInput = (value) => {
 
 const isValidDate = (dateStr) => {
   if (!dateStr) return true;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr).trim())) {
+    const [year, month, day] = String(dateStr).trim().split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day;
+  }
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(String(dateStr).trim())) {
+    const [month, day, year] = String(dateStr).trim().split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day;
+  }
   if (dateStr.length < 10) return false;
   const parts = dateStr.split('/');
   if (parts.length !== 3) return false;

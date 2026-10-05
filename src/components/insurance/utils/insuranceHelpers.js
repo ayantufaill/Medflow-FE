@@ -100,6 +100,66 @@ export const getCoverageAmounts = (ins, usage) => {
   return { usedAmount, maxAmount };
 };
 
+/**
+ * Resolve a stored `planFeeGuide` to a human-readable fee guide name.
+ *
+ * The value comes from the API as a decimal string of `feesched.FeeSchedNum`
+ * (e.g. `"53"`), not an ObjectId, so matching has to be done on stringified ids.
+ * Legacy records can instead hold a name-ish string (`"careington"`), which we
+ * pass through untouched. A numeric id that no guide matches resolves to null —
+ * callers render their own empty-state rather than leaking a bare number, since
+ * the id means nothing to a user reading a coverage summary.
+ */
+export const getFeeGuideLabel = (planFeeGuide, feeGuides = []) => {
+  if (planFeeGuide === null || planFeeGuide === undefined || planFeeGuide === '') return null;
+
+  // Already populated (e.g. { _id, description }) by a joined endpoint.
+  if (typeof planFeeGuide === 'object') {
+    const name = planFeeGuide.description || planFeeGuide.name || planFeeGuide.Description;
+    if (name) return name;
+    planFeeGuide = planFeeGuide._id || planFeeGuide.id || planFeeGuide.FeeSchedNum;
+    if (planFeeGuide === null || planFeeGuide === undefined || planFeeGuide === '') return null;
+  }
+
+  const key = String(planFeeGuide).trim();
+  const placeholderish = ['null', 'undefined', 'none', '0'];
+  if (!key || placeholderish.includes(key.toLowerCase())) return null;
+
+  const guide = (feeGuides || []).find(
+    (fg) => String(fg?._id ?? fg?.id ?? fg?.FeeSchedNum ?? fg?.feeSchedNum) === key
+  );
+  const name = guide?.description || guide?.name || guide?.Description;
+  if (name) return name;
+
+  // Not a resolvable id — treat an already-human string as its own label.
+  return /^\d+$/.test(key) ? null : key;
+};
+
+/**
+ * Match a coverage record to its benefit-usage payload from `getInsuranceUsage`.
+ *
+ * That endpoint only reports primary and secondary usage, so a record is matched
+ * by plan name when the names line up and otherwise by coverage ordinal. Passing
+ * the payload into `getCoverageAmounts` is what makes "used" mean actual claims
+ * paid to date instead of a stale limit/copay field stored on the coverage.
+ */
+export const getCoverageUsage = (ins, index, usagePayload) => {
+  const primaryUsage = usagePayload?.primaryInsurance ?? null;
+  const secondaryUsage = usagePayload?.secondaryInsurance ?? null;
+  const coverageOrdinal = Number(ins?.Ordinal ?? ins?.ordinal ?? index + 1);
+  const rowName = (ins?.planName || ins?.groupName || '').toLowerCase();
+
+  if (primaryUsage?.planName && rowName && primaryUsage.planName.toLowerCase() === rowName) {
+    return primaryUsage;
+  }
+  if (secondaryUsage?.planName && rowName && secondaryUsage.planName.toLowerCase() === rowName) {
+    return secondaryUsage;
+  }
+  if (coverageOrdinal === 1 || index === 0) return primaryUsage;
+  if (coverageOrdinal === 2 || index === 1) return secondaryUsage;
+  return null;
+};
+
 /** Benefits still available on a policy; never negative (over-use shows as $0). */
 export const getRemainingBenefits = (ins, usage) => {
   const { usedAmount, maxAmount } = getCoverageAmounts(ins, usage);

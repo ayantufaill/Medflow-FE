@@ -61,7 +61,9 @@ const LedgerDialogManager = ({
   showInvoiceModal,
   handleInvoiceModalCancel,
   handleInvoiceModalSave,
+  handleInvoiceDraftChange,
   invoiceModalData,
+  invoiceModalDraft,
   magicStickAnchorEl,
   setMagicStickAnchorEl,
   transferDirection,
@@ -261,6 +263,8 @@ const LedgerDialogManager = ({
       <DialogContent sx={{ p: 0 }}>
         <InvoiceModal
           invoiceData={invoiceModalData}
+          draft={invoiceModalDraft}
+          onDraftChange={handleInvoiceDraftChange}
           onSave={handleInvoiceModalSave}
           onCancel={handleInvoiceModalCancel}
         />

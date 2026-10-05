@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, IconButton, Tooltip, Menu, MenuItem, ListItemText } from '@mui/material';
+import { Box, Button, Divider, IconButton, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import {
   KeyboardArrowDown,
   CheckCircle,
@@ -18,11 +18,24 @@ import accountadjustmentminusIcon from '../../assets/finance icons/accountadjust
 import addclaimIcon from '../../assets/finance icons/addclaim.svg';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchPatientInsurances, selectPatientInsurancesCache } from '../../store/slices/patientSlice';
+import {
+  fetchPatientInsurances,
+  selectPatientInsurancesCache,
+  fetchInsuranceUsage,
+  selectInsuranceUsage,
+  selectInsuranceUsageCache,
+} from '../../store/slices/patientSlice';
+import { fetchFeeGuides, selectFeeGuides } from '../../store/slices/feeGuideSlice';
 import PatientPrintOptions from './PatientPrintOptions';
 import ShareDropdown from './ShareDropdown';
 import PastStatementsDialog from './PastStatementsDialog';
-import InsuranceCoverageDialog from './InsuranceCoverageDialog';
+
+import {
+  getCoverageAmounts,
+  getCoverageUsage,
+  getFeeGuideLabel,
+  parseAmount,
+} from '../insurance/utils/insuranceHelpers';
 
 const FinanceActions = ({ 
   expanded, 
@@ -40,22 +53,46 @@ const FinanceActions = ({
 
   // Insurance Coverage dropdown
   const [insuranceCoverageAnchorEl, setInsuranceCoverageAnchorEl] = useState(null);
-  const [selectedCoverage, setSelectedCoverage] = useState(null);
+  
   const [coverageError, setCoverageError] = useState('');
   const coverageLoading = useSelector((state) => state.patient.patientInsurancesLoading);
+  // Fee guides arrive as ids; the names shown in the coverage summary come from here.
+  const feeGuides = useSelector(selectFeeGuides);
 
   const patientId = patient?._id || patient?.id;
   const patientInsurancesRaw = patientId ? insurancesCache?.[patientId] : null;
   const patientInsurances = Array.isArray(patientInsurancesRaw) 
     ? patientInsurancesRaw 
     : (patientInsurancesRaw?.data || []);
-  const hasInsurance = patientInsurances.length > 0;
+  // Inactive coverages can't be billed, so they're noise in a picker whose only
+  // job is opening a coverage for review. Filter on `=== false` rather than
+  // truthiness so a record that predates the isActive flag still shows — hiding
+  // real coverage from a billing screen is worse than showing a stale one.
+  const activeInsurances = patientInsurances.filter(
+    (ins) => ins.isActive !== false
+  );
+  const hasInsurance = activeInsurances.length > 0;
+  const insuranceUsage = useSelector(selectInsuranceUsage);
+  const insuranceUsageCache = useSelector(selectInsuranceUsageCache);
+  const activeUsage = patientId
+    ? (insuranceUsageCache?.[patientId]?.data ?? insuranceUsage ?? null)
+    : null;
 
   useEffect(() => {
     if (patientId) {
       dispatch(fetchPatientInsurances({ patientId }));
+      // Benefit usage is a separate aggregate (paid-to-date claims per
+      // subscriber). Without it the card falls back to the limit/copay fields
+      // stored on the coverage, which are not what has actually been used.
+      dispatch(fetchInsuranceUsage(patientId));
     }
   }, [dispatch, patientId]);
+
+  useEffect(() => {
+    if (feeGuides.length === 0) {
+      dispatch(fetchFeeGuides());
+    }
+  }, [dispatch, feeGuides.length]);
 
   const handleInsuranceCoverageClick = (e) => {
     setInsuranceCoverageAnchorEl(e.currentTarget);
@@ -66,9 +103,13 @@ const FinanceActions = ({
     }
   };
   const handleInsuranceCoverageClose = () => setInsuranceCoverageAnchorEl(null);
+  // "View Coverage" goes to the same coverage page the insurance tab links to,
+  // so a plan is reviewed in one place; that route opens read-only unless the
+  // user hits Edit, which keeps this button from being an accidental edit path.
   const handleInsuranceCoverageSelect = (insuranceId) => {
     handleInsuranceCoverageClose();
-    if (insuranceId) setSelectedCoverage({ patientId, insuranceId });
+    if (!insuranceId || !patientId) return;
+    navigate(`/patients/${patientId}/insurance/${insuranceId}/edit`);
   };
 
   // Add Claim opens the manual claim dialog directly
@@ -210,50 +251,128 @@ const FinanceActions = ({
         onClose={handleInsuranceCoverageClose}
         PaperProps={{
           sx: {
-            minWidth: 280,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            '& .MuiMenuItem-root': {
-              py: 1.5,
-              px: 2,
-              '&:hover': { bgcolor: '#f5f5f5' }
-            }
+            minWidth: 320,
+            maxWidth: 380,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+            borderRadius: '10px',
+            p: 0,
+            overflow: 'hidden',
           }
         }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         {coverageLoading ? (
-          <MenuItem disabled>Loading coverage...</MenuItem>
+          <MenuItem disabled sx={{ py: 2, justifyContent: 'center' }}>Loading coverage…</MenuItem>
         ) : coverageError ? (
-          <MenuItem disabled>{coverageError}</MenuItem>
+          <MenuItem disabled sx={{ py: 2 }}>{coverageError}</MenuItem>
         ) : hasInsurance ? (
-          patientInsurances.map((ins, idx) => (
-            <MenuItem key={ins._id || idx} onClick={() => handleInsuranceCoverageSelect(ins._id)} disabled={!ins._id}>
-              <CheckCircle sx={{ color: '#4caf50', mr: 1.5, fontSize: 20 }} />
-              <ListItemText
-                primary={ins.insuranceCompanyId?.name || ins.insuranceCompany?.name || ins.carrierName || ins.inssub?.insplan?.carrier?.CarrierName || 'Insurance'}
-                secondary={`${ins.insuranceType ? `${ins.insuranceType.toUpperCase()} · ` : ''}${ins.groupName || ins.planName || ins.groupNumber || 'No group name'}${ins.isActive === false ? ' · Inactive' : ''}`}
-                primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
-                secondaryTypographyProps={{ fontSize: '0.8rem', color: '#666' }}
-              />
-            </MenuItem>
-          ))
+          activeInsurances.map((ins, idx) => {
+            const carrierName = ins.insuranceCompanyId?.name || ins.insuranceCompany?.name || ins.carrierName || ins.inssub?.insplan?.carrier?.CarrierName || 'Insurance';
+            const insType = ins.insuranceType ? ins.insuranceType.charAt(0).toUpperCase() + ins.insuranceType.slice(1) : 'Primary';
+            const groupLabel = ins.groupName || ins.planName || ins.groupNumber || '';
+
+            // Financial summary fields — use the same helper as the coverage tab
+            const usage = getCoverageUsage(ins, idx, activeUsage);
+            const { usedAmount: usedAmt, maxAmount: totalAmt } = getCoverageAmounts(ins, usage);
+            const completedNotPaid = ins.completedNotPaid ?? ins.pendingCompletedCount ?? null;
+            const estimatedNotCompleted = ins.estimatedNotCompleted ?? ins.pendingEstimatedAmount ?? null;
+            // Approx remaining = maxAmount - usedAmount (never negative)
+            const remaining = Math.max(totalAmt - usedAmt, 0);
+            const insPortionLeft = parseAmount(usage?.remaining) ?? ins.insPortionLeft ?? ins.remainingBenefit ?? remaining;
+            const planFeeGuide = getFeeGuideLabel(ins.planFeeGuide ?? ins.feeGuide, feeGuides);
+
+            const fmt = (val) => (val !== null && val !== undefined && val !== 0) ? `$${Number(val).toFixed(2)}` : null;
+            const fmtOrDash = (val) => fmt(val) ?? '—';
+
+            return (
+              <Box key={ins._id || idx}>
+                {idx > 0 && <Divider />}
+                <Box sx={{ px: 2, pt: 2, pb: 1.5 }}>
+                  {/* Header: type + carrier name */}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1 }}>
+                    <CheckCircle sx={{ color: '#4caf50', fontSize: 18, mt: '2px', flexShrink: 0 }} />
+                    <Box>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.2 }}>
+                        {insType}:{' '}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.3 }}>
+                        {carrierName}{groupLabel ? ` (${groupLabel})` : ''}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Financial rows */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, mb: 1.5, pl: 0.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Used:</Typography>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a1a' }}>
+                        {(usedAmt > 0 || totalAmt > 0)
+                          ? `${fmtOrDash(usedAmt)} / ${fmtOrDash(totalAmt)}`
+                          : '—'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Completed Not Paid:</Typography>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a1a' }}>
+                        {completedNotPaid !== null ? completedNotPaid : '—'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Estimated Not Completed:</Typography>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a1a' }}>
+                        {estimatedNotCompleted !== null ? estimatedNotCompleted : '—'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Approx. Ins. Portion Left:</Typography>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#1a1a1a' }}>
+                        {remaining > 0 ? fmtOrDash(insPortionLeft) : '—'}
+                        {remaining > 0 && <span style={{ color: '#888', fontWeight: 400 }}>*</span>}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#555' }}>Plan Fee Guide:</Typography>
+                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#1a1a1a' }}>
+                        {planFeeGuide || '—'}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* VIEW COVERAGE button */}
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    disabled={!ins._id}
+                    onClick={() => { handleInsuranceCoverageClose(); if (ins._id) handleInsuranceCoverageSelect(ins._id); }}
+                    sx={{
+                      bgcolor: '#2362EF',
+                      '&:hover': { bgcolor: '#1b4ecc' },
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      letterSpacing: '0.08em',
+                      borderRadius: '6px',
+                      height: '34px',
+                      boxShadow: 'none',
+                    }}
+                  >
+                    View Coverage
+                  </Button>
+                </Box>
+              </Box>
+            );
+          })
         ) : (
-          <MenuItem onClick={handleInsuranceCoverageSelect}>
-            <Cancel sx={{ color: '#f44336', mr: 1.5, fontSize: 20 }} />
-            <ListItemText
-              primary="No insurance coverage"
-              primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
-            />
-          </MenuItem>
+          <Box sx={{ px: 2, py: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+              <Cancel sx={{ color: '#f44336', fontSize: 20 }} />
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a1a1a' }}>No insurance coverage</Typography>
+            </Box>
+            <Typography sx={{ fontSize: '0.8rem', color: '#888', pl: 3.5 }}>No active insurance plans found for this patient.</Typography>
+          </Box>
         )}
       </Menu>
-
-      <InsuranceCoverageDialog
-        key={`${selectedCoverage?.patientId || ''}-${selectedCoverage?.insuranceId || ''}`}
-        open={Boolean(selectedCoverage && String(selectedCoverage.patientId) === String(patientId))}
-        onClose={() => setSelectedCoverage(null)}
-        patientId={selectedCoverage?.patientId}
-        insuranceId={selectedCoverage?.insuranceId}
-      />
 
       {/* Past Statements Dialog */}
       <PastStatementsDialog

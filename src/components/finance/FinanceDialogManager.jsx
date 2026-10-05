@@ -56,7 +56,8 @@ const FinanceDialogManager = ({
   showManualClaim, setShowManualClaim,
   showLateFee, setShowLateFee, selectedAdjustment, handleAddLateFee,
   showAccountNotes, setShowAccountNotes,
-  showNewInvoice, setShowNewInvoice, handleInvoiceModalSave,
+  showNewInvoice, handleInvoiceModalSave,
+  invoiceDraft, handleInvoiceDraftChange, handleNewInvoiceCancel,
   printAnchorEl, handlePrintClose, handlePrintSelect,
   showPrintReceipt, setShowPrintReceipt, isFamilyReceipt,
   showItemizedReceipt, setShowItemizedReceipt,
@@ -105,8 +106,15 @@ const FinanceDialogManager = ({
       )}
 
       {showNewInvoice && (
-        <DialogWrapper onClose={() => setShowNewInvoice(false)} maxWidth="1400px">
-          <InvoiceModal patient={patient} onSave={handleInvoiceModalSave} onClose={() => setShowNewInvoice(false)} />
+        <DialogWrapper onClose={handleNewInvoiceCancel} maxWidth="1400px">
+          <InvoiceModal
+            patient={patient}
+            draft={invoiceDraft}
+            onDraftChange={handleInvoiceDraftChange}
+            onSave={handleInvoiceModalSave}
+            onCancel={handleNewInvoiceCancel}
+            onClose={handleNewInvoiceCancel}
+          />
         </DialogWrapper>
       )}
 

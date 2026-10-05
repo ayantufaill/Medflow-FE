@@ -260,7 +260,19 @@ const AddCoveragePage = () => {
       const isValidDeductibleDate = (dateStr) => {
         if (!dateStr) return true;
         if (dateStr.length < 10) return false;
-        const parts = dateStr.split('/');
+        const usDash = /^\d{1,2}-\d{1,2}-\d{4}$/;
+        if (usDash.test(String(dateStr).trim())) {
+          const [month, day, year] = String(dateStr).trim().split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        const iso = /^\d{4}-\d{2}-\d{2}$/;
+        if (iso.test(String(dateStr).trim())) {
+          const [year, month, day] = String(dateStr).trim().split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        const parts = dateStr.split(/[-/]/);
         if (parts.length !== 3) return false;
         const month = parseInt(parts[0], 10);
         const day = parseInt(parts[1], 10);

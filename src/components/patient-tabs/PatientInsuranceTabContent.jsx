@@ -43,7 +43,7 @@ import InsuranceTabs from '../insurance/InsuranceTabs';
 import ImportedCoverageBanner from '../insurance/ImportedCoverageBanner';
 import FamilyCoverageBanner from '../insurance/FamilyCoverageBanner';
 import FamilyCoverageMatrix from '../insurance/components/FamilyCoverageMatrix';
-import { getCoverageAmounts } from '../insurance/utils/insuranceHelpers';
+import { getCoverageAmounts, getCoverageUsage } from '../insurance/utils/insuranceHelpers';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 import {
@@ -472,22 +472,9 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
     handleReorder(activeArray[index], activeArray[index + 1], activeArray);
   };
 
-  const getUsageForCoverage = (ins, index) => {
-    const primaryUsage = activeUsage?.primaryInsurance ?? null;
-    const secondaryUsage = activeUsage?.secondaryInsurance ?? null;
-    const coverageOrdinal = Number(ins?.Ordinal ?? ins?.ordinal ?? index + 1);
-    const rowName = (ins?.planName || ins?.groupName || '').toLowerCase();
-
-    if (primaryUsage?.planName && rowName && primaryUsage.planName.toLowerCase() === rowName) {
-      return primaryUsage;
-    }
-    if (secondaryUsage?.planName && rowName && secondaryUsage.planName.toLowerCase() === rowName) {
-      return secondaryUsage;
-    }
-    if (coverageOrdinal === 1 || index === 0) return primaryUsage;
-    if (coverageOrdinal === 2 || index === 1) return secondaryUsage;
-    return null;
-  };
+  // Single matcher for both this tab and the finance coverage card, so a policy
+  // shows the same used/max pair wherever it appears.
+  const getUsageForCoverage = (ins, index) => getCoverageUsage(ins, index, activeUsage);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Alert, Box, CircularProgress, Divider, Typography } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import BaseDialog from '../shared/BaseDialog';
 import { patientService } from '../../services/patient.service';
+import { fetchFeeGuides, selectFeeGuides } from '../../store/slices/feeGuideSlice';
+import { getFeeGuideLabel } from '../insurance/utils/insuranceHelpers';
 
 const labelFor = (key) => String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 const parseBenefit = (value) => {
@@ -61,6 +64,8 @@ const InsuranceCoverageDialog = ({ open, onClose, patientId, insuranceId }) => {
   const [insurance, setInsurance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const dispatch = useDispatch();
+  const feeGuides = useSelector(selectFeeGuides);
 
   useEffect(() => {
     if (!open || !patientId || !insuranceId) return undefined;
@@ -71,6 +76,12 @@ const InsuranceCoverageDialog = ({ open, onClose, patientId, insuranceId }) => {
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [open, patientId, insuranceId]);
+
+  useEffect(() => {
+    if (open && feeGuides.length === 0) {
+      dispatch(fetchFeeGuides());
+    }
+  }, [open, dispatch, feeGuides.length]);
 
   return (
     <BaseDialog open={open} onClose={onClose} title="Insurance Coverage" maxWidth="md" showCloseButton contentSx={{ maxHeight: '70vh', overflowY: 'auto' }}>
@@ -88,7 +99,7 @@ const InsuranceCoverageDialog = ({ open, onClose, patientId, insuranceId }) => {
             <DetailRow label="Group number" value={insurance.groupNumber} />
             <DetailRow label="Policy / subscriber ID" value={insurance.policyNumber} />
             <DetailRow label="Coverage type" value={insurance.coverageType} />
-            <DetailRow label="Plan fee guide" value={insurance.planFeeGuide} />
+            <DetailRow label="Plan fee guide" value={getFeeGuideLabel(insurance.planFeeGuide, feeGuides)} />
             <DetailRow label="Effective date" value={insurance.effectiveDate} />
             <DetailRow label="Expiration date" value={insurance.expirationDate} />
             <DetailRow label="Renewal month" value={insurance.renewalMonth} />
