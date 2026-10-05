@@ -196,6 +196,16 @@ const UserProfile = () => {
               Branch
             </Typography>
           </Box>,
+          // Multi-branch admins can go back to the whole group (no branch
+          // selected), which is what cross-branch views such as KPI read as "All".
+          ...(branches.length > 1 ? [
+            <MenuItem key="all-branches" onClick={() => setBranch(null)}>
+              <ListItemIcon sx={{ minWidth: 32, color: '#09121f' }}>
+                {!currentBranchId ? <Check sx={{ fontSize: '18px' }} /> : null}
+              </ListItemIcon>
+              All branches
+            </MenuItem>,
+          ] : []),
           ...branches.map((branch) => (
             <MenuItem key={branch.id} onClick={() => setBranch(branch.id)}>
               <ListItemIcon sx={{ minWidth: 32, color: '#09121f' }}>
