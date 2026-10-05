@@ -21,6 +21,13 @@ export const treatmentPlanService = {
     return response.data.data ? response.data.data : response.data;
   },
 
+  // Marks the plan Presented. Allowed for plan editors, and for Front Desk at a
+  // branch with the Treatment Coordinator feature on.
+  async present(id) {
+    const response = await apiClient.post(`/treatment-plans/${id}/present`);
+    return response.data.data ? response.data.data : response.data;
+  },
+
   async delete(id) {
     const response = await apiClient.delete(`/treatment-plans/${id}`);
     return response.data.data ? response.data.data : response.data;

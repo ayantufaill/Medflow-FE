@@ -222,6 +222,13 @@ export const hasRequiredRole = (user, requiredRoles) => {
     return true;
   }
 
+  // Backend requireRoles('Admin') admits the whole admin group (Group Admin,
+  // Branch Admin and their new-model keys); mirror it so those pages are not
+  // hidden from roles the API already allows.
+  if (requiredRoles.includes('Admin') && groups.includes('ADMIN_GROUP')) {
+    return true;
+  }
+
   const expandedUserRoles = new Set(userRoleNames);
   for (const r of userRoleNames) {
     const aliases = ROLE_ALIASES[r] || [];

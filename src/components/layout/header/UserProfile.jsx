@@ -58,11 +58,13 @@ const UserProfile = () => {
 
   // Resolve the current practice-group name (for the profile dropdown + subtitle).
   useEffect(() => {
-    if (user?.groupId && !currentGroup) {
+    // Only admins who can switch branches see the group name, and only they may
+    // read /practice-groups/:id — fetching it for everyone just produced 403s.
+    if (canSwitchBranch && user?.groupId && !currentGroup) {
       dispatch(fetchGroupById(user.groupId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.groupId, dispatch]);
+  }, [canSwitchBranch, user?.groupId, dispatch]);
 
   const handleClick = (event) => {
     if (open) {

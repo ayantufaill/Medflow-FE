@@ -43,6 +43,17 @@ const clinicalRoute = (children, hideSidebar = true) => (
   </ProtectedRoute>
 );
 
+// Treatment plan: clinical staff, plus a Treatment Coordinator (Front Desk at a
+// branch with the feature on). The API still checks the patient's branch.
+const treatmentPlanRoute = (children, hideSidebar = true) => (
+  <ProtectedRoute
+    allowedGroups={CLINICAL_ALLOWED_GROUPS}
+    allowIf={(user) => (user?.treatmentCoordinatorBranchIds || []).length > 0}
+  >
+    <Layout hideSidebar={hideSidebar}>{children}</Layout>
+  </ProtectedRoute>
+);
+
 const labCaseRoute = (children, hideSidebar = true) => (
   <ProtectedRoute
     allowedGroups={['FULL_ADMIN_GROUP', 'CLINICAL_GROUP', 'OPERATIONS_GROUP']}
@@ -78,7 +89,7 @@ const clinicalRoutes = [
   <Route key="/clinical/diagnostic-opinion/biomechanical" path="/clinical/diagnostic-opinion/biomechanical" element={clinicalRoute(<BiomechanicalPage />)} />,
   <Route key="/clinical/diagnostic-opinion/functional" path="/clinical/diagnostic-opinion/functional" element={clinicalRoute(<FunctionalPage />)} />,
   <Route key="/clinical/diagnostic-opinion/dentofacial" path="/clinical/diagnostic-opinion/dentofacial" element={clinicalRoute(<DentofacialPage />)} />,
-  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={clinicalRoute(<NewTreatmentPlanPage />)} />,
+  <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={treatmentPlanRoute(<NewTreatmentPlanPage />)} />,
   <Route key="/clinical/adjunctive-therapy" path="/clinical/adjunctive-therapy" element={clinicalRoute(<AdjunctiveTherapyPage />)} />,
   <Route key="/clinical/rx" path="/clinical/rx" element={clinicalRoute(<RXPage />)} />,
   <Route key="/clinical/referral" path="/clinical/referral" element={clinicalRoute(<ReferralPage />)} />,
