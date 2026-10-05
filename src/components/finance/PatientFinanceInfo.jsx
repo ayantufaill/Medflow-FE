@@ -41,6 +41,11 @@ import { claimService } from "../../services/claim.service";
 import { useSelector } from 'react-redux';
 import { selectPracticeInfo } from '../../store/slices/practiceInfoSlice';
 import { resolveFlagColor } from '../patient-flags/constants';
+import {
+  clearInvoiceDraft,
+  readInvoiceDraft,
+  saveInvoiceDraft,
+} from "../../utils/invoiceDraftStore";
 import addAccountNoteIcon from "../../assets/finance icons/add account note.svg";
 import addFlagsIcon from "../../assets/finance icons/add flag.svg";
 
@@ -72,13 +77,27 @@ const PatientFinanceInfo = forwardRef(
     const [showAddPayment, setShowAddPayment] = useState(false);
     const [showAccountNotes, setShowAccountNotes] = useState(false);
     const [showNewInvoice, setShowNewInvoice] = useState(false);
+    // Persisted so leaving the finance page mid-invoice doesn't lose the rows
+    // the user added. Re-opened by LedgerList when they come back — see
+    // utils/invoiceDraftStore.
+    const [invoiceDraft, setInvoiceDraft] = useState(null);
     const [cashPlusAnchorEl, setCashPlusAnchorEl] = useState(null);
+
+    // Every route into the new-invoice modal goes through here so a pending
+    // draft is picked up. LedgerList already auto-opens it when the finance page
+    // loads; this covers opening it from the toolbar while a draft is still
+    // sitting there, and the ledger views where LedgerList isn't mounted.
+    const openNewInvoice = () => {
+      const patientId = patient?._id || patient?.id;
+      setInvoiceDraft(patientId ? readInvoiceDraft(patientId, "new") : null);
+      setShowNewInvoice(true);
+    };
 
     useImperativeHandle(ref, () => ({
       triggerIcon: (iconId, e) => {
         switch (iconId) {
           case "invoice":
-            setShowNewInvoice(true);
+            openNewInvoice();
             break;
           case "userWallet":
             handleUserWalletClick();
@@ -109,6 +128,25 @@ const PatientFinanceInfo = forwardRef(
         }
       },
     }));
+
+    const handleInvoiceDraftChange = (payload) => {
+      const patientId = patient?._id || patient?.id;
+      if (!patientId) return;
+      // An empty table means the user removed everything they added, so there is
+      // nothing left to come back to.
+      if (!payload.procedures || payload.procedures.length === 0) {
+        clearInvoiceDraft(patientId, "new");
+        return;
+      }
+      saveInvoiceDraft(patientId, "new", { ...payload, sourceData: null });
+    };
+
+    const handleNewInvoiceCancel = () => {
+      // Same contract as the ledger's invoice modal: closing without saving
+      // leaves the draft resumable.
+      setShowNewInvoice(false);
+      setInvoiceDraft(null);
+    };
 
     const handleInvoiceModalSave = async (savePayload) => {
       // Support both old array format and new object format from InvoiceModal
@@ -182,6 +220,9 @@ const PatientFinanceInfo = forwardRef(
 
         const result = await dispatch(createInvoice(payload)).unwrap();
         setShowNewInvoice(false);
+        setInvoiceDraft(null);
+        // The invoice is on the server now, so the pending work is spent.
+        clearInvoiceDraft(patientId, "new");
 
         // If "Add Claim" was checked, create a claim for all dbi=false procedures
         if (shouldAddClaim && claimRows.length > 0) {
@@ -436,7 +477,7 @@ const PatientFinanceInfo = forwardRef(
     };
 
     const pixelIcons = [
-      { Icon: IconBill, onClick: () => setShowNewInvoice(true) },
+      { Icon: IconBill, onClick: openNewInvoice },
       { Icon: IconUserWallet, onClick: handleUserWalletClick },
       { Icon: IconInsuranceWithDropdown, onClaimSelect: handleClaimSelect },
       { Icon: IconInsuranceWallet, onClick: handleInsuranceWalletClick },
@@ -705,8 +746,10 @@ const PatientFinanceInfo = forwardRef(
           showAccountNotes={showAccountNotes}
           setShowAccountNotes={setShowAccountNotes}
           showNewInvoice={showNewInvoice}
-          setShowNewInvoice={setShowNewInvoice}
           handleInvoiceModalSave={handleInvoiceModalSave}
+          invoiceDraft={invoiceDraft}
+          handleInvoiceDraftChange={handleInvoiceDraftChange}
+          handleNewInvoiceCancel={handleNewInvoiceCancel}
           printAnchorEl={printAnchorEl}
           handlePrintClose={handlePrintClose}
           handlePrintSelect={handlePrintSelect}

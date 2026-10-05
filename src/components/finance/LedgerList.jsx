@@ -54,6 +54,14 @@ import { paymentService } from "../../services/payment.service";
 import LedgerItemCard from "./LedgerItemCard";
 import { invoiceService } from "../../services/invoice.service";
 import LedgerDialogManager from "./LedgerDialogManager";
+import {
+  clearInvoiceDraft,
+  draftSourceKey,
+  findResumableInvoiceDraft,
+  listInvoiceDrafts,
+  readInvoiceDraft,
+  saveInvoiceDraft,
+} from "../../utils/invoiceDraftStore";
 import { claimService } from "../../services/claim.service";
 import ManageEOBModal from "../claims/batch-actions/modals/ManageEOBModal";
 import EditClaimDialog from "../claims/EditClaimDialog";
@@ -105,6 +113,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceModalData, setInvoiceModalData] = useState(null);
+  // Draft of the modal's current contents, replayed into it on open. Held in
+  // state (not read straight from storage at render) so the object identity is
+  // stable while the modal is mounted and doesn't retrigger its seed effect.
+  const [invoiceModalDraft, setInvoiceModalDraft] = useState(null);
   const [magicStickAnchorEl, setMagicStickAnchorEl] = useState(null);
   const [showAttachDialog, setShowAttachDialog] = useState(false);
   const [attachTarget, setAttachTarget] = useState(null);
@@ -651,16 +663,69 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowAttachDialog(true);
   };
 
+  // Re-open whatever the user left mid-edit. Keyed on the patient rather than a
+  // mount flag so it fires for the initial load, for a patient that arrives a
+  // beat after the page renders, and again whenever the user comes back to this
+  // patient — which covers navigating to the schedule and back, switching
+  // patients, and a full reload.
+  useEffect(() => {
+    console.log("[draft] resume check for patientId:", patientId);
+    if (!patientId) return;
+    const draft = findResumableInvoiceDraft(patientId);
+    console.log("[draft] all drafts:", listInvoiceDrafts(patientId));
+    console.log("[draft] resumable:", draft);
+    if (!draft) return;
+    setInvoiceModalData(draft.sourceData || null);
+    setInvoiceModalDraft(draft);
+    setShowInvoiceModal(true);
+  }, [patientId]);
+
   const handleAddProcedureClick = (item) => {
+    const source = draftSourceKey(item);
+    // Replay whatever is already pending on this invoice so the rows the user
+    // added last time are already in the table.
+    setInvoiceModalDraft(readInvoiceDraft(patientId, source));
     setInvoiceModalData(item);
     setShowInvoiceModal(true);
   };
+
+  // The modal reports every edit. Persist it so the work survives leaving the
+  // page; an empty table means the user removed everything, so drop the draft
+  // rather than leaving a re-openable husk behind. Memoized because the modal
+  // debounces on this callback's identity — a fresh function each render would
+  // restart that timer and starve the write.
+  const handleInvoiceDraftChange = useCallback(
+    (payload) => {
+      console.log("[draft] change ->", {
+        patientId,
+        source: draftSourceKey(invoiceModalData),
+        rows: payload.procedures?.length,
+      });
+      if (!patientId) return;
+      const source = draftSourceKey(invoiceModalData);
+      if (!payload.procedures || payload.procedures.length === 0) {
+        clearInvoiceDraft(patientId, source);
+        return;
+      }
+      saveInvoiceDraft(patientId, source, {
+        ...payload,
+        sourceData: invoiceModalData,
+      });
+    },
+    [patientId, invoiceModalData],
+  );
+
   const handleInvoiceModalCancel = () => {
+    // Closing without saving leaves the draft alone — the rows were never sent
+    // to the server, so they come back next time this patient is opened. Save
+    // the invoice or empty the table to get rid of them for good.
     setShowInvoiceModal(false);
     setInvoiceModalData(null);
+    setInvoiceModalDraft(null);
   };
 
   const handleInvoiceModalSave = async (savePayload) => {
+    const draftSource = draftSourceKey(invoiceModalData);
     // Support both old array format and new object format from InvoiceModal
     const data = Array.isArray(savePayload)
       ? savePayload
@@ -753,6 +818,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
       setShowInvoiceModal(false);
       setInvoiceModalData(null);
+      setInvoiceModalDraft(null);
+      // The invoice is on the server now, so the pending work is spent.
+      clearInvoiceDraft(patientId, draftSource);
 
       // If "Add Claim" was checked, create a claim for all dbi=false procedures
       if (shouldAddClaim && claimRows.length > 0) {
@@ -1032,7 +1100,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
         showInvoiceModal={showInvoiceModal}
         handleInvoiceModalCancel={handleInvoiceModalCancel}
         handleInvoiceModalSave={handleInvoiceModalSave}
+        handleInvoiceDraftChange={handleInvoiceDraftChange}
         invoiceModalData={invoiceModalData}
+        invoiceModalDraft={invoiceModalDraft}
         magicStickAnchorEl={magicStickAnchorEl}
         setMagicStickAnchorEl={setMagicStickAnchorEl}
         transferDirection={transferDirection}
