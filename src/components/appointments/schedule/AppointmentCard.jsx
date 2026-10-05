@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Box, Typography, Tooltip } from "@mui/material";
+import { Box, Typography, Tooltip, Menu, MenuItem } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useDraggable } from "@dnd-kit/core";
 import { useDispatch } from "react-redux";
 import { fetchPatientById } from "../../../store/slices/patientSlice";
+import { updateAppointmentThunk } from "../../../store/slices/appointmentSlice";
 import {
   Phone,
   OpenInNew,
@@ -22,7 +23,8 @@ import dayjs from "dayjs";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../../constants/styles";
 import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
-import { ICON_TAGS } from "../new-appointment/constants";
+import { ICON_TAGS, STATUS_OPTIONS } from "../new-appointment/constants";
+import { isCheckedOutStatus } from "../../../utils/statusRules";
 import linkedIconSrc from "../../../assets/Tags/linked-icon.svg";
 
 const getPrivacyName = (fullName) => {
@@ -39,6 +41,10 @@ const getAge = (dob) => {
 };
 
 // STATUS_CONFIG removed in favor of COLORS.APPOINTMENT_STATUS
+
+// Single header background for every appointment card, so the header stays
+// visually consistent and distinct from the status stripe below it.
+const APPOINTMENT_HEADER_BG = COLORS.ACCENT;
 
 const getTagLabel = (tag) =>
   typeof tag === "object" && tag !== null ? tag.label : tag;
@@ -143,6 +149,7 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
+  const [statusAnchor, setStatusAnchor] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -168,6 +175,27 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
     window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
       detail: { ...appointment },
     }));
+  };
+
+  const handleStatusOpen = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isCheckedOutStatus(appointment.status)) return;
+    setStatusAnchor(e.currentTarget);
+  };
+
+  const handleStatusSelect = (e, newStatus) => {
+    e.stopPropagation();
+    setStatusAnchor(null);
+    if (!newStatus || newStatus === appointment.status) return;
+    const id = appointment._id || appointment.id;
+    if (!id) return;
+    dispatch(
+      updateAppointmentThunk({
+        appointmentId: String(id).replace("appt-", ""),
+        payload: { status: newStatus },
+      }),
+    );
   };
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -238,7 +266,7 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
           <Box
             sx={{
               flex: 1,
-              backgroundColor: appointment.headerColor,
+              backgroundColor: APPOINTMENT_HEADER_BG,
               px: "8px",
               display: "flex",
               alignItems: "center",
@@ -337,7 +365,7 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
           {/* Header */}
           <Box
             sx={{
-              backgroundColor: appointment.headerColor,
+              backgroundColor: APPOINTMENT_HEADER_BG,
               px: "8px",
               py: "5px",
               display: "flex",
@@ -370,9 +398,15 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
             </Typography>
           </Box>
 
-          {/* Status stripe — hidden on sm to save vertical space */}
+          {/* Status stripe — click to change status; hidden on sm to save vertical space */}
           {tier !== "sm" && (
             <Box
+              onClick={handleStatusOpen}
+              title={
+                isCheckedOutStatus(appointment.status)
+                  ? "Appointment is checked out and locked."
+                  : "Change status"
+              }
               sx={{
                 backgroundColor: statusCfg.bg,
                 py: appointment.durationMinutes < 75 ? "1px" : "2px",
@@ -380,6 +414,14 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
+                cursor: isCheckedOutStatus(appointment.status)
+                  ? "not-allowed"
+                  : "pointer",
+                "&:hover": {
+                  filter: isCheckedOutStatus(appointment.status)
+                    ? "none"
+                    : "brightness(1.08)",
+                },
               }}
             >
               <Typography
@@ -397,6 +439,37 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
               </Typography>
             </Box>
           )}
+
+          <Menu
+            anchorEl={statusAnchor}
+            open={!!statusAnchor}
+            onClose={() => setStatusAnchor(null)}
+            onClick={(e) => e.stopPropagation()}
+            MenuProps={{ disableRestoreFocus: true }}
+            slotProps={{ paper: { sx: { maxHeight: 320 } } }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem
+                key={opt.value}
+                selected={opt.value === appointment.status}
+                onClick={(e) => handleStatusSelect(e, opt.value)}
+                sx={{ fontSize: "0.8rem", fontFamily: "Inter" }}
+              >
+                <Box
+                  sx={{
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "2px",
+                    mr: "8px",
+                    flexShrink: 0,
+                    backgroundColor:
+                      COLORS.APPOINTMENT_STATUS[opt.value] || "#9e9e9e",
+                  }}
+                />
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Menu>
 
           {/* Body */}
           <Box

@@ -25,7 +25,6 @@ import PastStatementsDialog from './PastStatementsDialog';
 import InsuranceCoverageDialog from './InsuranceCoverageDialog';
 
 const FinanceActions = ({ 
-  view, 
   expanded, 
   onExpandToggle,
   onCalendarClick,
@@ -41,6 +40,9 @@ const FinanceActions = ({
 
   // Insurance Coverage dropdown
   const [insuranceCoverageAnchorEl, setInsuranceCoverageAnchorEl] = useState(null);
+  const [selectedCoverage, setSelectedCoverage] = useState(null);
+  const [coverageError, setCoverageError] = useState('');
+  const coverageLoading = useSelector((state) => state.patient.patientInsurancesLoading);
 
   const patientId = patient?._id || patient?.id;
   const patientInsurancesRaw = patientId ? insurancesCache?.[patientId] : null;
@@ -55,23 +57,23 @@ const FinanceActions = ({
     }
   }, [dispatch, patientId]);
 
-  const handleInsuranceCoverageClick = (e) => setInsuranceCoverageAnchorEl(e.currentTarget);
+  const handleInsuranceCoverageClick = (e) => {
+    setInsuranceCoverageAnchorEl(e.currentTarget);
+    setCoverageError('');
+    if (patientId) {
+      dispatch(fetchPatientInsurances({ patientId, force: true })).unwrap()
+        .catch(() => setCoverageError('Could not load insurance coverage. Please try again.'));
+    }
+  };
   const handleInsuranceCoverageClose = () => setInsuranceCoverageAnchorEl(null);
-  const handleInsuranceCoverageSelect = () => {
+  const handleInsuranceCoverageSelect = (insuranceId) => {
     handleInsuranceCoverageClose();
+    if (insuranceId) setSelectedCoverage({ patientId, insuranceId });
   };
 
-  // Add Claim dialog (dropdown state)
-  const [addClaimAnchorEl, setAddClaimAnchorEl] = useState(null);
-  const handleAddClaimClick = (e) => setAddClaimAnchorEl(e.currentTarget);
-  const handleAddClaimClose = () => setAddClaimAnchorEl(null);
-  const handleAddClaimSelect = (type) => {
-    handleAddClaimClose();
-    if (type === 'manual') {
-      onTriggerPatientFinanceIcon?.('claim');
-    } else if (type === 'electronic') {
-      onTriggerPatientFinanceIcon?.('electronicClaim');
-    }
+  // Add Claim opens the manual claim dialog directly
+  const handleAddClaimClick = () => {
+    onTriggerPatientFinanceIcon?.('claim');
   };
 
   // Past Statements dialog
@@ -94,8 +96,6 @@ const FinanceActions = ({
     handleShareClose();
     onTriggerPatientFinanceIcon?.('shareSelect', optionId);
   };
-
-  const iconStyle = { fontSize: '20px' };
 
   return (
     <Box
@@ -220,13 +220,17 @@ const FinanceActions = ({
           }
         }}
       >
-        {hasInsurance ? (
+        {coverageLoading ? (
+          <MenuItem disabled>Loading coverage...</MenuItem>
+        ) : coverageError ? (
+          <MenuItem disabled>{coverageError}</MenuItem>
+        ) : hasInsurance ? (
           patientInsurances.map((ins, idx) => (
-            <MenuItem key={idx} onClick={handleInsuranceCoverageSelect}>
+            <MenuItem key={ins._id || idx} onClick={() => handleInsuranceCoverageSelect(ins._id)} disabled={!ins._id}>
               <CheckCircle sx={{ color: '#4caf50', mr: 1.5, fontSize: 20 }} />
               <ListItemText
                 primary={ins.insuranceCompanyId?.name || ins.insuranceCompany?.name || ins.carrierName || ins.inssub?.insplan?.carrier?.CarrierName || 'Insurance'}
-                secondary={ins.groupName || ins.planName || ins.groupNumber || ins.inssub?.insplan?.GroupName || 'No Group Name'}
+                secondary={`${ins.insuranceType ? `${ins.insuranceType.toUpperCase()} · ` : ''}${ins.groupName || ins.planName || ins.groupNumber || 'No group name'}${ins.isActive === false ? ' · Inactive' : ''}`}
                 primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
                 secondaryTypographyProps={{ fontSize: '0.8rem', color: '#666' }}
               />
@@ -243,31 +247,20 @@ const FinanceActions = ({
         )}
       </Menu>
 
+      <InsuranceCoverageDialog
+        key={`${selectedCoverage?.patientId || ''}-${selectedCoverage?.insuranceId || ''}`}
+        open={Boolean(selectedCoverage && String(selectedCoverage.patientId) === String(patientId))}
+        onClose={() => setSelectedCoverage(null)}
+        patientId={selectedCoverage?.patientId}
+        insuranceId={selectedCoverage?.insuranceId}
+      />
+
       {/* Past Statements Dialog */}
       <PastStatementsDialog
         open={showPastStatements}
         onClose={() => setShowPastStatements(false)}
         patient={patient}
       />
-
-      {/* Add Claim Dropdown Menu */}
-      <Menu
-        anchorEl={addClaimAnchorEl}
-        open={Boolean(addClaimAnchorEl)}
-        onClose={handleAddClaimClose}
-        PaperProps={{
-          sx: {
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            minWidth: 150,
-            '& .MuiMenuItem-root': {
-              fontSize: '0.875rem'
-            }
-          }
-        }}
-      >
-        <MenuItem onClick={() => handleAddClaimSelect('manual')}>Manual Claim</MenuItem>
-        <MenuItem onClick={() => handleAddClaimSelect('electronic')}>Electronic Claim</MenuItem>
-      </Menu>
 
       <PatientPrintOptions
         anchorEl={printAnchorEl}

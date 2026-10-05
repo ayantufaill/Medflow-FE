@@ -64,6 +64,8 @@ const LedgerDialogManager = ({
   invoiceModalData,
   magicStickAnchorEl,
   setMagicStickAnchorEl,
+  transferDirection,
+  setTransferDirection,
   showTransferConfirmation,
   setShowTransferConfirmation,
   handleTransferConfirm,
@@ -285,10 +287,20 @@ const LedgerDialogManager = ({
       <MenuItem
         onClick={() => {
           setMagicStickAnchorEl(null);
+          setTransferDirection("patient");
           setShowTransferConfirmation(true);
         }}
       >
         Transfer Outstanding To Patient
+      </MenuItem>
+      <MenuItem
+        onClick={() => {
+          setMagicStickAnchorEl(null);
+          setTransferDirection("insurance");
+          setShowTransferConfirmation(true);
+        }}
+      >
+        Transfer Outstanding To Insurance
       </MenuItem>
     </Menu>
 
@@ -296,6 +308,7 @@ const LedgerDialogManager = ({
       open={showTransferConfirmation}
       onClose={() => setShowTransferConfirmation(false)}
       onConfirm={handleTransferConfirm}
+      direction={transferDirection}
     />
 
     {showEditInvoice && (

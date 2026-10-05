@@ -12,7 +12,10 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
+const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm, direction = 'patient' }) => {
+  const toInsurance = direction === 'insurance';
+  const destination = toInsurance ? 'insurance' : 'patient';
+
   return (
     <Dialog 
       open={open} 
@@ -62,7 +65,9 @@ const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
             fontWeight: 400
           }}
         >
-          Are you sure you want to transfer the outstanding credit to the patient?
+          {toInsurance
+            ? 'Are you sure you want to transfer the outstanding patient balance to the insurance estimate?'
+            : 'Are you sure you want to transfer the outstanding credit to the patient?'}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ p: '16px 25px', borderTop: '1px solid #e0e5eb', gap: 1 }}>
@@ -97,7 +102,7 @@ const TransferCreditConfirmationDialog = ({ open, onClose, onConfirm }) => {
             '&:hover': { bgcolor: '#1A4FCA', boxShadow: 'none' }
           }}
         >
-          Transfer
+          Transfer to {destination === 'insurance' ? 'Insurance' : 'Patient'}
         </Button>
       </DialogActions>
     </Dialog>

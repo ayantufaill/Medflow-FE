@@ -294,6 +294,9 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     try {
       await claimService.removeClaimDocument(claimId, docId);
       setExistingAttachments(prev => prev.filter((_, i) => i !== index));
+      // Keep any ledger attachment indicator in sync. Only LedgerList listens
+      // for this event, so it is a no-op when opened from the claims tabs.
+      window.dispatchEvent(new CustomEvent("refresh-ledger"));
     } catch (err) {
       console.error('Failed to remove attachment', err);
       alert('Failed to remove attachment. Please try again.');

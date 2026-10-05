@@ -34,11 +34,11 @@ import {
 } from '@mui/icons-material';
 import ChartFiltersDrawer from './ChartFiltersDrawer';
 
-const ChartTable = ({ treatmentPlans, onUpdateItemStatus }) => {
+const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteItems }) => {
   const providersList = useSelector(selectProviderDropdownList) || [];
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [activeRowId, setActiveRowId] = useState(null);
+  const [activeRow, setActiveRow] = useState(null);
   const [activeFilters, setActiveFilters] = useState({ 
     type: 'All Types', 
     toothState: 'All Tooth States', 
@@ -79,24 +79,33 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus }) => {
     return true;
   });
 
-  const handleMenuOpen = (event, id) => {
+  const handleMenuOpen = (event, row) => {
     setMenuAnchorEl(event.currentTarget);
-    setActiveRowId(id);
+    setActiveRow(row);
   };
 
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
-    setActiveRowId(null);
+    setActiveRow(null);
   };
 
   const handleEdit = () => {
+    if (activeRow && onEditItem) {
+      onEditItem(activeRow);
+    }
     handleMenuClose();
-    // Logic for editing procedure could go here
   };
 
   const handleDelete = () => {
+    if (activeRow?.id && onDeleteItems) {
+      onDeleteItems([activeRow.id]);
+    }
     handleMenuClose();
-    // Logic for deleting procedure could go here
+  };
+
+  const escapeCsvValue = (value) => {
+    const text = value == null || value === '' ? '-' : String(value);
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
 
   const getProviderName = (providerId) => {
@@ -128,12 +137,49 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus }) => {
     return { bgcolor: '#f1f5f9', color: '#475569' };
   };
 
+  const handleDownload = () => {
+    const columns = [
+      ['Type', () => 'Procedure'],
+      ['Status', (row) => row.status],
+      ['Site', (row) => row.site],
+      ['Code', (row) => row.code],
+      ['Description', (row) => row.description],
+      ...(activeFilters.columns?.icd !== false ? [['ICD', (row) => row.icd]] : []),
+      ...(activeFilters.columns?.provider !== false ? [['Provider', (row) => getProviderName(row.provider)]] : []),
+      ...(activeFilters.columns?.created !== false ? [['Created', (row) => row.created]] : []),
+      ...(activeFilters.columns?.completed !== false ? [['Completed', (row) => row.scheduled || '-']] : []),
+      ...(activeFilters.columns?.lab !== false ? [['Lab', (row) => row.labCase || '-']] : []),
+      ...(activeFilters.columns?.comments !== false ? [['Comments', () => '-']] : []),
+    ];
+
+    const csvRows = [
+      columns.map(([header]) => escapeCsvValue(header)).join(','),
+      ...filteredPlans.map((row) => columns.map(([, getter]) => escapeCsvValue(getter(row))).join(',')),
+    ];
+    const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `chart-procedures-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Paper elevation={0} sx={{ borderRadius: '8px', border: 'none', mt: 1 }}>
       {/* Table Toolbar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2, pt: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton size="small" sx={{ border: 'none', color: '#64748b' }}>
+          <IconButton
+            size="small"
+            aria-label="Download chart procedures"
+            onClick={handleDownload}
+            disabled={filteredPlans.length === 0}
+            sx={{ border: 'none', color: '#64748b' }}
+          >
             <DownloadIcon fontSize="small" />
           </IconButton>
           
@@ -278,7 +324,13 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus }) => {
                 )}
                 {activeFilters.columns?.comments !== false && <TableCell sx={{ fontSize: '0.85rem', color: '#475569' }}>-</TableCell>}
                 <TableCell align="right">
-                  <IconButton size="small" onClick={(e) => handleMenuOpen(e, row.id)}>
+                  <IconButton
+                    size="small"
+                    aria-label={`Procedure actions for ${row.code || 'procedure'}`}
+                    aria-haspopup="menu"
+                    aria-expanded={activeRow?.id === row.id ? 'true' : undefined}
+                    onClick={(e) => handleMenuOpen(e, row)}
+                  >
                     <MoreVertIcon fontSize="small" />
                   </IconButton>
                 </TableCell>

@@ -90,9 +90,19 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       const claims = claimsRes.claims || [];
       const claimedPrimaryItemIds = new Set();
       const claimedSecondaryItemIds = new Set();
+      // A locked, unpaid claim freezes its invoice: no further claim may be built on it.
+      const lockedInvoices = {};
       claims.forEach((c) => {
         const cStatus = String(c.status || '').toLowerCase();
         if (cStatus === 'void' || cStatus === 'voided') return;
+        const isLocked = Boolean(c.isLocked);
+        const isPaid = cStatus === 'paid' || cStatus === 'acceptedpaid' || Number(c.paidAmount || 0) > 0;
+        if (isLocked && !isPaid && c.invoiceId) {
+          lockedInvoices[String(c.invoiceId)] = {
+            claimId: String(c.id || c._id || ''),
+            claimNumber: c.claimNumber || c.id || c._id || '',
+          };
+        }
         const isSec = String(c.insuranceType || c.claimType || '').toLowerCase() === 'secondary';
         const procs = (c.procedures?.length > 0 ? c.procedures : c.selectedItems) || [];
         procs.forEach((p) => {
@@ -162,7 +172,12 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
 
       return fullInvoices
         .filter(Boolean)
-        .map((inv) => ({ ...inv, checked: false, lineItems: enrichLineItems(inv.lineItems) }))
+        .map((inv) => ({
+          ...inv,
+          checked: false,
+          lockedByClaim: lockedInvoices[String(inv.id || inv._id)] || null,
+          lineItems: enrichLineItems(inv.lineItems),
+        }))
         .filter((inv) => inv.lineItems.length > 0);
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch draft invoices');
