@@ -153,7 +153,10 @@ const UserProfile = () => {
         PaperProps={{
           elevation: 0,
           sx: {
-            overflow: 'visible',
+            // Admin menus are long (group, branches, manage links, analytics);
+            // cap the height and scroll so My Profile / Logout stay reachable.
+            maxHeight: 'calc(100vh - 88px)',
+            overflowY: 'auto',
             border: '1px solid #e2e8f0',
             boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
             mt: 1,
