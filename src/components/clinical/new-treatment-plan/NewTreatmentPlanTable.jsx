@@ -35,6 +35,7 @@ import {
   RequestQuoteOutlined as EstimateIcon,
   AssignmentIndOutlined as RouteSlipIcon,
   MoveToInboxOutlined as HoldIcon,
+  ReceiptLongOutlined as InvoiceIcon,
   DeleteOutline as DeleteOutlineIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
@@ -77,14 +78,20 @@ const NEW_TEMPLATE_OPTIONS = [
 
 const PROCEDURE_TABLE_MIN_WIDTH = 1120;
 
-const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onEditFees, onMoveToTop, onPrintEstimate, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
+const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onEditFees, onMoveToTop, onPrintEstimate, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onBulkUpdateItemStatus, isSaving = false, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const currentVisitStatus = appointment?.status || 'Unconfirmed';
   const getCatId = (val) => (typeof val === 'object' && val !== null ? (val._id || val.id || val.name) : val);
   const selectedNewTemplate = getCatId(appointment?.appointmentTypeId) || getCatId(appointment?.category) || 'New Patient Exam 12yo+';
 
   const handleStatusChange = (e) => {
-    if (onUpdateAppointment) onUpdateAppointment({ status: e.target.value });
+    if (isSaving) return;
+    const nextStatus = e.target.value;
+    if (nextStatus === 'Completed' && selectedRows.length > 0) {
+      onBulkUpdateItemStatus?.(selectedRows, nextStatus);
+      return;
+    }
+    if (onUpdateAppointment) onUpdateAppointment({ status: nextStatus });
   };
 
   const handleCategoryChange = (e) => {
@@ -352,6 +359,7 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.priority}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>
                       <Select
+                        disabled={isSaving}
                         value={row.status}
                         onChange={(e) => onUpdateItemStatus && onUpdateItemStatus(row.id, e.target.value)}
                         variant="standard"
@@ -475,6 +483,16 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
           },
         }}
       >
+        {procedureMenu.row?.status === 'Completed' && !String(procedureMenu.row?.id).startsWith('appt-') && (
+          <MenuItem disabled={isSaving} onClick={() => {
+            const row = procedureMenu.row;
+            handleProcedureMenuClose();
+            onUpdateItemStatus?.(row.id, 'Completed');
+          }}>
+            <InvoiceIcon sx={{ fontSize: 18, color: '#0f172a' }} />
+            Create Invoice
+          </MenuItem>
+        )}
         <MenuItem onClick={handleEditProcedure}>
           <EditOutlineIcon sx={{ fontSize: 18, color: '#0f172a' }} />
           Edit Procedure
