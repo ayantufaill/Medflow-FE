@@ -142,7 +142,9 @@ export const navMenuItems = [
     icon: <Business />,
     path: '/admin/practice-groups',
     allowedGroups: ['ADMIN_GROUP'],
-    requiredRoles: ['Admin', 'Super Admin'],
+    // Platform screen: Super Admin (and the legacy wildcard Admin) only. Not
+    // 'Admin', which also admits Group/Branch Admin (see hasRequiredRole).
+    requiredRoles: ['Super Admin'],
   },
   {
     text: 'My Group',
