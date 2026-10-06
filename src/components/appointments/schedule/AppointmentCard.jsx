@@ -27,6 +27,8 @@ import { ICON_TAGS, STATUS_OPTIONS } from "../new-appointment/constants";
 import { isCheckedOutStatus } from "../../../utils/statusRules";
 import linkedIconSrc from "../../../assets/Tags/linked-icon.svg";
 import { clinicalNoteService } from '../../../services/clinical-note.service';
+import { useAuth } from '../../../contexts/AuthContext';
+import { hasRequiredGroup, hasRequiredPermission } from '../../../config/navMenuItems';
 
 const getPrivacyName = (fullName) => {
   if (!fullName) return "";
@@ -147,6 +149,15 @@ const getSizeTier = (durationMinutes = 60) => {
 };
 
 const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false }) => {
+  // Only offer the clinical/finance shortcuts the user can actually open (same
+  // checks as those routes); otherwise they would land on "Access denied".
+  const { user } = useAuth();
+  const isSuperUser = (user?.roles || []).some((r) => (typeof r === 'string' ? r : r?.name) === 'Super Admin')
+    || hasRequiredPermission(user, ['*']);
+  const canOpenClinical = isSuperUser || hasRequiredGroup(user, ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP']);
+  const canOpenTreatmentPlan = canOpenClinical || (user?.treatmentCoordinatorBranchIds || []).length > 0;
+  const canOpenFinance = isSuperUser
+    || (hasRequiredGroup(user, ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP']) && hasRequiredPermission(user, ['invoices.read']));
   const cardRef = useRef(null);
   const leaveTimer = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
@@ -538,6 +549,7 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     }}
                   />
                 </Tooltip>
+                {canOpenClinical && (
                 <Tooltip title="Progress Notes" arrow placement="top">
                   <Description
                     sx={{
@@ -569,6 +581,8 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     }}
                   />
                 </Tooltip>
+                )}
+                {canOpenFinance && (
                 <Tooltip title="Ledger / Finance" arrow placement="top">
                   <AttachMoney
                     sx={{
@@ -584,6 +598,8 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     }}
                   />
                 </Tooltip>
+                )}
+                {canOpenTreatmentPlan && (
                 <Tooltip title="Treatment Plan" arrow placement="top">
                   <Typography
                     sx={{
@@ -604,6 +620,8 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     Tx
                   </Typography>
                 </Tooltip>
+                )}
+                {canOpenClinical && (
                 <Tooltip title="Clinical Exam" arrow placement="top">
                   <Typography
                     sx={{ fontSize: "14px", lineHeight: 1, cursor: "pointer" }}
@@ -619,6 +637,7 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                     🦷
                   </Typography>
                 </Tooltip>
+                )}
               </Box>
             </Box>
 
