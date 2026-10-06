@@ -26,6 +26,7 @@ import ToothSvg from "../../../assets/operatory icons/Vector (2).svg";
 import { ICON_TAGS, STATUS_OPTIONS } from "../new-appointment/constants";
 import { isCheckedOutStatus } from "../../../utils/statusRules";
 import linkedIconSrc from "../../../assets/Tags/linked-icon.svg";
+import { clinicalNoteService } from '../../../services/clinical-note.service';
 
 const getPrivacyName = (fullName) => {
   if (!fullName) return "";
@@ -544,13 +545,27 @@ const AppointmentCard = ({ appointment, privacyMode, isLinkedToShortlist = false
                       color: COLORS.ACCENT,
                       cursor: "pointer",
                     }}
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      const appointmentId = appointment._id || appointment.id;
+                      // Booking an appointment already creates its note; open
+                      // that one instead of a create form that would 409.
+                      try {
+                        const existing = await clinicalNoteService.getClinicalNoteByAppointment(appointmentId);
+                        const note = existing?.clinicalNote || existing;
+                        const noteId = note?._id || note?.id;
+                        if (noteId) {
+                          navigate(note.isSigned ? `/clinical-notes/${noteId}` : `/clinical-notes/${noteId}/edit`);
+                          return;
+                        }
+                      } catch {
+                        // No note yet: fall through to create.
+                      }
                       if (appointment.patientId)
                         navigate(
-                          `/clinical-notes/create?patientId=${appointment.patientId}&appointmentId=${appointment._id || appointment.id}`,
+                          `/clinical-notes/create?patientId=${appointment.patientId}&appointmentId=${appointmentId}`,
                         );
-                      else navigate(`/clinical-notes/create?appointmentId=${appointment._id || appointment.id}`);
+                      else navigate(`/clinical-notes/create?appointmentId=${appointmentId}`);
                     }}
                   />
                 </Tooltip>
