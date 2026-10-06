@@ -27,6 +27,7 @@ import {
 import { useDispatch } from 'react-redux';
 import { fetchUserById, assignRole, removeRole } from '../../store/slices/userSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { roleService } from '../../services/role.service';
 import { userService } from '../../services/user.service';
 import { useBranch } from '../../hooks/redux';
@@ -50,6 +51,8 @@ const ROLE_KEY_LABELS = {
 const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const { showSnackbar } = useSnackbar();
   const dispatch = useDispatch();
+  const { user: currentUser } = useAuth();
+  const isSuperAdminActor = (currentUser?.roles || []).some((r) => (typeof r === 'string' ? r : r?.name) === 'Super Admin');
   const userId = propUser?._id || propUser?.id;
 
   const [userDetails, setUserDetails] = useState(propUser || null);
@@ -357,7 +360,10 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
               </Box>
             </Paper>
 
-            {/* Interactive Roles Selection Section (legacy multi-role system) */}
+            {/* Interactive Roles Selection Section (legacy multi-role system).
+                Super Admin only: everyone else changes roles through the Role
+                picker above, and the API refuses chips outside their rules. */}
+            {isSuperAdminActor && (
             <Paper
               elevation={0}
               sx={{
@@ -432,6 +438,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                 </Stack>
               )}
             </Paper>
+            )}
           </>
         )}
       </DialogContent>
