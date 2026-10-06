@@ -34,6 +34,9 @@ export const SocketProvider = ({ children }) => {
   // focus, and tell the user when their access actually changed.
   useEffect(() => {
     if (!user) { lastSignature.current = null; return; }
+    // The login response carries no roles or permissions; only compare full
+    // profiles, or every sign-in would read as an access change.
+    if (!Array.isArray(user.permissions)) return;
     const next = accessSignature(user);
     if (lastSignature.current && lastSignature.current !== next) {
       showSnackbar('Your access was updated.', 'info');

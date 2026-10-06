@@ -2,10 +2,10 @@ import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
 
 export const portalSurfaceSx = {
   p: { xs: 2, md: 2.5 },
-  borderRadius: 3,
-  border: '1px solid #dce6f5',
-  boxShadow: '0 12px 24px rgba(15, 59, 102, 0.06)',
-  background: 'linear-gradient(180deg, #ffffff 0%, #fbfdff 100%)',
+  borderRadius: '8px',
+  border: '1px solid #e0e5eb',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+  backgroundColor: '#ffffff',
 };
 
 export const getStatusColor = (status) => {
@@ -36,12 +36,8 @@ export const PortalPageHeader = ({ title, subtitle, action }) => (
   >
     <Box>
       <Typography
-        variant="h4"
-        sx={{
-          fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif',
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
-        }}
+        variant="h5"
+        sx={{ fontFamily: 'Inter', fontWeight: 600, color: '#09121f' }}
       >
         {title}
       </Typography>
@@ -66,7 +62,7 @@ export const PortalSectionTitle = ({ title, subtitle, action }) => (
     <Box>
       <Typography
         variant="h6"
-        sx={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif', fontWeight: 700 }}
+        sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', color: '#09121f' }}
       >
         {title}
       </Typography>
@@ -80,17 +76,12 @@ export const PortalSectionTitle = ({ title, subtitle, action }) => (
   </Stack>
 );
 
-export const PortalStatCard = ({ label, value, accent = '#1976d2', helper }) => (
-  <Paper
-    sx={{
-      ...portalSurfaceSx,
-      background: `linear-gradient(140deg, ${accent}15 0%, #ffffff 60%)`,
-    }}
-  >
+export const PortalStatCard = ({ label, value, accent = '#2262ef', helper }) => (
+  <Paper elevation={0} sx={{ ...portalSurfaceSx, borderTop: `3px solid ${accent}` }}>
     <Typography variant="body2" color="text.secondary">
       {label}
     </Typography>
-    <Typography variant="h4" sx={{ mt: 0.25, fontWeight: 700 }}>
+    <Typography variant="h4" sx={{ mt: 0.25, fontFamily: 'Inter', fontWeight: 600, color: '#09121f' }}>
       {value}
     </Typography>
     {helper ? (
@@ -118,8 +109,8 @@ export const PortalEmptyState = ({ title, description, actionLabel, onAction }) 
     sx={{
       p: 2,
       borderRadius: 2,
-      border: '1px dashed #b8c9e8',
-      backgroundColor: '#f7fafe',
+      border: '1px dashed #d0d7e2',
+      backgroundColor: '#fafbfc',
     }}
   >
     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
