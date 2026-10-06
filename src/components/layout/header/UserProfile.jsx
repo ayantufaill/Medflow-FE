@@ -58,11 +58,13 @@ const UserProfile = () => {
 
   // Resolve the current practice-group name (for the profile dropdown + subtitle).
   useEffect(() => {
-    if (user?.groupId && !currentGroup) {
+    // Only admins who can switch branches see the group name, and only they may
+    // read /practice-groups/:id — fetching it for everyone just produced 403s.
+    if (canSwitchBranch && user?.groupId && !currentGroup) {
       dispatch(fetchGroupById(user.groupId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.groupId, dispatch]);
+  }, [canSwitchBranch, user?.groupId, dispatch]);
 
   const handleClick = (event) => {
     if (open) {
@@ -151,7 +153,10 @@ const UserProfile = () => {
         PaperProps={{
           elevation: 0,
           sx: {
-            overflow: 'visible',
+            // Admin menus are long (group, branches, manage links, analytics);
+            // cap the height and scroll so My Profile / Logout stay reachable.
+            maxHeight: 'calc(100vh - 88px)',
+            overflowY: 'auto',
             border: '1px solid #e2e8f0',
             boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
             mt: 1,
@@ -191,6 +196,16 @@ const UserProfile = () => {
               Branch
             </Typography>
           </Box>,
+          // Multi-branch admins can go back to the whole group (no branch
+          // selected), which is what cross-branch views such as KPI read as "All".
+          ...(branches.length > 1 ? [
+            <MenuItem key="all-branches" onClick={() => setBranch(null)}>
+              <ListItemIcon sx={{ minWidth: 32, color: '#09121f' }}>
+                {!currentBranchId ? <Check sx={{ fontSize: '18px' }} /> : null}
+              </ListItemIcon>
+              All branches
+            </MenuItem>,
+          ] : []),
           ...branches.map((branch) => (
             <MenuItem key={branch.id} onClick={() => setBranch(branch.id)}>
               <ListItemIcon sx={{ minWidth: 32, color: '#09121f' }}>

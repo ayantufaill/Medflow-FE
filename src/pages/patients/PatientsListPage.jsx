@@ -36,6 +36,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   // ─── Redux State ─────────────────────────────────────────
   const {
     patients,
+    crossBranchMatches,
     pagination,
     loading,
     error: reduxError,
@@ -381,6 +382,15 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           onDeactivateSelected={handleDeactivateSelected}
           deactivateDisabled={selectedIds.length === 0}
         />
+
+        {crossBranchMatches > 0 && effectiveSearch && (
+          <Alert severity="info" sx={{ mt: 2, mb: 1 }}>
+            {crossBranchMatches === 1
+              ? 'A patient matching this search is registered at another branch of your practice.'
+              : `${crossBranchMatches} patients matching this search are registered at other branches of your practice.`}
+            {' '}Their details are not shown. Contact your administrator if you need access.
+          </Alert>
+        )}
 
         <PatientFiltersBar
           statusFilter={statusFilter}
