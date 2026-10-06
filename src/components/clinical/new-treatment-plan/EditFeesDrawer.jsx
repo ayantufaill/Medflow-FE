@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react';
 import { Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, MenuItem, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../../store/slices/feeGuideSlice';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, roundedSelectMenuProps, standardFieldSx } from '../../../constants/styles';
 
@@ -36,15 +34,9 @@ const initialForm = (procedure) => ({
   downgradedCode: procedure?.downgradedCode || '',
 });
 
-const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) => {
-  const dispatch = useDispatch();
-  const procedureCodes = useSelector(selectProcedureCodes) || [];
-  const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
+const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving, downgradeCodes = [] }) => {
   const [form, setForm] = useState(() => initialForm(procedure));
   const [error, setError] = useState('');
-  useEffect(() => {
-    if (open && !procedureCodes.length && !procedureCodesLoading) dispatch(fetchProcedureCodes({ limit: 2000 }));
-  }, [dispatch, open, procedureCodes.length, procedureCodesLoading]);
 
   const change = (name, value) => setForm((previous) => ({ ...previous, [name]: value }));
   const save = () => {
@@ -131,10 +123,10 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
                 SelectProps={{ MenuProps: drawerMenuProps }}
                 onChange={(event) => change('downgradedCode', event.target.value)} sx={moneySx} disabled={saving}>
                 <MenuItem value="">None</MenuItem>
-                {form?.downgradedCode && !procedureCodes.some((code) => String(code.ProcCode || code.code) === form.downgradedCode) &&
+                {form?.downgradedCode && !downgradeCodes.some((dg) => dg.code === form.downgradedCode) &&
                   <MenuItem value={form.downgradedCode}>{form.downgradedCode}</MenuItem>}
-                {procedureCodes.map((code) => <MenuItem key={code.ProcCode || code.code} value={code.ProcCode || code.code}>
-                  {code.ProcCode || code.code} · {code.Descript || code.description || ''}
+                {downgradeCodes.map((dg) => <MenuItem key={dg.code} value={dg.code}>
+                  {dg.code} · Downgrade from {dg.fromCode}
                 </MenuItem>)}
               </TextField></Box>
               {moneyField('Insurance Estimate', 'insuranceEstimate', true)}
@@ -164,3 +156,4 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
 };
 
 export default EditFeesDrawer;
+

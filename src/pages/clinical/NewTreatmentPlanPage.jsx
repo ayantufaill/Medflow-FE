@@ -358,6 +358,20 @@ const NewTreatmentPlanPage = () => {
   });
 
 
+  // Extract downgrade codes from the patient's primary insurance coverage book
+  const downgradeCodes = useMemo(() => {
+    const insurances = insurancesCache?.[currentPatientId]?.data || [];
+    const primary = insurances.find((ins) => ins.insuranceType === 'primary') || insurances[0];
+    const coverageBook = primary?.coverageBookData || [];
+    return coverageBook
+      .filter((row) => row.hasDowngrade === true && row.downgrade)
+      .map((row) => ({
+        code: row.downgrade,
+        fromCode: row.code,
+        description: row.description || row.Descript || '',
+      }));
+  }, [insurancesCache, currentPatientId]);
+
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -1680,18 +1694,21 @@ const NewTreatmentPlanPage = () => {
           '.MuiBox-root, .MuiPaper-root': { backgroundColor: 'transparent !important', boxShadow: 'none !important', border: 'none !important' },
           '@page': { margin: '10mm' },
           '.MuiTableContainer-root': { overflow: 'visible !important' },
-          'table': { width: '100% !important', zoom: '0.65' },
+          'table': { width: '100% !important', borderCollapse: 'collapse' },
           '.MuiTableCell-root': {
-            padding: '2px 4px !important',
-            fontSize: '9px !important',
-            lineHeight: '1.1 !important',
+            padding: '4px 6px !important',
+            fontSize: '10px !important',
+            lineHeight: '1.2 !important',
             whiteSpace: 'normal !important',
             minWidth: '0 !important',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            borderBottom: '1px solid #e2e8f0 !important'
           },
           '.MuiTableCell-head': {
             fontSize: '9px !important',
-            fontWeight: 'bold !important'
+            fontWeight: 'bold !important',
+            color: '#64748b !important',
+            textTransform: 'uppercase'
           },
           '.MuiSelect-select': {
             fontSize: '9px !important'
@@ -1719,7 +1736,7 @@ const NewTreatmentPlanPage = () => {
 
         {/* Left Pane - Odontogram */}
         {showOdontogram && (
-          <Box className={activeTab === 2 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
+          <Box className={activeTab !== 0 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
             <NewTreatmentPlanOdontogram
               selectedTeeth={selectedTeeth}
               onToothClick={handleToothClick}
@@ -1758,8 +1775,8 @@ const NewTreatmentPlanPage = () => {
           </Box>
         )}
         {activeTab === 1 && (
-          <Box sx={{ p: 2, overflowX: 'auto' }}>
-            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900 }}>
+          <Box sx={{ p: 2, overflowX: 'auto', '@media print': { p: 0, overflowX: 'visible', overflow: 'visible' } }}>
+            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900, '@media print': { minWidth: 0, width: '100%', border: 'none', p: 0, m: 0, boxShadow: 'none' } }}>
               {/* Top Toolbar matching screenshot */}
               <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ width: 260 }}>
@@ -2134,6 +2151,7 @@ const NewTreatmentPlanPage = () => {
         onSave={handleSaveEditedFees}
         onRevert={String(editingFeesProcedure?.id || '').startsWith('appt-') ? undefined : handleRevertFees}
         saving={isSaving}
+        downgradeCodes={downgradeCodes}
       />
       <NotesDrawer
         open={isNotesDrawerOpen}
