@@ -31,7 +31,7 @@ export const COLORS = {
   APPOINTMENT_STATUS: {
     unconfirmed:            '#9e9e9e', // Gray
     preconfirmed:           '#7c3aed', // Purple
-    confirmed:              '#1976d2', // Blue
+    confirmed:              '#43a047', // Green
     arrived:                '#0ea5e9', // Light Blue
     seated:                 '#00796b', // Teal
     completed:              '#10b981', // Emerald Green

@@ -31,3 +31,159 @@ export const getProcedureType = (codeStr) => {
   }
   return 'Other';
 };
+
+/**
+ * Crown procedures that downgrade to a cheaper alternative when the downgrade
+ * flag is checked. Keyed by the procedure's own CDT code.
+ */
+export const DOWNGRADE_CODE_MAP = {
+  D2391: 'D2140',
+  D2392: 'D2150',
+  D2393: 'D2160',
+  D2394: 'D2161',
+  D2740: 'D2791',
+  D2750: 'D2790',
+};
+
+/** Returns the auto-assigned downgrade code for a procedure, or '' if none. */
+export const getDowngradeCode = (code) =>
+  DOWNGRADE_CODE_MAP[String(code || '').trim().toUpperCase()] || '';
+
+// ── Coverage amount helpers ───────────────────────────────────────────────────
+// Lifted out of PatientInsuranceTabContent so the coverage list and the family
+// coverage matrix read benefit amounts the exact same way — the two views sit
+// side by side in the same tab strip, so any drift between them is visible to
+// the user as two different dollar figures for one policy.
+
+/** Coerce "$1,740.00" | 1740 | null into a number (or null when unusable). */
+export const parseAmount = (val) => {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  const cleaned = String(val).replace(/[^0-9.-]+/g, '');
+  if (!cleaned) return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+};
+
+/**
+ * Pull the individual used/annual-max pair off a coverage record. `usage`
+ * (from the eligibility-check redux cache) wins when present; coverageLimits
+ * is next, arriving as either an object or a JSON string depending on the
+ * endpoint; legacy records fall back to their flat copay/deductible columns.
+ */
+export const getCoverageAmounts = (ins, usage) => {
+  let coverageLimits = ins?.coverageLimits;
+  if (typeof coverageLimits === 'string') {
+    try {
+      coverageLimits = JSON.parse(coverageLimits);
+    } catch {
+      coverageLimits = null;
+    }
+  }
+  const limitsInd = coverageLimits?.individual;
+
+  const rawUsed =
+    usage?.usedAmount ??
+    limitsInd?.usedAmount ??
+    ins?.usedAmount ??
+    ins?.copayAmount;
+
+  const rawMax =
+    usage?.annualMax ??
+    limitsInd?.annualMax ??
+    ins?.individualAnnualMax ??
+    ins?.deductibleAmount;
+
+  const usedAmount = parseAmount(rawUsed) ?? 0;
+  const maxAmount = parseAmount(rawMax) ?? 0;
+
+  return { usedAmount, maxAmount };
+};
+
+/**
+ * Resolve a stored `planFeeGuide` to a human-readable fee guide name.
+ *
+ * The value comes from the API as a decimal string of `feesched.FeeSchedNum`
+ * (e.g. `"53"`), not an ObjectId, so matching has to be done on stringified ids.
+ * Legacy records can instead hold a name-ish string (`"careington"`), which we
+ * pass through untouched. A numeric id that no guide matches resolves to null —
+ * callers render their own empty-state rather than leaking a bare number, since
+ * the id means nothing to a user reading a coverage summary.
+ */
+export const getFeeGuideLabel = (planFeeGuide, feeGuides = []) => {
+  if (planFeeGuide === null || planFeeGuide === undefined || planFeeGuide === '') return null;
+
+  // Already populated (e.g. { _id, description }) by a joined endpoint.
+  if (typeof planFeeGuide === 'object') {
+    const name = planFeeGuide.description || planFeeGuide.name || planFeeGuide.Description;
+    if (name) return name;
+    planFeeGuide = planFeeGuide._id || planFeeGuide.id || planFeeGuide.FeeSchedNum;
+    if (planFeeGuide === null || planFeeGuide === undefined || planFeeGuide === '') return null;
+  }
+
+  const key = String(planFeeGuide).trim();
+  const placeholderish = ['null', 'undefined', 'none', '0'];
+  if (!key || placeholderish.includes(key.toLowerCase())) return null;
+
+  const guide = (feeGuides || []).find(
+    (fg) => String(fg?._id ?? fg?.id ?? fg?.FeeSchedNum ?? fg?.feeSchedNum) === key
+  );
+  const name = guide?.description || guide?.name || guide?.Description;
+  if (name) return name;
+
+  // Not a resolvable id — treat an already-human string as its own label.
+  return /^\d+$/.test(key) ? null : key;
+};
+
+/**
+ * Match a coverage record to its benefit-usage payload from `getInsuranceUsage`.
+ *
+ * That endpoint only reports primary and secondary usage, so a record is matched
+ * by plan name when the names line up and otherwise by coverage ordinal. Passing
+ * the payload into `getCoverageAmounts` is what makes "used" mean actual claims
+ * paid to date instead of a stale limit/copay field stored on the coverage.
+ */
+export const getCoverageUsage = (ins, index, usagePayload) => {
+  const primaryUsage = usagePayload?.primaryInsurance ?? null;
+  const secondaryUsage = usagePayload?.secondaryInsurance ?? null;
+  const coverageOrdinal = Number(ins?.Ordinal ?? ins?.ordinal ?? index + 1);
+  const rowName = (ins?.planName || ins?.groupName || '').toLowerCase();
+
+  if (primaryUsage?.planName && rowName && primaryUsage.planName.toLowerCase() === rowName) {
+    return primaryUsage;
+  }
+  if (secondaryUsage?.planName && rowName && secondaryUsage.planName.toLowerCase() === rowName) {
+    return secondaryUsage;
+  }
+  if (coverageOrdinal === 1 || index === 0) return primaryUsage;
+  if (coverageOrdinal === 2 || index === 1) return secondaryUsage;
+  return null;
+};
+
+/** Benefits still available on a policy; never negative (over-use shows as $0). */
+export const getRemainingBenefits = (ins, usage) => {
+  const { usedAmount, maxAmount } = getCoverageAmounts(ins, usage);
+  return Math.max(maxAmount - usedAmount, 0);
+};
+
+/**
+ * Identity of a *policy* rather than of a coverage row. Each family member owns
+ * their own coverage record for the same employer policy, so the matrix groups
+ * columns by carrier + group/plan instead of by record id.
+ */
+export const getPolicyKey = (ins, companyName = '') => {
+  const companyId =
+    (ins?.insuranceCompanyId && typeof ins.insuranceCompanyId === 'object'
+      ? ins.insuranceCompanyId._id || ins.insuranceCompanyId.id
+      : ins?.insuranceCompanyId) || companyName;
+  const group = ins?.groupNumber || ins?.groupName || ins?.planName || ins?.employerName || '';
+  return `${companyId}|${String(group).trim().toLowerCase()}`;
+};
+
+/** Column heading, e.g. "Lowe's Companies, Inc $2000 by Delta Dental". */
+export const getPolicyLabel = (ins, companyName) => {
+  const employer = ins?.employerName || ins?.groupName || ins?.planName?.split(' by ')[0] || companyName;
+  const { maxAmount } = getCoverageAmounts(ins);
+  const maxText = maxAmount ? ` $${Math.round(maxAmount).toLocaleString()}` : '';
+  return `${employer}${maxText} by ${companyName}`;
+};

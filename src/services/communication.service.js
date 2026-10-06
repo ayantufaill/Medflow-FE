@@ -118,5 +118,84 @@ export const communicationService = {
   updateReviewSettings: async (data) => {
     const response = await apiClient.put('/communication/reviews/settings', data);
     return response.data?.data || response.data;
-  }
+  },
+
+  // Email Services (sending domain verification)
+  getEmailDomain: async () => {
+    const response = await apiClient.get('/communication/email-domain');
+    return response.data?.data || response.data;
+  },
+
+  setEmailDomain: async (domain) => {
+    const response = await apiClient.put('/communication/email-domain', { domain });
+    return response.data?.data || response.data;
+  },
+
+  verifyEmailDomain: async () => {
+    const response = await apiClient.post('/communication/email-domain/verify');
+    return response.data?.data || response.data;
+  },
+
+  // Email Preferences ('Sent From' / 'Reply To')
+  getEmailPreferences: async () => {
+    const response = await apiClient.get('/communication/email-preferences');
+    return response.data?.data || response.data;
+  },
+
+  updateEmailPreferences: async (data) => {
+    const response = await apiClient.put('/communication/email-preferences', data);
+    return response.data?.data || response.data;
+  },
+
+  // Messaging Services / Number Selection
+  getMessagingService: async () => {
+    const response = await apiClient.get('/communication/messaging-service');
+    return response.data?.data || response.data;
+  },
+
+  getMessagingPracticeDetails: async () => {
+    const response = await apiClient.get('/communication/messaging-service/practice-details');
+    return response.data?.data || response.data;
+  },
+
+  updateMessagingPracticeDetails: async (data) => {
+    const response = await apiClient.put('/communication/messaging-service/practice-details', data);
+    return response.data?.data || response.data;
+  },
+
+  searchMessagingNumbers: async (areaCode) => {
+    const response = await apiClient.get('/communication/messaging-service/available-numbers', { params: { areaCode } });
+    return response.data?.data || response.data;
+  },
+
+  selectMessagingNumber: async (phoneNumber) => {
+    const response = await apiClient.post('/communication/messaging-service/number', { phoneNumber });
+    return response.data?.data || response.data;
+  },
+
+  // Automations
+  getAutomations: async (category) => {
+    const response = await apiClient.get('/communication/automations', { params: { category } });
+    return response.data?.data || response.data;
+  },
+
+  createAutomation: async (category, data) => {
+    const response = await apiClient.post('/communication/automations', { category, ...data });
+    return response.data?.data || response.data;
+  },
+
+  updateAutomation: async (id, data) => {
+    const response = await apiClient.put(`/communication/automations/${id}`, data);
+    return response.data?.data || response.data;
+  },
+
+  setAutomationActive: async (id, active) => {
+    const response = await apiClient.patch(`/communication/automations/${id}/active`, { active });
+    return response.data?.data || response.data;
+  },
+
+  deleteAutomation: async (id) => {
+    const response = await apiClient.delete(`/communication/automations/${id}`);
+    return response.data?.data || response.data;
+  },
 };

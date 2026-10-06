@@ -1,13 +1,16 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 
-const ReminderSidebar = ({ activeTab, setActiveTab, onSave }) => {
-  const sidebarItems = [
-    { id: 'reminder-config', label: 'Reminder Config' },
-    { id: 'email-defaults', label: 'Welcome/Update Email Defaults' },
-    { id: 'template-settings', label: 'Email Template Settings' },
-    { id: 'notifications', label: 'Email Notifications' },
-  ];
+const DEFAULT_ITEMS = [
+  { id: 'reminder-config', label: 'Reminder Config' },
+  { id: 'email-defaults', label: 'Welcome/Update Email Defaults' },
+  { id: 'template-settings', label: 'Email Template Settings' },
+  { id: 'notifications', label: 'Email Notifications' },
+];
+
+// `items` lets other Patient Communication pages (e.g. Automations) reuse the same sidebar.
+const ReminderSidebar = ({ activeTab, setActiveTab, onSave, items = DEFAULT_ITEMS }) => {
+  const sidebarItems = items;
 
   return (
     <Box sx={{ width: 230, minWidth: 230, py: 2.5, pt: 0 }}>

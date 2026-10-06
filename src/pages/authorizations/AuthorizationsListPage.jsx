@@ -49,6 +49,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { authorizationService } from '../../services/authorization.service';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRequiredPermission } from '../../config/navMenuItems';
 
 const STATUS_COLORS = {
   requested: 'info',
@@ -70,6 +72,8 @@ const STATUS_ICONS = {
 
 const AuthorizationsListPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canRequest = hasRequiredPermission(user, ['authorizations.create']);
   const { showSnackbar } = useSnackbar();
   const [authorizations, setAuthorizations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -224,13 +228,15 @@ const AuthorizationsListPage = () => {
           <Typography variant="h4" fontWeight="bold">
             Insurance Authorizations
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/authorizations/new')}
-          >
-            Request Authorization
-          </Button>
+          {canRequest && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/authorizations/new')}
+            >
+              Request Authorization
+            </Button>
+          )}
         </Box>
 
         {error && (

@@ -1,7 +1,8 @@
-import { Route } from 'react-router-dom';
+import { Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/shared/ProtectedRoute';
 import Layout from '../components/layout/Layout';
 import AdminPage from '../pages/admin/AdminPage';
+import { LEGACY_EMAIL_MESSAGING_REDIRECTS } from '../components/admin/patient-communication/emailMessagingPaths';
 import PracticeOnboardingPage from '../pages/admin/PracticeOnboardingPage';
 import KioskAccountsView from '../pages/admin/KioskAccountsView';
 import MyChartConfiguration from '../pages/admin/MyChartConfiguration';
@@ -81,6 +82,11 @@ const adminRoutes = [
   <Route key="/admin/patient-communication/digital-forms" path="/admin/patient-communication/digital-forms" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/gap-fills" path="/admin/patient-communication/gap-fills" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/review-settings" path="/admin/patient-communication/review-settings" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/patient-communication/email-messaging" path="/admin/patient-communication/email-messaging/*" element={adminOnly(<AdminPage />)} />,
+  ...Object.entries(LEGACY_EMAIL_MESSAGING_REDIRECTS).map(([from, to]) => (
+    <Route key={from} path={from} element={<Navigate to={to} replace />} />
+  )),
+  <Route key="/admin/patient-communication/automations" path="/admin/patient-communication/automations" element={adminOnly(<AdminPage />)} />,
 
   <Route key="/admin/insurance-management/carriers" path="/admin/insurance-management/carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/plans" path="/admin/insurance-management/plans" element={adminOnly(<AdminPage />)} />,

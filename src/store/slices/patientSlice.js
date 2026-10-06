@@ -333,6 +333,8 @@ const initialState = {
   // List state
   list: [],
   pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+  // Patients matching the search in another branch of the group (count only).
+  crossBranchMatches: 0,
   filters: { search: '', status: '', dobStart: '', dobEnd: '' },
   listLoading: false,
   listError: null,
@@ -473,6 +475,7 @@ const patientSlice = createSlice({
       .addCase(fetchPatients.fulfilled, (state, action) => {
         state.list = action.payload.patients || [];
         state.pagination = action.payload.pagination || { total: 0, page: 1, limit: 10, totalPages: 0 };
+        state.crossBranchMatches = action.payload.crossBranchMatches || 0;
         state.listLoading = false;
         state.lastFetched = Date.now();
       })
@@ -620,6 +623,7 @@ export const {
 // ─── Selectors ───────────────────────────────────────────────
 
 export const selectPatientList = (state) => state.patient.list;
+export const selectPatientCrossBranchMatches = (state) => state.patient.crossBranchMatches;
 export const selectPatientPagination = (state) => state.patient.pagination;
 export const selectPatientFilters = (state) => state.patient.filters;
 export const selectPatientListLoading = (state) => state.patient.listLoading;

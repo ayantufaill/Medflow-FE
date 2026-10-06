@@ -6,6 +6,8 @@ import {
   getPatientSectionPath,
 } from "../../patients/PatientSectionTabs";
 import { usePatient } from "../../../hooks/redux";
+import { useAuth } from "../../../contexts/AuthContext";
+import { hasRequiredGroup, hasRequiredPermission } from "../../../config/navMenuItems";
 
 const TABS = [
   { label: "Schedule", path: "/appointments/operatory-schedule" },
@@ -27,8 +29,36 @@ const FINANCE_SUBMENU_ITEMS = [
   { label: "E-trans", path: "/era" },
 ];
 
+// Same checks as each tab's route guard, so the bar never offers a page that
+// answers "Access denied".
+const STAFF = ["FULL_ADMIN_GROUP", "CLINICAL_GROUP", "OPERATIONS_GROUP"];
+const OPERATIONS = ["FULL_ADMIN_GROUP", "OPERATIONS_GROUP"];
+const TAB_ACCESS = {
+  "/appointments/operatory-schedule": { groups: STAFF },
+  "/patients": { groups: STAFF, permissions: ["patients.read", "patients.read_basic"] },
+  // Clinical staff, or a Treatment Coordinator (Front Desk with the flag on).
+  "/clinical/treatment-plan": {
+    groups: ["FULL_ADMIN_GROUP", "CLINICAL_GROUP"],
+    allowIf: (user) => (user?.treatmentCoordinatorBranchIds || []).length > 0,
+  },
+  "/finance": { groups: OPERATIONS, permissions: ["invoices.read"] },
+  "/era": { groups: OPERATIONS, permissions: ["era.read"] },
+  "/patient-reports": { groups: STAFF, permissions: ["patients.read"] },
+};
+
 const NavTabs = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuperUser = (user?.roles || []).some((r) => (typeof r === "string" ? r : r?.name) === "Super Admin")
+    || hasRequiredPermission(user, ["*"]);
+  const canOpen = (path) => {
+    const rule = TAB_ACCESS[path];
+    if (!rule || isSuperUser) return true;
+    if (rule.allowIf && rule.allowIf(user)) return true;
+    return hasRequiredGroup(user, rule.groups) && (!rule.permissions || hasRequiredPermission(user, rule.permissions));
+  };
+  const visibleTabs = TABS.filter((tab) => canOpen(tab.path));
+  const financeItems = FINANCE_SUBMENU_ITEMS.filter((item) => canOpen(item.path));
   const location = useLocation();
   const { currentPatient, selectedPatientId } = usePatient();
   const theme = useTheme();
@@ -143,7 +173,7 @@ const NavTabs = () => {
         "&::-webkit-scrollbar": { display: "none" },
       }}
     >
-      {TABS.map(({ label, path }) => {
+      {visibleTabs.map(({ label, path }) => {
         const active = isActive(path);
         return (
           <Box
@@ -324,29 +354,27 @@ const NavTabs = () => {
             py: 1,
           }}
         >
-          {FINANCE_SUBMENU_ITEMS.map((item) => {
-            const isDisabled = item.path === "/era";
+          {financeItems.map((item) => {
             const itemActive = location.pathname === item.path;
             return (
               <Typography
                 key={item.path}
-                onClick={isDisabled ? undefined : () => handleFinanceClick(item.path)}
+                onClick={() => handleFinanceClick(item.path)}
                 sx={{
                   px: 2,
                   py: 1.2,
                   fontSize: "0.8rem",
                   fontWeight: 500,
-                  color: isDisabled ? "#9ca3af" : itemActive
+                  color: itemActive
                     ? theme.palette.primary.main
                     : "text.secondary",
                   display: "block",
-                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  cursor: "pointer",
                   transition: "background-color 0.15s, color 0.15s",
                   textDecoration: "none",
-                  opacity: isDisabled ? 0.5 : 1,
                   "&:hover": {
-                    color: isDisabled ? "#9ca3af" : theme.palette.primary.main,
-                    backgroundColor: isDisabled ? "transparent" : "rgba(25, 118, 210, 0.08)",
+                    color: theme.palette.primary.main,
+                    backgroundColor: "rgba(25, 118, 210, 0.08)",
                   },
                 }}
               >

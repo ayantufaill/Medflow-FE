@@ -160,6 +160,10 @@ export const authService = {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      // Per-user selections must not carry over to the next person who signs
+      // in on this browser (another practice may be signing in next).
+      localStorage.removeItem('selectedPatientId');
+      localStorage.removeItem('currentBranchId');
     }
   },
 
@@ -170,6 +174,8 @@ export const authService = {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('selectedPatientId');
+    localStorage.removeItem('currentBranchId');
   }
 };
 

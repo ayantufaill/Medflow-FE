@@ -41,6 +41,7 @@ import {
   selectAdjustmentTypeMap,
   setAdjustmentTypeForItem,
   transferOutstandingToPatient,
+  transferOutstandingToInsurance,
 } from "../../store/slices/billingSlice";
 import {
   fetchMedicalHistoryThunk,
@@ -53,9 +54,19 @@ import { paymentService } from "../../services/payment.service";
 import LedgerItemCard from "./LedgerItemCard";
 import { invoiceService } from "../../services/invoice.service";
 import LedgerDialogManager from "./LedgerDialogManager";
+import {
+  clearInvoiceDraft,
+  draftSourceKey,
+  findResumableInvoiceDraft,
+  listInvoiceDrafts,
+  readInvoiceDraft,
+  saveInvoiceDraft,
+} from "../../utils/invoiceDraftStore";
 import { claimService } from "../../services/claim.service";
 import ManageEOBModal from "../claims/batch-actions/modals/ManageEOBModal";
 import EditClaimDialog from "../claims/EditClaimDialog";
+import ModifyClaimStatusDialog from "./ModifyClaimStatusDialog";
+import VoidConfirmationDialog from "./VoidConfirmationDialog";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 
 const LedgerList = ({ patient, expanded, filters }) => {
@@ -94,11 +105,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [showTransferConfirmation, setShowTransferConfirmation] =
     useState(false);
   const [transferTarget, setTransferTarget] = useState(null);
+  // Which way the magic stick is transferring: outstanding insurance -> patient,
+  // or the patient's remaining balance -> insurance.
+  const [transferDirection, setTransferDirection] = useState("patient");
   const [isTransferRefreshing, setIsTransferRefreshing] = useState(false);
   const [showEditInvoice, setShowEditInvoice] = useState(false);
   const [editInvoiceTarget, setEditInvoiceTarget] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceModalData, setInvoiceModalData] = useState(null);
+  // Draft of the modal's current contents, replayed into it on open. Held in
+  // state (not read straight from storage at render) so the object identity is
+  // stable while the modal is mounted and doesn't retrigger its seed effect.
+  const [invoiceModalDraft, setInvoiceModalDraft] = useState(null);
   const [magicStickAnchorEl, setMagicStickAnchorEl] = useState(null);
   const [showAttachDialog, setShowAttachDialog] = useState(false);
   const [attachTarget, setAttachTarget] = useState(null);
@@ -111,10 +129,59 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
   const [showEditClaimDialog, setShowEditClaimDialog] = useState(false);
   const [editClaimTarget, setEditClaimTarget] = useState(null);
+  const [showModifyClaimStatus, setShowModifyClaimStatus] = useState(false);
+  const [modifyClaimTarget, setModifyClaimTarget] = useState(null);
+  const [showVoidClaimDialog, setShowVoidClaimDialog] = useState(false);
+  const [voidClaimTarget, setVoidClaimTarget] = useState(null);
 
   const handleEditClaimClick = (claimData) => {
     setEditClaimTarget(claimData);
     setShowEditClaimDialog(true);
+  };
+
+  const handleOpenModifyClaimStatus = (claimData) => {
+    setModifyClaimTarget(claimData);
+    setShowModifyClaimStatus(true);
+  };
+
+  const handleModifyClaimStatusSave = async ({
+    label,
+    status,
+    remittanceDate,
+    insurancePaymentAmount,
+  }) => {
+    const claimId = modifyClaimTarget?.id || modifyClaimTarget?._id;
+    if (!claimId) {
+      showSnackbar('No claim selected to update', 'error');
+      return;
+    }
+    try {
+      const updates = {
+        status,
+        notes: `Status changed to ${label} from patient ledger`,
+      };
+      if (remittanceDate) {
+        updates.remittanceDate = remittanceDate;
+      }
+      if (insurancePaymentAmount !== null && insurancePaymentAmount !== undefined) {
+        updates.insurancePaymentAmount = insurancePaymentAmount;
+        // Keep the claim's paid amount in step with the insurance remittance.
+        updates.paidAmount = insurancePaymentAmount;
+      }
+      await claimService.updateClaim(claimId, updates);
+      showSnackbar(`Claim status changed to ${label}`, 'success');
+      setShowModifyClaimStatus(false);
+      setModifyClaimTarget(null);
+      refreshLedger();
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          'Failed to change claim status',
+        'error',
+      );
+    }
   };
 
   const handleSendClaimClick = async (claimData) => {
@@ -451,6 +518,27 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowTransferConfirmation(false);
     setTransferTarget(null);
 
+    const toInsurance = transferDirection === "insurance";
+    const transferThunk = toInsurance
+      ? transferOutstandingToInsurance
+      : transferOutstandingToPatient;
+    const noAmountLabel = toInsurance
+      ? "outstanding patient balance"
+      : "outstanding insurance estimate";
+
+    // How much is actually available to move in the chosen direction.
+    const getTransferableAmount = (row) => {
+      const raw = toInsurance
+        ? (row.ptPortion ?? row.patientAmount ?? row.patient ?? row.ptAmt ?? 0)
+        : (row.insuranceAmount ??
+          row.insPortion ??
+          row.insurancePortion ??
+          row.insAmt ??
+          row.insurance ??
+          0);
+      return Number(String(raw).replace(/[^0-9.-]+/g, "")) || 0;
+    };
+
     try {
       if (target.isGrouped && target.procedures) {
         let successCount = 0;
@@ -458,20 +546,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
         for (let i = 0; i < target.procedures.length; i++) {
           const proc = target.procedures[i];
           const procId = proc.ProcNum || proc._id || proc.id;
-          const insRaw =
-            (proc.insuranceAmount ??
-              proc.insPortion ??
-              proc.insurancePortion ??
-              proc.insAmt ??
-              proc.insurance) ||
-            0;
-          const insAmt = Number(String(insRaw).replace(/[^0-9.-]+/g, "")) || 0;
-          if (insAmt <= 0) {
+          const amount = getTransferableAmount(proc);
+          if (amount <= 0) {
             skippedCount++;
             console.warn(
-              "Skipping transfer for procedure with no outstanding insurance:",
+              `Skipping transfer for procedure with no ${noAmountLabel}:`,
               procId,
-              insAmt,
+              amount,
             );
             continue;
           }
@@ -479,7 +560,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             const isLast = i === target.procedures.length - 1;
             try {
               await dispatch(
-                transferOutstandingToPatient({
+                transferThunk({
                   patientId,
                   invoiceId: target.invoiceId,
                   procedureId: procId,
@@ -490,7 +571,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             } catch (err) {
               console.error("Failed to transfer for procedure:", procId, err);
               showSnackbar(
-                err || "Failed to transfer outstanding insurance",
+                err || `Failed to transfer ${noAmountLabel}`,
                 "error",
               );
             }
@@ -502,36 +583,29 @@ const LedgerList = ({ patient, expanded, filters }) => {
           console.warn("refreshLedger failed after grouped transfer", e);
         }
         if (successCount === 0 && target.procedures.length > 0) {
-          console.warn("No procedures had outstanding insurance to transfer");
+          console.warn(`No procedures had ${noAmountLabel} to transfer`);
           if (skippedCount === target.procedures.length) {
             showSnackbar(
-              "No outstanding insurance estimate to transfer for selected procedures",
+              `No ${noAmountLabel} to transfer for selected procedures`,
               "warning",
             );
           }
         }
       } else {
-        const insRaw =
-          (target.insuranceAmount ??
-            target.insPortion ??
-            target.insurancePortion ??
-            target.insAmt ??
-            target.insurance) ||
-          0;
-        const insAmt = Number(String(insRaw).replace(/[^0-9.-]+/g, "")) || 0;
-        if (insAmt <= 0) {
+        const amount = getTransferableAmount(target);
+        if (amount <= 0) {
           console.warn(
-            "No outstanding insurance to transfer for item:",
+            `No ${noAmountLabel} to transfer for item:`,
             target,
           );
           showSnackbar(
-            "No outstanding insurance estimate to transfer for this item",
+            `No ${noAmountLabel} to transfer for this item`,
             "warning",
           );
         } else {
           try {
             await dispatch(
-              transferOutstandingToPatient({
+              transferThunk({
                 patientId,
                 invoiceId: target.invoiceId,
                 procedureId: target.id,
@@ -544,10 +618,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             }
           } catch (err) {
             console.error("Transfer outstanding failed:", err);
-            showSnackbar(
-              err || "Failed to transfer outstanding insurance",
-              "error",
-            );
+            showSnackbar(err || `Failed to transfer ${noAmountLabel}`, "error");
           }
         }
       }
@@ -592,16 +663,69 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setShowAttachDialog(true);
   };
 
+  // Re-open whatever the user left mid-edit. Keyed on the patient rather than a
+  // mount flag so it fires for the initial load, for a patient that arrives a
+  // beat after the page renders, and again whenever the user comes back to this
+  // patient — which covers navigating to the schedule and back, switching
+  // patients, and a full reload.
+  useEffect(() => {
+    console.log("[draft] resume check for patientId:", patientId);
+    if (!patientId) return;
+    const draft = findResumableInvoiceDraft(patientId);
+    console.log("[draft] all drafts:", listInvoiceDrafts(patientId));
+    console.log("[draft] resumable:", draft);
+    if (!draft) return;
+    setInvoiceModalData(draft.sourceData || null);
+    setInvoiceModalDraft(draft);
+    setShowInvoiceModal(true);
+  }, [patientId]);
+
   const handleAddProcedureClick = (item) => {
+    const source = draftSourceKey(item);
+    // Replay whatever is already pending on this invoice so the rows the user
+    // added last time are already in the table.
+    setInvoiceModalDraft(readInvoiceDraft(patientId, source));
     setInvoiceModalData(item);
     setShowInvoiceModal(true);
   };
+
+  // The modal reports every edit. Persist it so the work survives leaving the
+  // page; an empty table means the user removed everything, so drop the draft
+  // rather than leaving a re-openable husk behind. Memoized because the modal
+  // debounces on this callback's identity — a fresh function each render would
+  // restart that timer and starve the write.
+  const handleInvoiceDraftChange = useCallback(
+    (payload) => {
+      console.log("[draft] change ->", {
+        patientId,
+        source: draftSourceKey(invoiceModalData),
+        rows: payload.procedures?.length,
+      });
+      if (!patientId) return;
+      const source = draftSourceKey(invoiceModalData);
+      if (!payload.procedures || payload.procedures.length === 0) {
+        clearInvoiceDraft(patientId, source);
+        return;
+      }
+      saveInvoiceDraft(patientId, source, {
+        ...payload,
+        sourceData: invoiceModalData,
+      });
+    },
+    [patientId, invoiceModalData],
+  );
+
   const handleInvoiceModalCancel = () => {
+    // Closing without saving leaves the draft alone — the rows were never sent
+    // to the server, so they come back next time this patient is opened. Save
+    // the invoice or empty the table to get rid of them for good.
     setShowInvoiceModal(false);
     setInvoiceModalData(null);
+    setInvoiceModalDraft(null);
   };
 
   const handleInvoiceModalSave = async (savePayload) => {
+    const draftSource = draftSourceKey(invoiceModalData);
     // Support both old array format and new object format from InvoiceModal
     const data = Array.isArray(savePayload)
       ? savePayload
@@ -694,6 +818,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
       setShowInvoiceModal(false);
       setInvoiceModalData(null);
+      setInvoiceModalDraft(null);
+      // The invoice is on the server now, so the pending work is spent.
+      clearInvoiceDraft(patientId, draftSource);
 
       // If "Add Claim" was checked, create a claim for all dbi=false procedures
       if (shouldAddClaim && claimRows.length > 0) {
@@ -718,6 +845,12 @@ const LedgerList = ({ patient, expanded, filters }) => {
             console.warn(
               "Invoice created but claim creation failed:",
               claimErr,
+            );
+            showSnackbar(
+              claimErr.response?.data?.error?.message ||
+                claimErr.response?.data?.message ||
+                'Invoice saved, but the claim could not be created.',
+              'error',
             );
           }
         }
@@ -752,11 +885,57 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
 
   const handleLockClaimClick = async (claimData) => {
-     showSnackbar('Lock Claim not yet implemented', 'info');
+    const claimId = claimData?.id || claimData?._id;
+    if (!claimId) return;
+    const nextLocked = !claimData.isLocked;
+    try {
+      await claimService.setClaimLock(claimId, nextLocked);
+      showSnackbar(
+        nextLocked
+          ? 'Claim locked. No further claim can be built for this invoice until it is paid.'
+          : 'Claim unlocked',
+        'success',
+      );
+      refreshLedger();
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          'Failed to update claim lock',
+        'error',
+      );
+    }
   };
 
-  const handleVoidClaimMenuClick = async (claimData) => {
-     showSnackbar('Void Claim not yet implemented', 'info');
+  const handleVoidClaimMenuClick = (claimData) => {
+    setVoidClaimTarget(claimData);
+    setShowVoidClaimDialog(true);
+  };
+
+  const handleVoidClaimCancel = () => {
+    setShowVoidClaimDialog(false);
+    setVoidClaimTarget(null);
+  };
+
+  const handleVoidClaimConfirm = async () => {
+    const claimId = voidClaimTarget?.id || voidClaimTarget?._id;
+    setShowVoidClaimDialog(false);
+    setVoidClaimTarget(null);
+    if (!claimId) return;
+    try {
+      await claimService.voidClaim(claimId, 'Claim voided from patient ledger');
+      showSnackbar('Claim voided', 'success');
+      refreshLedger();
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          'Failed to void claim',
+        'error',
+      );
+    }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -872,6 +1051,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             onRejectClaimClick={handleRejectClaimClick}
             onLockClaimClick={handleLockClaimClick}
             onVoidClaimClick={handleVoidClaimMenuClick}
+            onChangeClaimStatusClick={handleOpenModifyClaimStatus}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
           />
@@ -920,9 +1100,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
         showInvoiceModal={showInvoiceModal}
         handleInvoiceModalCancel={handleInvoiceModalCancel}
         handleInvoiceModalSave={handleInvoiceModalSave}
+        handleInvoiceDraftChange={handleInvoiceDraftChange}
         invoiceModalData={invoiceModalData}
+        invoiceModalDraft={invoiceModalDraft}
         magicStickAnchorEl={magicStickAnchorEl}
         setMagicStickAnchorEl={setMagicStickAnchorEl}
+        transferDirection={transferDirection}
+        setTransferDirection={setTransferDirection}
         showTransferConfirmation={showTransferConfirmation}
         setShowTransferConfirmation={setShowTransferConfirmation}
         handleTransferConfirm={handleTransferConfirm}
@@ -971,6 +1155,22 @@ const LedgerList = ({ patient, expanded, filters }) => {
           }}
         />
       )}
+      <ModifyClaimStatusDialog
+        open={showModifyClaimStatus}
+        claim={modifyClaimTarget}
+        onClose={() => {
+          setShowModifyClaimStatus(false);
+          setModifyClaimTarget(null);
+        }}
+        onSave={handleModifyClaimStatusSave}
+      />
+      <VoidConfirmationDialog
+        open={showVoidClaimDialog}
+        onClose={handleVoidClaimCancel}
+        onConfirm={handleVoidClaimConfirm}
+        title="Void Claim"
+        message="Are you sure you want to void this claim? The claim will be hidden from the ledger until 'Include voided transactions' is checked."
+      />
     </Box>
   );
 };

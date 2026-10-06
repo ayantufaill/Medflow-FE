@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAllProvidersForDropdown,
@@ -26,6 +26,8 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
 import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
 import {
@@ -35,7 +37,49 @@ import {
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
 
-const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+// Shared empty list so the effects below can depend on a value that never
+// changes identity when there are no procedures to render.
+const EMPTY_PROCEDURES = [];
+
+// Shape a row into the payload the estimator expects. The estimator builds ONE
+// deductible ledger per request and drains it across every item, so callers must
+// send the whole invoice — pricing a single line in isolation hands it a fresh
+// full pool and re-sells deductible the other lines already consumed.
+const toEstimateItem = (p) => ({
+  code: p.code,
+  charge:
+    parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
+  allowedFee: p.allowedFee !== undefined ? Number(p.allowedFee) : undefined,
+  originalFee: p.originalFee !== undefined ? Number(p.originalFee) : undefined,
+  dbi: Boolean(p.dbi),
+});
+
+// Draft rows carry the client-generated id assigned when they were added, so a
+// re-opened draft that overlaps the source invoice's own rows is deduped rather
+// than doubled up.
+const withRestoredProcedures = (baseProcedures, restoredProcedures) => {
+  if (!restoredProcedures || restoredProcedures.length === 0)
+    return baseProcedures;
+  const presentIds = new Set(baseProcedures.map((p) => p.id));
+  return [
+    ...baseProcedures,
+    ...restoredProcedures.filter((p) => !presentIds.has(p.id)),
+  ];
+};
+
+// `draft` is a previously persisted in-progress invoice for this same patient
+// and source, replayed when the modal is re-opened (see utils/invoiceDraftStore).
+// `onDraftChange` reports the live state back up so the owner can persist it.
+// Both are optional: callers that don't persist drafts simply omit them.
+const InvoiceModal = ({
+  patient,
+  invoiceData,
+  draft,
+  onDraftChange,
+  onSave,
+  onCancel,
+  onClose,
+}) => {
   const dispatch = useDispatch();
   const reduxPatient = useSelector((state) => state.patient?.currentPatient || state.patient?.selectedPatient);
   const activePatient = patient || reduxPatient;
@@ -47,24 +91,48 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
-  const [addClaim, setAddClaim] = useState(false);
+  const [addClaim, setAddClaim] = useState(() => Boolean(draft?.addClaim));
   const [dupWarning, setDupWarning] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(
+    () => draft?.description || "",
+  );
   const [showDescription, setShowDescription] = useState(false);
+  // handleAmountChange fires on every keystroke, and each call re-prices the whole
+  // invoice server-side. Debounce so typing a charge is one request, not one per
+  // character. The local calculatePortionsForCategory pass below still runs
+  // synchronously, so the table keeps updating as you type.
+  const estimateTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(estimateTimer.current), []);
+
+  // Selection is tracked by EXCLUSION, not inclusion. `procedures` is rebuilt
+  // wholesale from `invoiceData` in the effect below and appended to as rows
+  // are added, so an inclusion Set would have to be re-synced in every one of
+  // those places and would silently leave a newly added row unselected.
+  // Defaulting to "not excluded" also preserves the previous behaviour, where
+  // every listed procedure went onto the invoice.
+  const [unselectedIds, setUnselectedIds] = useState(
+    () => new Set(draft?.unselectedIds || []),
+  );
+
+  // Rows carried over from a persisted draft. They were already priced when
+  // they were first entered, so they are appended after the recalculation pass
+  // rather than run through it — re-pricing would re-charge the deductible they
+  // already consumed.
+  const restoredProcedures = draft?.procedures || EMPTY_PROCEDURES;
 
   useEffect(() => {
     console.log("InvoiceModal debug - invoiceData:", invoiceData);
-    if (
-      invoiceData &&
-      invoiceData.procedures &&
-      invoiceData.procedures.length > 0
-    ) {
+    const baseProcedures = invoiceData?.procedures || EMPTY_PROCEDURES;
+    if (baseProcedures.length > 0 || restoredProcedures.length > 0) {
       // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions
       // based on the patient's coverage table and the dbi (Do Not Bill Insurance) flag.
-      const isNewInvoice = !invoiceData._id && !invoiceData.id;
+      // invoiceData is genuinely absent on the new-invoice path, and a restored
+      // draft can get us into this block with nothing behind us.
+      const isNewInvoice = !invoiceData?._id && !invoiceData?.id;
 
       if (isNewInvoice) {
-        const recalculated = invoiceData.procedures.map((p) => {
+        const recalculated = baseProcedures.map((p) => {
           const numCharge =
             parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) ||
             0;
@@ -117,10 +185,14 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           "InvoiceModal debug - recalculated procedures:",
           recalculated,
         );
-        setProcedures(recalculated);
-        
-        // Fetch accurate estimates from backend to handle secondary insurance
-        if (activePatientId) {
+        const seeded = withRestoredProcedures(recalculated, restoredProcedures);
+        setProcedures(seeded);
+
+        // Fetch accurate estimates from backend to handle secondary insurance.
+        // Only the freshly recalculated rows are priced — the restored rows
+        // already went through the estimator before the draft was stored, and
+        // the response lines up with the payload by index.
+        if (activePatientId && recalculated.length > 0) {
           const payload = recalculated.map(p => ({
             code: p.code,
             charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
@@ -134,7 +206,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               if (estimates && estimates.length === recalculated.length) {
                 setProcedures(prev => prev.map((p, idx) => {
                   const est = estimates[idx];
-                  if (!est) return p;
+                  // Rows appended from a draft sit past the payload length and
+                  // have no matching estimate.
+                  if (!est || idx >= recalculated.length) return p;
                   const sec = Number(est.secondaryInsPortion || 0);
                   const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
                   const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
@@ -154,13 +228,52 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             .catch(err => console.warn("Failed to fetch initial estimates from backend:", err));
         }
       } else {
-        setProcedures(invoiceData.procedures);
+        setProcedures(
+          withRestoredProcedures(baseProcedures, restoredProcedures),
+        );
       }
+    } else {
+      setProcedures([]);
     }
-  }, [invoiceData, patient, reduxPatient]);
+  }, [invoiceData, patient, reduxPatient, restoredProcedures]);
+
+  // Report every edit back to the owner so it can be persisted. Debounced
+  // because the backend estimate lands a beat after each edit and would
+  // otherwise write twice per keystroke.
+  useEffect(() => {
+    if (!onDraftChange) return undefined;
+    const timer = setTimeout(() => {
+      onDraftChange({
+        procedures,
+        unselectedIds: [...unselectedIds],
+        description,
+        addClaim,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [procedures, unselectedIds, description, addClaim, onDraftChange]);
+
+  // Only ticked rows reach the invoice.
+  const selectedProcedures = procedures.filter((p) => !unselectedIds.has(p.id));
 
   // Procedures eligible for a claim: only those where dbi is false
-  const claimProcedures = procedures.filter((p) => !p.dbi);
+  const claimProcedures = selectedProcedures.filter((p) => !p.dbi);
+
+  const allSelected =
+    procedures.length > 0 && selectedProcedures.length === procedures.length;
+
+  const toggleProcedureSelected = (procedureId) =>
+    setUnselectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(procedureId)) next.delete(procedureId);
+      else next.add(procedureId);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setUnselectedIds(
+      allSelected ? new Set(procedures.map((p) => p.id)) : new Set(),
+    );
 
   // Providers from Redux (cached — won't re-fetch if already loaded)
   const providersList = useSelector(selectProviderDropdownList);
@@ -214,13 +327,20 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
       balance: `$${portions.balance.toFixed(2)}`,
       dbi: false,
       completed: true,
+      // Store selected teeth and surfaces for duplicate detection
+      selectedTeeth: savedData.selectedTeeth,
+      selectedSurfaces: savedData.selectedSurfaces,
     };
 
     if (activePatientId) {
       try {
+        // Send every existing line plus the new one so the deductible pool is
+        // shared. The new line is priced last, so it reads the balance its
+        // predecessors left rather than the full limit.
         const estimates = await invoiceService.estimateInvoiceItems(
           activePatientId,
           [
+            ...procedures.map(toEstimateItem),
             {
               code: newProcedure.code,
               charge: fee,
@@ -230,7 +350,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           ],
         );
         if (estimates && estimates.length > 0) {
-          const est = estimates[0];
+          const est = estimates[estimates.length - 1];
           console.log("Got estimate from backend for new procedure:", est);
           const sec = Number(est.secondaryInsPortion || 0);
           const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
@@ -265,6 +385,23 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   const handleDeleteProcedure = (procedureId) => {
     setProcedures((prev) => prev.filter((p) => p.id !== procedureId));
+  };
+
+  const handleDateChange = (procedureId, newDate) => {
+    // dayjs() with no argument returns NOW, so a row arriving without a date
+    // would silently pick up today. Only null when there is genuinely nothing
+    // to parse, and never overwrite an existing date with an invalid one.
+    const parsed = newDate ? dayjs(newDate) : null;
+    if (parsed && !parsed.isValid()) return;
+
+    setProcedures((prev) =>
+      prev.map((p) => {
+        if (p.id !== procedureId) return p;
+        // Persist as YYYY-MM-DD, the same shape a newly added procedure uses,
+        // so the backend receives one date format regardless of origin.
+        return { ...p, date: parsed ? parsed.format("YYYY-MM-DD") : null };
+      }),
+    );
   };
 
   const handleAmountChange = async (procedureId, field, value) => {
@@ -356,19 +493,30 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           ) || 0;
         const baseFee =
           updatedProcedure.allowedFee ?? updatedProcedure.originalFee;
-        const estimates = await invoiceService.estimateInvoiceItems(
-          patient._id,
-          [
-            {
-              code: updatedProcedure.code,
-              charge: numCharge,
-              allowedFee: baseFee,
-              originalFee: baseFee,
-            },
-          ],
+        // Price the whole invoice, not just this line, so the shared deductible
+        // pool is drained in the same order the estimator would drain it. Merge
+        // back only the edited row, but at ITS index in the batch.
+        const batch = procedures.map((p) =>
+          p.id === procedureId
+            ? {
+                code: updatedProcedure.code,
+                charge: numCharge,
+                allowedFee: baseFee,
+                originalFee: baseFee,
+                dbi: Boolean(updatedProcedure.dbi),
+              }
+            : toEstimateItem(p),
         );
-        if (estimates && estimates.length > 0) {
-          const est = estimates[0];
+        const editedIndex = procedures.findIndex((p) => p.id === procedureId);
+        clearTimeout(estimateTimer.current);
+        estimateTimer.current = setTimeout(async () => {
+          try {
+          const estimates = await invoiceService.estimateInvoiceItems(
+            patient._id,
+            batch,
+          );
+          if (estimates && estimates.length > 0 && editedIndex > -1) {
+            const est = estimates[editedIndex];
           setProcedures((prev) =>
             prev.map((p) => {
               if (p.id !== procedureId) return p;
@@ -394,7 +542,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           );
         }
       } catch (err) {
-        console.warn("Failed to fetch estimate after charge change:", err);
+          console.warn("Failed to fetch estimate after charge change:", err);
+        }
+      }, 600);
+      } catch (err) {
+        console.warn("Failed to build estimate payload:", err);
       }
     }
   };
@@ -442,7 +594,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     );
 
     // 2. Server-side re-estimation if patient is present
-    if (patient && patient._id && procedures.length > 0) {
+    if (activePatientId && procedures.length > 0) {
       try {
         const payload = procedures.map((p) => {
           const numCharge =
@@ -458,7 +610,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           };
         });
         const estimates = await invoiceService.estimateInvoiceItems(
-          patient._id,
+          activePatientId,
           payload,
         );
         if (estimates && estimates.length === procedures.length) {
@@ -669,6 +821,29 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                   <TableRow>
                     <TableCell
                       sx={{
+                        py: 1,
+                        width: "36px",
+                        textAlign: "center",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={allSelected}
+                        indeterminate={
+                          selectedProcedures.length > 0 && !allSelected
+                        }
+                        onChange={toggleSelectAll}
+                        sx={{
+                          p: 0,
+                          color: "#cbd5e1",
+                          "&.Mui-checked": { color: COLORS.ACCENT },
+                          "&.MuiCheckbox-indeterminate": { color: COLORS.ACCENT },
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell
+                      sx={{
                         fontSize: "11px",
                         color: COLORS.TEXT_SECONDARY,
                         fontWeight: 600,
@@ -768,13 +943,57 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                       BALANCE
                     </TableCell>
                     <TableCell sx={{ py: 1 }}></TableCell>
+                    <TableCell sx={{ py: 1 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {procedures.map((row) => (
                     <TableRow key={row.id}>
+                      <TableCell
+                        sx={{ py: 1, textAlign: "center", verticalAlign: "top" }}
+                      >
+                        <Checkbox
+                          size="small"
+                          checked={!unselectedIds.has(row.id)}
+                          onChange={() => toggleProcedureSelected(row.id)}
+                          sx={{
+                            p: 0,
+                            color: "#cbd5e1",
+                            "&.Mui-checked": { color: COLORS.ACCENT },
+                          }}
+                        />
+                      </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
-                        {row.date}
+                        <DatePicker
+                          size="small"
+                          format="MM/DD/YYYY"
+                          value={row.date ? dayjs(row.date) : null}
+                          onChange={(value) => handleDateChange(row.id, value)}
+                          slotProps={{
+                            // The calendar renders in a portal at the document
+                            // body, so it inherits the default theme z-index
+                            // (1300) and lands behind these overlays, which sit
+                            // at 130000 (finance/ledger) and 140000
+                            // (appointments). Must clear the highest of them.
+                            popper: {
+                              sx: { zIndex: 150000 },
+                            },
+                            textField: {
+                              size: "small",
+                              sx: {
+                                width: "160px",
+                                "& .MuiInputBase-input": {
+                                  py: 0.5,
+                                  px: 1,
+                                  fontSize: "12px",
+                                },
+                              },
+                            },
+                          }}
+                          sx={{
+                            "& .MuiInputBase-root": { fontSize: "12px" },
+                          }}
+                        />
                       </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
                         {row.code}
@@ -884,6 +1103,33 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
                           </Box>
                         </Box>
                       </TableCell>
+                      <TableCell sx={{ py: 1, textAlign: "center" }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleDeleteProcedure(row.id)}
+                          sx={{
+                            fontFamily: "Inter",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            textTransform: "none",
+                            borderRadius: "8px",
+                            border: "1px solid #ef4444",
+                            color: "#ef4444",
+                            px: "10px",
+                            py: "2px",
+                            minWidth: "0",
+                            bgcolor: "white",
+                            whiteSpace: "nowrap",
+                            "&:hover": {
+                              borderColor: "#dc2626",
+                              backgroundColor: "#fef2f2",
+                            },
+                          }}
+                        >
+                          Incomplete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -984,8 +1230,14 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             size="small"
             onClick={() => {
               if (onSave)
-                onSave({ procedures, addClaim, claimProcedures, description });
+                onSave({
+                  procedures: selectedProcedures,
+                  addClaim,
+                  claimProcedures,
+                  description,
+                });
             }}
+            disabled={selectedProcedures.length === 0}
             sx={{
               bgcolor: COLORS.ACCENT,
               color: "#fff",
@@ -994,6 +1246,10 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               borderRadius: "8px",
               fontWeight: 600,
               "&:hover": { bgcolor: "#1565c0" },
+              "&.Mui-disabled": {
+                bgcolor: "#cbd5e1",
+                color: "#fff",
+              },
             }}
           >
             Add New Invoice
@@ -1046,6 +1302,8 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             <AddNewProcedureDialog
               onClose={() => setShowAddProcedure(false)}
               onSave={handleSaveProcedure}
+              existingProcedures={procedures}
+              maxTeeth={1}
             />
           </Box>
         </Box>

@@ -2,8 +2,8 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 
-export const VariableButton = ({ label }) => (
-  <Box sx={{ 
+export const VariableButton = ({ label, onClick }) => (
+  <Box onClick={onClick} sx={{
     display: 'inline-flex', 
     alignItems: 'center', 
     border: '1px solid #E5E9F2', 

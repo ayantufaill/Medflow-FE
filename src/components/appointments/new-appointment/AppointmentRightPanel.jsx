@@ -77,14 +77,14 @@ const AppointmentRightPanel = ({
           MenuProps={{ sx: { zIndex: 1400 } }}
           size="small"
           fullWidth
-          disabled={isFuture || isStatusLocked}
+          disabled={isStatusLocked}
           value={status}
           onChange={(e) => onStatusChange(e.target.value)}
           sx={{
             fontFamily: "Inter",
             fontSize: "13px",
             borderRadius: "8px",
-            ...(isFuture || isStatusLocked
+            ...(isStatusLocked
               ? {
                   backgroundColor: "#f9fafb",
                   "& .MuiInputBase-input.Mui-disabled": {
@@ -107,11 +107,6 @@ const AppointmentRightPanel = ({
         {isStatusLocked && (
           <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280", mt: "4px" }}>
             Appointment is checked out and locked.
-          </Typography>
-        )}
-        {!isStatusLocked && isFuture && (
-          <Typography sx={{ fontFamily: "Inter", fontSize: "11px", color: "#6b7280", mt: "4px" }}>
-            Appointment is in the future. Status cannot be changed.
           </Typography>
         )}
       </FieldBox>

@@ -27,11 +27,13 @@ import {
   KeyboardArrowRight as KeyboardArrowRightIcon,
   HelpOutline as HelpOutlineIcon,
   AutoFixNormal as ToothIcon,
+  Edit as EditIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
 import CloseIcon from '@mui/icons-material/Close';
 import { useCoverageBook } from "../hooks/useCoverageBook";
 import ToothSelectionDialog from "../shared/ToothSelectionDialog";
+import { getDowngradeCode } from "../utils/insuranceHelpers";
 import { COLORS } from "../../../constants/colors";
 import { radius, fontWeight } from "../../../constants/styles";
 
@@ -110,6 +112,18 @@ const CoverageBookModal = ({
   const renderInputCells = (proc = {}, isGroup = false, code = null) => {
     const onChange = (field, val) => {
       if (code) handleFieldChange(code, field, val);
+    };
+
+    const autoDowngrade = getDowngradeCode(code);
+
+    const handleDowngradeToggle = (checked) => {
+      if (!code) return;
+      // Crown codes carry a fixed downgrade alternative, so fill it in for the user.
+      if (autoDowngrade) {
+        handleFieldChange(code, { hasDowngrade: checked, downgrade: checked ? autoDowngrade : '' });
+      } else {
+        onChange("hasDowngrade", checked);
+      }
     };
 
     return (
@@ -224,15 +238,30 @@ const CoverageBookModal = ({
               size="small"
               sx={{ p: 0, "& .MuiSvgIcon-root": { fontSize: 16 } }}
               checked={proc.hasDowngrade || false}
-              onChange={(e) => onChange("hasDowngrade", e.target.checked)}
+              onChange={(e) => handleDowngradeToggle(e.target.checked)}
             />
             {proc.hasDowngrade && (
-              <input
-                type="text"
-                style={{ ...inputStyle, width: "35px" }}
-                value={proc.downgrade || ""}
-                onChange={(e) => onChange("downgrade", e.target.value)}
-              />
+              <>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                  title={`Select teeth for ${proc.downgrade || autoDowngrade}`}
+                  // Teeth are stored against the downgraded procedure's own code.
+                  onClick={() => code && setActiveToothSelection(proc.downgrade || autoDowngrade)}
+                >
+                  <EditIcon sx={{ fontSize: 14, color: "#2362EF" }} />
+                </Box>
+                <input
+                  type="text"
+                  style={{ ...inputStyle, width: "35px" }}
+                  value={proc.downgrade || autoDowngrade || ""}
+                  onChange={(e) => onChange("downgrade", e.target.value)}
+                />
+                {proc.downgradeTeeth && (
+                  <Typography sx={{ fontSize: "0.6rem", color: "#2362EF", whiteSpace: "nowrap" }}>
+                    {proc.downgradeTeeth}
+                  </Typography>
+                )}
+              </>
             )}
           </Box>
         </TableCell>

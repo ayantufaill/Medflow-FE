@@ -260,7 +260,19 @@ const AddCoveragePage = () => {
       const isValidDeductibleDate = (dateStr) => {
         if (!dateStr) return true;
         if (dateStr.length < 10) return false;
-        const parts = dateStr.split('/');
+        const usDash = /^\d{1,2}-\d{1,2}-\d{4}$/;
+        if (usDash.test(String(dateStr).trim())) {
+          const [month, day, year] = String(dateStr).trim().split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        const iso = /^\d{4}-\d{2}-\d{2}$/;
+        if (iso.test(String(dateStr).trim())) {
+          const [year, month, day] = String(dateStr).trim().split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        const parts = dateStr.split(/[-/]/);
         if (parts.length !== 3) return false;
         const month = parseInt(parts[0], 10);
         const day = parseInt(parts[1], 10);
@@ -296,6 +308,18 @@ const AddCoveragePage = () => {
       setErrors({});
       setSaving(true);
 
+      // Date pickers store MM/DD/YYYY; the API requires ISO (YYYY-MM-DD).
+      const toIsoDate = (dateStr) => {
+        if (!dateStr) return '';
+        const str = String(dateStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+        const parts = str.split(/[-/]/);
+        if (parts.length !== 3) return str;
+        const [m, d, y] = parts;
+        if (!m || !d || !y) return '';
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      };
+
       // Map UI state to backend validator requirements
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
@@ -316,13 +340,23 @@ const AddCoveragePage = () => {
         relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
         effectiveDate: formatDateForPayload(formData.policyStarted),
         expirationDate: formData.policyEnds ? formatDateForPayload(formData.policyEnds) : undefined,
-        deductibleAmount: parseFloat(formData.deductibles[0]?.individual?.replace(/[^0-9.-]+/g, "")) || 0,
+        deductibleAmount: parseFloat(String(formData.deductibles[0]?.individual ?? '').replace(/[^0-9.-]+/g, "")) || 0,
         individualAnnualMax: !isNaN(parsedIndMax) ? parsedIndMax : undefined,
         usedAmount: !isNaN(parsedIndUsed) ? parsedIndUsed : undefined,
         
         // Advanced Dentistry Fields
-        deductiblesGrid: formData.deductibles,
-        coverageLimits: formData.coverage,
+        deductiblesGrid: formData.deductibles.map((ded) => ({
+          ...ded,
+          metDate: toIsoDate(ded.metDate)
+        })),
+        coverageLimits: Object.fromEntries(
+          Object.entries(formData.coverage || {}).map(([key, val]) => [
+            key,
+            val && typeof val === 'object' && 'usedAmountDate' in val
+              ? { ...val, usedAmountDate: toIsoDate(val.usedAmountDate) }
+              : val
+          ])
+        ),
         coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
         coverageBookData: coverageBookData,
         planFeeGuide: formData.planFeeGuide,
@@ -750,6 +784,7 @@ const AddCoveragePage = () => {
                 handleRemoveDeductibleRow={handleRemoveDeductibleRow}
                 tableHeaderStyle={STYLE_CONSTANTS.tableHeaderStyle}
                 blueHeader={STYLE_CONSTANTS.blueHeader}
+                readOnly={!isEditing}
               />
 
               <CoverageTable

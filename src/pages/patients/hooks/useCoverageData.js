@@ -12,6 +12,20 @@ import { buildCoveragePayload } from "../utils/coveragePayloadBuilder";
 import { monthMapReverse } from "../utils/coverageConstants";
 import { useNavigate } from "react-router-dom";
 
+/** Normalise any stored date (ISO or MM/DD/YYYY) to the MM-DD-YYYY display form. */
+const isoToDisplayDate = (value) => {
+  if (!value) return "";
+  const str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [y, m, d] = str.split("-");
+    return `${m}-${d}-${y}`;
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    return str.replace(/\//g, "-");
+  }
+  return str;
+};
+
 export const useCoverageData = (
   patientId,
   insuranceId,
@@ -183,7 +197,10 @@ export const useCoverageData = (
                   : "",
               },
               deductibles: editTarget.deductiblesGrid?.length
-                ? editTarget.deductiblesGrid
+                ? editTarget.deductiblesGrid.map((d) => ({
+                    ...d,
+                    metDate: isoToDisplayDate(d.metDate),
+                  }))
                 : prev.deductibles,
               coverage: editTarget.coverageLimits || prev.coverage,
               providersPlanFeeGuides: editTarget.providersPlanFeeGuides || [],
