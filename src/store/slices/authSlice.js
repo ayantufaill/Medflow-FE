@@ -46,6 +46,20 @@ export const fetchUserProfile = createAsyncThunk(
   }
 );
 
+// Background refresh (socket "access:changed" or periodic poll). Unlike
+// fetchUserProfile it never toggles loading or clears auth on a transient
+// failure, so screens don't flash a spinner or log the user out.
+export const refreshUserProfile = createAsyncThunk(
+  'auth/refreshUserProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await authService.getProfile();
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Failed to refresh user profile'));
+    }
+  }
+);
+
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (credentials, { dispatch, rejectWithValue }) => {
@@ -182,6 +196,9 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.user = action.payload;
       state.error = null;
+    });
+    builder.addCase(refreshUserProfile.fulfilled, (state, action) => {
+      if (action.payload) state.user = action.payload;
     });
     builder.addCase(fetchUserProfile.rejected, (state, action) => {
       state.loading = false;

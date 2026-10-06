@@ -326,7 +326,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                   Role
                 </Typography>
                 <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748b' }}>
-                  Changing this signs the user out of all active sessions immediately.
+                  The user's screens and access update automatically. They stay signed in.
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -474,7 +474,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
         onConfirm={handleElevateRole}
         onCancel={() => setConfirmingElevation(false)}
         title="Change role?"
-        message={`Changing ${userDetails?.firstName || userDetails?.email || 'this user'}'s role to "${ROLE_KEY_LABELS[selectedRoleKey] || selectedRoleKey}" will sign them out of all active sessions. Continue?`}
+        message={`Changing ${userDetails?.firstName || userDetails?.email || 'this user'}'s role to "${ROLE_KEY_LABELS[selectedRoleKey] || selectedRoleKey}" updates their access right away; they stay signed in. Continue?`}
         confirmText="Change role"
         confirmColor="primary"
         loading={elevating}
