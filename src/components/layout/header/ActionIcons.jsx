@@ -13,6 +13,8 @@ import {
   selectUnreadCount,
 } from '../../../store/slices/notificationSlice';
 import { appointmentService } from '../../../services/appointment.service';
+import { useAuth } from '../../../contexts/AuthContext';
+import { hasRequiredGroup, hasRequiredPermission } from '../../../config/navMenuItems';
 
 dayjs.extend(relativeTime);
 
@@ -28,8 +30,30 @@ const iconStyle = {
   boxShadow: '0px 1px 4px rgba(0,0,0,0.08)',
 };
 
+const SETTINGS_ITEMS = ['Claim Management', 'Batch Actions', 'Reports', 'Advanced Reporting', 'KPI Dashboard', 'Automations', 'Admin'];
+
+// Same checks as each target route's guard, so the menu never offers a page
+// that would answer "Access denied".
+const OPERATIONS = ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP'];
+const REPORTS = ['ADMIN_GROUP', 'OPERATIONS_GROUP'];
+const SETTINGS_ACCESS = {
+  'Claim Management': { groups: OPERATIONS, permissions: ['claims.read'] },
+  'Batch Actions': { groups: OPERATIONS, permissions: ['claims.process'] },
+  Reports: { groups: REPORTS, permissions: ['reports.read'] },
+  'Advanced Reporting': { groups: REPORTS, permissions: ['reports.read'] },
+  'KPI Dashboard': { groups: REPORTS, permissions: ['reports.read'] },
+  Automations: { groups: ['ADMIN_GROUP'] },
+  Admin: { groups: ['ADMIN_GROUP'] },
+};
+
 const ActionIcons = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuperUser = (user?.roles || []).some((r) => (typeof r === 'string' ? r : r?.name) === 'Super Admin')
+    || hasRequiredPermission(user, ['*']);
+  const canOpen = ({ groups, permissions } = {}) =>
+    isSuperUser || ((!groups || hasRequiredGroup(user, groups)) && (!permissions || hasRequiredPermission(user, permissions)));
+  const visibleSettingsItems = SETTINGS_ITEMS.filter((item) => canOpen(SETTINGS_ACCESS[item]));
   const dispatch = useDispatch();
   const notifications = useSelector(selectNotifications);
   const unreadCount = useSelector(selectUnreadCount);
@@ -114,9 +138,11 @@ const ActionIcons = () => {
         </Box>
       </Badge>
 
+{visibleSettingsItems.length > 0 && (
       <Box sx={iconStyle} onClick={handleSettingsOpen}>
         <Settings sx={{ fontSize: '18px', color: '#4a5568' }} />
       </Box>
+      )}
 
       <Popover
         anchorEl={notificationAnchor}
@@ -227,15 +253,7 @@ const ActionIcons = () => {
         }}
       >
         <Box sx={{ py: 1 }}>
-          {[
-            'Claim Management',
-            'Batch Actions',
-            'Reports',
-            'Advanced Reporting',
-            'KPI Dashboard',
-            'Automations',
-            'Admin',
-          ].map((item) => (
+          {visibleSettingsItems.map((item) => (
             <MenuItem
               key={item}
               onClick={() => {
@@ -245,6 +263,7 @@ const ActionIcons = () => {
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Reports') navigate('/admin/reports/financial');
                 if (item === 'KPI Dashboard') navigate('/kpi');
+                if (item === 'Automations') navigate('/admin/patient-communication/automations');
                 handleSettingsClose();
               }}
               sx={{
