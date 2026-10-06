@@ -499,8 +499,10 @@ const LedgerSubRow = ({
                   sx={{
                     width: 22,
                     height: 22,
-                    bgcolor: "#b3d4ff",
-                    border: "1px solid #4a90e2",
+                    bgcolor: hasAttachment ? "#86efac" : "#b3d4ff",
+                    border: hasAttachment
+                      ? "1px solid #22c55e"
+                      : "1px solid #4a90e2",
                     borderRadius: "4px",
                     display: "flex",
                     alignItems: "center",
@@ -512,7 +514,7 @@ const LedgerSubRow = ({
                   <AttachFileOutlined
                     sx={{
                       fontSize: 16,
-                      color: hasAttachment ? "#2f855a" : "#3182ce",
+                      color: hasAttachment ? "#15803d" : "#3182ce",
                     }}
                   />
                 </Box>

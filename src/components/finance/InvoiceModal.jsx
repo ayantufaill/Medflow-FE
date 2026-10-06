@@ -37,6 +37,10 @@ import {
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
 
+// Shared empty list so the effects below can depend on a value that never
+// changes identity when there are no procedures to render.
+const EMPTY_PROCEDURES = [];
+
 // Shape a row into the payload the estimator expects. The estimator builds ONE
 // deductible ledger per request and drains it across every item, so callers must
 // send the whole invoice — pricing a single line in isolation hands it a fresh
@@ -50,7 +54,32 @@ const toEstimateItem = (p) => ({
   dbi: Boolean(p.dbi),
 });
 
-const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
+// Draft rows carry the client-generated id assigned when they were added, so a
+// re-opened draft that overlaps the source invoice's own rows is deduped rather
+// than doubled up.
+const withRestoredProcedures = (baseProcedures, restoredProcedures) => {
+  if (!restoredProcedures || restoredProcedures.length === 0)
+    return baseProcedures;
+  const presentIds = new Set(baseProcedures.map((p) => p.id));
+  return [
+    ...baseProcedures,
+    ...restoredProcedures.filter((p) => !presentIds.has(p.id)),
+  ];
+};
+
+// `draft` is a previously persisted in-progress invoice for this same patient
+// and source, replayed when the modal is re-opened (see utils/invoiceDraftStore).
+// `onDraftChange` reports the live state back up so the owner can persist it.
+// Both are optional: callers that don't persist drafts simply omit them.
+const InvoiceModal = ({
+  patient,
+  invoiceData,
+  draft,
+  onDraftChange,
+  onSave,
+  onCancel,
+  onClose,
+}) => {
   const dispatch = useDispatch();
   const reduxPatient = useSelector((state) => state.patient?.currentPatient || state.patient?.selectedPatient);
   const activePatient = patient || reduxPatient;
@@ -62,9 +91,11 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
 
   const [showAddProcedure, setShowAddProcedure] = useState(false);
   const [procedures, setProcedures] = useState([]);
-  const [addClaim, setAddClaim] = useState(false);
+  const [addClaim, setAddClaim] = useState(() => Boolean(draft?.addClaim));
   const [dupWarning, setDupWarning] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(
+    () => draft?.description || "",
+  );
   const [showDescription, setShowDescription] = useState(false);
   // handleAmountChange fires on every keystroke, and each call re-prices the whole
   // invoice server-side. Debounce so typing a charge is one request, not one per
@@ -80,21 +111,28 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
   // those places and would silently leave a newly added row unselected.
   // Defaulting to "not excluded" also preserves the previous behaviour, where
   // every listed procedure went onto the invoice.
-  const [unselectedIds, setUnselectedIds] = useState(() => new Set());
+  const [unselectedIds, setUnselectedIds] = useState(
+    () => new Set(draft?.unselectedIds || []),
+  );
+
+  // Rows carried over from a persisted draft. They were already priced when
+  // they were first entered, so they are appended after the recalculation pass
+  // rather than run through it — re-pricing would re-charge the deductible they
+  // already consumed.
+  const restoredProcedures = draft?.procedures || EMPTY_PROCEDURES;
 
   useEffect(() => {
     console.log("InvoiceModal debug - invoiceData:", invoiceData);
-    if (
-      invoiceData &&
-      invoiceData.procedures &&
-      invoiceData.procedures.length > 0
-    ) {
+    const baseProcedures = invoiceData?.procedures || EMPTY_PROCEDURES;
+    if (baseProcedures.length > 0 || restoredProcedures.length > 0) {
       // If this is a new invoice (no _id/id), intelligently calculate the patient vs insurance portions
       // based on the patient's coverage table and the dbi (Do Not Bill Insurance) flag.
-      const isNewInvoice = !invoiceData._id && !invoiceData.id;
+      // invoiceData is genuinely absent on the new-invoice path, and a restored
+      // draft can get us into this block with nothing behind us.
+      const isNewInvoice = !invoiceData?._id && !invoiceData?.id;
 
       if (isNewInvoice) {
-        const recalculated = invoiceData.procedures.map((p) => {
+        const recalculated = baseProcedures.map((p) => {
           const numCharge =
             parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) ||
             0;
@@ -147,10 +185,14 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           "InvoiceModal debug - recalculated procedures:",
           recalculated,
         );
-        setProcedures(recalculated);
-        
-        // Fetch accurate estimates from backend to handle secondary insurance
-        if (activePatientId) {
+        const seeded = withRestoredProcedures(recalculated, restoredProcedures);
+        setProcedures(seeded);
+
+        // Fetch accurate estimates from backend to handle secondary insurance.
+        // Only the freshly recalculated rows are priced — the restored rows
+        // already went through the estimator before the draft was stored, and
+        // the response lines up with the payload by index.
+        if (activePatientId && recalculated.length > 0) {
           const payload = recalculated.map(p => ({
             code: p.code,
             charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
@@ -164,7 +206,9 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
               if (estimates && estimates.length === recalculated.length) {
                 setProcedures(prev => prev.map((p, idx) => {
                   const est = estimates[idx];
-                  if (!est) return p;
+                  // Rows appended from a draft sit past the payload length and
+                  // have no matching estimate.
+                  if (!est || idx >= recalculated.length) return p;
                   const sec = Number(est.secondaryInsPortion || 0);
                   const prim = Number(est.primaryInsPortion ?? (sec > 0 && Number(est.insPortion || 0) > sec ? Number(est.insPortion) - sec : est.insPortion) ?? 0);
                   const totalIns = Number(est.totalInsPortion ?? (sec > 0 ? (prim + sec) : est.insPortion) ?? 0);
@@ -184,10 +228,30 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
             .catch(err => console.warn("Failed to fetch initial estimates from backend:", err));
         }
       } else {
-        setProcedures(invoiceData.procedures);
+        setProcedures(
+          withRestoredProcedures(baseProcedures, restoredProcedures),
+        );
       }
+    } else {
+      setProcedures([]);
     }
-  }, [invoiceData, patient, reduxPatient]);
+  }, [invoiceData, patient, reduxPatient, restoredProcedures]);
+
+  // Report every edit back to the owner so it can be persisted. Debounced
+  // because the backend estimate lands a beat after each edit and would
+  // otherwise write twice per keystroke.
+  useEffect(() => {
+    if (!onDraftChange) return undefined;
+    const timer = setTimeout(() => {
+      onDraftChange({
+        procedures,
+        unselectedIds: [...unselectedIds],
+        description,
+        addClaim,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [procedures, unselectedIds, description, addClaim, onDraftChange]);
 
   // Only ticked rows reach the invoice.
   const selectedProcedures = procedures.filter((p) => !unselectedIds.has(p.id));
@@ -530,7 +594,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
     );
 
     // 2. Server-side re-estimation if patient is present
-    if (patient && patient._id && procedures.length > 0) {
+    if (activePatientId && procedures.length > 0) {
       try {
         const payload = procedures.map((p) => {
           const numCharge =
@@ -546,7 +610,7 @@ const InvoiceModal = ({ patient, invoiceData, onSave, onCancel, onClose }) => {
           };
         });
         const estimates = await invoiceService.estimateInvoiceItems(
-          patient._id,
+          activePatientId,
           payload,
         );
         if (estimates && estimates.length === procedures.length) {
