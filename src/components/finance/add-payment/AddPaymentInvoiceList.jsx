@@ -19,10 +19,11 @@ const AddPaymentInvoiceList = ({
   }
 
   // Defensive guard: only display invoices with an outstanding patient balance (> 0)
+  const hasPatientBalance = (i) => Number(Number(i.patientBalance || 0).toFixed(2)) > 0;
   const activeInvoices = (invoices || []).filter(inv => {
     const items = inv.lineItems || [];
     const totalPatient = items.reduce((s, i) => s + Number(i.patientBalance || 0), 0);
-    return totalPatient > 0 && items.some(i => Number(i.patientBalance || 0) > 0);
+    return Number(totalPatient.toFixed(2)) > 0 && items.some(hasPatientBalance);
   });
 
   if (activeInvoices.length === 0) {
@@ -35,7 +36,11 @@ const AddPaymentInvoiceList = ({
         // Derive invoice-level summary columns from the enriched line items.
         // This ensures the header always reflects post-transfer per-item values
         // rather than the potentially stale invoice-level meta fields.
-        const items = inv.lineItems || [];
+        // Rows whose patient portion rounds to $0.00 are not collectible, so
+        // they are hidden entirely.
+        const items = (inv.lineItems || []).filter(
+          (i) => Number(Number(i.patientBalance || 0).toFixed(2)) > 0
+        );
         const totalCharge   = items.reduce((s, i) => s + Number(i.totalAmount    || 0), 0);
         const totalIns      = items.reduce((s, i) => s + Number(i.insuranceAmount || 0), 0);
         const totalPatient  = items.reduce((s, i) => s + Number(i.patientBalance  || 0), 0);

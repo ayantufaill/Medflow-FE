@@ -244,7 +244,13 @@ export const fetchLedgerItems = createAsyncThunk(
                 adj.notes && adj.notes.toLowerCase().includes("income transfer")
               );
               const isCourtesy = !!(
-                adj.notes && adj.notes.toLowerCase().includes("courtesy")
+                (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
+                adj.type === "Write-off" ||
+                (adj.type || "").toLowerCase() === "write-off" ||
+                (adj.type || "").toLowerCase() === "writeoff" ||
+                (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
+                (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
+                !adj.type // Defaulting to Write-off if empty, even if notes have the invoice link
               );
               const adjAmt = isVoided ? 0 : Math.abs(Number(adj.amount || 0));
 
@@ -260,6 +266,9 @@ export const fetchLedgerItems = createAsyncThunk(
                 amount: isVoided
                   ? "(Voided)"
                   : `$${Math.max(0, runningBalance).toFixed(2)}`,
+                rawAmount: adjAmt,
+                procedureId: adj.procedureId,
+                isCourtesy,
                 isPayment: true,
                 isAdjustment: true,
                 isTransfer,
@@ -519,12 +528,26 @@ export const fetchLedgerItems = createAsyncThunk(
             );
           } else {
             // Final Payment (Partial Payment unchecked / final):
-            // Final claim adjudication. Any underpayment shifts to patient responsibility. Insurance balance is zero.
+            // Final claim adjudication. The insurance portion stays
+            // responsible for anything it hasn't paid yet (expected − paid =
+            // underpayment stays an insurance balance), and the patient only
+            // shows a balance for the remainder after that.
+            // Use the larger of rawIns or (total - writeoff - ptPortion) as the
+            // true expected insurance in case the backend stored totalInsPaid
+            // instead of the original expected amount.
+            const effectiveExpectedIns = Math.max(
+              rawIns,
+              Math.max(0, originalTotal - (Number(invoice.writeoffAmount) || 0) - rawPt),
+            );
+            adjustedInsBal = Math.max(0, effectiveExpectedIns - totalInsPaidAmt);
             adjustedPtBal = Math.max(
               0,
-              originalTotal - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt - effectivePtPaid,
+              originalTotal -
+                (Number(invoice.writeoffAmount) || 0) -
+                totalInsPaidAmt -
+                effectivePtPaid -
+                adjustedInsBal,
             );
-            adjustedInsBal = 0;
           }
         } else {
           // Insurance pending: patient owes their portion, insurance owes their portion
@@ -549,7 +572,7 @@ export const fetchLedgerItems = createAsyncThunk(
         }
         const adjustedInvBal = Math.max(
           0,
-          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
+          originalTotal - (Number(invoice.writeoffAmount) || 0) - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
         );
 
         const ptPaidDisplay = totalPtPaidAmt;
@@ -602,7 +625,13 @@ export const fetchLedgerItems = createAsyncThunk(
             adj.notes && adj.notes.toLowerCase().includes("income transfer")
           );
           const isCourtesy = !!(
-            adj.notes && adj.notes.toLowerCase().includes("courtesy")
+            (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
+            adj.type === "Write-off" ||
+            (adj.type || "").toLowerCase() === "write-off" ||
+            (adj.type || "").toLowerCase() === "writeoff" ||
+            (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
+            (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
+            !adj.type
           );
 
           return {
@@ -1196,32 +1225,110 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
 
       // Fetch full invoice details + payments for each invoice concurrently.
       // payments are needed to compute patient-only paid amounts (excluding insurance payments).
-      const rawInvoices = await withConcurrency(
-        3,
-        fetchedInvoices.map((inv) => async () => {
-          const invId = inv._id || inv.id;
-          try {
-            const [fullInv, paymentsRes] = await Promise.all([
-              inv.lineItems ? inv : invoiceService.getInvoiceById(invId),
-              apiClient
-                .get(`/payments/invoice/${invId}?limit=1000`)
-                .catch(() => ({ data: { data: { payments: [] } } })),
-            ]);
-            const payments =
-              paymentsRes?.data?.data?.payments ||
-              paymentsRes?.data?.data ||
-              [];
-            return {
-              ...fullInv,
-              _payments: Array.isArray(payments) ? payments : [],
-            };
-          } catch {
-            return null;
-          }
-        }),
-      );
+      // Adjustments are needed to apply courtesy write-offs exactly like LedgerList.
+      const [rawInvoices, adjustmentsRes] = await Promise.all([
+        withConcurrency(
+          3,
+          fetchedInvoices.map((inv) => async () => {
+            const invId = inv._id || inv.id;
+            try {
+              const [fullInv, paymentsRes] = await Promise.all([
+                inv.lineItems ? inv : invoiceService.getInvoiceById(invId),
+                apiClient
+                  .get(`/payments/invoice/${invId}?limit=1000`)
+                  .catch(() => ({ data: { data: { payments: [] } } })),
+              ]);
+              const payments =
+                paymentsRes?.data?.data?.payments ||
+                paymentsRes?.data?.data ||
+                [];
+              return {
+                ...fullInv,
+                _payments: Array.isArray(payments) ? payments : [],
+              };
+            } catch {
+              return null;
+            }
+          }),
+        ),
+        apiClient
+          .get(`/adjustments?patientId=${patientId}&limit=1000`)
+          .catch(() => ({ data: { data: { adjustments: [] } } })),
+      ]);
+      const patientAdjustments =
+        adjustmentsRes?.data?.data?.adjustments ||
+        adjustmentsRes?.data?.data ||
+        [];
+      const adjustments = Array.isArray(patientAdjustments)
+        ? patientAdjustments
+        : [];
+
+      // Courtesy classification — mirrors the Ledger mapping so both screens
+      // share one definition of "remaining patient balance".
+      const adjIsVoided = (adj) => {
+        const status = String(adj?.status || "").toLowerCase();
+        return status === "void" || status === "voided";
+      };
+      const adjIsCourtesy = (adj) => {
+        if (!adj) return false;
+        const notes = (adj.notes || "").toLowerCase();
+        const type = (adj.type || "").toLowerCase();
+        return Boolean(
+          notes.includes("courtesy") ||
+            adj.type === "Write-off" ||
+            type === "write-off" ||
+            type === "writeoff" ||
+            notes.includes("write-off") ||
+            notes.includes("writeoff") ||
+            !adj.type,
+        );
+      };
 
       const enrichedInvoices = rawInvoices.filter(Boolean).map((fullInv) => {
+        // ── Courtesy write-offs for this invoice (same matching as Ledger) ──
+        // Invoice linkage lives in the adjustment notes:
+        // "<type> applied to Invoice #<invoiceId>".
+        const invoiceAdjs = adjustments.filter((adj) => {
+          if (!adj?.notes) return false;
+          return (
+            adj.notes.includes(`Invoice #${fullInv._id}`) ||
+            (fullInv.id && adj.notes.includes(`Invoice #${fullInv.id}`))
+          );
+        });
+
+        // Invoice-level courtesy (no procedureId) is distributed greedily
+        // across procedures in order, exactly like LedgerList does.
+        let unallocatedCourtesy = 0;
+        invoiceAdjs.forEach((adj) => {
+          if (adjIsCourtesy(adj) && !adjIsVoided(adj) && !adj.procedureId) {
+            unallocatedCourtesy += Math.abs(Number(adj.amount || 0));
+          }
+        });
+
+        const invoiceItems = fullInv.lineItems || [];
+        const courtesyByItem = invoiceItems.map((item) => {
+          const itemKey = item.ProcNum || item._id || item.id;
+          let totalCourtesy = 0;
+          invoiceAdjs.forEach((adj) => {
+            if (
+              adjIsCourtesy(adj) &&
+              !adjIsVoided(adj) &&
+              adj.procedureId &&
+              String(adj.procedureId) === String(itemKey)
+            ) {
+              totalCourtesy += Math.abs(Number(adj.amount || 0));
+            }
+          });
+
+          const grossPtPortion = Number(item.patientPortion || 0);
+          if (unallocatedCourtesy > 0 && grossPtPortion > 0) {
+            const applied = Math.min(unallocatedCourtesy, grossPtPortion);
+            totalCourtesy += applied;
+            unallocatedCourtesy -= applied;
+          }
+          return totalCourtesy;
+        });
+
         // Compute total patient and insurance payments for this invoice.
         const invoicePayments = fullInv._payments || [];
         let totalPatientPaid = 0;
@@ -1267,7 +1374,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           ...fullInv,
           id: fullInv.id || fullInv._id,
           checked: false,
-          lineItems: items.map((item) => {
+          lineItems: items.map((item, itemIndex) => {
             const itemId = item.id || item._id;
             const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
             const ins = Number(
@@ -1352,6 +1459,16 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               effectivePatientBal = patientBal;
             }
 
+            // Courtesy write-offs have already satisfied part (or all) of the
+            // patient portion. Subtract them so Add Payment shows the SAME
+            // remaining patient balance as LedgerList (e.g. $45 portion with a
+            // $45 courtesy W/O -> $0.00 remaining -> hidden, not payable).
+            const totalCourtesyApplied = courtesyByItem[itemIndex] || 0;
+            effectivePatientBal = Math.max(
+              0,
+              effectivePatientBal - totalCourtesyApplied,
+            );
+
             console.debug("[AddPayment] item:", {
               itemId,
               total,
@@ -1364,6 +1481,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               totalPatientPaid,
               totalInsurancePaid,
               netPatientBal,
+              totalCourtesyApplied,
               effectivePatientBal,
               safeRemainingBal,
               alreadyPaid,
@@ -1385,12 +1503,12 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
       });
 
       // AddPaymentDialog is strictly for collecting patient payments.
-      // Only keep line items where the patient actually has an outstanding balance (> 0).
-      // Filter out any invoices where the remaining patient balance or patient portion is zero.
+      // Only keep line items where the EFFECTIVE remaining patient balance
+      // (after courtesy write-offs) is still greater than $0.00.
       const result = enrichedInvoices
         .map((inv) => {
           const patientItems = (inv.lineItems || []).filter(
-            (item) => Number(item.patientBalance || 0) > 0,
+            (item) => Number(Number(item.patientBalance || 0).toFixed(2)) > 0,
           );
           return {
             ...inv,
@@ -1402,7 +1520,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
             (sum, item) => sum + Number(item.patientBalance || 0),
             0,
           );
-          return totalPatientBalance > 0;
+          return Number(totalPatientBalance.toFixed(2)) > 0;
         });
 
       return { patientId, invoices: result };
@@ -2435,7 +2553,9 @@ const billingSlice = createSlice({
         if (!items) return;
         const idx = items.findIndex((i) => i.id === invoiceId);
         if (idx === -1) return;
-        items[idx].details = details;
+        // Preserve existing adjustments that fetchLedgerItems added
+        const existingAdjs = (items[idx].details || []).filter(d => d.isAdjustment);
+        items[idx].details = [...existingAdjs, ...details];
         if (totalPaidAmt > 0) {
           items[idx].summary.ptPaid = `$${totalPaidAmt.toFixed(2)}`;
         }

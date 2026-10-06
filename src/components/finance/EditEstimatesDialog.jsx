@@ -207,7 +207,6 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
                       size="small"
                       disabled
                       value={`$${item.editDeductible}`}
-                      title="Not yet supported — the backend has no deductible field on invoice line items"
                       sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }}
                     />
                   </TableCell>

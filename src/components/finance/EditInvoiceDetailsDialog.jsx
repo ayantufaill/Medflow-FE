@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -34,8 +34,21 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [items, setItems] = useState([]);
   const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [patientId, setPatientId] = useState(null);
+
+  // Changing a charge re-prices the WHOLE invoice server-side so the shared
+  // deductible pool is drained in the same order the estimator drains it, just
+  // like InvoiceModal. Debounce so typing a charge is one request, not one per
+  // character, and keep the freshest items in a ref for the timer callback.
+  const estimateTimer = useRef(null);
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  useEffect(() => () => clearTimeout(estimateTimer.current), []);
 
   const dispatch = useDispatch();
   const providersList = useSelector(selectProviderDropdownList);
@@ -57,6 +70,7 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
       console.log('Fetching invoice ID:', invoiceId);
       const data = await invoiceService.getInvoiceById(invoiceId);
       console.log('Fetched invoice data:', data);
+      setPatientId(data.patientId || null);
       const initialItems = (data.lineItems || []).map(item => ({
         ...item,
         editDate: item.date ? new Date(item.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '',
@@ -65,7 +79,18 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
         editDescription: item.description || '',
         editProvider: item.provider || '',
         editTotalCharge: Number(item.totalPrice || item.unitPrice || item.total || 0).toFixed(2),
-        editDbi: item.dbi || false
+        editDbi: item.dbi || false,
+        editWriteoff: Number(item.writeoff || 0),
+        editPtPortion: Number(item.ptPortion || 0),
+        editInsPortion: Number(item.insPortion || 0),
+        editPrimaryInsPortion: Number(item.primaryInsPortion || 0),
+        editSecondaryInsPortion: Number(item.secondaryInsPortion || 0),
+        editAllowedFee:
+          Number(item.allowedFee) > 0
+            ? Number(item.allowedFee)
+            : Number(item.originalFee) > 0
+              ? Number(item.originalFee)
+              : null,
       }));
       setItems(initialItems);
     } catch (err) {
@@ -89,7 +114,71 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const handleTotalChargeChange = (itemId, value) => {
     const val = value.replace(/[^0-9.-]/g, '');
     handleFieldChange(itemId, 'editTotalCharge', val);
+    scheduleEstimate();
   };
+
+  // Build the estimate payload from an item's current edit fields. Shares the
+  // same estimator contract as InvoiceModal: code + charge + allowed fee + dbi.
+  const buildBatchItem = (item) => ({
+    code: item.editCptCode || item.cptCode || item.code || '',
+    charge: Number(item.editTotalCharge) || 0,
+    allowedFee:
+      Number(item.editAllowedFee) > 0 ? Number(item.editAllowedFee) : undefined,
+    originalFee:
+      Number(item.editAllowedFee) > 0 ? Number(item.editAllowedFee) : undefined,
+    dbi: Boolean(item.editDbi),
+  });
+
+  // Map a single estimate response row back onto an item's edit fields. Shared
+  // by the live debounced re-estimate AND the save path so the persisted splits
+  // always match the current charge instead of a stale debounced snapshot.
+  const applyEstimate = (item, est) => {
+    if (!est) return item;
+    const sec = Number(est.secondaryInsPortion || 0);
+    const prim = Number(
+      est.primaryInsPortion ??
+        (sec > 0 && Number(est.insPortion || 0) > sec
+          ? Number(est.insPortion) - sec
+          : est.insPortion) ??
+        0,
+    );
+    const totalIns = Number(
+      est.totalInsPortion ?? (sec > 0 ? prim + sec : est.insPortion) ?? 0,
+    );
+    return {
+      ...item,
+      editPtPortion: Number(est.ptPortion || 0),
+      editInsPortion: totalIns,
+      editPrimaryInsPortion: prim,
+      editSecondaryInsPortion: sec,
+      editWriteoff: Number(est.writeoff || 0),
+      editAllowedFee:
+        est.allowedFee !== undefined && Number(est.allowedFee) > 0
+          ? Number(est.allowedFee)
+          : item.editAllowedFee,
+    };
+  };
+
+  // Price the whole invoice (not just the edited line) so the shared deductible
+  // pool is drained consistently, mirroring InvoiceModal. The response lines up
+  // with the payload by index.
+  const runEstimate = useCallback(async () => {
+    const current = itemsRef.current;
+    if (!patientId || current.length === 0) return;
+    const batch = current.map(buildBatchItem);
+    try {
+      const estimates = await invoiceService.estimateInvoiceItems(patientId, batch);
+      if (!estimates || estimates.length !== batch.length) return;
+      setItems(prev => prev.map((item, idx) => applyEstimate(item, estimates[idx])));
+    } catch (err) {
+      console.warn('Failed to re-estimate invoice items after charge change:', err);
+    }
+  }, [patientId]);
+
+  const scheduleEstimate = useCallback(() => {
+    clearTimeout(estimateTimer.current);
+    estimateTimer.current = setTimeout(runEstimate, 600);
+  }, [runEstimate]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -113,6 +202,8 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
       }
       return item;
     }));
+    // Re-price after toggling DBI so the patient/insurance splits follow suit.
+    scheduleEstimate();
     // Optionally clear selection after toggling
     setSelectedItemIds([]);
   };
@@ -120,25 +211,55 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      
-      for (const item of items) {
+      setSaveError(null);
+
+      // Re-price the whole invoice against the CURRENT charges before writing
+      // anything, so a debounced estimate that hasn't fired yet can't leave the
+      // old (or zero) splits frozen via isManuallyAdjusted. Falls back to the
+      // edits already on screen when the estimate cannot be produced.
+      let saveItems = items;
+      if (patientId && items.length > 0) {
+        const batch = items.map(buildBatchItem);
+        const estimates = await invoiceService.estimateInvoiceItems(patientId, batch);
+        if (estimates && estimates.length === batch.length) {
+          saveItems = items.map((item, idx) => applyEstimate(item, estimates[idx]));
+        }
+      }
+
+      for (const item of saveItems) {
         const itemId = item.id || item._id;
         if (!itemId) continue;
 
         const updates = {
           provider: item.editProvider || undefined,
           unitPrice: Number(item.editTotalCharge) || 0,
-          dbi: item.editDbi
+          dbi: item.editDbi,
+          // Persist the freshly estimated splits so recalculateInvoice keeps them
+          // instead of folding the whole balance into the patient portion.
+          // insPortion is the primary split; secondary is stored on its own field.
+          ptPortion: Number(item.editPtPortion) || 0,
+          insPortion: Number(item.editPrimaryInsPortion) || 0,
+          secondaryInsPortion: Number(item.editSecondaryInsPortion) || 0,
+          writeoff: Number(item.editWriteoff) || 0,
         };
 
         await invoiceService.updateInvoiceItem(invoiceId, itemId, updates);
       }
+
+      // Any pending debounced estimate is now stale — drop it so it cannot fire
+      // after this save and scribble over the items we just persisted.
+      clearTimeout(estimateTimer.current);
 
       await invoiceService.recalculateInvoice(invoiceId);
       window.dispatchEvent(new CustomEvent('refresh-ledger'));
       onClose();
     } catch (err) {
       console.error('Error saving invoice details:', err);
+      setSaveError(
+        err.response?.data?.error?.message ||
+          err.message ||
+          'Failed to save invoice details',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -276,25 +397,28 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                 <TableCell>Site</TableCell>
                 <TableCell>Treatment</TableCell>
                 <TableCell>Provider</TableCell>
+                <TableCell align="right">Writeoff</TableCell>
+                <TableCell align="right">PT Portion</TableCell>
+                <TableCell align="right">Ins Portion</TableCell>
                 <TableCell align="right">Total Charge</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                     <CircularProgress size={24} sx={{ color: COLORS.ACCENT }} />
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'red' }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'red' }}>
                     Error: {error}
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
                     No items found.
                   </TableCell>
                 </TableRow>
@@ -323,6 +447,9 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                           onChange={(val) => handleFieldChange(id, 'editProvider', val)}
                         />
                       </TableCell>
+                      <TableCell align="right">${Number(item.editWriteoff || 0).toFixed(2)}</TableCell>
+                      <TableCell align="right">${Number(item.editPtPortion || 0).toFixed(2)}</TableCell>
+                      <TableCell align="right">${Number(item.editInsPortion || 0).toFixed(2)}</TableCell>
                       <TableCell align="right">
                         <TextField 
                           size="small" 
@@ -344,6 +471,14 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {saveError && (
+          <Box sx={{ mt: 2, p: 1.5, borderRadius: radius.sm, bgcolor: '#fef2f2', border: '1px solid #fecaca' }}>
+            <Typography sx={{ fontSize: '13px', color: '#b91c1c' }}>
+              {saveError}
+            </Typography>
+          </Box>
+        )}
 
         {/* Footer Actions */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 3, pt: 2, borderTop: `1px solid ${COLORS.BORDER_LIGHT}` }}>
