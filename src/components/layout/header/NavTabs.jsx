@@ -355,28 +355,26 @@ const NavTabs = () => {
           }}
         >
           {financeItems.map((item) => {
-            const isDisabled = item.path === "/era";
             const itemActive = location.pathname === item.path;
             return (
               <Typography
                 key={item.path}
-                onClick={isDisabled ? undefined : () => handleFinanceClick(item.path)}
+                onClick={() => handleFinanceClick(item.path)}
                 sx={{
                   px: 2,
                   py: 1.2,
                   fontSize: "0.8rem",
                   fontWeight: 500,
-                  color: isDisabled ? "#9ca3af" : itemActive
+                  color: itemActive
                     ? theme.palette.primary.main
                     : "text.secondary",
                   display: "block",
-                  cursor: isDisabled ? "not-allowed" : "pointer",
+                  cursor: "pointer",
                   transition: "background-color 0.15s, color 0.15s",
                   textDecoration: "none",
-                  opacity: isDisabled ? 0.5 : 1,
                   "&:hover": {
-                    color: isDisabled ? "#9ca3af" : theme.palette.primary.main,
-                    backgroundColor: isDisabled ? "transparent" : "rgba(25, 118, 210, 0.08)",
+                    color: theme.palette.primary.main,
+                    backgroundColor: "rgba(25, 118, 210, 0.08)",
                   },
                 }}
               >
