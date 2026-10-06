@@ -30,7 +30,7 @@ const iconStyle = {
   boxShadow: '0px 1px 4px rgba(0,0,0,0.08)',
 };
 
-const SETTINGS_ITEMS = ['Claim Management', 'Batch Actions', 'Reports', 'Advanced Reporting', 'KPI Dashboard', 'Automations', 'Admin'];
+const SETTINGS_ITEMS = ['Claim Management', 'Batch Actions', 'Authorizations', 'Reports', 'Advanced Reporting', 'KPI Dashboard', 'Automations', 'Admin'];
 
 // Same checks as each target route's guard, so the menu never offers a page
 // that would answer "Access denied".
@@ -39,6 +39,7 @@ const REPORTS = ['ADMIN_GROUP', 'OPERATIONS_GROUP'];
 const SETTINGS_ACCESS = {
   'Claim Management': { groups: OPERATIONS, permissions: ['claims.read'] },
   'Batch Actions': { groups: OPERATIONS, permissions: ['claims.process'] },
+  Authorizations: { groups: ['FULL_ADMIN_GROUP', 'OPERATIONS_GROUP', 'CLINICAL_GROUP'], permissions: ['authorizations.read'] },
   Reports: { groups: REPORTS, permissions: ['reports.read'] },
   'Advanced Reporting': { groups: REPORTS, permissions: ['reports.read'] },
   'KPI Dashboard': { groups: REPORTS, permissions: ['reports.read'] },
@@ -259,6 +260,7 @@ const ActionIcons = () => {
               onClick={() => {
                 if (item === 'Claim Management') navigate('/claims');
                 if (item === 'Batch Actions') navigate('/batch-actions');
+                if (item === 'Authorizations') navigate('/authorizations');
                 if (item === 'Advanced Reporting') navigate('/admin/advanced-reporting');
                 if (item === 'Admin') navigate('/admin/user-management');
                 if (item === 'Reports') navigate('/admin/reports/financial');
