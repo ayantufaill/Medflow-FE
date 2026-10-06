@@ -334,6 +334,8 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                   <InputLabel id="new-model-role-label">Role</InputLabel>
                   <Select
                     labelId="new-model-role-label"
+                    // The dialog sits at zIndex 9999; the menu must render above it.
+                    MenuProps={{ sx: { zIndex: 10000 } }}
                     label="Role"
                     value={selectedRoleKey}
                     onChange={(e) => setSelectedRoleKey(e.target.value)}
