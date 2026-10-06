@@ -622,8 +622,9 @@ const NewTreatmentPlanPage = () => {
           treatmentPlanService.getAll({ patientId, limit: 100 }),
           appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
         ]);
-        // treatmentPlanService.getAll already unwraps response.data.data.
-        const plans = tpRes?.treatmentPlans || tpRes?.data?.treatmentPlans || [];
+        // getAll already unwraps response.data.data -> { treatmentPlans, pagination }
+        const plans = tpRes?.data?.treatmentPlans || tpRes?.treatmentPlans || [];
+        setTreatmentPlanDrafts(plans);
 
         if (plans.length > 0) {
           const activePlan = plans.reduce((latest, plan) => {
@@ -1324,29 +1325,28 @@ const NewTreatmentPlanPage = () => {
     );    setSelectedRows([]);
   };
 
-  const handlePresent = async () => {
-    if (!activePlanId) {
-      setToast({ open: true, message: 'There is no treatment plan to present yet.', type: 'error' });
+  const handleSaveAsHold = async () => {
+    if (!currentPatient) {
+      setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
       return;
     }
-    setIsPresenting(true);
-    try {
-      await treatmentPlanService.present(activePlanId);
-      setToast({ open: true, message: 'Treatment plan marked as presented', type: 'success' });
-    } catch (error) {
-      setToast({ open: true, message: error?.response?.data?.error?.message || 'Could not present the treatment plan', type: 'error' });
-    } finally {
-      setIsPresenting(false);
-    }
-  };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Treatment Plan',
-          text: `Check out this treatment plan for ${currentPatient?.firstName || ''} ${currentPatient?.lastName || ''}`,
-          url: window.location.href,
+    if (!activePlanId && treatmentPlans.length === 0) {
+      setToast({ open: true, message: 'Add procedures before saving a hold draft.', type: 'error' });
+      return;
+    }
+
+    const payloadItems = treatmentPlans.map(mapProcedureToPayloadItem);
+    const totalsPayload = buildTreatmentPlanTotalsPayload(payloadItems);
+
+    try {
+      setIsSaving(true);
+
+      if (activePlanId) {
+        const updatedPlan = await treatmentPlanService.update(activePlanId, {
+          status: TREATMENT_PLAN_STATUS_HOLD,
+          items: payloadItems,
+          ...totalsPayload,
         });
         const nextPlan = updatedPlan?.data?.treatmentPlan || updatedPlan?.treatmentPlan || updatedPlan?.data || updatedPlan;
         setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(
@@ -1637,6 +1637,22 @@ const NewTreatmentPlanPage = () => {
     window.print();
   };
 
+  const handlePresent = async () => {
+    if (!activePlanId) {
+      setToast({ open: true, message: 'There is no treatment plan to present yet.', type: 'error' });
+      return;
+    }
+    setIsPresenting(true);
+    try {
+      await treatmentPlanService.present(activePlanId);
+      setToast({ open: true, message: 'Treatment plan marked as presented', type: 'success' });
+    } catch (error) {
+      setToast({ open: true, message: error?.response?.data?.error?.message || 'Could not present the treatment plan', type: 'error' });
+    } finally {
+      setIsPresenting(false);
+    }
+  };
+
   const handleShareSelection = (destination) => {
     handleShareMenuClose();
     setToast({
@@ -1826,7 +1842,7 @@ const NewTreatmentPlanPage = () => {
                   )}
                   {canEditPlan && (
                     <Tooltip title="Pre-Auth">
-                      <IconButton size="small" onClick={handleOpenPreAuth}>
+                      <IconButton size="small" onClick={() => handleOpenPreAuth()}>
                         <Box component="img" src={addClaimSvg} alt="add claim" sx={{ width: 22, height: 22 }} />
                       </IconButton>
                     </Tooltip>
