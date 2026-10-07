@@ -1013,11 +1013,73 @@ const LedgerList = ({ patient, expanded, filters }) => {
         if (displayItem.details) {
           displayItem = {
             ...displayItem,
-            details: displayItem.details.filter((d) => {
-              if (d.isVoided && !filters?.includeVoided) return false;
-              if (d.isTransfer && filters?.hideBillingTransfers) return false;
-              return true;
-            }),
+            details: displayItem.details
+              .filter((d) => {
+                if (d.isVoided && !filters?.includeVoided) return false;
+                if (d.isTransfer && filters?.hideBillingTransfers) return false;
+                return true;
+              })
+              .map((d) => {
+                if (d.isGrouped && d.procedures) {
+                  let unallocatedCourtesy = 0;
+                  const invoiceLevelAdjs = displayItem.details.filter(
+                    (adj) =>
+                      adj.isAdjustment &&
+                      adj.isCourtesy &&
+                      !adj.isVoided &&
+                      !adj.procedureId
+                  );
+                  invoiceLevelAdjs.forEach((adj) => {
+                    unallocatedCourtesy += adj.rawAmount || 0;
+                  });
+
+                  const proceduresWithBalance = d.procedures
+                    .map((p) => {
+                      const procedureId = p.ProcNum || p._id || p.id;
+                      const courtesyAdjs = displayItem.details.filter(
+                        (adj) =>
+                          adj.isAdjustment &&
+                          adj.isCourtesy &&
+                          !adj.isVoided &&
+                          String(adj.procedureId) === String(procedureId)
+                      );
+                      let totalCourtesy = courtesyAdjs.reduce(
+                        (sum, adj) => sum + (adj.rawAmount || 0),
+                        0
+                      );
+
+                      const ptPortion = Number(p.patientPortion || 0);
+                      if (unallocatedCourtesy > 0 && ptPortion > 0) {
+                        const amountToApply = Math.min(unallocatedCourtesy, ptPortion);
+                        totalCourtesy += amountToApply;
+                        unallocatedCourtesy -= amountToApply;
+                      }
+
+                      return {
+                        ...p,
+                        ptPortion: Math.max(0, Number(p.ptPortion || 0) - totalCourtesy)
+                      };
+                    })
+                    // Hide procedures whose remaining patient portion is $0.00
+                    .filter((p) => Number(Number(p.ptPortion || 0).toFixed(2)) > 0);
+
+                  // Every procedure is $0.00 (e.g. an invoice created with a
+                  // 0.00 charge). Fall back to showing all of them rather than
+                  // dropping the row and claiming nothing is attached.
+                  if (proceduresWithBalance.length === 0) {
+                    if (!d.procedures || d.procedures.length === 0)
+                      return null;
+                    return { ...d };
+                  }
+
+                  return {
+                    ...d,
+                    procedures: proceduresWithBalance,
+                  };
+                }
+                return d;
+              })
+              .filter(Boolean),
           };
         }
 

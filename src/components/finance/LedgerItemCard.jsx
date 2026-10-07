@@ -355,17 +355,15 @@ const LedgerItemCard = ({
                     }}
                   >
                     {(() => {
-                      const st = displayItem.details.find(
+                      const claim = displayItem.details.find(
                         (d) => d.isClaim,
-                      )?.status;
-                      if (
-                        st?.toLowerCase() === "draft" ||
-                        st?.toLowerCase() === "readyforsubmission"
-                      )
-                        return "Ready for submission";
-                      if (st?.toLowerCase() === "cancelled") return "Cancelled";
-                      if (st?.toLowerCase() === "paid") return "Paid";
-                      return st || "Claim in process";
+                      );
+                      const rawFormat = String(
+                        claim?.claimFormat || claim?.ClaimFormat || "",
+                      ).toLowerCase();
+                      if (rawFormat.includes("manual") || rawFormat.includes("paper"))
+                        return "Manual Claim";
+                      return "Electronic Claim";
                     })()}
                   </Typography>
                 </>

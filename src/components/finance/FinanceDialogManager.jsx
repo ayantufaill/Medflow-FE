@@ -94,7 +94,7 @@ const FinanceDialogManager = ({
 
       {showLateFee && (
         <DialogWrapper onClose={() => setShowLateFee(false)}>
-          <LateFeeDialog onClose={() => setShowLateFee(false)} adjustmentType={selectedAdjustment?.label} onAddFee={handleAddLateFee} />
+          <LateFeeDialog onClose={() => setShowLateFee(false)} adjustmentType={selectedAdjustment?.label} onAddFee={handleAddLateFee} patientId={patient?._id || patient?.id} tier={selectedAdjustment?.tier} />
         </DialogWrapper>
       )}
 

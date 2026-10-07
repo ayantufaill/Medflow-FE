@@ -88,6 +88,7 @@ const PatientForm = ({
     duplicates: [],
   });
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [grantingPatientId, setGrantingPatientId] = useState(null);
   const duplicateCheckTimerRef = useRef(null);
 
   const { branches, currentBranchId, fetchBranches: loadBranches } = useBranch();
@@ -282,7 +283,7 @@ const PatientForm = ({
   };
 
   // Check for duplicate patients
-  const checkForDuplicates = useCallback(async (firstName, lastName, dateOfBirth) => {
+  const checkForDuplicates = useCallback(async (firstName, lastName, dateOfBirth, phonePrimary, email) => {
     // Only check in create mode
     if (isEditMode || !firstName || !lastName) {
       return;
@@ -297,11 +298,16 @@ const PatientForm = ({
     try {
       setCheckingDuplicates(true);
       console.log('Checking duplicates for:', { firstName, lastName, dateOfBirth });
-      
+
       const duplicateData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         dateOfBirth: dayjs(dateOfBirth).format('YYYY-MM-DD'),
+        // Phone/email let the backend surface a cross-branch match (a sibling
+        // branch in the same group) on a strong match only — name+DOB alone
+        // only ever searches the current branch, unchanged from before.
+        ...(phonePrimary ? { phonePrimary } : {}),
+        ...(email ? { email } : {}),
       };
 
       const duplicates = await patientService.checkDuplicates(duplicateData);
@@ -329,10 +335,31 @@ const PatientForm = ({
     }
   }, [isEditMode]);
 
+  // "Use this existing patient instead" — resolves a cross-branch duplicate
+  // match by granting this branch read access to the existing patient,
+  // rather than submitting the new-patient form at all.
+  const handleUseExistingPatient = useCallback(async (duplicate) => {
+    const patientId = duplicate._id || duplicate.id;
+    try {
+      setGrantingPatientId(patientId);
+      await patientService.createBranchGrant(patientId, currentBranchId);
+      showSnackbar(`${duplicate.firstName} ${duplicate.lastName} is now accessible from this branch.`, 'success');
+      setDuplicateDialog({ open: false, duplicates: [] });
+      navigate(`/patients/${patientId}`);
+    } catch (err) {
+      const message = err.response?.data?.error?.message || 'Could not link this patient to your branch.';
+      showSnackbar(message, 'error');
+    } finally {
+      setGrantingPatientId(null);
+    }
+  }, [currentBranchId, navigate, showSnackbar]);
+
   // Watch for changes in firstName, lastName, dateOfBirth and check duplicates
   const firstName = watch('firstName');
   const lastName = watch('lastName');
   const dateOfBirth = watch('dateOfBirth');
+  const phonePrimary = watch('phonePrimary');
+  const email = watch('email');
 
   useEffect(() => {
     if (isEditMode) return;
@@ -355,7 +382,7 @@ const PatientForm = ({
       console.log('Setting duplicate check timer for:', { firstName, lastName, dateOfBirth });
       duplicateCheckTimerRef.current = setTimeout(() => {
         console.log('Timer fired, checking duplicates...');
-        checkForDuplicates(firstName, lastName, dateOfBirth);
+        checkForDuplicates(firstName, lastName, dateOfBirth, phonePrimary, email);
       }, 1500);
     } else {
       console.log('Not checking duplicates - missing required fields:', {
@@ -370,7 +397,7 @@ const PatientForm = ({
         clearTimeout(duplicateCheckTimerRef.current);
       }
     };
-  }, [firstName, lastName, dateOfBirth, isEditMode, checkForDuplicates]);
+  }, [firstName, lastName, dateOfBirth, phonePrimary, email, isEditMode, checkForDuplicates]);
 
   // Handle driver's license scan
   const handleLicenseScan = async (event) => {
@@ -1872,36 +1899,55 @@ const PatientForm = ({
                   <TableCell><strong>Date of Birth</strong></TableCell>
                   <TableCell><strong>Phone</strong></TableCell>
                   <TableCell><strong>Email</strong></TableCell>
+                  <TableCell><strong>Branch</strong></TableCell>
                   <TableCell><strong>Actions</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {duplicateDialog.duplicates.map((dup) => (
-                  <TableRow key={dup._id || dup.id} hover>
-                    <TableCell>
-                      {dup.firstName} {dup.lastName}
-                    </TableCell>
-                    <TableCell>
-                      {dup.dateOfBirth
-                        ? dayjs(dup.dateOfBirth).format('MM/DD/YYYY')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>{dup.phonePrimary || '-'}</TableCell>
-                    <TableCell>{dup.email || '-'}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          navigate(`/patients/${dup._id || dup.id}`);
-                          setDuplicateDialog({ open: false, duplicates: [] });
-                        }}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {duplicateDialog.duplicates.map((dup) => {
+                  const patientId = dup._id || dup.id;
+                  return (
+                    <TableRow key={patientId} hover>
+                      <TableCell>
+                        {dup.firstName} {dup.lastName}
+                      </TableCell>
+                      <TableCell>
+                        {dup.dateOfBirth
+                          ? dayjs(dup.dateOfBirth).format('MM/DD/YYYY')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>{dup.phonePrimary || '-'}</TableCell>
+                      <TableCell>{dup.email || '-'}</TableCell>
+                      <TableCell>
+                        {dup.isCrossBranch ? (dup.branchName || 'Another branch') : 'This branch'}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => {
+                              navigate(`/patients/${patientId}`);
+                              setDuplicateDialog({ open: false, duplicates: [] });
+                            }}
+                          >
+                            View
+                          </Button>
+                          {dup.isCrossBranch && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              disabled={grantingPatientId === patientId}
+                              onClick={() => handleUseExistingPatient(dup)}
+                            >
+                              {grantingPatientId === patientId ? 'Linking…' : 'Use this patient instead'}
+                            </Button>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

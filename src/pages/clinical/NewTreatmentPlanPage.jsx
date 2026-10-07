@@ -70,6 +70,9 @@ import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsuran
 import { selectProviderDropdownList } from '../../store/slices/providerSlice';
 import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment, fetchPatientHistory } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
+import { useAuth } from '../../contexts/AuthContext';
+import { useBranch } from '../../hooks/redux/useBranch';
+import { hasRequiredPermission } from '../../config/navMenuItems';
 import { appointmentService } from '../../services/appointment.service';
 import { invoiceService } from '../../services/invoice.service';
 import { invalidateLedger, invalidatePaymentInvoices, fetchLedgerItems } from '../../store/slices/billingSlice';
@@ -308,6 +311,18 @@ const NewTreatmentPlanPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useAuth();
+  const { currentBranchId } = useBranch();
+  // Plan editors can do everything here. A Treatment Coordinator (Front Desk at
+  // a branch with the feature on) may only view and present the plan.
+  const canEditPlan = hasRequiredPermission(user, ['treatment-plans.update']);
+  // Single-branch users have no branch switcher, so currentBranchId can be empty.
+  const userBranchIds = user?.branchIds || user?.clinics || [];
+  const effectiveBranchId = currentBranchId || (userBranchIds.length === 1 ? userBranchIds[0] : null);
+  const isTreatmentCoordinator = effectiveBranchId != null
+    && (user?.treatmentCoordinatorBranchIds || []).map(String).includes(String(effectiveBranchId));
+  const canPresentPlan = canEditPlan || isTreatmentCoordinator;
+  const [isPresenting, setIsPresenting] = useState(false);
 
   useEffect(() => {
     const appointmentId = searchParams.get('appointmentId');
@@ -1782,6 +1797,22 @@ const NewTreatmentPlanPage = () => {
     window.print();
   };
 
+  const handlePresent = async () => {
+    if (!activePlanId) {
+      setToast({ open: true, message: 'There is no treatment plan to present yet.', type: 'error' });
+      return;
+    }
+    setIsPresenting(true);
+    try {
+      await treatmentPlanService.present(activePlanId);
+      setToast({ open: true, message: 'Treatment plan marked as presented', type: 'success' });
+    } catch (error) {
+      setToast({ open: true, message: error?.response?.data?.error?.message || 'Could not present the treatment plan', type: 'error' });
+    } finally {
+      setIsPresenting(false);
+    }
+  };
+
   const handleShareSelection = (destination) => {
     handleShareMenuClose();
     setToast({
@@ -1964,19 +1995,23 @@ const NewTreatmentPlanPage = () => {
                 <Divider orientation="vertical" flexItem sx={{ mx: 3, my: 0.5, borderColor: '#cbd5e1' }} />
 
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
-                  <IconButton size="small" onClick={() => {
-                    if (selectedRows.length > 0) {
-                      handleDeleteItems(selectedRows);
-                      setSelectedRows([]);
-                    }
-                  }}>
-                    <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
-                  </IconButton>
-                  <Tooltip title="Pre-Auth">
-                    <IconButton size="small" onClick={() => handleOpenPreAuth()}>
-                      <Box component="img" src={addClaimSvg} alt="add claim" sx={{ width: 22, height: 22 }} />
+                  {canEditPlan && (
+                    <IconButton size="small" onClick={() => {
+                      if (selectedRows.length > 0) {
+                        handleDeleteItems(selectedRows);
+                        setSelectedRows([]);
+                      }
+                    }}>
+                      <Box component="img" src={deleteSvg} alt="delete" sx={{ width: 22, height: 22 }} />
                     </IconButton>
-                  </Tooltip>
+                  )}
+                  {canEditPlan && (
+                    <Tooltip title="Pre-Auth">
+                      <IconButton size="small" onClick={() => handleOpenPreAuth()}>
+                        <Box component="img" src={addClaimSvg} alt="add claim" sx={{ width: 22, height: 22 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   <Tooltip title="Share">
                     <IconButton
                       id="clinical-share-button"
@@ -2030,6 +2065,28 @@ const NewTreatmentPlanPage = () => {
                     </IconButton>
                   </Tooltip>
                 </Box>
+
+                {canPresentPlan && (
+                  <Button
+                    className="print-hide"
+                    variant="contained"
+                    size="small"
+                    onClick={handlePresent}
+                    disabled={isPresenting}
+                    sx={{
+                      ml: 3,
+                      textTransform: 'none',
+                      fontFamily: 'Inter, sans-serif',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                      boxShadow: 'none',
+                      backgroundColor: COLORS.ACCENT,
+                      '&:hover': { backgroundColor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
+                    }}
+                  >
+                    {isPresenting ? 'Presenting…' : 'Present Treatment Plan'}
+                  </Button>
+                )}
 
                 <Box sx={{ flexGrow: 1 }} />
 

@@ -27,6 +27,7 @@ import {
 import { useDispatch } from 'react-redux';
 import { fetchUserById, assignRole, removeRole } from '../../store/slices/userSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { roleService } from '../../services/role.service';
 import { userService } from '../../services/user.service';
 import { useBranch } from '../../hooks/redux';
@@ -50,6 +51,8 @@ const ROLE_KEY_LABELS = {
 const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const { showSnackbar } = useSnackbar();
   const dispatch = useDispatch();
+  const { user: currentUser } = useAuth();
+  const isSuperAdminActor = (currentUser?.roles || []).some((r) => (typeof r === 'string' ? r : r?.name) === 'Super Admin');
   const userId = propUser?._id || propUser?.id;
 
   const [userDetails, setUserDetails] = useState(propUser || null);
@@ -323,7 +326,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                   Role
                 </Typography>
                 <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#64748b' }}>
-                  Changing this signs the user out of all active sessions immediately.
+                  The user's screens and access update automatically. They stay signed in.
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -331,6 +334,8 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                   <InputLabel id="new-model-role-label">Role</InputLabel>
                   <Select
                     labelId="new-model-role-label"
+                    // The dialog sits at zIndex 9999; the menu must render above it.
+                    MenuProps={{ sx: { zIndex: 10000 } }}
                     label="Role"
                     value={selectedRoleKey}
                     onChange={(e) => setSelectedRoleKey(e.target.value)}
@@ -357,7 +362,10 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
               </Box>
             </Paper>
 
-            {/* Interactive Roles Selection Section (legacy multi-role system) */}
+            {/* Interactive Roles Selection Section (legacy multi-role system).
+                Super Admin only: everyone else changes roles through the Role
+                picker above, and the API refuses chips outside their rules. */}
+            {isSuperAdminActor && (
             <Paper
               elevation={0}
               sx={{
@@ -432,6 +440,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
                 </Stack>
               )}
             </Paper>
+            )}
           </>
         )}
       </DialogContent>
@@ -465,7 +474,7 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
         onConfirm={handleElevateRole}
         onCancel={() => setConfirmingElevation(false)}
         title="Change role?"
-        message={`Changing ${userDetails?.firstName || userDetails?.email || 'this user'}'s role to "${ROLE_KEY_LABELS[selectedRoleKey] || selectedRoleKey}" will sign them out of all active sessions. Continue?`}
+        message={`Changing ${userDetails?.firstName || userDetails?.email || 'this user'}'s role to "${ROLE_KEY_LABELS[selectedRoleKey] || selectedRoleKey}" updates their access right away; they stay signed in. Continue?`}
         confirmText="Change role"
         confirmColor="primary"
         loading={elevating}

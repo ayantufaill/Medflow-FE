@@ -49,7 +49,15 @@ const UserRow = ({ user, branches, onViewUser, onEditUser, onAssignRolesUser }) 
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-  const branchNames = (user.branchIds || []).map((bId) => branches.find((b) => b.id === bId)?.name || bId);
+  // Branches the viewer can't see (e.g. a sibling branch for a Branch Admin)
+  // have no name here; show a count rather than a raw id.
+  const knownNames = (user.branchIds || [])
+    .map((bId) => branches.find((b) => String(b.id) === String(bId))?.name)
+    .filter(Boolean);
+  const otherCount = (user.branchIds || []).length - knownNames.length;
+  const branchNames = otherCount > 0
+    ? [...knownNames, `+${otherCount} other branch${otherCount > 1 ? 'es' : ''}`]
+    : knownNames;
 
   return (
     <Box sx={{ borderTop: `1px solid ${theme.palette.divider}` }}>

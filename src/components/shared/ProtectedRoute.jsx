@@ -24,6 +24,9 @@ const ProtectedRoute = ({
   requireAllRoles = false,
   requireAllPermissions = false,
   requireEitherRoleOrPermission = false,
+  // Optional extra grant, e.g. a feature flag: (user) => boolean. When it
+  // returns true the role/group/permission checks below are skipped.
+  allowIf,
   accessDeniedMessage = "Access denied. You do not have the required privileges to access this page.",
 }) => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -58,6 +61,10 @@ const ProtectedRoute = ({
   const groups = getUserGroups(user);
 
   if (userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
+    return children;
+  }
+
+  if (typeof allowIf === 'function' && allowIf(user)) {
     return children;
   }
 

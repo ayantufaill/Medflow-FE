@@ -46,7 +46,14 @@ const portalRoutes = [
     key="/portal/messages"
     path="/portal/messages"
     element={
-      <ProtectedRoute requiredRoles={['Patient', 'Admin', 'Provider']}>
+      // Patients, plus Admin / Provider staff by exact role name (not the
+      // whole admin group: the access matrix gives Group/Branch Admin no portal).
+      <ProtectedRoute
+        allowedGroups={['__none__']}
+        allowIf={(user) => (user?.roles || [])
+          .map((r) => (typeof r === 'string' ? r : r?.name))
+          .some((name) => ['Patient', 'Admin', 'Provider', 'Doctor', 'dentist'].includes(name))}
+      >
         <RoleBasedPortalMessagesRoute />
       </ProtectedRoute>
     }
@@ -91,7 +98,14 @@ const portalRoutes = [
     key="/portal-messages"
     path="/portal-messages"
     element={
-      <ProtectedRoute requiredRoles={['Admin', 'Provider']}>
+      // Screen access matrix: Super Admin / Admin and Provider only. Not
+      // requiredRoles={['Admin']}, which also admits Group/Branch Admin.
+      <ProtectedRoute
+        allowedGroups={['__none__']}
+        allowIf={(user) => (user?.roles || [])
+          .map((r) => (typeof r === 'string' ? r : r?.name))
+          .some((name) => ['Admin', 'Provider', 'Doctor', 'dentist'].includes(name))}
+      >
         <Layout><ProviderPortalMessagesPage /></Layout>
       </ProtectedRoute>
     }

@@ -5,6 +5,7 @@ import {
   fetchPatientById,
   fetchPatientInsurances,
   selectPatientList,
+  selectPatientCrossBranchMatches,
   selectPatientPagination,
   selectPatientFilters,
   selectPatientListLoading,
@@ -44,6 +45,7 @@ import {
 export const usePatients = () => {
   const dispatch = useDispatch();
   const patients = useSelector(selectPatientList);
+  const crossBranchMatches = useSelector(selectPatientCrossBranchMatches);
   const pagination = useSelector(selectPatientPagination);
   const filters = useSelector(selectPatientFilters);
   const loading = useSelector(selectPatientListLoading);
@@ -81,6 +83,7 @@ export const usePatients = () => {
 
   return {
     patients,
+    crossBranchMatches,
     pagination,
     filters,
     loading,

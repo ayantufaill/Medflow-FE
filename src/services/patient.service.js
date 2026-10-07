@@ -130,6 +130,18 @@ export const patientService = {
   },
 
   /**
+   * "Use this existing patient instead" — resolves a cross-branch
+   * duplicate-check match by granting the caller's branch read access to the
+   * existing patient, instead of creating a new, duplicate chart.
+   * @param {string} patientId
+   * @param {string|number} [clinicId] - defaults to the caller's own branch on the backend if omitted
+   */
+  async createBranchGrant(patientId, clinicId) {
+    const response = await apiClient.post(`/patients/${patientId}/branch-grant`, clinicId !== undefined ? { clinicId } : {});
+    return response.data.data;
+  },
+
+  /**
    * Create patient
    * @param {Object} patientData - Patient data
    * @returns {Promise<Object>} Created patient data

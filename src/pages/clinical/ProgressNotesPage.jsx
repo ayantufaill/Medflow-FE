@@ -658,7 +658,7 @@ const ProgressNotesPage = () => {
                                       let tpData = null;
                                       try {
                                         const tpRes = await treatmentPlanService.getAll({ patientId: selectedPatientId });
-                                        tpData = tpRes?.data?.treatmentPlans || [];
+                                        tpData = tpRes?.treatmentPlans || tpRes?.data?.treatmentPlans || [];
                                       } catch (e) {
                                         console.error('Failed to fetch treatment plans', e);
                                       }
