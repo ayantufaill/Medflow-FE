@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, MenuItem, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, roundedSelectMenuProps, standardFieldSx } from '../../../constants/styles';
 
@@ -74,14 +75,34 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving, do
 
   return (
     <Drawer anchor="right" open={open} onClose={saving ? undefined : onClose} sx={{ zIndex: 1400 }}
-      PaperProps={{ sx: { width: { xs: '100%', md: 860 }, maxWidth: '100%', bgcolor: COLORS.SURFACE_PAGE } }}>
+      PaperProps={{ sx: { width: { xs: '100%', md: 860 }, maxWidth: '100%' } }}>
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>Edit Fees</Typography>
-            <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: fontSize.base }}>Update this procedure's fees and insurance estimates</Typography>
-          </Box>
-          <IconButton onClick={onClose} disabled={saving} aria-label="Close Edit Fees"><CloseIcon /></IconButton>
+        <Box sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}>
+          <PaymentsOutlinedIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: "15px",
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
+            Edit Fees
+          </Typography>
+          <IconButton onClick={onClose} size="small" disabled={saving} sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
+          </IconButton>
         </Box>
         <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={sectionSx}>
@@ -146,9 +167,9 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving, do
           </Box>
           {error && <Typography role="alert" sx={{ color: COLORS.ERROR || '#dc2626' }}>{error}</Typography>}
         </Box>
-        <Box sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_FOOTER, display: 'flex', justifyContent: 'flex-end', gap: 1.25 }}>
-          <Button onClick={onClose} disabled={saving} variant="outlined" sx={{ borderRadius: radius.md, textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={save} disabled={saving || !form} variant="contained" sx={{ bgcolor: COLORS.ACCENT, borderRadius: radius.md, textTransform: 'none' }}>{saving ? 'Saving…' : 'Save'}</Button>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', borderTop: `1px solid ${COLORS.BORDER}`, flexShrink: 0 }}>
+          <Button onClick={onClose} disabled={saving} variant="outlined" sx={{ minWidth: 112, height: 38, borderRadius: '6px', borderColor: COLORS.BORDER, color: COLORS.ACCENT, textTransform: 'none', fontWeight: 400, '&:hover': { borderColor: COLORS.BORDER, bgcolor: COLORS.SURFACE_HOVER } }}>Cancel</Button>
+          <Button onClick={save} disabled={saving || !form} variant="contained" sx={{ minWidth: 112, height: 38, borderRadius: '6px', bgcolor: COLORS.ACCENT, boxShadow: 'none', textTransform: 'none', fontWeight: 400, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>{saving ? 'Saving…' : 'Save'}</Button>
         </Box>
       </Box>
     </Drawer>

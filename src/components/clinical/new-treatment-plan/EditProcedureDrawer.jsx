@@ -246,26 +246,36 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       PaperProps={{
         sx: {
           width: { xs: '100%', md: 860 },
-          maxWidth: '100%',
-          bgcolor: COLORS.SURFACE_PAGE
+          maxWidth: '100%'
         }
       }}
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT, flexShrink: 0 }}>
-          <Box sx={{ width: 34, height: 34, borderRadius: radius.md, bgcolor: COLORS.ACCENT_BG, color: COLORS.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <EditOutlinedIcon sx={{ fontSize: 18 }} />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
-              Edit Procedure
-            </Typography>
-            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
-              Update treatment details and clinical metadata
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} sx={{ width: 32, height: 32, borderRadius: radius.md, color: COLORS.TEXT_SECONDARY, '&:hover': { bgcolor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_PRIMARY } }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
+        <Box sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}>
+          <EditOutlinedIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: "15px",
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
+            Edit Procedure
+          </Typography>
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
           </IconButton>
         </Box>
 
@@ -502,7 +512,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
           </Box>
         </Box>
 
-        <Box sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_FOOTER, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.25, flexShrink: 0 }}>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', borderTop: `1px solid ${COLORS.BORDER}`, flexShrink: 0 }}>
           <Button onClick={onClose} variant="outlined" sx={{ minWidth: 112, height: 38, borderRadius: radius.md, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, textTransform: 'none', fontWeight: fontWeight.semibold, '&:hover': { borderColor: COLORS.TEXT_MUTED, bgcolor: COLORS.SURFACE_HOVER } }}>
             Cancel
           </Button>

@@ -24,6 +24,7 @@ import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../
 import { COLORS } from '../../../constants/colors';
 import medflowLogo from '../../../assets/medflow-logo.png';
 import DynamicRouteSlipRenderer from '../../common/DynamicRouteSlipRenderer';
+import { fetchPatientHistory } from '../../../store/slices/appointmentSlice';
 
 const sectionHeaderSx = {
   bgcolor: '#f3f8fd',
@@ -113,6 +114,7 @@ const TreatmentPlanRouteSlipDialog = ({
   onClose,
   patient,
   appointment,
+  nextAppointment,
   procedures = [],
   planTitle = 'Treatment Plan'
 }) => {
@@ -123,16 +125,71 @@ const TreatmentPlanRouteSlipDialog = ({
   const providersList = useSelector(selectProviderDropdownList) || [];
   const patientName = getPatientName(patient);
   const appointmentDate = getAppointmentDate(appointment, procedures);
+  const [localAppointments, setLocalAppointments] = React.useState([]);
 
   useEffect(() => {
     if (!open) return;
     if (providersList.length === 0) {
       dispatch(fetchAllProvidersForDropdown());
     }
-    if (patientId && !insurancesCache?.[patientId]?.data) {
-      dispatch(fetchPatientInsurances({ patientId })).catch(() => {});
+    if (patientId) {
+      if (!insurancesCache?.[patientId]?.data) {
+        dispatch(fetchPatientInsurances({ patientId })).catch(() => {});
+      }
+      dispatch(fetchPatientHistory(patientId))
+        .unwrap()
+        .then(data => setLocalAppointments(data))
+        .catch(() => setLocalAppointments([]));
     }
   }, [dispatch, open, patientId, providersList.length, insurancesCache]);
+
+  const computedNextAppointment = useMemo(() => {
+    if (nextAppointment) return nextAppointment; // Fallback to prop if explicitly provided and valid
+    if (!localAppointments || localAppointments.length === 0) return null;
+
+    const getApptDateTime = (appt) => {
+      let dateStr;
+      if (appt.appointmentDate) {
+        dateStr = appt.appointmentDate.split('T')[0];
+      } else if (appt.start) {
+        dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      } else if (appt.date) {
+        dateStr = appt.date.split('T')[0];
+      } else if (appt.AptDateTime) {
+        dateStr = appt.AptDateTime.split('T')[0];
+      } else {
+        dateStr = dayjs().format('YYYY-MM-DD');
+      }
+
+      let timeStr = '00:00';
+      if (appt.time) {
+        const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+        if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
+      } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
+        timeStr = appt.startTime;
+        if (timeStr.split(':').length === 2) timeStr += ':00';
+      } else if (appt.start && typeof appt.start === 'string' && appt.start.includes('T')) {
+        timeStr = appt.start.split('T')[1].substring(0, 8);
+      }
+
+      return dayjs(`${dateStr}T${timeStr}`);
+    };
+
+    const referenceDateTime = appointment ? getApptDateTime(appointment) : dayjs();
+
+    const futureAppts = localAppointments
+      .filter(a => {
+        if (appointment) {
+          const aId = a._id || a.id;
+          const rId = appointment._id || appointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        const appointmentDateTime = getApptDateTime(a);
+        return appointmentDateTime.isAfter(dayjs()) && appointmentDateTime.isAfter(referenceDateTime);
+      })
+      .sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
+    return futureAppts[0] || null;
+  }, [localAppointments, nextAppointment, appointment]);
 
   const insurances = useMemo(() => {
     const cached = patientId ? insurancesCache?.[patientId]?.data : null;
@@ -239,6 +296,7 @@ const TreatmentPlanRouteSlipDialog = ({
         <DynamicRouteSlipRenderer 
           patient={patient} 
           appointment={appointment} 
+          nextAppointment={computedNextAppointment}
           procedures={procedures} 
           planTitle={planTitle} 
           insurances={insurances} 
