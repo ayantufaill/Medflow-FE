@@ -399,6 +399,7 @@ export const fetchLedgerItems = createAsyncThunk(
             amount: `$${finalClaimAmount.toFixed(2)}`,
             insuranceType: effectiveInsuranceType,
             ClaimType: isSecondaryClaim ? 'Secondary' : claim.claimType,
+            claimFormat: claim.claimFormat,
             claimAmount: finalClaimAmount,
             isClaim: true,
             isPayment: false,

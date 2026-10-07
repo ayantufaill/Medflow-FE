@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Chip,
   IconButton,
   CircularProgress,
@@ -26,6 +25,7 @@ import EditEstimatesDialog from './EditEstimatesDialog';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { invoiceService } from '../../services/invoice.service';
+import CurrencyInput from './CurrencyInput';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
 
 const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
@@ -82,7 +82,6 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
         editDbi: item.dbi || false,
         editWriteoff: Number(item.writeoff || 0),
         editPtPortion: Number(item.ptPortion || 0),
-        editInsPortion: Number(item.insPortion || 0),
         editPrimaryInsPortion: Number(item.primaryInsPortion || 0),
         editSecondaryInsPortion: Number(item.secondaryInsPortion || 0),
         editAllowedFee:
@@ -142,13 +141,9 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
           : est.insPortion) ??
         0,
     );
-    const totalIns = Number(
-      est.totalInsPortion ?? (sec > 0 ? prim + sec : est.insPortion) ?? 0,
-    );
     return {
       ...item,
       editPtPortion: Number(est.ptPortion || 0),
-      editInsPortion: totalIns,
       editPrimaryInsPortion: prim,
       editSecondaryInsPortion: sec,
       editWriteoff: Number(est.writeoff || 0),
@@ -397,28 +392,25 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                 <TableCell>Site</TableCell>
                 <TableCell>Treatment</TableCell>
                 <TableCell>Provider</TableCell>
-                <TableCell align="right">Writeoff</TableCell>
-                <TableCell align="right">PT Portion</TableCell>
-                <TableCell align="right">Ins Portion</TableCell>
                 <TableCell align="right">Total Charge</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                     <CircularProgress size={24} sx={{ color: COLORS.ACCENT }} />
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'red' }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'red' }}>
                     Error: {error}
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
                     No items found.
                   </TableCell>
                 </TableRow>
@@ -447,21 +439,10 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
                           onChange={(val) => handleFieldChange(id, 'editProvider', val)}
                         />
                       </TableCell>
-                      <TableCell align="right">${Number(item.editWriteoff || 0).toFixed(2)}</TableCell>
-                      <TableCell align="right">${Number(item.editPtPortion || 0).toFixed(2)}</TableCell>
-                      <TableCell align="right">${Number(item.editInsPortion || 0).toFixed(2)}</TableCell>
                       <TableCell align="right">
-                        <TextField 
-                          size="small" 
+                        <CurrencyInput
                           value={item.editTotalCharge}
-                          onChange={(e) => handleTotalChargeChange(id, e.target.value)}
-                          variant="outlined"
-                          sx={{ 
-                            width: '80px',
-                            '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT },
-                            '& .MuiInputBase-input': { textAlign: 'right' },
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER }
-                          }} 
+                          onChange={(v) => handleTotalChargeChange(id, v)}
                         />
                       </TableCell>
                     </TableRow>

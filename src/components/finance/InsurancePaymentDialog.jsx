@@ -42,7 +42,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
   const [paymentMethod, setPaymentMethod] = useState('EFT');
-  const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [procedures, setProcedures] = useState([]);
   const [updateAllowedFee, setUpdateAllowedFee] = useState(false);
   const [updateInsFlatPortion, setUpdateInsFlatPortion] = useState(false);
@@ -109,14 +108,12 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
   const [rememberCard, setRememberCard] = useState(false);
   const [claims, setClaims] = useState([]);
-  const [loadingClaims, setLoadingClaims] = useState(true);
 
   useEffect(() => {
     const fetchClaims = async () => {
       const patientId = patient?._id || patient?.id;
       if (!patientId) return;
       try {
-        setLoadingClaims(true);
         const data = await claimService.getAllClaims({ patientId, limit: 1000 });
         const claimsList = data.claims || [];
         setClaims(claimsList);
@@ -125,8 +122,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         }
       } catch (err) {
         console.error('Error fetching claims:', err);
-      } finally {
-        setLoadingClaims(false);
       }
     };
     fetchClaims();
@@ -378,13 +373,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setProcedures(claimProcs);
   }, [selectedClaim, claims]);
   
-  const headerBackground = '#7788bb';
-  const greenHeader = '#8fb884';
-  const warningRed = '#c0392b';
-  const greenButton = '#7788bb';
-  const tanButton = '#d4c197';
-  const linkBlue = '#5c7cb6';
-
   const checkboxOptions = [
     { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
     { label: 'Update Ins. Flat Portion', checked: updateInsFlatPortion, onChange: (e) => setUpdateInsFlatPortion(e.target.checked) },
@@ -490,6 +478,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           paymentSource: 'insurance_company',
           paymentDate: new Date().toISOString(),
           isPartialPayment: isPartialPayment,
+          claimStatus: !isPartialPayment && invPay === 0 ? 'rejected' : undefined,
           insuranceCompanyId: (
             selectedClaimObj.insuranceCompanyId?._id ||
             selectedClaimObj.insuranceCompanyId?.id ||
@@ -503,7 +492,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           branchNo: branchNo || undefined,
           overpaymentAmount: overpaymentAmount > 0.005 ? Math.round(overpaymentAmount * 100) / 100 : undefined,
           overpaymentAction: overpaymentAmount > 0.005 ? (overpaymentAction || 'credit') : undefined,
-          isPartialPayment: isPartialPayment,
           procedures: invProcs.map(p => ({
             ...p,
             allowed: Number(p.allowed || 0),
@@ -557,7 +545,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const bc = new BroadcastChannel('medflow-payments');
         bc.postMessage(eventPayload);
         bc.close();
-      } catch (e) {}
+      } catch (e) {
+        void e;
+      }
 
       showSnackbar('Insurance payment applied successfully', 'success');
 
@@ -590,7 +580,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setShowPaymentOptions(false);
   };
 
-  const handleSecondarySubmit = async ({ claimType, invoiceId, primaryClaimId }) => {
+  const handleSecondarySubmit = async ({ claimType, primaryClaimId }) => {
     setIsSubmitting(true);
     try {
       const generatedClaimRes = await claimService.generateSecondaryClaim(primaryClaimId);

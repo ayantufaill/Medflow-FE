@@ -54,7 +54,7 @@ const AddCoveragePage = () => {
 
   const [errors, setErrors] = useState({});
   const [coverageBookData, setCoverageBookData] = useState([]);
-  const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
+  const [coverageCategoryData, setCoverageCategoryData] = useState(COVERAGE_DATA);
   const [templateToApply, setTemplateToApply] = useState(null);
   const [isTemplateConfirmOpen, setIsTemplateConfirmOpen] = useState(false);
 
