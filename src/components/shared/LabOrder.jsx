@@ -339,7 +339,10 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
     }
   }, [open]);
 
+  // The Snackbar sits outside the Modal: MUI's Modal takes exactly one child
+  // element, and a second sibling crashes it ("reading 'hasOwnProperty'").
   return (
+    <>
     <Modal 
       open={open} 
       onClose={onClose}
@@ -920,6 +923,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
         </Box>
       </Box>
       </Box>
+    </Modal>
 
       <Snackbar 
         open={!!toastMessage} 
@@ -931,7 +935,7 @@ const LabOrder = ({ open, onClose, onSubmit, initialInstructions = '', isLabCase
           {toastMessage}
         </Alert>
       </Snackbar>
-    </Modal>
+    </>
   );
 };
 
