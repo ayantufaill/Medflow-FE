@@ -81,11 +81,11 @@ const RxReport = () => {
           r.startDate,
           `"${r.dose}"`,
           r.refills,
-          `"${r.duration}"`,
+          `"${r.duration ?? ''}"`,
           r.longTerm,
           r.prints,
           `"${r.notes || ''}"`,
-          `"${r.drugName}"`,
+          `"${r.drugName ?? ''}"`,
         ].join(',')
       ),
     ].join('\n');
@@ -122,13 +122,13 @@ const RxReport = () => {
       <TableCell sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 500 }}>{row.provider}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem', color: '#337ab7', fontWeight: 500 }}>{row.patient}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem' }}>{row.startDate}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.dose}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.refills}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.duration}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.longTerm}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.prints}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.dose ?? '\u2014'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.refills ?? '\u2014'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.duration ?? '\u2014'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.longTerm ?? '\u2014'}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.prints ?? '\u2014'}</TableCell>
       <TableCell sx={{ fontSize: '0.75rem' }}>{row.notes}</TableCell>
-      <TableCell sx={{ fontSize: '0.75rem' }}>{row.drugName}</TableCell>
+      <TableCell sx={{ fontSize: '0.75rem' }}>{row.drugName ?? '\u2014'}</TableCell>
     </TableRow>
   );
 

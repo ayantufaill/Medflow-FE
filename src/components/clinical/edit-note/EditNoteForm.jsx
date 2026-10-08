@@ -20,6 +20,8 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, standardFieldSx, roundedSelectMenuProps, radius } from '../../../constants/styles';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
 import { providerService } from '../../../services/provider.service';
+import { clinicalExamService } from '../../../services/clinical-exam.service';
+import { formatPeriodontalNotes } from '../../../utils/formatPeriodontalNotes';
 
 const enhancedMenuProps = {
   ...roundedSelectMenuProps,
@@ -102,7 +104,7 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
   const [isSaving, setIsSaving] = useState(false);
   const providersList = useSelector(selectProviderDropdownList) || [];
 
-  const { control, handleSubmit, watch, reset, setValue } = useForm({
+  const { control, handleSubmit, watch, reset, setValue, getValues } = useForm({
     defaultValues: view === 'create' ? defaultValues : {}
   });
 
@@ -125,6 +127,12 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
 
   const generateNoteDefaults = () => {
     let defaults = { ...defaultValues };
+    
+    // Preserve existing async-fetched fields if they exist
+    const currentValues = getValues ? getValues() : {};
+    if (currentValues.treatmentRequirementsNotes) {
+      defaults.treatmentRequirementsNotes = currentValues.treatmentRequirementsNotes;
+    }
     
     if (currentPatient) {
       const patientGender = currentPatient.gender || 'Unknown';
@@ -189,6 +197,34 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
       reset(generateNoteDefaults());
     }
   }, [view, noteId, currentPatient, selectedProcedures, providersList]);
+
+  useEffect(() => {
+    const fetchPerioSummary = async () => {
+      // Only auto-populate if we are creating a new note and have an appointment ID
+      if (view !== 'create' || !appointmentId) return;
+      
+      try {
+        const exam = await clinicalExamService.getExam('periodontal', appointmentId);
+        const examData = exam?.examData || exam?.exam?.examData;
+        
+        if (examData) {
+          const summaryHTML = formatPeriodontalNotes(examData);
+          const plainTextSummary = summaryHTML
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&gt;/g, '>')
+            .replace(/&lt;/g, '<')
+            .trim();
+          setValue('treatmentRequirementsNotes', plainTextSummary);
+        }
+      } catch (error) {
+        console.error("Failed to auto-populate periodontal summary:", error);
+      }
+    };
+
+    fetchPerioSummary();
+  }, [view, appointmentId, setValue]);
 
   const loadNote = async () => {
     try {

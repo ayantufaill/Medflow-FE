@@ -76,94 +76,6 @@ const ActionIcons = ({ onChatClick }) => (
   </Box>
 );
 
-// Fallback mock data — ISO dates for reliable parsing
-const MOCK_ROWS = [
-  {
-    id: 1,
-    patient: "Patient A",
-    flags: "red",
-    age: 37,
-    contact: "(555) 123-4567",
-    recallDate: "2026-05-24",
-    lastExam: "2026-02-24",
-    lastProphy: "2026-02-24",
-    lastMaintenance: "",
-    lastComm: "",
-    note: "left message to schedule recare apt",
-    contactAgain: "Y",
-    followUp: "",
-    apptDate: "",
-    contactCount: 1,
-  },
-  {
-    id: 2,
-    patient: "Patient B",
-    flags: "",
-    age: 54,
-    contact: "(555) 987-6543",
-    recallDate: "2026-05-18",
-    lastExam: "2025-11-18",
-    lastProphy: "2025-11-18",
-    lastMaintenance: "",
-    lastComm: "",
-    note: "",
-    contactAgain: "Y",
-    followUp: "",
-    apptDate: "",
-    contactCount: 0,
-  },
-  {
-    id: 3,
-    patient: "Patient C",
-    flags: "",
-    age: 44,
-    contact: "(555) 456-7890",
-    recallDate: "2026-06-13",
-    lastExam: "2025-11-13",
-    lastProphy: "2025-11-13",
-    lastMaintenance: "",
-    lastComm: "",
-    note: "",
-    contactAgain: "Y",
-    followUp: "",
-    apptDate: "2026-07-01",
-    contactCount: 0,
-  },
-  {
-    id: 4,
-    patient: "Patient D",
-    flags: "red",
-    age: 29,
-    contact: "(555) 321-0987",
-    recallDate: "2026-07-10",
-    lastExam: "2026-01-10",
-    lastProphy: "2026-01-10",
-    lastMaintenance: "",
-    lastComm: "2026-06-15",
-    note: "Requested callback",
-    contactAgain: "N",
-    followUp: "2026-07-05",
-    apptDate: "",
-    contactCount: 2,
-  },
-  {
-    id: 5,
-    patient: "Patient E",
-    flags: "",
-    age: 61,
-    contact: "(555) 654-3210",
-    recallDate: "2026-08-22",
-    lastExam: "2026-02-22",
-    lastProphy: "2026-02-22",
-    lastMaintenance: "2025-08-22",
-    lastComm: "",
-    note: "",
-    contactAgain: "Y",
-    followUp: "",
-    apptDate: "2026-08-30",
-    contactCount: 0,
-  },
-];
 
 const PAGE_SIZE = 10;
 
@@ -171,15 +83,16 @@ const RecareList = ({
   setSubtitle,
   hideFilters = false,
   forcedCategory = null,
+  forcedMonth = null,
   getRowCategory = null,
 }) => {
+  const branchId = useSelector(state => state.branch?.currentBranchId);
   const dispatch = useDispatch();
   const apiData = useSelector(selectRecareData);
   const loading = useSelector(selectClinicalReportLoading);
   const allProviders = useSelector(selectProviderDropdownList);
 
   const [chatPatient, setChatPatient] = useState(null);
-  const [editedRows, setEditedRows] = useState({}); // Local mock save for row edits
   const [filterType, setFilterType] = useState("range");
   const [dentist, setDentist] = useState("None");
   const [hygienist, setHygienist] = useState("None");
@@ -194,10 +107,10 @@ const RecareList = ({
   // Fetch on mount
   useEffect(() => {
     if (!hideFilters) {
-      dispatch(fetchRecareReport({}));
+      dispatch(fetchRecareReport({ branchId }));
     }
     dispatch(fetchAllProvidersForDropdown());
-  }, [dispatch, hideFilters]);
+  }, [dispatch, hideFilters, branchId]);
 
   // Helper: resolve provider display name (name may be nested under userId)
   const getProviderName = (p) => {
@@ -232,42 +145,6 @@ const RecareList = ({
   const dentistOptions = dentists.length > 0 ? dentists : allProviders;
   const hygienistOptions = hygienists.length > 0 ? hygienists : allProviders;
 
-  // Handlers for dynamic row edits
-  const handleRowChange = (rowId, field, value) => {
-    setEditedRows((prev) => ({
-      ...prev,
-      [rowId]: {
-        ...(prev[rowId] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleAddNoteClick = (row) => {
-    if (!editedRows[row.id]?.noteText && !row.note) {
-      setEditedRows((prev) => ({
-        ...prev,
-        [row.id]: {
-          ...(prev[row.id] || {}),
-          noteText: "",
-          noteDate: new Date().toLocaleString("en-US", {
-            dateStyle: "short",
-            timeStyle: "short",
-          }),
-        },
-      }));
-    }
-  };
-
-  const handleNoteChange = (rowId, newText) => {
-    handleRowChange(rowId, "noteText", newText);
-  };
-
-  const handleNoteSave = (rowId, text) => {
-    // In a real app, dispatch an API call to save the note here.
-    console.log(`Saved note for row ${rowId}:`, text);
-  };
-
   // Update parent subtitle
   useEffect(() => {
     if (!setSubtitle) return;
@@ -298,22 +175,8 @@ const RecareList = ({
     let rows = apiData || [];
 
     // Apply forced category from dialog
-    if (forcedCategory && getRowCategory) {
-      rows = rows.filter((r) => {
-        const cat = getRowCategory(r);
-        // Allow broken appointments to match our combined No Appointment mapping
-        if (
-          forcedCategory.includes("Broken Appointment") &&
-          cat.includes("No Appointment")
-        ) {
-          return (
-            cat.split("No Appointment")[0] ===
-            forcedCategory.split("Broken Appointment")[0]
-          );
-        }
-        return cat === forcedCategory;
-      });
-    }
+    if (forcedCategory && getRowCategory) rows = rows.filter(r => getRowCategory(r) === forcedCategory);
+    if (forcedMonth) rows = rows.filter(r => (r.recallDate?.slice(0, 7) || 'No due date') === forcedMonth);
 
     // Dentist filter
     if (dentist !== "None") {
@@ -332,7 +195,7 @@ const RecareList = ({
         `${item["First Name"] || ""} ${item["Last Name"] || ""}`.trim() ||
         "Unknown",
       flags: item.flags || "",
-      age: item.age || "",
+      age: item.age ?? "",
       contact: item.contact || item.phone || item.email || "",
       recallDate: item.recallDate || item.nextRecareAppt || "",
       lastExam: item.lastExam || item.lastAppt || "",
@@ -343,11 +206,11 @@ const RecareList = ({
       contactAgain: item.contactAgain || "",
       followUp: item.followUp || "",
       apptDate: item.apptDate || item.nextTreatmentAppt || "",
-      contactCount: item.contactCount || 0,
+      contactCount: item.contactCount ?? "",
       dentistId: item.dentistId || "",
       hygienistId: item.hygienistId || "",
     }));
-  }, [apiData, forcedCategory, getRowCategory, dentist, hygienist]);
+  }, [apiData, forcedCategory, forcedMonth, getRowCategory, dentist, hygienist]);
 
   // Apply all filters
   const filteredRows = useMemo(() => {
@@ -360,7 +223,7 @@ const RecareList = ({
     }
 
     // 2. Include Appointed (patients with an upcoming apptDate)
-    if (!includeAppointed) {
+    if (!hideFilters && !includeAppointed) {
       rows = rows.filter((r) => !r.apptDate);
     }
 
@@ -384,7 +247,7 @@ const RecareList = ({
     }
 
     return rows;
-  }, [baseRows, searchQuery, includeAppointed, flagFilter, startDate, endDate]);
+  }, [baseRows, searchQuery, includeAppointed, flagFilter, startDate, endDate, hideFilters]);
 
   // Paginate
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
@@ -630,19 +493,7 @@ const RecareList = ({
                       </TableCell>
                       {showFlagsCol && (
                         <TableCell>
-                          {row.flags && row.flags !== "" && (
-                            <Box
-                              sx={{
-                                width: 12,
-                                height: 12,
-                                backgroundColor:
-                                  row.flags === "red"
-                                    ? "error.main"
-                                    : row.flags,
-                                borderRadius: "2px",
-                              }}
-                            />
-                          )}
+                          <Typography variant="caption">{row.flags || '\u2014'}</Typography>
                         </TableCell>
                       )}
                       <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
@@ -664,219 +515,9 @@ const RecareList = ({
                         {row.lastMaintenance}
                       </TableCell>
 
-                      {/* Editable Last Comm Date */}
-                      <TableCell
-                        sx={{
-                          fontSize: "0.85rem",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <span
-                          className="print-only"
-                          style={{ display: "none" }}
-                        >
-                          {editedRows[row.id]?.lastComm !== undefined
-                            ? editedRows[row.id].lastComm
-                            : row.lastComm || ""}
-                        </span>
-                        <TextField
-                          className="no-print"
-                          type="date"
-                          variant="standard"
-                          size="small"
-                          value={
-                            editedRows[row.id]?.lastComm !== undefined
-                              ? editedRows[row.id].lastComm
-                              : row.lastComm || ""
-                          }
-                          onChange={(e) =>
-                            handleRowChange(row.id, "lastComm", e.target.value)
-                          }
-                          InputProps={{
-                            disableUnderline: true,
-                            sx: { fontSize: "0.75rem", color: "#1a3a6b" },
-                          }}
-                        />
-                      </TableCell>
-
-                      {/* Editable Note */}
-                      <TableCell
-                        sx={{
-                          fontSize: "0.85rem",
-                          maxWidth: 220,
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                          <Typography
-                            className="no-print"
-                            variant="caption"
-                            sx={{
-                              color: "#1a3a6b",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                            }}
-                            onClick={() => handleAddNoteClick(row)}
-                          >
-                            <EditOutlined sx={{ fontSize: 14, mr: 0.5 }} /> Add
-                            note
-                          </Typography>
-                          {(() => {
-                            const stateNoteText = editedRows[row.id]?.noteText;
-                            const stateNoteDate = editedRows[row.id]?.noteDate;
-                            const hasNote =
-                              stateNoteText !== undefined || row.note;
-
-                            if (!hasNote) return null;
-
-                            const text =
-                              stateNoteText !== undefined
-                                ? stateNoteText
-                                : row.note;
-                            const date =
-                              stateNoteDate ||
-                              (row.lastComm
-                                ? `${row.lastComm} 12:00 PM`
-                                : "07/15/2022 12:38 PM");
-
-                            return (
-                              <Box sx={{ mt: 0.5 }}>
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    color: "text.secondary",
-                                    display: "block",
-                                    mb: 0.5,
-                                  }}
-                                >
-                                  {date}
-                                </Typography>
-                                <span
-                                  className="print-only"
-                                  style={{ display: "none" }}
-                                >
-                                  {text}
-                                </span>
-                                <TextField
-                                  className="no-print"
-                                  multiline
-                                  maxRows={3}
-                                  fullWidth
-                                  variant="outlined"
-                                  size="small"
-                                  value={text}
-                                  onChange={(e) =>
-                                    handleNoteChange(row.id, e.target.value)
-                                  }
-                                  onBlur={(e) =>
-                                    handleNoteSave(row.id, e.target.value)
-                                  }
-                                  InputProps={{
-                                    sx: {
-                                      fontSize: "0.8rem",
-                                      p: 1,
-                                      borderRadius: '6px',
-                                      backgroundColor: '#ffffff'
-                                    },
-                                  }}
-                                />
-                              </Box>
-                            );
-                          })()}
-                        </Box>
-                      </TableCell>
-
-                      {/* Editable Contact Again */}
-                      <TableCell
-                        sx={{
-                          fontSize: "0.85rem",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        <span
-                          className="print-only"
-                          style={{ display: "none" }}
-                        >
-                          {editedRows[row.id]?.contactAgain !== undefined
-                            ? editedRows[row.id].contactAgain
-                            : row.contactAgain === "Y" ||
-                                row.contactAgain === "N"
-                              ? row.contactAgain
-                              : ""}
-                        </span>
-                        <Select
-                          className="no-print"
-                          variant="standard"
-                          value={
-                            editedRows[row.id]?.contactAgain !== undefined
-                              ? editedRows[row.id].contactAgain
-                              : row.contactAgain === "Y" ||
-                                  row.contactAgain === "N"
-                                ? row.contactAgain
-                                : ""
-                          }
-                          onChange={(e) =>
-                            handleRowChange(
-                              row.id,
-                              "contactAgain",
-                              e.target.value,
-                            )
-                          }
-                          displayEmpty
-                          sx={{
-                            fontSize: "0.75rem",
-                            color: "#1a3a6b",
-                            "& .MuiSelect-select": { py: 0.5 },
-                          }}
-                        >
-                          <MenuItem value="" sx={{ fontSize: "0.75rem" }}>
-                            <em>&nbsp;</em>
-                          </MenuItem>
-                          <MenuItem value="Y" sx={{ fontSize: "0.75rem" }}>
-                            Y
-                          </MenuItem>
-                          <MenuItem value="N" sx={{ fontSize: "0.75rem" }}>
-                            N
-                          </MenuItem>
-                        </Select>
-                      </TableCell>
-
-                      {/* Editable Follow Up Date */}
-                      <TableCell
-                        sx={{
-                          fontSize: "0.75rem",
-                          verticalAlign: "top",
-                          pt: 1.5,
-                        }}
-                      >
-                        <span
-                          className="print-only"
-                          style={{ display: "none" }}
-                        >
-                          {editedRows[row.id]?.followUp !== undefined
-                            ? editedRows[row.id].followUp
-                            : row.followUp || ""}
-                        </span>
-                        <TextField
-                          className="no-print"
-                          type="date"
-                          variant="standard"
-                          size="small"
-                          value={
-                            editedRows[row.id]?.followUp !== undefined
-                              ? editedRows[row.id].followUp
-                              : row.followUp || ""
-                          }
-                          onChange={(e) =>
-                            handleRowChange(row.id, "followUp", e.target.value)
-                          }
-                          InputProps={{
-                            disableUnderline: true,
-                            sx: { fontSize: "0.75rem", color: "#1a3a6b" },
-                          }}
-                        />
-                      </TableCell>
+                      {['lastComm', 'note', 'contactAgain', 'followUp'].map(field => (
+                        <TableCell key={field} sx={{ fontSize: '0.85rem', verticalAlign: 'middle' }}>{row[field] || '\u2014'}</TableCell>
+                      ))}
 
                       <TableCell
                         sx={{
@@ -894,23 +535,7 @@ const RecareList = ({
                       >
                         {row.contactCount}
                       </TableCell>
-                      <TableCell sx={{ verticalAlign: "middle" }}>
-                        <Button
-                          className="no-print"
-                          size="small"
-                          variant="contained"
-                          sx={{
-                            fontSize: "0.7rem",
-                            p: "4px 10px",
-                            backgroundColor: "#1a3a6b",
-                            textTransform: "none",
-                            borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#0f172a" },
-                          }}
-                        >
-                          Reset
-                        </Button>
-                      </TableCell>
+                      <TableCell />
                     </TableRow>
                   ))
                 )}

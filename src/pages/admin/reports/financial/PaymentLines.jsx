@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CircularProgress, Box, Typography } from '@mui/material';
+import { Alert, CircularProgress, Box, Typography } from '@mui/material';
 import { ReportLayout } from '../../../../components/reports/ui';
 import ProductionReportActions from '../../../../components/reports/financial/ProductionReportActions';
 import PaymentLinesFilters from '../../../../components/reports/financial/PaymentLinesFilters';
@@ -17,19 +17,22 @@ const PaymentLines = () => {
   const [selectedStatus, setSelectedStatus] = useState('Scheduled');
   const [includeArchived, setIncludeArchived] = useState(false);
 
+  const [error, setError] = useState(null);
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await reportingService.getFinancialReport('payment-lines', {
         startDate,
         endDate
       });
       setReportData(res || []);
     } catch (err) {
-      console.error('Failed to fetch payment lines report:', err);
+      setReportData([]);
+      setError(err.response?.data?.message || 'Unable to load payment lines.');
     } finally {
       setLoading(false);
     }
@@ -152,7 +155,7 @@ const PaymentLines = () => {
       row.dueDate,
       row.chargedOn || '',
       row.failedOn || '',
-      row.failedAttempts ?? 0,
+      row.failedAttempts ?? '',
       row.status,
       row.error || ''
     ]);
@@ -224,6 +227,7 @@ const PaymentLines = () => {
 
   return (
     <ReportLayout title="Payment Lines Report:">
+      {error && <Alert severity="error">{error}</Alert>}
       <PaymentLinesFilters
         dateRange={dateRange}
         startDate={startDate}

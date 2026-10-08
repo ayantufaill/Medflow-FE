@@ -33,7 +33,8 @@ import {
   KeyboardArrowDown as ExpandMoreIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   ContentCopy as ContentCopyIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Receipt as ReceiptIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { OutlinedSelect } from '../../components/patients/form-components/formInputs';
@@ -67,7 +68,7 @@ import { useDropdownData } from '../../hooks/redux/useDropdownData';
 // AFTER
 import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById, invalidatePatientBalance } from '../../store/slices/patientSlice';
 import { selectProviderDropdownList } from '../../store/slices/providerSlice';
-import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment } from '../../store/slices/appointmentSlice';
+import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment, fetchPatientHistory } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranch } from '../../hooks/redux/useBranch';
@@ -343,7 +344,19 @@ const NewTreatmentPlanPage = () => {
   const [treatmentPlanDrafts, setTreatmentPlanDrafts] = useState([]);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [appointmentProcedures, setAppointmentProcedures] = useState([]);
-  const allProcedures = [...treatmentPlans, ...appointmentProcedures].sort((a, b) => {
+  const [patientAppointments, setPatientAppointments] = useState([]);
+
+  const currentPatient = useSelector(selectCurrentPatient);
+  const currentAppointment = useSelector(selectCurrentAppointment);
+  const currentPatientId = currentPatient?._id || currentPatient?.id;
+  const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
+
+  // Filter out procedures that belong to OTHER appointments
+  const filteredAppointmentProcedures = activeAppointmentId 
+    ? appointmentProcedures.filter(proc => String(proc.appointmentId || proc._appointmentId) === String(activeAppointmentId))
+    : appointmentProcedures;
+
+  const allProcedures = [...treatmentPlans, ...filteredAppointmentProcedures].sort((a, b) => {
     const dateA = dayjs(a.scheduled !== '-' ? a.scheduled : a.created, ['MM/DD/YYYY']);
     const dateB = dayjs(b.scheduled !== '-' ? b.scheduled : b.created, ['MM/DD/YYYY']);
     return dateB.valueOf() - dateA.valueOf();
@@ -361,9 +374,6 @@ const NewTreatmentPlanPage = () => {
   const [activeGroupPlanId, setActiveGroupPlanId] = useState(null);
   const [isSubmittingGroups, setIsSubmittingGroups] = useState(false);
 
-  const currentPatient = useSelector(selectCurrentPatient);
-  const currentAppointment = useSelector(selectCurrentAppointment);
-  const currentPatientId = currentPatient?._id || currentPatient?.id;
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const providersList = useSelector(selectProviderDropdownList) || [];
   const { providers: appointmentProviders, rooms: appointmentRooms, appointmentTypes } = useDropdownData({
@@ -418,8 +428,55 @@ const NewTreatmentPlanPage = () => {
   const activeDraft = treatmentPlanDrafts.find((plan) => getPlanId(plan) === String(activePlanId));
   const activeDraftTitle = activeDraft ? getPlanTitle(activeDraft) : 'Active Treatment Plan';
   const treatmentPlanTotals = useMemo(() => calculateTreatmentPlanTotals(allProcedures), [allProcedures]);
-  const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
   const activeAppointmentForHistory = currentAppointment || (activeAppointmentId ? { _id: activeAppointmentId } : null);
+
+  const nextAppointment = useMemo(() => {
+    if (!patientAppointments || patientAppointments.length === 0) return null;
+
+    const getApptDateTime = (appt) => {
+      let dateStr;
+      if (appt.appointmentDate) {
+        dateStr = appt.appointmentDate.split('T')[0];
+      } else if (appt.start) {
+        dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      } else if (appt.date) {
+        dateStr = appt.date.split('T')[0];
+      } else if (appt.AptDateTime) {
+        dateStr = appt.AptDateTime.split('T')[0];
+      } else {
+        dateStr = dayjs().format('YYYY-MM-DD');
+      }
+
+      let timeStr = '00:00';
+      if (appt.time) {
+        const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+        if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
+      } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
+        timeStr = appt.startTime;
+        if (timeStr.split(':').length === 2) timeStr += ':00';
+      } else if (appt.start && typeof appt.start === 'string' && appt.start.includes('T')) {
+        timeStr = appt.start.split('T')[1].substring(0, 8);
+      }
+
+      return dayjs(`${dateStr}T${timeStr}`);
+    };
+
+    const referenceDateTime = currentAppointment ? getApptDateTime(currentAppointment) : dayjs();
+
+    const futureAppts = patientAppointments
+      .filter(a => {
+        if (currentAppointment) {
+          const aId = a._id || a.id;
+          const rId = currentAppointment._id || currentAppointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        const appointmentDateTime = getApptDateTime(a);
+        return appointmentDateTime.isAfter(dayjs()) && appointmentDateTime.isAfter(referenceDateTime);
+      })
+      .sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
+    return futureAppts[0] || null;
+  }, [patientAppointments, currentAppointment]);
+
   const activeScheduledProcedure = allProcedures.find((procedure) => procedure.appointmentId || procedure._appointmentId);
   const activeScheduleDate =
     currentAppointment?.appointmentDate ||
@@ -431,6 +488,49 @@ const NewTreatmentPlanPage = () => {
     currentAppointment?.time ||
     activeScheduledProcedure?.startTime ||
     activeScheduledProcedure?.time;
+
+  const headerDates = useMemo(() => {
+    const current = activeScheduleDate ? dayjs(activeScheduleDate) : dayjs();
+    
+    if (!patientAppointments || patientAppointments.length === 0) {
+      return { pastDates: [], currentDate: current };
+    }
+
+    const getApptDate = (appt) => {
+      if (appt.appointmentDate) return dayjs(appt.appointmentDate);
+      if (appt.date) return dayjs(appt.date);
+      if (appt.start) return dayjs(appt.start);
+      if (appt.AptDateTime) return dayjs(appt.AptDateTime);
+      return dayjs();
+    };
+
+    const pastAppts = patientAppointments
+      .filter(a => {
+        if (currentAppointment) {
+          const aId = a._id || a.id;
+          const rId = currentAppointment._id || currentAppointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        return getApptDate(a).isBefore(current, 'day');
+      });
+
+    // Extract unique dates and sort them chronologically (oldest to newest)
+    const uniqueDatesMap = new Map();
+    pastAppts.forEach(a => {
+      const dateObj = getApptDate(a);
+      const formatted = dateObj.format('MM/DD/YYYY');
+      if (!uniqueDatesMap.has(formatted)) {
+        uniqueDatesMap.set(formatted, dateObj);
+      }
+    });
+
+    const pastDates = Array.from(uniqueDatesMap.values()).sort((a, b) => a.diff(b));
+
+    return {
+      pastDates,
+      currentDate: current
+    };
+  }, [patientAppointments, currentAppointment, activeScheduleDate]);
 
   const getLinkedAppointmentId = () => (
     activeAppointmentId || activeScheduledProcedure?.appointmentId || activeScheduledProcedure?._appointmentId
@@ -584,7 +684,7 @@ const NewTreatmentPlanPage = () => {
           // Ask for a large page: the API defaults to 10, and a newly created
           // plan can otherwise fall outside the first page and never be read.
           treatmentPlanService.getAll({ patientId, limit: 100 }),
-          appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
+          dispatch(fetchPatientHistory(patientId)).unwrap().catch(() => ([]))
         ]);
         // getAll already unwraps response.data.data -> { treatmentPlans, pagination }
         const plans = tpRes?.data?.treatmentPlans || tpRes?.treatmentPlans || [];
@@ -613,6 +713,7 @@ const NewTreatmentPlanPage = () => {
         }
 
         const appointments = Array.isArray(apptRes) ? apptRes : (Array.isArray(apptRes?.data) ? apptRes.data : (apptRes?.data?.appointments || []));
+        setPatientAppointments(appointments);
         const apptProcs = mapAppointmentsToTreatmentRows(appointments);
         setAppointmentProcedures(apptProcs);
 
@@ -1484,8 +1585,8 @@ const NewTreatmentPlanPage = () => {
 
     try {
       setIsCreatingDraft(true);
+      const currentItems = treatmentPlans.map(mapProcedureToPayloadItem);
       if (activePlanId) {
-        const currentItems = treatmentPlans.map(mapProcedureToPayloadItem);
         await treatmentPlanService.update(activePlanId, {
           items: currentItems,
           ...buildTreatmentPlanTotalsPayload(currentItems),
@@ -1493,12 +1594,18 @@ const NewTreatmentPlanPage = () => {
         setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, currentItems, buildTreatmentPlanTotalsPayload(currentItems)));
       }
 
+      // Strip IDs so the backend generates new ones and doesn't hang on duplicate key errors
+      const itemsForNewDraft = currentItems.map(item => {
+        const { id, _id, ...rest } = item;
+        return rest;
+      });
+
       const res = await treatmentPlanService.create({
         patientId: currentPatient._id || currentPatient.id,
         title: name,
         status: TREATMENT_PLAN_STATUS_ACTIVE,
-        ...buildTreatmentPlanTotalsPayload([]),
-        items: []
+        ...buildTreatmentPlanTotalsPayload(itemsForNewDraft),
+        items: itemsForNewDraft
       });
       const createdPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data || res;
       const createdId = getPlanId(createdPlan);
@@ -1759,6 +1866,8 @@ const NewTreatmentPlanPage = () => {
           showOdontogram={showOdontogram}
           setShowOdontogram={setShowOdontogram}
           onNotesClick={() => setIsNotesDrawerOpen(true)}
+          pastDates={headerDates.pastDates}
+          currentDate={headerDates.currentDate}
         />
       </Box>
 
@@ -2087,6 +2196,7 @@ const NewTreatmentPlanPage = () => {
         onClose={() => setIsRouteSlipOpen(false)}
         patient={currentPatient}
         appointment={currentAppointment}
+        nextAppointment={nextAppointment}
         procedures={allProcedures}
         planTitle={activeDraftTitle}
       />
@@ -2123,24 +2233,47 @@ const NewTreatmentPlanPage = () => {
         sx={{ zIndex: 10000 }}
         PaperProps={{
           sx: {
-            borderRadius: '8px',
-            boxShadow: '0 24px 64px rgba(15, 23, 42, 0.24)',
-            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
             overflow: 'hidden'
           }
         }}
       >
-        <DialogTitle sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
-          <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            p: '12px 16px',
+            gap: '8px',
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_TINT,
+            m: 0,
+            flexShrink: 0,
+          }}
+        >
+          <ReceiptIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
             Create draft
           </Typography>
-          <IconButton onClick={closeCreateDraftDialog} disabled={isCreatingDraft} sx={{ width: 30, height: 30, color: '#2563eb' }}>
-            <CloseIcon sx={{ fontSize: 20 }} />
+          <IconButton
+            onClick={closeCreateDraftDialog}
+            disabled={isCreatingDraft}
+            size="small"
+            sx={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            <CloseIcon sx={{ fontSize: '18px' }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ px: 3, py: 2.25, bgcolor: '#fff' }}>
-          <Typography sx={{ mb: 1, fontFamily: 'Inter, sans-serif', fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }}>
-            Treatment Plan Name <Box component="span" sx={{ color: '#ef4444' }}>*</Box>
+        <DialogContent sx={{ p: 2, pt: '16px !important' }}>
+          <Typography sx={{ mb: 1, fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>
+            Treatment Plan Name <Box component="span" sx={{ color: COLORS.STATUS_ERROR }}>*</Box>
           </Typography>
           <TextField
             autoFocus
@@ -2150,6 +2283,7 @@ const NewTreatmentPlanPage = () => {
             disabled={isCreatingDraft}
             error={Boolean(draftNameError)}
             helperText={draftNameError}
+            placeholder="e.g. Phase 1 Treatment"
             onChange={(event) => {
               setDraftName(event.target.value);
               if (draftNameError) setDraftNameError('');
@@ -2162,25 +2296,31 @@ const NewTreatmentPlanPage = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                height: 34,
-                borderRadius: '4px',
-                fontFamily: 'Inter, sans-serif',
-                bgcolor: '#fff',
-                '& fieldset': { borderColor: '#d8dee8' },
+                fontSize: '13px',
+                borderRadius: '8px',
+                '& fieldset': { borderColor: COLORS.BORDER },
                 '&:hover fieldset': { borderColor: '#94a3b8' },
-                '&.Mui-focused fieldset': { borderColor: '#2563eb', borderWidth: '1.2px' },
+                '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT, borderWidth: '1px' },
               },
-              '& .MuiOutlinedInput-input': { py: 0.75, px: 1.25, fontSize: '0.8125rem' },
               '& .MuiFormHelperText-root': { mx: 0, fontSize: '0.75rem' }
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', gap: 1 }}>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
           <Button
             onClick={closeCreateDraftDialog}
             disabled={isCreatingDraft}
             variant="outlined"
-            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', borderColor: '#d8dee8', color: '#2563eb', fontWeight: 600, boxShadow: 'none' }}
+            size="small"
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600,
+            }}
           >
             Cancel
           </Button>
@@ -2188,7 +2328,21 @@ const NewTreatmentPlanPage = () => {
             onClick={handleCreateDraft}
             disabled={isCreatingDraft}
             variant="contained"
-            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', bgcolor: '#2563eb', fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' } }}
+            size="small"
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: '#fff',
+              textTransform: 'none',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              px: 2,
+              '&:hover': { bgcolor: '#1565c0' },
+              '&.Mui-disabled': {
+                bgcolor: '#cbd5e1',
+                color: '#fff',
+              },
+            }}
           >
             {isCreatingDraft ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : 'Save'}
           </Button>
@@ -2215,7 +2369,7 @@ const NewTreatmentPlanPage = () => {
         onClose={() => setIsNotesDrawerOpen(false)}
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
-        appointmentId={searchParams.get('appointmentId')}
+        appointmentId={activeAppointmentId}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
       />

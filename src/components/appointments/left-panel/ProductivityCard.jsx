@@ -6,7 +6,7 @@ const formatCurrency = (val) => '$' + val.toLocaleString('en-US', { minimumFract
 
 const ProductivityCard = ({ data }) => {
   // Use a max value based on the highest value or goal in the rows to scale the bars properly
-  const maxVal = Math.max(...data.rows.map(r => Math.max(r.value, r.goal || 0))) * 1.1; // Add 10% headroom
+  const maxVal = Math.max(1, ...data.rows.map(r => Math.max(r.value, r.goal || 0))) * 1.1; // Add 10% headroom
 
   return (
     <Box sx={{ border: `1px solid ${COLORS.BORDER}`, borderRadius: radius.md, p: '16px', mb: '16px', backgroundColor: COLORS.SURFACE_CARD }}>
@@ -66,10 +66,10 @@ const ProductivityCard = ({ data }) => {
       </Box>
 
       <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY, mb: '4px' }}>
-        Production per hour <Typography component="span" sx={{ fontSize: '12px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{formatCurrency(data.perHour)}</Typography> (goal {formatCurrency(data.perHourGoal)})
+        Production per hour <Typography component="span" sx={{ fontSize: '12px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{formatCurrency(data.perHour)}</Typography> ({data.goalConfigured ? (data.perHourGoal === 0 ? 'No active goal' : `goal ${formatCurrency(data.perHourGoal)}`) : 'Goal not configured'})
       </Typography>
       <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY }}>
-        Production per visit <Typography component="span" sx={{ fontSize: '12px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{formatCurrency(data.perVisit)}</Typography> (goal {formatCurrency(data.perVisitGoal)})
+        Production per visit <Typography component="span" sx={{ fontSize: '12px', fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{formatCurrency(data.perVisit)}</Typography> ({data.visitGoalConfigured ? (data.perVisitGoal === 0 ? 'Goal disabled' : `goal ${formatCurrency(data.perVisitGoal)}`) : 'Goal not configured'})
       </Typography>
     </Box>
   );

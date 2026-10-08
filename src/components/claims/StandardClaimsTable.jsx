@@ -903,16 +903,19 @@ export const StandardClaimsTable = ({
                           {(activeTab === 1 || activeTab === 2) ? (
                             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0.5 }}>
                               <Typography
+                                onDoubleClick={claim.status === "denied" ? (event) => handleDescDoubleClick(claim.id, claim.clearingHouseMessage, event, "clearingHouseMessage") : undefined}
+                                title={claim.status === "denied" ? "Double-click to edit denial reason" : undefined}
                                 noWrap={!isExpanded && !expandAllMessages}
                                 sx={{
                                   fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
                                   color: "#1e293b",
                                   fontWeight: 500,
+                                  cursor: claim.status === "denied" ? "pointer" : "default",
                                   whiteSpace: isExpanded || expandAllMessages ? "normal" : "nowrap",
                                   wordBreak: "break-word",
                                 }}
                               >
-                                {claim.clearingHouseMessage}
+                                {claim.clearingHouseMessage || (claim.status === "denied" ? "Double-click to add denial reason" : "")}
                               </Typography>
                               <Button
                                 size="small"
@@ -937,13 +940,14 @@ export const StandardClaimsTable = ({
                             </Box>
                           ) : (
                             <Typography
-                              onDoubleClick={activeTab === 4 ? (event) => handleDescDoubleClick(claim.id, claim.clearingHouseMessage, event, "clearingHouseMessage") : undefined}
+                              onDoubleClick={activeTab === 4 || claim.status === "denied" ? (event) => handleDescDoubleClick(claim.id, claim.clearingHouseMessage, event, "clearingHouseMessage") : undefined}
+                              title={claim.status === "denied" ? "Double-click to edit denial reason" : undefined}
                               noWrap={!isExpanded && !expandAllMessages}
                               sx={{
                                 fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
                                 color: "#1e293b",
                                 fontWeight: 500,
-                                cursor: activeTab === 4 ? "pointer" : "default",
+                                cursor: activeTab === 4 || claim.status === "denied" ? "pointer" : "default",
                                 whiteSpace:
                                   isExpanded || expandAllMessages
                                     ? "normal"
@@ -951,7 +955,7 @@ export const StandardClaimsTable = ({
                                 wordBreak: "break-word",
                               }}
                             >
-                              {claim.clearingHouseMessage || "—"}
+                              {claim.clearingHouseMessage || (claim.status === "denied" ? "Double-click to add denial reason" : "—")}
                             </Typography>
                           )}
                         </TableCell>

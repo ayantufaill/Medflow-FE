@@ -9,6 +9,7 @@ import {
 } from '../../store/slices/dashboardGoalsSlice';
 
 import ProductionGoalsSection from '../../components/admin/finance-management/dashboard-goals/ProductionGoalsSection';
+import ReportingTargets from '../../components/admin/finance-management/dashboard-goals/ReportingTargets';
 import CollectionGoalsSection from '../../components/admin/finance-management/dashboard-goals/CollectionGoalsSection';
 import NewPatientsSection from '../../components/admin/finance-management/dashboard-goals/NewPatientsSection';
 import VisitsSection from '../../components/admin/finance-management/dashboard-goals/VisitsSection';
@@ -91,6 +92,8 @@ const DashboardGoals = () => {
           Dashboard Goals
         </Typography>
       </Box>
+
+      <ReportingTargets />
 
       <ProductionGoalsSection
         data={data}
