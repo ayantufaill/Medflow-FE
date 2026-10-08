@@ -10,6 +10,8 @@ const DETAIL_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 // Fetches a paginated, filtered list of appointments.
 // The condition blocks a second dispatch while one is already in-flight,
 // preventing duplicate API calls when multiple components mount simultaneously.
+const appointmentListKey = (args = {}) => JSON.stringify(args);
+
 export const fetchAppointments = createAsyncThunk(
   'appointment/fetchAppointments',
   async (args = {}, { rejectWithValue }) => {
@@ -17,10 +19,12 @@ export const fetchAppointments = createAsyncThunk(
       page = 1, limit = 10,
       providerId = '', patientId = '', status = '',
       startDate = '', endDate = '', appointmentTypeId = '', search = '',
+      // Optional: limit to one branch (the schedule passes the header's selected branch).
+      branchId = '',
     } = args;
     try {
       const result = await appointmentService.getAllAppointments(
-        page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search,
+        page, limit, providerId, patientId, status, startDate, endDate, appointmentTypeId, search, branchId,
       );
       // Return args alongside data so the fulfilled reducer can record lastFetched context.
       return { data: result, args };
@@ -29,9 +33,14 @@ export const fetchAppointments = createAsyncThunk(
     }
   },
   {
-    // Block concurrent list fetches; param deduplication is intentionally omitted
-    // because date range changes on the schedule page should always hit the network.
-    condition: (_args, { getState }) => !getState().appointment.listLoading,
+    // Skip only an identical request already in flight (StrictMode double
+    // mounts). A different one — another date range, or the schedule switching
+    // branch — always goes out; the reducers below keep just the latest reply,
+    // so a slower earlier response can't land on top of it.
+    condition: (args = {}, { getState }) => {
+      const { listLoading, listRequestKey } = getState().appointment;
+      return !(listLoading && listRequestKey === appointmentListKey(args));
+    },
   }
 );
 
@@ -251,6 +260,9 @@ const initialState = {
   // can read them without prop drilling.
   filters: { status: '', startDate: '', endDate: '', providerId: '', search: '' },
   listLoading: false,
+  // The in-flight fetchAppointments request; only its reply is applied.
+  listRequestId: null,
+  listRequestKey: null,
   listError: null,
   // Timestamp of the last successful list fetch — used by consumers to decide
   // whether to trigger a background refresh.
@@ -468,11 +480,14 @@ const appointmentSlice = createSlice({
     builder
 
       // ── fetchAppointments ─────────────────────────────────────────────────
-      .addCase(fetchAppointments.pending, (state) => {
+      .addCase(fetchAppointments.pending, (state, action) => {
         state.listLoading = true;
         state.listError = null;
+        state.listRequestId = action.meta.requestId;
+        state.listRequestKey = appointmentListKey(action.meta.arg);
       })
       .addCase(fetchAppointments.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.listRequestId) return; // superseded
         const raw = action.payload.data;
         // API returns either a bare array or { appointments: [], pagination: {} }
         state.list = Array.isArray(raw) ? raw : (raw?.appointments || []);
@@ -481,6 +496,7 @@ const appointmentSlice = createSlice({
         state.lastFetched = Date.now();
       })
       .addCase(fetchAppointments.rejected, (state, action) => {
+        if (action.meta.requestId !== state.listRequestId) return; // superseded
         state.listLoading = false;
         state.listError = action.payload;
       })
