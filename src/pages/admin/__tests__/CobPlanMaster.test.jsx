@@ -5,7 +5,7 @@ import {
   renderWithQuery,
   grantPermissions,
 } from '../../../components/cob/__tests__/cobTestUtils';
-import { cobPlanMasterService } from '../../../services/cob.service';
+import { cobPlanMasterService, cobPlanRequestService } from '../../../services/cob.service';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { COB_PERMISSIONS } from '../../../constants/cobConstants';
 
@@ -68,7 +68,7 @@ const PLANS = [
 const grant = (...permissions) =>
   grantPermissions(usePermissions, COB_PERMISSIONS.PLAN_MASTER_READ, ...permissions);
 
-const setup = () => {
+const setup = ({ requests = [] } = {}) => {
   cobPlanMasterService.getPlans.mockResolvedValue({
     plans: PLANS,
     page: 1,
@@ -81,6 +81,13 @@ const setup = () => {
     openClaims: 23,
     patientsOnPlan: 180,
   });
+  cobPlanRequestService.getPlanRequests.mockResolvedValue({
+    requests,
+    page: 1,
+    limit: 25,
+    total: requests.length,
+  });
+  cobPlanRequestService.resolvePlanRequest.mockResolvedValue({ request: { id: '1' } });
   cobPlanMasterService.updatePlanCobFields.mockResolvedValue({
     plan: PLANS[0],
     changed: { coordinatesBenefits: { from: true, to: false } },
@@ -293,5 +300,109 @@ describe('CobPlanMaster — the affected-patient count', () => {
 
     // The response carries `reEvaluated`; the dialog closes on success.
     await waitFor(() => expect(screen.queryByTestId('plan-master-save')).not.toBeInTheDocument());
+  });
+});
+
+describe('CobPlanMaster — the plan-request worklist', () => {
+  const REQUESTS = [
+    {
+      id: '11',
+      planName: 'Mystery PPO 2000',
+      groupNumber: 'G-777',
+      payerPhone: '800-555-0100',
+      carrierName: 'Cigna',
+      note: 'Card says "Cigna Open Access" on the back.',
+      status: 'OPEN',
+      createdAt: '2026-10-07T10:00:00.000Z',
+    },
+  ];
+
+  it('renders nothing when the queue is empty', async () => {
+    grant();
+    setup();
+
+    await screen.findByTestId('plan-master-table');
+    // An empty box every day teaches people to stop looking at this area.
+    expect(screen.queryByTestId('plan-requests-panel')).not.toBeInTheDocument();
+  });
+
+  it('lists what the front desk could read off the card', async () => {
+    grant();
+    setup({ requests: REQUESTS });
+
+    // The panel renders its heading before the query resolves, so wait for
+    // the row rather than the container.
+    await screen.findByTestId('plan-request-11');
+
+    const panel = screen.getByTestId('plan-requests-panel');
+    expect(panel).toHaveTextContent('Mystery PPO 2000');
+    expect(panel).toHaveTextContent('Group G-777');
+    expect(panel).toHaveTextContent('800-555-0100');
+    expect(panel).toHaveTextContent(/Cigna Open Access/);
+    expect(screen.getByTestId('plan-requests-count')).toHaveTextContent('1');
+  });
+
+  it('hides the close action without insurance.plan_master.edit', async () => {
+    grant();
+    setup({ requests: REQUESTS });
+
+    await screen.findByTestId('plan-requests-panel');
+    expect(screen.queryByTestId('plan-request-resolve-11')).not.toBeInTheDocument();
+  });
+
+  it('requires the created plan before a request can be closed as resolved', async () => {
+    const user = userEvent.setup();
+    grant(COB_PERMISSIONS.PLAN_MASTER_EDIT);
+    setup({ requests: REQUESTS });
+
+    await user.click(await screen.findByTestId('plan-request-resolve-11'));
+
+    // "Resolved" with nothing to point at is indistinguishable from "ignored"
+    // a month later, and the front desk's coverage still needs a plan.
+    expect(screen.getByTestId('plan-request-submit')).toBeDisabled();
+
+    await user.click(screen.getByLabelText('Which plan did you add?'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Cigna — Open Access Plus'));
+
+    expect(screen.getByTestId('plan-request-submit')).toBeEnabled();
+    await user.click(screen.getByTestId('plan-request-submit'));
+
+    await waitFor(() =>
+      expect(cobPlanRequestService.resolvePlanRequest).toHaveBeenCalledWith('11', {
+        status: 'RESOLVED',
+        planId: 'plan-1',
+        resolutionNote: undefined,
+      })
+    );
+  });
+
+  it('requires a note before a request can be declined', async () => {
+    const user = userEvent.setup();
+    grant(COB_PERMISSIONS.PLAN_MASTER_EDIT);
+    setup({ requests: REQUESTS });
+
+    await user.click(await screen.findByTestId('plan-request-resolve-11'));
+    await user.click(screen.getByLabelText('What happened?'));
+    await user.click(within(await screen.findByRole('listbox')).getByText("This isn't a plan we need"));
+
+    // Declining is the one path with nothing to show for it, so it has to say
+    // why — the person who asked is looking at a patient's card.
+    expect(screen.getByTestId('plan-request-submit')).toBeDisabled();
+
+    await user.type(
+      screen.getByTestId('plan-request-note').querySelector('textarea'),
+      'Discount card, not insurance.'
+    );
+
+    expect(screen.getByTestId('plan-request-submit')).toBeEnabled();
+    await user.click(screen.getByTestId('plan-request-submit'));
+
+    await waitFor(() =>
+      expect(cobPlanRequestService.resolvePlanRequest).toHaveBeenCalledWith('11', {
+        status: 'REJECTED',
+        planId: undefined,
+        resolutionNote: 'Discount card, not insurance.',
+      })
+    );
   });
 });

@@ -37,19 +37,64 @@ const BREAKDOWN = {
   lastPayerClaimId: null,
 };
 
-/** A secondary with a firm estimate, a tertiary whose method is unknown. */
-const ESTIMATES = {
-  SECONDARY: { low: 120, high: 120 },
-  TERTIARY: { low: 0, high: 240 },
+/**
+ * `byParty` as GET /cob/claims/:id/downstream-estimates returns it: the
+ * secondary's method is confirmed so it is a point figure, the tertiary's is
+ * UNKNOWN so the server returns a spread and says so.
+ */
+const DOWNSTREAM = {
+  claimId: 'claim-1',
+  dateOfService: '2026-09-01',
+  basis: {
+    posted: true,
+    billedAmount: 550,
+    allowedAmount: 550,
+    primaryPaid: 400,
+    primaryPatientResponsibility: 150,
+  },
+  byParty: {
+    SECONDARY: {
+      responsibleParty: 'SECONDARY',
+      position: 2,
+      coverageId: 'cov-b',
+      cobPaymentMethod: 'STANDARD',
+      isRange: false,
+      low: 120,
+      high: 120,
+      explanation: 'Standard coordination: pays its normal benefit less what the primary paid.',
+    },
+    TERTIARY: {
+      responsibleParty: 'TERTIARY',
+      position: 3,
+      coverageId: 'cov-c',
+      cobPaymentMethod: 'UNKNOWN',
+      isRange: true,
+      low: 0,
+      high: 240,
+      explanation:
+        "This plan's coordination method is not confirmed, so the secondary payment can only be given as a range.",
+    },
+  },
 };
 
-const setup = ({ readiness, breakdown = BREAKDOWN, estimatesByParty = ESTIMATES, invoiceId = 'inv-1' } = {}) => {
+const setup = ({
+  readiness,
+  breakdown = BREAKDOWN,
+  downstream = DOWNSTREAM,
+  estimatesByParty,
+  invoiceId = 'inv-1',
+} = {}) => {
   cobBillingService.getInvoiceResponsibility.mockResolvedValue(breakdown);
   cobBillingService.getSecondaryReadiness.mockResolvedValue(readiness || { posted: false, reason: null });
+  cobBillingService.getDownstreamEstimates.mockResolvedValue(downstream);
   cobBillingService.generateSecondaryClaim.mockResolvedValue({});
 
   return renderWithQuery(
-    <ClaimResponsibilityPanel claimId="claim-1" invoiceId={invoiceId} estimatesByParty={estimatesByParty} />
+    <ClaimResponsibilityPanel
+      claimId="claim-1"
+      invoiceId={invoiceId}
+      estimatesByParty={estimatesByParty}
+    />
   );
 };
 
@@ -132,11 +177,46 @@ describe('Balance by responsible party', () => {
   });
 
   it('shows no estimate notice when every payer has remitted', async () => {
-    setup({ estimatesByParty: {} });
+    setup({ downstream: { ...DOWNSTREAM, byParty: {} } });
 
     await screen.findByTestId('cob-balance-table');
     expect(screen.queryByTestId('cob-estimates-notice')).not.toBeInTheDocument();
     expect(screen.queryByTestId('cob-estimate-badge-SECONDARY')).not.toBeInTheDocument();
+  });
+
+  it('asks the server for the estimates in one call', async () => {
+    setup();
+
+    // One request keyed on the claim, not one per payer — and no client
+    // arithmetic, so a midpoint for an unconfirmed plan is impossible.
+    await screen.findByTestId('cob-balance-table');
+    await waitFor(() =>
+      expect(cobBillingService.getDownstreamEstimates).toHaveBeenCalledWith('claim-1')
+    );
+    expect(cobBillingService.getDownstreamEstimates).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the server's explanation for an unconfirmed method", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    const info = await screen.findByTestId('cob-estimate-range-info-TERTIARY');
+    await user.hover(info);
+
+    // The backend's sentence names the actual spread and the question worth
+    // asking the payer, which beats our generic wording.
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      /coordination method is not confirmed/i
+    );
+  });
+
+  it('shows no estimates at all before the primary has remitted', async () => {
+    // `byParty` empty is the normal early state, not an error.
+    setup({ downstream: { claimId: 'claim-1', dateOfService: null, basis: { posted: false }, byParty: {} } });
+
+    await screen.findByTestId('cob-balance-table');
+    expect(screen.queryByTestId('cob-estimate-badge-SECONDARY')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cob-estimates-notice')).not.toBeInTheDocument();
   });
 
   it('handles the empty, unlinked and error cases', async () => {

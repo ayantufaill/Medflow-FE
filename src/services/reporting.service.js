@@ -5,6 +5,10 @@ import apiClient from '../config/api';
  * Handles dynamic report execution and definition management
  */
 export const reportingService = {
+  async getFields() {
+    const response = await apiClient.get('/reports/fields');
+    return response.data.data;
+  },
   /**
    * Get all saved report definitions
    */

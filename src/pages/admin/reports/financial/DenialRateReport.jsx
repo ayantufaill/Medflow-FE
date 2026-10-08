@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert } from '@mui/material';
 import apiClient from '../../../../config/api';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { useBranch } from '../../../../hooks/redux/useBranch';
 
 const DenialRateReport = () => {
-  const { selectedBranchId } = useAuth();
+  const { currentBranchId: selectedBranchId } = useBranch();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,6 +12,7 @@ const DenialRateReport = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError('');
       try {
         const res = await apiClient.get('/reports/denial-rates', {
           params: { branchId: selectedBranchId }
@@ -19,7 +20,7 @@ const DenialRateReport = () => {
         if (res.data.success) {
           setData(res.data.data);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to fetch denial rates');
       } finally {
         setLoading(false);
@@ -36,6 +37,9 @@ const DenialRateReport = () => {
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, color: '#1e293b' }}>
         Denial Rate By Payer
       </Typography>
+      <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
+        Current denied claims divided by submitted claims. Each claim is counted once; this is not a history of every denial.
+      </Typography>
 
       <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
         <Table>
@@ -50,7 +54,7 @@ const DenialRateReport = () => {
           </TableHead>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.payerName} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+              <TableRow key={row.payerId ?? row.payerName} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                 <TableCell component="th" scope="row" sx={{ fontWeight: 500, color: '#1e293b' }}>
                   {row.payerName}
                 </TableCell>

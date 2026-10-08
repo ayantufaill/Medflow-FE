@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Box } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSystemSettings, selectSettingsMap } from '../../store/slices/clinicalManagementSlice';
+import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
+import { fetchAllRoomsForDropdown, selectRoomDropdownList } from '../../store/slices/roomSlice';
 import dayjs from 'dayjs';
 
 const parseMoney = (value) => {
@@ -23,26 +25,52 @@ const formatAddress = (patient) => {
   ].filter(Boolean).join(', ') || '-';
 };
 
-const getProviderLabel = (provider) => {
+const getProviderLabel = (provider, providersList = []) => {
   if (!provider || provider === '-') return '-';
   if (typeof provider === 'object') {
     const first = provider.userId?.firstName || provider.firstName || provider.FName || '';
     const last = provider.userId?.lastName || provider.lastName || provider.LName || '';
     return provider.name || `${first} ${last}`.trim() || provider.providerCode || '-';
   }
-  return String(provider);
+  const found = providersList.find(p => String(p._id || p.id) === String(provider) || String(p.providerCode) === String(provider));
+  if (found) {
+    const first = found.userId?.firstName || found.firstName || found.FName || '';
+    const last = found.userId?.lastName || found.lastName || found.LName || '';
+    return found.name || `${first} ${last}`.trim() || found.providerCode || '-';
+  }
+  return '-';
 };
 
-export const DynamicRouteSlipRenderer = ({ patient, appointment, procedures = [], planTitle = 'Treatment Plan', insurances = [] }) => {
+const getRoomLabel = (room, roomsList = []) => {
+  if (!room || room === '-') return '-';
+  if (typeof room === 'object') {
+    return room.name || room.roomName || room.operatoryName || room.label || '-';
+  }
+  const found = roomsList.find(r => String(r._id || r.id) === String(room));
+  if (found) {
+    return found.name || found.roomName || found.operatoryName || found.label || '-';
+  }
+  return '-';
+};
+
+export const DynamicRouteSlipRenderer = ({ patient, appointment, nextAppointment, procedures = [], planTitle = 'Treatment Plan', insurances = [] }) => {
   const dispatch = useDispatch();
   const settingsMap = useSelector(selectSettingsMap);
   const templateHtml = settingsMap?.['route_slip_template_config'];
+  const providersList = useSelector(selectProviderDropdownList) || [];
+  const roomsList = useSelector(selectRoomDropdownList) || [];
 
   useEffect(() => {
     if (!templateHtml) {
       dispatch(fetchSystemSettings());
     }
-  }, [dispatch, templateHtml]);
+    if (providersList.length === 0) {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+    if (roomsList.length === 0) {
+      dispatch(fetchAllRoomsForDropdown());
+    }
+  }, [dispatch, templateHtml, providersList.length, roomsList.length]);
 
   if (!templateHtml) {
     return <Box sx={{ p: 3, textAlign: 'center', color: '#64748b' }}>Loading Route Slip Template...</Box>;
@@ -75,7 +103,7 @@ export const DynamicRouteSlipRenderer = ({ patient, appointment, procedures = []
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${p.site || '-'}</td>
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7; font-weight: 700;">${p.code || '-'}</td>
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${p.description || '-'}</td>
-          <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${getProviderLabel(p.provider)}</td>
+          <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${getProviderLabel(p.provider, providersList)}</td>
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${money(p.negRate)}</td>
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${money(p.insEst)}</td>
           <td style="padding: 6px; font-size: 0.72rem; border-bottom: 1px solid #edf2f7;">${money(p.ptEst)}</td>
@@ -117,24 +145,40 @@ export const DynamicRouteSlipRenderer = ({ patient, appointment, procedures = []
   finalHtml = finalHtml.replace(/>Patient Email</g, `>${patient?.email || patient?.emailAddress || '-'}<`);
   finalHtml = finalHtml.replace(/>Patient Phone</g, `>${patient?.phonePrimary || patient?.mobileNumber || patient?.phone || '-'}<`);
 
-  finalHtml = finalHtml.replace(/>Preferred Dentist</g, `>${getProviderLabel(patient?.preferredDentist)}<`);
-  finalHtml = finalHtml.replace(/>Preferred Hygienist</g, `>${getProviderLabel(patient?.preferredHygienist)}<`);
-  finalHtml = finalHtml.replace(/>Referral Source</g, `>${patient?.referralSource || '-'}<`);
+  const pd = patient?.preferredProvider || patient?.preferredDentist || patient?.preferredDentistId;
+  const ph = patient?.preferredHygienist || patient?.preferredHygienistId;
+  const referringSource = patient?.referringSource?.name || patient?.referringSource || patient?.referralSource?.name || patient?.referralSource || patient?.howDidYouHearAboutUs || '-';
+
+  finalHtml = finalHtml.replace(/>Preferred Dentist</g, `>${getProviderLabel(pd, providersList)}<`);
+  finalHtml = finalHtml.replace(/>Preferred Hygienist</g, `>${getProviderLabel(ph, providersList)}<`);
+  finalHtml = finalHtml.replace(/>Referral Source</g, `>${referringSource}<`);
 
   finalHtml = finalHtml.replace(/>Total Fee</g, `>${money(totals.fee)}<`);
   finalHtml = finalHtml.replace(/>Total Ins Est</g, `>${money(totals.ins)}<`);
   finalHtml = finalHtml.replace(/>Total Pt Est</g, `>${money(totals.pt)}<`);
 
-  finalHtml = finalHtml.replace(/>Appt Time</g, `>${appointment?.time || appointmentDate.format('h:mm A')}<`);
+  finalHtml = finalHtml.replace(/>Appt Time</g, `>${appointment?.time || appointment?.startTime || appointmentDate.format('h:mm A')}<`);
   finalHtml = finalHtml.replace(/>Plan Title</g, `>${planTitle}<`);
-  finalHtml = finalHtml.replace(/>Appt Provider</g, `>${getProviderLabel(appointment?.provider)}<`);
-  finalHtml = finalHtml.replace(/>Appt Room</g, `>${appointment?.room?.name || appointment?.operatory || '-'}<`);
+
+  const apptProviderId = appointment?.provider || appointment?.providerId || appointment?.dentist || appointment?.dentistId;
+  const apptRoomId = appointment?.room || appointment?.roomId || appointment?.operatory || appointment?.operatoryId || appointment?.chair || appointment?.chairId;
+  finalHtml = finalHtml.replace(/>Appt Provider</g, `>${getProviderLabel(apptProviderId, providersList)}<`);
+  finalHtml = finalHtml.replace(/>Appt Room</g, `>${getRoomLabel(apptRoomId, roomsList)}<`);
+
   finalHtml = finalHtml.replace(/>Procedure Count</g, `>${procedures.length}<`);
   finalHtml = finalHtml.replace(/>Appt Status</g, `>${appointment?.status || '-'}<`);
 
   finalHtml = finalHtml.replace(/>Active Insurances List</g, `>${insHtml}<`);
   finalHtml = finalHtml.replace(/>Treatment Procedures Table</g, `>${tableHtml}<`);
-  finalHtml = finalHtml.replace(/>Next Appointment Info</g, `>No future appointments scheduled.<`);
+
+  let nextApptHtml = 'No future appointments scheduled.';
+  if (nextAppointment) {
+    const nextDate = nextAppointment.appointmentDate || nextAppointment.date;
+    const nextTime = nextAppointment.startTime || nextAppointment.time || '';
+    const providerLabel = getProviderLabel(nextAppointment.provider || nextAppointment.providerId, providersList);
+    nextApptHtml = `${dayjs(nextDate).format('dddd MMM DD, YYYY')}${nextTime ? ` at ${nextTime}` : ''}${providerLabel !== '-' ? ` with ${providerLabel}` : ''}`;
+  }
+  finalHtml = finalHtml.replace(/>Next Appointment Info</g, `>${nextApptHtml}<`);
 
   // Inject CSS to strip blue chip styles
   const styleInjection = `

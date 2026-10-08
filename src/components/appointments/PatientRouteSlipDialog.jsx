@@ -155,7 +155,38 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
             <DynamicRouteSlipRenderer 
               patient={patientDetails} 
               appointment={todayAppointment} 
-              procedures={todayAppointment?.procedures || []} 
+              nextAppointment={nextAppointment}
+              procedures={(() => {
+                const appt = todayAppointment;
+                if (!appt) return [];
+                const candidates = [
+                  appt.customFields?.procedures,
+                  appt.workspace?.procedures,
+                  appt.procedures,
+                  appt.procedureCodes
+                ];
+                let procs = candidates.find(arr => Array.isArray(arr) && arr.length > 0) || [];
+                return procs.map(p => {
+                  if (typeof p === 'string') return { code: p, description: p };
+                  const code = p.code || p.procedureCode || p.ProcCode || p.cdtCode || p.id || '-';
+                  const description = p.treatment || p.description || p.name || p.Descript || p.label || code;
+                  const rawCharge = Number(String(p.charge || p.fee || p.negRate || 0).replace(/[^0-9.-]+/g, ''));
+                  const insEst = Number(String(p.insPortion || p.insuranceAmount || p.insEst || 0).replace(/[^0-9.-]+/g, ''));
+                  const ptEst = Number(String(p.ptPart || p.ptPortion || p.patientAmount || p.ptEst || 0).replace(/[^0-9.-]+/g, ''));
+                  return {
+                    ...p,
+                    status: p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete' ? 'Completed' : 'Scheduled',
+                    scheduled: dayjs(appt.appointmentDate || appt.start || appt.date || new Date()).format('MM/DD/YYYY'),
+                    site: p.site || p.tooth || '-',
+                    code,
+                    description,
+                    provider: p.provider || appt.provider || appt.providerId,
+                    negRate: rawCharge,
+                    insEst: insEst,
+                    ptEst: ptEst
+                  };
+                });
+              })()} 
               insurances={insurances} 
               planTitle={todayAppointment?.reason || todayAppointment?.appointmentType?.name || 'Treatment Plan'}
             />

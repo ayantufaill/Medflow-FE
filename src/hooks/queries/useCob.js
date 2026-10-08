@@ -40,6 +40,9 @@ export const cobKeys = {
   planImpact: (planId) => [...cobKeys.plans(), 'cob-impact', planId],
 
   coverageDetail: (coverageId) => [...cobKeys.all, 'coverage-detail', coverageId],
+  coverageCards: (coverageId) => [...cobKeys.all, 'coverage-cards', coverageId],
+
+  planRequests: (filters) => [...cobKeys.all, 'plan-requests', filters],
 
   orders: () => [...cobKeys.all, 'order'],
   order: (patientId, dateOfService) => [...cobKeys.orders(), patientId, { dateOfService }],
@@ -51,6 +54,7 @@ export const cobKeys = {
   invoiceResponsibility: (invoiceId) => [...cobKeys.all, 'invoice-responsibility', invoiceId],
   secondaryReadiness: (claimId) => [...cobKeys.all, 'secondary-readiness', claimId],
   primaryPayment: (claimId) => [...cobKeys.all, 'primary-payment', claimId],
+  downstreamEstimates: (claimId) => [...cobKeys.all, 'downstream-estimates', claimId],
 };
 
 /* Matches the cache policy the other query hooks in this folder use. */
@@ -151,9 +155,43 @@ export const useSetCarrierPayerType = () => {
   });
 };
 
-/** Raises a task for a billing admin — see `cobPlanRequestService`. */
-export const useRequestPlan = () =>
-  useMutation({ mutationFn: (payload) => cobPlanRequestService.requestPlan(payload) });
+/**
+ * Raise a plan request. Notifies everyone holding
+ * `insurance.plan_master.edit` — see `cobPlanRequestService`.
+ */
+export const useRequestPlan = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload) => cobPlanRequestService.createPlanRequest(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...cobKeys.all, 'plan-requests'] });
+    },
+  });
+};
+
+/** The admin worklist of plans waiting to be added. */
+export const usePlanRequests = (filters = { status: 'OPEN' }, options = {}) =>
+  useQuery({
+    queryKey: cobKeys.planRequests(filters),
+    queryFn: () => cobPlanRequestService.getPlanRequests(filters),
+    ...BASE_QUERY_OPTIONS,
+    ...options,
+  });
+
+export const useResolvePlanRequest = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ requestId, ...payload }) =>
+      cobPlanRequestService.resolvePlanRequest(requestId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...cobKeys.all, 'plan-requests'] });
+      // A resolved request means a new plan exists.
+      queryClient.invalidateQueries({ queryKey: cobKeys.plans() });
+    },
+  });
+};
 
 /* ── Coverage detail ────────────────────────────────────────────────────── */
 
@@ -185,6 +223,47 @@ export const useSaveCoverageDetail = (patientId) => {
       if (patientId) {
         queryClient.invalidateQueries({ queryKey: cobKeys.payerReports(patientId) });
       }
+    },
+  });
+};
+
+/* ── Insurance card images ──────────────────────────────────────────────── */
+
+export const useCoverageCards = (coverageId, options = {}) =>
+  useQuery({
+    queryKey: cobKeys.coverageCards(coverageId),
+    queryFn: () => cobCoverageService.getCoverageCards(coverageId),
+    enabled: !!coverageId,
+    ...BASE_QUERY_OPTIONS,
+    ...options,
+  });
+
+/**
+ * Upload one side of the card.
+ *
+ * Takes one side per call because the endpoint does — a combined upload keyed
+ * on the coverage would let a re-shot front destroy the back.
+ */
+export const useUploadCoverageCard = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ coverageId, side, file }) =>
+      cobCoverageService.uploadCoverageCard(coverageId, side, file),
+    onSuccess: (_data, { coverageId }) => {
+      queryClient.invalidateQueries({ queryKey: cobKeys.coverageCards(coverageId) });
+    },
+  });
+};
+
+export const useDeleteCoverageCard = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ coverageId, side }) =>
+      cobCoverageService.deleteCoverageCard(coverageId, side),
+    onSuccess: (_data, { coverageId }) => {
+      queryClient.invalidateQueries({ queryKey: cobKeys.coverageCards(coverageId) });
     },
   });
 };
@@ -329,6 +408,23 @@ export const useSecondaryClaimReadiness = (claimId, options = {}) =>
   useQuery({
     queryKey: cobKeys.secondaryReadiness(claimId),
     queryFn: () => cobBillingService.getSecondaryReadiness(claimId),
+    enabled: !!claimId,
+    ...BASE_QUERY_OPTIONS,
+    ...options,
+  });
+
+/**
+ * Every downstream payer's expected payment on one claim.
+ *
+ * Feeds the balance table's `estimatesByParty` directly, so the table does no
+ * arithmetic and cannot accidentally render a midpoint for an unconfirmed
+ * plan. `byParty` comes back empty before the primary has remitted, which is
+ * the normal early state rather than an error.
+ */
+export const useDownstreamEstimates = (claimId, options = {}) =>
+  useQuery({
+    queryKey: cobKeys.downstreamEstimates(claimId),
+    queryFn: () => cobBillingService.getDownstreamEstimates(claimId),
     enabled: !!claimId,
     ...BASE_QUERY_OPTIONS,
     ...options,

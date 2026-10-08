@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Alert, Typography } from '@mui/material';
 import { ReceiptLongOutlined as ReceiptIcon } from '@mui/icons-material';
 import SectionCard from '../../shared/SectionCard';
@@ -12,6 +13,7 @@ import {
   useInvoiceResponsibility,
   useSecondaryClaimReadiness,
   useGenerateSecondaryClaim,
+  useDownstreamEstimates,
 } from '../../../hooks/queries/useCob';
 
 /**
@@ -26,12 +28,37 @@ import {
  * endpoints and must fail independently — a balance endpoint being down should
  * never hide the coverage order.
  */
-const ClaimResponsibilityPanel = ({ claimId, invoiceId, estimatesByParty }) => {
+const ClaimResponsibilityPanel = ({ claimId, invoiceId, estimatesByParty: estimatesOverride }) => {
   const { showSnackbar } = useSnackbar();
 
   const breakdown = useInvoiceResponsibility(invoiceId);
   const readiness = useSecondaryClaimReadiness(claimId);
+  const estimates = useDownstreamEstimates(claimId);
   const generateSecondary = useGenerateSecondaryClaim();
+
+  /**
+   * Estimates for the payers that haven't remitted yet.
+   *
+   * Comes from the server in one call: `byParty` is keyed by responsible party
+   * and already carries low/high, so the table does no arithmetic and cannot
+   * accidentally render a midpoint for a plan whose method is unconfirmed.
+   * `estimatesOverride` exists only so a caller (and the tests) can supply
+   * them directly.
+   */
+  const estimatesByParty = useMemo(() => {
+    if (estimatesOverride) return estimatesOverride;
+
+    return Object.entries(estimates.data?.byParty || {}).reduce((acc, [party, estimate]) => {
+      acc[party] = {
+        low: estimate.low,
+        high: estimate.high,
+        isRange: estimate.isRange,
+        cobPaymentMethod: estimate.cobPaymentMethod,
+        explanation: estimate.explanation,
+      };
+      return acc;
+    }, {});
+  }, [estimatesOverride, estimates.data]);
 
   const handleCreate = async () => {
     try {

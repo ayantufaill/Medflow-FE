@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
+  Alert,
   Typography,
   Tabs,
   Tab,
@@ -39,60 +40,16 @@ import { audienceService } from '../../services/audience.service';
 import { ReportFilterBar, ReportSearchInput } from '../../components/reports/ui';
 import { COLORS } from '../../constants/colors';
 
-const COLUMNS = [
-  'ID', 'Middle Name', 'dob', 'email', 'householdHeadUUID', 'isHeadOfHousehold', 'newPatientDate', 'sex',
-  'Home Phone', 'Mobile Phone', 'Preferred DDS', 'Preferred HYG', 'Preferred DDS First Name',
-  'Preferred DDS Last Name', 'Preferred HYG First Name', 'Preferred HYG Last Name', 'street Address',
-  'additional Address', 'city', 'state', 'zip code', 'country', 'recallDate', 'patient.PoliciesPayers',
-  'payerName', 'Ins Remain', 'Has Mychart Account', 'Total Outstanding Balance', 'Patient Account Credit',
-  'Flags', 'Created from mychart', 'Last Name', 'First Name', 'nextTreatmentAppt', 'nextRecareAppt',
-  'IsSubscriber(NonPatient)', 'Inactive', 'lastAppt'
-];
-
-const METADATA_FIELDS = ['Metadata', 'dob', 'email', 'inactive', 'isHeadOfHousehold', 'isSubscriber(NonPatient)', 'newPatientDate', 'sex', 'Preferred DDS', 'Preferred HYG', 'zip code', 'recallDate', 'nextTreatmentAppt', 'nextRecareAppt', 'lastAppt', 'patientPoliciesPayers', 'payerName', 'Ins Remain', 'Has Mychart Account', 'Total Outstanding Balance'];
-
-// 1:1 Static Pre-seed Data from Screenshot
-const DEFAULT_REPORTS = {
-  Patient: [
-    { _id: 'def-rep-1', name: 'Screening for inactive patients', kind: 'Patient' },
-    { _id: 'def-rep-2', name: 'Total # of patients', kind: 'Patient' },
-    { _id: 'def-rep-3', name: 'Credit accounts report', kind: 'Patient' },
-    { _id: 'def-rep-4', name: 'PPO percentage', kind: 'Patient' },
-    { _id: 'def-rep-5', name: 'Accounts Receivable by patient', kind: 'Patient' },
-    { _id: 'def-rep-6', name: 'x', kind: 'Patient' },
-  ],
-  Procedures: [
-    { _id: 'def-rep-7', name: "Whitening pt's", kind: 'Procedures' },
-    { _id: 'def-rep-8', name: 'Patients with no appointment', kind: 'Procedures' },
-    { _id: 'def-rep-9', name: 'DNOA collection', kind: 'Procedures' },
-  ]
-};
-
-const DEFAULT_AUDIENCES = {
-  Patient: [
-    { _id: 'def-aud-1', name: 'Email Campaign #1', kind: 'Patient' },
-    { _id: 'def-aud-2', name: 'Spark Day', kind: 'Patient' },
-    { _id: 'def-aud-3', name: 'Family', kind: 'Patient' },
-    { _id: 'def-aud-4', name: 'Use it Lose it.', kind: 'Patient' },
-    { _id: 'def-aud-5', name: 'Deactivation list 12/2023', kind: 'Patient' },
-    { _id: 'def-aud-6', name: 'Active patient 09/24', kind: 'Patient' },
-    { _id: 'def-aud-7', name: 'Newsletter active patients 4/22', kind: 'Patient' },
-    { _id: 'def-aud-8', name: 'Valentines 2025', kind: 'Patient' },
-    { _id: 'def-aud-9', name: 'TDS Membership 2025 update', kind: 'Patient' },
-    { _id: 'def-aud-10', name: 'test', kind: 'Patient' },
-  ],
-  Procedures: []
-};
-
 const AdvancedReporting = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [fieldCatalog, setFieldCatalog] = useState([]);
+  const [reportError, setReportError] = useState('');
   const [view, setView] = useState('list'); // 'list' or 'detail'
   const [selectedItem, setSelectedItem] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [reportName, setReportName] = useState('');
   const [reportKind, setReportKind] = useState('Kind');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [selectedMetadata, setSelectedMetadata] = useState('Metadata');
   const [selectedOperation, setSelectedOperation] = useState('Operations');
   const [filterValue, setFilterValue] = useState('');
@@ -109,6 +66,14 @@ const AdvancedReporting = () => {
   const [resultsData, setResultsData] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const resultsRef = useRef(null);
+  const currentKind = selectedItem?.kind || (reportKind === 'Procedures' ? 'Procedures' : 'Patient');
+  const availableFields = fieldCatalog.filter(f => f.kinds.includes(currentKind));
+  const COLUMNS = availableFields.map(f => f.field);
+  const METADATA_FIELDS = COLUMNS;
+  const fieldOperators = availableFields.find(f => f.field === selectedMetadata)?.operators || [];
+  useEffect(() => {
+    reportingService.getFields().then(setFieldCatalog).catch(() => setReportError('Unable to load supported report fields.'));
+  }, []);
 
   useEffect(() => {
     fetchSavedItems();
@@ -169,7 +134,8 @@ const AdvancedReporting = () => {
   };
 
   const handleItemClick = (item, kind) => {
-    setSelectedItem(item);
+    setSelectedItem({ ...item, kind: item.kind || kind });
+    setReportError('');
     if (item.columns && item.columns.length > 0) {
       setSelectedColumns(item.columns);
     }
@@ -230,9 +196,7 @@ const AdvancedReporting = () => {
       const payload = {
         name: saveName.trim(),
         kind: selectedItem?.kind || 'Patient',
-        filters: [
-          { field: 'Inactive', operator: 'equals', value: 0 }
-        ],
+        filters: appliedFilters,
         columns: selectedColumns,
       };
 
@@ -247,7 +211,7 @@ const AdvancedReporting = () => {
       await fetchSavedItems();
     } catch (error) {
       console.error('Failed to save new template:', error);
-      alert('Failed to save template. Check console for details.');
+      setReportError(error.response?.data?.error?.message || error.response?.data?.message || 'Unable to save this report.');
     } finally {
       setLoading(false);
     }
@@ -260,7 +224,7 @@ const AdvancedReporting = () => {
     const rows = resultsData.map(row => 
       selectedColumns.map(col => {
         let val = row[col] !== undefined && row[col] !== null ? String(row[col]) : '';
-        if (val.includes(',') || val.includes('"')) {
+        if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
           val = `"${val.replace(/"/g, '""')}"`;
         }
         return val;
@@ -276,15 +240,15 @@ const AdvancedReporting = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
 
   const handleRunReport = async () => {
     try {
       setLoading(true);
-      const filters = [
-        { field: 'Inactive', operator: 'equals', value: 0 }
-      ];
+      setReportError('');
+      const filters = appliedFilters;
 
       const result = await reportingService.runReport({
         kind: selectedItem?.kind || 'Patient',
@@ -294,7 +258,6 @@ const AdvancedReporting = () => {
         limit: 50
       });
 
-      console.log("Raw result from reportingService:", result);
 
       let rows = [];
       let total = 0;
@@ -315,26 +278,17 @@ const AdvancedReporting = () => {
         total = result.data.data.total !== undefined ? result.data.data.total : rows.length;
       }
 
-      console.log("Setting resultsData to:", rows);
-      console.log("Setting totalResults to:", total);
+
 
       setResultsData(rows);
       setTotalResults(total);
       setShowResults(true);
     } catch (error) {
       console.error('Failed to run report:', error);
-      // Fallback if API fails
-      const mockRow = {};
-      selectedColumns.forEach(col => {
-        mockRow[col] = `Sample ${col}`;
-      });
-      setResultsData([
-        { ...mockRow, 'ID': '1' },
-        { ...mockRow, 'ID': '2' },
-        { ...mockRow, 'ID': '3' }
-      ]);
-      setTotalResults(3);
-      setShowResults(true);
+      setResultsData([]);
+      setTotalResults(0);
+      setShowResults(false);
+      setReportError(error.response?.data?.error?.message || error.response?.data?.message || 'Unable to run this report.');
     } finally {
       setLoading(false);
     }
@@ -354,6 +308,7 @@ const AdvancedReporting = () => {
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Box sx={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 3, flex: 1, overflowY: 'auto' }}>
+            {reportError && <Alert severity="error" sx={{ mb: 2 }}>{reportError}</Alert>}
             {/* Page Title */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1a1a2e', fontFamily: 'Inter' }}>
@@ -568,7 +523,7 @@ const AdvancedReporting = () => {
                           name: reportName,
                           kind: reportKind,
                           filters: [],
-                          columns: selectedColumns
+                          columns: reportKind === 'Procedures' ? ['ID', 'Code', 'Fee'] : ['ID', 'First Name', 'Last Name']
                         });
                       } else {
                         await audienceService.saveAudience({
@@ -584,7 +539,7 @@ const AdvancedReporting = () => {
                       setReportName('');
                       setReportKind('Kind');
                     } catch (error) {
-                      console.error('Failed to save item:', error);
+                      setReportError(error.response?.data?.error?.message || error.response?.data?.message || 'Unable to create report.');
                     }
                   }}
                   variant="contained"
@@ -661,7 +616,7 @@ const AdvancedReporting = () => {
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 150 }}>
-                      <Select value={selectedMetadata} onChange={(e) => setSelectedMetadata(e.target.value)} MenuProps={{ sx: { zIndex: 100000 } }} variant="standard" disableUnderline sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderBottom: '1px solid #cbd5e1', borderRadius: 0, '&:hover': { borderBottom: '1px solid #94a3b8' } }}>
+                      <Select value={selectedMetadata} onChange={(e) => { setSelectedMetadata(e.target.value); setSelectedOperation('Operations'); }} MenuProps={{ sx: { zIndex: 100000 } }} variant="standard" disableUnderline sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderBottom: '1px solid #cbd5e1', borderRadius: 0, '&:hover': { borderBottom: '1px solid #94a3b8' } }}>
                         <MenuItem value="Metadata">Metadata</MenuItem>
                         {METADATA_FIELDS.filter(f => f !== 'Metadata').map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                       </Select>
@@ -669,16 +624,7 @@ const AdvancedReporting = () => {
                     <FormControl size="small" sx={{ minWidth: 120 }}>
                       <Select value={selectedOperation} onChange={(e) => setSelectedOperation(e.target.value)} MenuProps={{ sx: { zIndex: 100000 } }} variant="outlined" sx={{ height: 32, fontSize: '0.85rem', color: '#0f172a', borderRadius: '4px', backgroundColor: '#fff', '& fieldset': { borderColor: '#e2e8f0' }, '&:hover fieldset': { borderColor: '#cbd5e1' }, '&.Mui-focused fieldset': { borderColor: '#2362EF' } }}>
                         <MenuItem value="Operations">Operations</MenuItem>
-                        <MenuItem value="Equal">Equal</MenuItem>
-                        <MenuItem value="Empty">Empty</MenuItem>
-                        <MenuItem value="Not Empty">Not Empty</MenuItem>
-                        <MenuItem value="In set">In set</MenuItem>
-                        <MenuItem value="Greater than">Greater than</MenuItem>
-                        <MenuItem value="Less than">Less than</MenuItem>
-                        <MenuItem value="Greater than or equal">Greater than or equal</MenuItem>
-                        <MenuItem value="Less than or equal">Less than or equal</MenuItem>
-                        <MenuItem value="Not Equal">Not Equal</MenuItem>
-                        <MenuItem value="In Range">In Range</MenuItem>
+                        {fieldOperators.map(op => <MenuItem key={op} value={op}>{op}</MenuItem>)}
                       </Select>
                     </FormControl>
                     
@@ -738,9 +684,9 @@ const AdvancedReporting = () => {
                     {appliedFilters.map((filter, index) => (
                       <Box key={index} sx={{ border: '1px solid #e2e8f0', bgcolor: '#ffffff', p: 0, borderRadius: '2px', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: '#000000', fontWeight: 500, px: 1.5, py: 0.5, borderRight: '1px solid #e2e8f0' }}>{filter.field}</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', color: '#64748b', px: 1.5, py: 0.5, borderRight: filter.value ? '1px solid #e2e8f0' : 'none' }}>{filter.operator}</Typography>
-                        {filter.value && (
-                          <Typography sx={{ fontSize: '0.8rem', color: '#000000', fontWeight: 500, px: 1.5, py: 0.5 }}>{filter.value}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: '#64748b', px: 1.5, py: 0.5, borderRight: filter.value != null && filter.value !== '' ? '1px solid #e2e8f0' : 'none' }}>{filter.operator}</Typography>
+                        {filter.value != null && filter.value !== '' && (
+                          <Typography sx={{ fontSize: '0.8rem', color: '#000000', fontWeight: 500, px: 1.5, py: 0.5 }}>{String(filter.value)}</Typography>
                         )}
                         <Typography onClick={() => handleRemoveFilter(index)} sx={{ color: '#ef4444', fontSize: '0.75rem', px: 1, fontWeight: 500, cursor: 'pointer', '&:hover': { color: '#dc2626' } }}>
                           x
@@ -753,9 +699,12 @@ const AdvancedReporting = () => {
                 {/* Actions & Count */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: '#000000' }}>
-                    Filtered Items: {totalResults}
+                    Filtered Items: {totalResults} · Displaying {resultsData.length} (up to 50 rows)
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button onClick={() => { setSaveName(selectedItem?.name || ''); setSaveDialogOpen(true); }} disabled={loading} variant="outlined">
+                      Save as new report
+                    </Button>
                     <Button
                       onClick={handleRunReport}
                       disabled={loading}
@@ -770,11 +719,12 @@ const AdvancedReporting = () => {
                       variant="outlined"
                       sx={{ textTransform: 'none', borderColor: '#2362EF', color: '#2362EF', borderRadius: '8px', px: 3, fontWeight: 600, fontSize: '0.85rem', '&:hover': { bgcolor: '#eff6ff', borderColor: '#1D53CC' } }}
                     >
-                      Export As CSV
+                      Export displayed rows as CSV
                     </Button>
                   </Box>
                 </Box>
 
+                {reportError && <Alert severity="error" sx={{ mb: 2 }}>{reportError}</Alert>}
                 {/* Results Section */}
                 <Box ref={resultsRef}>
                   {showResults && (
@@ -801,7 +751,7 @@ const AdvancedReporting = () => {
                                 <TableRow key={i} sx={{ backgroundColor: i % 2 === 0 ? '#fff' : '#fcfcfc' }}>
                                   {selectedColumns.map(col => (
                                     <TableCell key={col} sx={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-                                      {row[col] !== undefined && row[col] !== null ? String(row[col]) : '-'}
+                                      {row[col] !== undefined && row[col] !== null ? String(row[col]) : '\u2014'}
                                     </TableCell>
                                   ))}
                                 </TableRow>
@@ -818,6 +768,17 @@ const AdvancedReporting = () => {
                   )}
                 </Box>
               </DialogContent>
+            </Dialog>
+            <Dialog open={saveDialogOpen} onClose={() => !loading && setSaveDialogOpen(false)} fullWidth maxWidth="sm" sx={{ zIndex: 100001 }}>
+              <DialogTitle>Save selected columns and filters</DialogTitle>
+              <DialogContent>
+                {reportError && <Alert severity="error" sx={{ mb: 2 }}>{reportError}</Alert>}
+                <TextField autoFocus fullWidth margin="dense" label="Report name" value={saveName} onChange={e => setSaveName(e.target.value)} />
+              </DialogContent>
+              <DialogActions>
+                <Button disabled={loading} onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+                <Button disabled={loading || !saveName.trim()} onClick={handleSaveNew} variant="contained">Save</Button>
+              </DialogActions>
             </Dialog>
           </Box>
         </Box>

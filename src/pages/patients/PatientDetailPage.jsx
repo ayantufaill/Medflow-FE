@@ -145,6 +145,9 @@ const PatientDetailPage = () => {
         dataToSave.address = { ...dataToSave.address };
         delete dataToSave.address.postalCode;
       }
+      if (dataToSave.address && !dataToSave.address.country) {
+        dataToSave.address = { ...dataToSave.address, country: 'United States' };
+      }
       if (dataToSave.workAddress && !dataToSave.workAddress.postalCode) {
         dataToSave.workAddress = { ...dataToSave.workAddress };
         delete dataToSave.workAddress.postalCode;

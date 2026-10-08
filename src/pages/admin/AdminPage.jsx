@@ -56,6 +56,8 @@ import FeeGuideDetail from './FeeGuideDetail';
 import BillingConfiguration from './BillingConfiguration';
 import PaymentTypes from './PaymentTypes';
 import ARAutomation from './ARAutomation';
+import LateFeePolicyAdmin from './LateFeePolicyAdmin';
+import LateFeeWaiversAdmin from './LateFeeWaiversAdmin';
 import CoverageBookShortcuts from './CoverageBookShortcuts';
 import DashboardGoals from './DashboardGoals';
 import PaymentPresentation from './PaymentPresentation';
@@ -117,6 +119,8 @@ const FINANCIAL_MANAGEMENT_SUB_TABS = [
   { label: 'Payment Presentation', path: '/admin/finance-management/payment-presentation' },
   { label: 'Coverage Book Shortcut', path: '/admin/finance-management/coverage-book-shortcut' },
   { label: 'AR Automation', path: '/admin/finance-management/ar-automation' },
+  { label: 'Late Fee Policy', path: '/admin/finance-management/late-fee-policy' },
+  { label: 'Late Fee Waivers', path: '/admin/finance-management/late-fee-waivers' },
 ];
 
 const CLINICAL_MANAGEMENT_SUB_TABS = [
@@ -515,6 +519,10 @@ const AdminPage = () => {
               <PaymentPresentation />
             ) : location.pathname === '/admin/finance-management/ar-automation' ? (
               <ARAutomation />
+            ) : location.pathname === '/admin/finance-management/late-fee-policy' ? (
+              <LateFeePolicyAdmin />
+            ) : location.pathname === '/admin/finance-management/late-fee-waivers' ? (
+              <LateFeeWaiversAdmin />
             ) : location.pathname === '/admin/finance-management/coverage-book-shortcut' ? (
               <CoverageBookShortcuts />
             ) : (

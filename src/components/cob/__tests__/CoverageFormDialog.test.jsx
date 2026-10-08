@@ -1,7 +1,14 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CoverageFormDialog from '../CoverageFormDialog';
-import { carrierFixtures, planFixtures } from './cobTestUtils';
+import { carrierFixtures, planFixtures, renderWithQuery } from './cobTestUtils';
+import { cobCoverageService } from '../../../services/cob.service';
+
+jest.mock('../../../config/api', () => ({
+  __esModule: true,
+  default: { get: jest.fn(), post: jest.fn(), put: jest.fn(), patch: jest.fn(), delete: jest.fn() },
+}));
+jest.mock('../../../services/cob.service');
 
 /**
  * The coverage intake form: conditional questions, and the one required field
@@ -32,8 +39,19 @@ jest.mock('@mui/x-date-pickers/LocalizationProvider', () => ({
   LocalizationProvider: ({ children }) => <>{children}</>,
 }));
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  cobCoverageService.getCoverageCards.mockResolvedValue({
+    coverageId: 'cov-1',
+    cards: [],
+    missingSides: ['FRONT', 'BACK'],
+  });
+  cobCoverageService.uploadCoverageCard.mockResolvedValue({ card: { side: 'FRONT' } });
+  cobCoverageService.deleteCoverageCard.mockResolvedValue({ deleted: true });
+});
+
 const setup = (props = {}) =>
-  render(
+  renderWithQuery(
     <CoverageFormDialog
       open
       onClose={jest.fn()}
@@ -359,5 +377,86 @@ describe('CoverageFormDialog — plan not listed', () => {
       expect.objectContaining({ planName: 'Mystery PPO', carrierId: 'carrier-cigna' })
     );
     expect(await screen.findByTestId('cob-plan-request-pending')).toHaveTextContent('Mystery PPO');
+  });
+});
+
+describe('CoverageFormDialog — insurance card photos', () => {
+  it('cannot take photos until the coverage exists', () => {
+    // There is nothing to attach an image to before the coverage row exists,
+    // so the slots are disabled and say why rather than silently dropping the
+    // file on save.
+    setup();
+
+    expect(screen.getByTestId('cob-card-photo-needs-save')).toHaveTextContent(
+      /save the insurance first/i
+    );
+    expect(cobCoverageService.getCoverageCards).not.toHaveBeenCalled();
+  });
+
+  it('uploads a side as soon as it is picked, not on save', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    setup({ initialValues: { coverageId: 'cov-1' }, onSubmit });
+
+    await waitFor(() => expect(cobCoverageService.getCoverageCards).toHaveBeenCalledWith('cov-1'));
+
+    const file = new File(['front'], 'card-front.jpg', { type: 'image/jpeg' });
+    await user.upload(screen.getByTestId('cob-card-photo-FRONT'), file);
+
+    await waitFor(() =>
+      expect(cobCoverageService.uploadCoverageCard).toHaveBeenCalledWith('cov-1', 'FRONT', file)
+    );
+    // The upload is its own endpoint, so it must not be bundled into the save.
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('uploads each side separately so a re-shoot cannot drop the other', async () => {
+    const user = userEvent.setup();
+    setup({ initialValues: { coverageId: 'cov-1' } });
+
+    await waitFor(() => expect(cobCoverageService.getCoverageCards).toHaveBeenCalled());
+
+    const front = new File(['f'], 'front.jpg', { type: 'image/jpeg' });
+    const back = new File(['b'], 'back.jpg', { type: 'image/jpeg' });
+
+    await user.upload(screen.getByTestId('cob-card-photo-FRONT'), front);
+    await user.upload(screen.getByTestId('cob-card-photo-BACK'), back);
+
+    expect(cobCoverageService.uploadCoverageCard).toHaveBeenCalledTimes(2);
+    expect(cobCoverageService.uploadCoverageCard).toHaveBeenCalledWith('cov-1', 'FRONT', front);
+    expect(cobCoverageService.uploadCoverageCard).toHaveBeenCalledWith('cov-1', 'BACK', back);
+  });
+
+  it('links to a stored card rather than rendering it inline', async () => {
+    cobCoverageService.getCoverageCards.mockResolvedValue({
+      coverageId: 'cov-1',
+      cards: [{ side: 'FRONT', documentId: '7', url: 'https://files/card-front.jpg' }],
+      missingSides: ['BACK'],
+    });
+
+    setup({ initialValues: { coverageId: 'cov-1' } });
+
+    // A card carries the member ID and the subscriber's name, so a thumbnail
+    // on a shared front-desk screen is a card anyone walking past can read.
+    const link = await screen.findByTestId('cob-card-photo-FRONT-link');
+    expect(link).toHaveAttribute('href', 'https://files/card-front.jpg');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('removes a stored side', async () => {
+    const user = userEvent.setup();
+    cobCoverageService.getCoverageCards.mockResolvedValue({
+      coverageId: 'cov-1',
+      cards: [{ side: 'BACK', documentId: '8', url: 'https://files/card-back.jpg' }],
+      missingSides: ['FRONT'],
+    });
+
+    setup({ initialValues: { coverageId: 'cov-1' } });
+
+    await user.click(await screen.findByTestId('cob-card-photo-BACK-remove'));
+
+    await waitFor(() =>
+      expect(cobCoverageService.deleteCoverageCard).toHaveBeenCalledWith('cov-1', 'BACK')
+    );
   });
 });

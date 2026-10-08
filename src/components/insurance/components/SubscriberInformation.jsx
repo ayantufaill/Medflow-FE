@@ -234,6 +234,8 @@ const SubscriberInformation = ({
           placeholder="•••-••-••••"
           value={formData.subscriber?.ssn || ''}
           onChange={(e) => handleSubscriberChange('ssn', e.target.value)}
+          error={!!errors.ssn}
+          helperText={errors.ssn}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
