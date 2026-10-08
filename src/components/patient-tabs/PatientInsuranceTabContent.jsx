@@ -43,6 +43,7 @@ import InsuranceTabs from '../insurance/InsuranceTabs';
 import ImportedCoverageBanner from '../insurance/ImportedCoverageBanner';
 import FamilyCoverageBanner from '../insurance/FamilyCoverageBanner';
 import FamilyCoverageMatrix from '../insurance/components/FamilyCoverageMatrix';
+import CoverageOrderPanel from '../cob/CoverageOrderPanel';
 import { getCoverageAmounts, getCoverageUsage } from '../insurance/utils/insuranceHelpers';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
@@ -476,6 +477,47 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   // shows the same used/max pair wherever it appears.
   const getUsageForCoverage = (ins, index) => getCoverageUsage(ins, index, activeUsage);
 
+  // Carrier list in the shape the COB panel's dialogs expect. Reuses the
+  // companies already loaded for this tab rather than fetching the same list
+  // again.
+  const carrierOptions = useMemo(
+    () =>
+      (companies || []).map((company) => ({
+        id: company._id || company.id,
+        name: company.name || company.companyName,
+        // Drives the Medicare questions on the coverage form; absent until the
+        // carrier's payer type has been recorded, in which case the form falls
+        // back to the coverage basis.
+        payerType: company.payerType,
+      })),
+    [companies]
+  );
+
+  /** Same, for the plan picker. */
+  const planOptions = useMemo(
+    () =>
+      (planCatalog || []).map((plan) => ({
+        id: plan._id || plan.id,
+        carrierId:
+          plan.insuranceCompanyId?._id || plan.insuranceCompanyId?.id || plan.insuranceCompanyId,
+        name: plan.groupName || plan.name || plan.templateName,
+        benefitCategory: plan.benefitCategory,
+      })),
+    [planCatalog]
+  );
+
+  // A NEEDS_INFO "fix this" click lands here. The existing coverage editor is
+  // a full page, so we route to it and carry the field to focus in the query
+  // string; `mode: 'create'` comes from the panel's empty state instead.
+  const handleCoverageOrderEdit = (target = {}) => {
+    if (target.mode === 'create' || (!target.coverageId && !target.field)) {
+      handleInsuranceAdd();
+      return;
+    }
+    const query = target.field ? `?focus=${encodeURIComponent(target.field)}` : '';
+    navigate(`/patients/${patientId}/insurance/${target.coverageId}/edit${query}`);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box
@@ -561,6 +603,23 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
           )}
         </Box>
       )}
+
+      {/* Who we bill first, and why. Sits above the coverage list because the
+          order (and anything blocking a claim) is the question staff open this
+          tab to answer; the individual policies are the detail behind it. */}
+      <Box sx={{ mt: 2 }}>
+        <CoverageOrderPanel
+          patientId={patientId}
+          /* The patient's age plus which policies a parent holds is what
+             decides whether the dependent-child custody questions apply —
+             see deriveCoverageFormContext. */
+          patient={patient}
+          carriers={carrierOptions}
+          plans={planOptions}
+          onEditCoverage={handleCoverageOrderEdit}
+          onOpenClaim={(claimId) => navigate(`/claims/${claimId}`)}
+        />
+      </Box>
 
       <Box sx={{ pt: 0, display: 'flex', gap: 2 }}>
         <Box sx={{ flex: 1 }}>

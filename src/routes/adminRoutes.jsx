@@ -91,6 +91,9 @@ const adminRoutes = [
   <Route key="/admin/insurance-management/carriers" path="/admin/insurance-management/carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/plans" path="/admin/insurance-management/plans" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/membership-plans" path="/admin/insurance-management/membership-plans" element={adminOnly(<AdminPage />)} />,
+  // Plan coordination (COB) master data. Read access follows the admin area;
+  // the edit action inside is gated on insurance.plan_master.edit.
+  <Route key="/admin/insurance-management/plan-coordination" path="/admin/insurance-management/plan-coordination" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-converted-carriers" path="/admin/insurance-management/match-converted-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-vyne-carriers" path="/admin/insurance-management/match-vyne-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup/onboarding" path="/admin/practice-setup/onboarding" element={adminOnly(<PracticeOnboardingPage />, true)} />,
