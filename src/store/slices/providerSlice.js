@@ -128,15 +128,13 @@ export const fetchAllProvidersForDropdown = createAsyncThunk(
     }
   },
   {
-    condition: (_, { getState }) => {
+    // Skip only a request for the same branch already in flight (StrictMode
+    // double mounts). Switching branch mid-request goes out, and the reducers
+    // keep just the latest reply.
+    condition: (branchId = null, { getState }) => {
       const { provider } = getState();
-      // Block redundant requests if a request is already in progress
-      // This solves the React 18 StrictMode double-mount race condition
-      if (provider.dropdownLoading) {
-        return false;
-      }
-      return true;
-    }
+      return !(provider.dropdownLoading && provider.dropdownRequestBranchId === (branchId || null));
+    },
   }
 );
 
@@ -181,6 +179,9 @@ const initialState = {
   dropdownLoading: false,
   dropdownLastFetched: null,
   dropdownBranchId: null,
+  // The in-flight dropdown request; only its reply is applied.
+  dropdownRequestId: null,
+  dropdownRequestBranchId: null,
 
   // Detail cache (by provider id)
   cache: {},
@@ -336,10 +337,13 @@ const providerSlice = createSlice({
         state.detailLoading = false;
         state.detailError = action.payload;
       })
-      .addCase(fetchAllProvidersForDropdown.pending, (state) => {
+      .addCase(fetchAllProvidersForDropdown.pending, (state, action) => {
         state.dropdownLoading = true;
+        state.dropdownRequestId = action.meta.requestId;
+        state.dropdownRequestBranchId = action.meta.arg || null;
       })
       .addCase(fetchAllProvidersForDropdown.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.dropdownRequestId) return; // superseded
         if (action.payload !== null) {
           state.dropdownList = action.payload.providers;
           state.dropdownBranchId = action.payload.branchId;
@@ -347,7 +351,8 @@ const providerSlice = createSlice({
         }
         state.dropdownLoading = false;
       })
-      .addCase(fetchAllProvidersForDropdown.rejected, (state) => {
+      .addCase(fetchAllProvidersForDropdown.rejected, (state, action) => {
+        if (action.meta.requestId !== state.dropdownRequestId) return; // superseded
         state.dropdownLoading = false;
       })
       .addCase(fetchSpecialties.pending, (state) => {

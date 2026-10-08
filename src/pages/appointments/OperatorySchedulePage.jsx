@@ -12,7 +12,7 @@ import RightPanel from '../../components/appointments/right-panel/RightPanel';
 import RightPanelCollapsed from '../../components/appointments/right-panel/RightPanelCollapsed';
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
-import { usePatients, usePatient, useScheduleState, useAppointmentList } from '../../hooks/redux';
+import { usePatients, usePatient, useScheduleState, useAppointmentList, useBranch } from '../../hooks/redux';
 import { fetchPatientById, fetchPatients } from '../../store/slices/patientSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
@@ -103,11 +103,19 @@ const OperatorySchedulePage = () => {
   const { showSnackbar } = useSnackbar();
   const recareDueDates = useSelector(selectFamilyAppointmentsRecareDueDates);
 
+  // ── Branch: the header's selected branch scopes the whole schedule ──
+  // A group admin sees every branch in their group; with one branch selected
+  // the schedule shows only that branch's operatories, providers and
+  // appointments. "All branches" (no selection) keeps the combined view.
+  const { currentBranchId } = useBranch();
+  const scheduleBranchId = currentBranchId || '';
+
   // ── Dropdown data (providers, rooms, appointment types) ──────────
   const { providers, rooms, appointmentTypes } = useDropdownData({
     providers: true,
     rooms: true,
     appointmentTypes: true,
+    branchId: currentBranchId || null,
   });
 
   // ── Patients (for the new appointment form's patient search) ─────
@@ -323,7 +331,7 @@ const OperatorySchedulePage = () => {
         const viewUnit = calendarView === "day" ? "day" : calendarView;
         const sDate = selectedDate.startOf(viewUnit).format("YYYY-MM-DD");
         const eDate = selectedDate.endOf(viewUnit).format("YYYY-MM-DD");
-        dispatch(fetchAppointments({ startDate: sDate, endDate: eDate, limit: 200 }));
+        dispatch(fetchAppointments({ startDate: sDate, endDate: eDate, limit: 200, branchId: scheduleBranchId }));
 
         showSnackbar("Shortlist appointment scheduled successfully", "success");
       } catch (err) {
@@ -892,6 +900,7 @@ const OperatorySchedulePage = () => {
     startDate: fetchStartDate,
     endDate: fetchEndDate,
     limit: 500,
+    branchId: scheduleBranchId,
   });
 
   useEffect(() => {
@@ -900,9 +909,10 @@ const OperatorySchedulePage = () => {
         startDate: fetchStartDate,
         endDate: fetchEndDate,
         limit: 500,
+        branchId: scheduleBranchId,
       });
     }
-  }, [fetchStartDate, fetchEndDate, fetchApptsMain]);
+  }, [fetchStartDate, fetchEndDate, fetchApptsMain, scheduleBranchId]);
 
   // Re-fetch appointments whenever a shortlist operation mutates appointment data
   // (e.g. copy-to-shortlist writes linkedToShortlist flag back to the appointment)
@@ -913,6 +923,7 @@ const OperatorySchedulePage = () => {
           startDate: fetchStartDate,
           endDate: fetchEndDate,
           limit: 500,
+          branchId: scheduleBranchId,
         });
       } else if (refreshAppointments) {
         refreshAppointments();
@@ -920,7 +931,7 @@ const OperatorySchedulePage = () => {
     };
     window.addEventListener('shortlist-updated', handleShortlistUpdated);
     return () => window.removeEventListener('shortlist-updated', handleShortlistUpdated);
-  }, [fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
+  }, [fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments, scheduleBranchId]);
 
   useEffect(() => {
     const handlePaymentCompleted = async (e) => {
@@ -947,6 +958,7 @@ const OperatorySchedulePage = () => {
             startDate: fetchStartDate,
             endDate: fetchEndDate,
             limit: 500,
+            branchId: scheduleBranchId,
           });
         } else if (refreshAppointments) {
           refreshAppointments();
@@ -968,7 +980,7 @@ const OperatorySchedulePage = () => {
       window.removeEventListener('appointment-financials-updated', handlePaymentCompleted);
       if (bc) bc.close();
     };
-  }, [dispatch, fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments]);
+  }, [dispatch, fetchApptsMain, fetchEndDate, fetchStartDate, refreshAppointments, scheduleBranchId]);
 
   // Derived state to map Redux appointments to the Grid format
   const mappedAppointments = useMemo(() => {
@@ -994,12 +1006,17 @@ const OperatorySchedulePage = () => {
         }
         return true;
       })
+      // With one branch selected, an appointment booked in a room that isn't
+      // one of this branch's operatories belongs to another branch. Don't let
+      // the room-number fallback in mapAppointment drop it into a column here
+      // (it would flash in for a moment while the branch's own list loads).
+      .filter(a => !scheduleBranchId || !a.roomId || OPERATORY_COLUMNS.some((col) => col.id === `op${a.roomId}`))
       .map(mapAppointment)
       .filter(Boolean);
 
     console.log("Filters applied:", { providerId, visitType }, "Resulting appointments:", mapped.length);
     return mapped;
-  }, [reduxAppointments, frontendFilters]);
+  }, [reduxAppointments, frontendFilters, scheduleBranchId, OPERATORY_COLUMNS]);
 
   // Once the target appointment has rendered on the grid, scroll to it and flash a highlight
   // ring around its card so the user can spot it immediately after landing from a notification.
