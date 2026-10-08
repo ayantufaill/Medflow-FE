@@ -232,12 +232,37 @@ export const invoiceService = {
    * Get patient composite ledger (invoices, adjustments, payments, claims)
    */
   async getPatientCompositeLedger(patientId) {
-    const [invoicesResult, adjustmentsResult, paymentsResult, claimsResult] = await Promise.all([
-      this.getAllInvoices({ patientId, limit: 1000 }),
+    // Invoices are the ledger's backbone — if that call fails there is genuinely
+    // nothing to render, so it is the only one allowed to reject.
+    const invoicesResult = await this.getAllInvoices({ patientId, limit: 1000 });
+
+    // Adjustments / payments / claims only *enrich* the invoice rows. They are
+    // fetched with allSettled rather than Promise.all because each sits behind
+    // its own permission (`adjustments.read`, `payments.read`, `claims.read`):
+    // with Promise.all a single 403 — e.g. a Biller whose role is missing
+    // `adjustments.read` — rejected the whole thunk and the ledger rendered
+    // completely empty, hiding invoices the user had just created. Degrade one
+    // panel at a time instead of blanking the page.
+    const [adjustmentsResult, paymentsResult, claimsResult] = await Promise.allSettled([
       apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
       apiClient.get(`/payments/patient/${patientId}?limit=1000`),
       apiClient.get(`/claims?patientId=${patientId}&limit=1000`),
     ]);
+
+    // Unwrap an allSettled entry, logging why a section came back empty so a
+    // silent 403 is still traceable in the console.
+    const settledRows = (settled, key) => {
+      if (settled.status === 'fulfilled') {
+        return settled.value.data?.data?.[key] || [];
+      }
+      console.warn(
+        `Composite ledger: could not load ${key} for patient ${patientId} — ` +
+          `rendering the ledger without them.`,
+        settled.reason?.response?.status,
+        settled.reason?.response?.data?.error?.message || settled.reason?.message
+      );
+      return [];
+    };
 
     const invoices = invoicesResult.invoices || [];
     // Pre-fetch details (line items) for all invoices in parallel
@@ -258,9 +283,9 @@ export const invoiceService = {
 
     return {
       invoices: enrichedInvoices,
-      adjustments: adjustmentsResult.data?.data?.adjustments || [],
-      payments: paymentsResult.data?.data?.payments || [],
-      claims: claimsResult.data?.data?.claims || [],
+      adjustments: settledRows(adjustmentsResult, 'adjustments'),
+      payments: settledRows(paymentsResult, 'payments'),
+      claims: settledRows(claimsResult, 'claims'),
     };
   },
 
