@@ -40,9 +40,12 @@ export const fetchAllRoomsForDropdown = createAsyncThunk(
     }
   },
   {
-    condition: (_, { getState }) => {
+    // Skip only a request for the same branch already in flight (StrictMode
+    // double mounts). Switching branch mid-request goes out, and the reducers
+    // keep just the latest reply.
+    condition: (branchId = null, { getState }) => {
       const { room } = getState();
-      return !room.dropdownLoading;
+      return !(room.dropdownLoading && room.dropdownRequestBranchId === (branchId || null));
     },
   }
 );
@@ -72,6 +75,9 @@ const initialState = {
   dropdownLoading: false,
   dropdownLastFetched: null,
   dropdownBranchId: null,
+  // The in-flight dropdown request; only its reply is applied.
+  dropdownRequestId: null,
+  dropdownRequestBranchId: null,
 };
 
 const roomSlice = createSlice({
@@ -108,10 +114,13 @@ const roomSlice = createSlice({
         state.listLoading = false;
         state.listError = action.payload;
       })
-      .addCase(fetchAllRoomsForDropdown.pending, (state) => {
+      .addCase(fetchAllRoomsForDropdown.pending, (state, action) => {
         state.dropdownLoading = true;
+        state.dropdownRequestId = action.meta.requestId;
+        state.dropdownRequestBranchId = action.meta.arg || null;
       })
       .addCase(fetchAllRoomsForDropdown.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.dropdownRequestId) return; // superseded
         if (action.payload !== null) {
           state.dropdownList = action.payload.rooms;
           state.dropdownBranchId = action.payload.branchId;
@@ -119,7 +128,8 @@ const roomSlice = createSlice({
         }
         state.dropdownLoading = false;
       })
-      .addCase(fetchAllRoomsForDropdown.rejected, (state) => {
+      .addCase(fetchAllRoomsForDropdown.rejected, (state, action) => {
+        if (action.meta.requestId !== state.dropdownRequestId) return; // superseded
         state.dropdownLoading = false;
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {

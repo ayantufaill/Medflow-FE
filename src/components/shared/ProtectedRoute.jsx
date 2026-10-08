@@ -1,7 +1,8 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { CircularProgress, Box, Alert } from "@mui/material";
 import { hasRequiredRole, hasRequiredPermission, hasRequiredGroup, getUserGroups } from "../../config/navMenuItems";
+import { moduleTurnedOff, moduleGranted } from "../../constants/teamModuleAccess";
 
 /**
  * ProtectedRoute Component with Pure 4-Group support
@@ -30,6 +31,7 @@ const ProtectedRoute = ({
   accessDeniedMessage = "Access denied. You do not have the required privileges to access this page.",
 }) => {
   const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -62,6 +64,31 @@ const ProtectedRoute = ({
 
   if (userRoleNames.includes('Super Admin') || hasRequiredPermission(user, ['*'])) {
     return children;
+  }
+
+  // Team Access: the user's admin turned this module off for them.
+  const turnedOff = moduleTurnedOff(user, location.pathname);
+  if (turnedOff) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">Access denied. Your administrator has turned off your access to {turnedOff.label}.</Alert>
+      </Box>
+    );
+  }
+
+  // Team Access: the user's admin granted this module beyond their role. That
+  // stands in for the role/group checks, not for the page's own permission
+  // (e.g. /patients/new still needs patients.create, which a switched-off
+  // "Add new patients" removes).
+  if (moduleGranted(user, location.pathname)) {
+    if (requiredPermissions.length === 0 || hasRequiredPermission(user, requiredPermissions, requireAllPermissions)) {
+      return children;
+    }
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{accessDeniedMessage}</Alert>
+      </Box>
+    );
   }
 
   if (typeof allowIf === 'function' && allowIf(user)) {

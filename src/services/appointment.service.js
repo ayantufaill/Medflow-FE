@@ -27,7 +27,8 @@ export const appointmentService = {
     startDate = '',
     endDate = '',
     appointmentTypeId = '',
-    search = ''
+    search = '',
+    branchId = ''
   ) {
     const params = new URLSearchParams();
     if (page) params.append('page', page);
@@ -40,6 +41,7 @@ export const appointmentService = {
     if (appointmentTypeId)
       params.append('appointmentTypeId', appointmentTypeId);
     if (search) params.append('search', search);
+    if (branchId) params.append('branchId', branchId);
 
     const response = await apiClient.get(`/appointments?${params.toString()}`);
     return response.data.data;

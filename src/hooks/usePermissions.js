@@ -8,6 +8,9 @@ const getRoleName = (role) => {
   return role?.name || role?.roleName || role?.Description || role?.description || '';
 };
 
+// The profile's `permissions` list is the backend's effective set (role keys,
+// inherited keys, and Team Access overrides that can take keys away), so it
+// wins when present; the role objects are only a fallback before it loads.
 const collectPermissions = (user) => {
   const granted = new Set();
 
@@ -15,6 +18,7 @@ const collectPermissions = (user) => {
     user.permissions.forEach((permission) => {
       if (permission) granted.add(permission);
     });
+    return granted;
   }
 
   for (const role of user?.roles || []) {
