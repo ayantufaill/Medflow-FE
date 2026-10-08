@@ -25,6 +25,7 @@ import AdvancedReporting from '../pages/admin/AdvancedReporting';
 import ClinicAnalyticsPage from '../pages/admin/ClinicAnalyticsPage';
 import PracticeGroupsPage from '../pages/admin/PracticeGroupsPage';
 import MyGroupPage from '../pages/admin/MyGroupPage';
+import TeamAccessPage from '../pages/admin/TeamAccessPage';
 import AuditTrailPage from '../pages/admin/AuditTrailPage';
 import DataSharingSettings from '../pages/admin/DataSharingSettings';
 
@@ -128,6 +129,7 @@ const adminRoutes = [
   <Route key="/admin/audit-trail" path="/admin/audit-trail" element={adminOrPermission(<AuditTrailPage />, 'security.audit.view')} />,
   <Route key="/admin/data-sharing" path="/admin/data-sharing" element={adminOrPermission(<DataSharingSettings />, 'sharing.manage')} />,
   <Route key="/admin/my-group" path="/admin/my-group" element={groupOrBranchAdminOnly(<MyGroupPage />)} />,
+  <Route key="/admin/team-access" path="/admin/team-access" element={groupOrBranchAdminOnly(<TeamAccessPage />)} />,
   <Route key="admin-catchall" path="/admin/*" element={adminOnly(<AdminPage />)} />,
 ];
 

@@ -18,6 +18,7 @@ import {
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { patientService } from '../../services/patient.service';
 import { usePatients, useDropdownData, useBranch } from '../../hooks/redux';
+import { usePermissions } from '../../hooks/usePermissions';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import PatientSearchActionsBar from '../../components/patients/list/PatientSearchActionsBar';
 import PatientFiltersBar from '../../components/patients/list/PatientFiltersBar';
@@ -31,6 +32,8 @@ const EMPTY_PROVIDER_LIST = [];
 
 const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const navigate = useNavigate();
+  const { has: hasPermission } = usePermissions();
+  const canCreatePatients = hasPermission('patients.create');
   const { showSnackbar } = useSnackbar();
 
   // ─── Redux State ─────────────────────────────────────────
@@ -381,6 +384,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
           onImportPatient={handleImportPatient}
           onDeactivateSelected={handleDeactivateSelected}
           deactivateDisabled={selectedIds.length === 0}
+          canCreate={canCreatePatients}
         />
 
         {crossBranchMatches > 0 && effectiveSearch && (
