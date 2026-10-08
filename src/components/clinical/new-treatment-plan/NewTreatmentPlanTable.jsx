@@ -35,6 +35,7 @@ import {
   RequestQuoteOutlined as EstimateIcon,
   AssignmentIndOutlined as RouteSlipIcon,
   MoveToInboxOutlined as HoldIcon,
+  ReceiptLongOutlined as InvoiceIcon,
   DeleteOutline as DeleteOutlineIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
@@ -77,14 +78,20 @@ const NEW_TEMPLATE_OPTIONS = [
 
 const PROCEDURE_TABLE_MIN_WIDTH = 1120;
 
-const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onEditFees, onMoveToTop, onPrintEstimate, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
+const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointment, treatmentPlans, totals, formatMoney, onDeleteItems, onEditItem, onEditFees, onMoveToTop, onPrintEstimate, onPrintRouteSlip, onViewHistory, onViewSchedule, onEditAppointment, onSendPreAuth, onUpdateItemStatus, onBulkUpdateItemStatus, isSaving = false, onSaveAsHold, onDeleteDraft, selectedRows, setSelectedRows }) => {
   const [activeFilters, setActiveFilters] = useState([]);
   const currentVisitStatus = appointment?.status || 'Unconfirmed';
   const getCatId = (val) => (typeof val === 'object' && val !== null ? (val._id || val.id || val.name) : val);
   const selectedNewTemplate = getCatId(appointment?.appointmentTypeId) || getCatId(appointment?.category) || 'New Patient Exam 12yo+';
 
   const handleStatusChange = (e) => {
-    if (onUpdateAppointment) onUpdateAppointment({ status: e.target.value });
+    if (isSaving) return;
+    const nextStatus = e.target.value;
+    if (nextStatus === 'Completed' && selectedRows.length > 0) {
+      onBulkUpdateItemStatus?.(selectedRows, nextStatus);
+      return;
+    }
+    if (onUpdateAppointment) onUpdateAppointment({ status: nextStatus });
   };
 
   const handleCategoryChange = (e) => {
@@ -197,7 +204,7 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
   return (
     <Box sx={{ height: '100%' }}>
       {/* Phase / Visit Header Row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1.5 }}>
+      <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1.5 }}>
         <DragIndicatorIcon sx={{ color: '#cbd5e1', cursor: 'grab', fontSize: '1.2rem' }} />
 
         <ReportSelect
@@ -306,13 +313,13 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
       </Box>
 
       {/* Table + total block share the same scroll frame. */}
-      <Box sx={{ maxHeight: 340, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-        <Box sx={{ minWidth: PROCEDURE_TABLE_MIN_WIDTH }}>
-          <TableContainer>
-            <Table size="small" sx={{ minWidth: PROCEDURE_TABLE_MIN_WIDTH }}>
+      <Box sx={{ maxHeight: 340, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px', '@media print': { maxHeight: 'none', overflow: 'visible', border: 'none' } }}>
+        <Box sx={{ minWidth: PROCEDURE_TABLE_MIN_WIDTH, '@media print': { minWidth: 0, width: '100%' } }}>
+          <TableContainer sx={{ '@media print': { overflow: 'visible' } }}>
+            <Table size="small" sx={{ minWidth: PROCEDURE_TABLE_MIN_WIDTH, '@media print': { minWidth: 0, width: '100%' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                  <TableCell padding="checkbox">
+                  <TableCell padding="checkbox" sx={{ '@media print': { display: 'none' } }}>
                     <Checkbox
                       size="small"
                       checked={filteredPlans.length > 0 && selectedRows.length === filteredPlans.length}
@@ -320,7 +327,7 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
                       onChange={handleSelectAll}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>PRIORITY</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', '@media print': { display: 'none' } }}>PRIORITY</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>STATUS</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>CREATED</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>SCHEDULED</TableCell>
@@ -336,49 +343,62 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
                   <TableCell sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textAlign: 'center' }}>
                     <ScienceIcon sx={{ fontSize: '1.2rem', color: '#64748b' }} />
                   </TableCell>
-                  <TableCell align="right"></TableCell>
+                  <TableCell align="right" sx={{ '@media print': { display: 'none' } }}></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredPlans.map((row) => (
                   <TableRow key={row.id} hover selected={selectedRows.includes(row.id)}>
-                    <TableCell padding="checkbox">
+                    <TableCell padding="checkbox" sx={{ '@media print': { display: 'none' } }}>
                       <Checkbox
                         size="small"
                         checked={selectedRows.includes(row.id)}
                         onChange={() => handleSelectRow(row.id)}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.priority}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569', '@media print': { display: 'none' } }}>{row.priority}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>
-                      <Select
-                        value={row.status}
-                        onChange={(e) => onUpdateItemStatus && onUpdateItemStatus(row.id, e.target.value)}
-                        variant="standard"
-                        disableUnderline
-                        IconComponent={ExpandMoreIcon}
-                        sx={{
-                          fontSize: '0.8rem',
-                          color: '#475569',
-                          '& .MuiSelect-select': { py: 0, px: 0, display: 'flex', alignItems: 'center' },
-                          '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
-                        }}
-                      >
-                        <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
-                        <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
-                        <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
-                        <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
-                        <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
-                        <MenuItem value="Existing Other" sx={{ fontSize: '0.8rem' }}>Existing Other</MenuItem>
-                        <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
-                        <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
-                      </Select>
+                      <Box className="print-hide">
+                        <Select
+                          disabled={isSaving}
+                          value={row.status}
+                          onChange={(e) => onUpdateItemStatus && onUpdateItemStatus(row.id, e.target.value)}
+                          variant="standard"
+                          disableUnderline
+                          IconComponent={ExpandMoreIcon}
+                          sx={{
+                            fontSize: '0.8rem',
+                            color: '#475569',
+                            '& .MuiSelect-select': { py: 0, px: 0, display: 'flex', alignItems: 'center' },
+                            '& .MuiSvgIcon-root': { fontSize: '1rem', ml: 0.5, color: '#94a3b8' }
+                          }}
+                        >
+                          <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
+                          <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
+                          <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
+                          <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
+                          <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>
+                          <MenuItem value="Existing Other" sx={{ fontSize: '0.8rem' }}>Existing Other</MenuItem>
+                          <MenuItem value="Referred" sx={{ fontSize: '0.8rem' }}>Referred</MenuItem>
+                          <MenuItem value="Completed" sx={{ fontSize: '0.8rem' }}>Completed</MenuItem>
+                        </Select>
+                      </Box>
+                      <Box className="print-only" sx={{ display: 'none' }}>
+                        {row.status}
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.created}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>{row.scheduled}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.site}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.code}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.description}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>
+                      {row.description}
+                      {row.downgradedCode && (
+                        <Box sx={{ fontSize: '0.75rem', color: '#64748b', mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <span style={{ color: '#ef4444' }}>↓</span> Downgraded to {row.downgradedCode}
+                        </Box>
+                      )}
+                    </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.icd}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600 }}>
                       <Box sx={{ bgcolor: '#eff6ff', borderRadius: '4px', display: 'inline-block', px: 1 }}>{getProviderName(row.provider)}</Box>
@@ -386,13 +406,15 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.negRate}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.insEst}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.ptEst}</TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>{row.preAuth}</TableCell>
+                    <TableCell sx={{ fontSize: '0.8rem', color: '#475569' }}>
+                      {row.preAuthStatus && row.preAuthStatus !== '-' ? row.preAuthStatus : (row.preAuth || '-')}
+                    </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center' }}>
                       {row.labCase === '+' ? (
                         <Box sx={{ width: 16, height: 16, borderRadius: '50%', border: '1px solid #94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>+</Box>
                       ) : '-'}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ '@media print': { display: 'none' } }}>
                       <IconButton
                         size="small"
                         aria-label={`Procedure actions for ${row.code || 'procedure'}`}
@@ -475,6 +497,16 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
           },
         }}
       >
+        {procedureMenu.row?.status === 'Completed' && !String(procedureMenu.row?.id).startsWith('appt-') && (
+          <MenuItem disabled={isSaving} onClick={() => {
+            const row = procedureMenu.row;
+            handleProcedureMenuClose();
+            onUpdateItemStatus?.(row.id, 'Completed');
+          }}>
+            <InvoiceIcon sx={{ fontSize: 18, color: '#0f172a' }} />
+            Create Invoice
+          </MenuItem>
+        )}
         <MenuItem onClick={handleEditProcedure}>
           <EditOutlineIcon sx={{ fontSize: 18, color: '#0f172a' }} />
           Edit Procedure

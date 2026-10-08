@@ -109,6 +109,7 @@ const adminRoutes = [
 
   <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/procedure-codes" path="/admin/clinical-management/procedure-codes" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/clinical-management/route-slip" path="/admin/clinical-management/route-slip" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/checklists" path="/admin/clinical-management/checklists" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/prescription-templates" path="/admin/clinical-management/prescription-templates" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/system-settings" path="/admin/clinical-management/system-settings" element={adminOnly(<AdminPage />)} />,

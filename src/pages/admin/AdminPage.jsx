@@ -29,6 +29,7 @@ import PracticeSettings from './PracticeSettings';
 import PracticeInformation from './PracticeInformation';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
+import RouteSlipManagement from './RouteSlipManagement';
 import ChecklistsManagement from './ChecklistsManagement';
 import PrescriptionTemplates from './PrescriptionTemplates';
 import ClinicalSystemSettings from './ClinicalSystemSettings';
@@ -120,6 +121,7 @@ const FINANCIAL_MANAGEMENT_SUB_TABS = [
 const CLINICAL_MANAGEMENT_SUB_TABS = [
   { label: 'Products', path: '/admin/clinical-management/products' },
   { label: 'Procedure Codes', path: '/admin/clinical-management/procedure-codes' },
+  { label: 'Route Slip', path: '/admin/clinical-management/route-slip' },
   { label: 'Checklists', path: '/admin/clinical-management/checklists' },
   { label: 'Prescription Templates', path: '/admin/clinical-management/prescription-templates' },
   { label: 'System Settings', path: '/admin/clinical-management/system-settings' },
@@ -462,6 +464,8 @@ const AdminPage = () => {
               <ProductsManagement />
             ) : location.pathname === '/admin/clinical-management/procedure-codes' ? (
               <ProcedureCodesManagement />
+            ) : location.pathname === '/admin/clinical-management/route-slip' ? (
+              <RouteSlipManagement />
             ) : location.pathname === '/admin/clinical-management/checklists' ? (
               <ChecklistsManagement />
             ) : location.pathname === '/admin/clinical-management/prescription-templates' ? (

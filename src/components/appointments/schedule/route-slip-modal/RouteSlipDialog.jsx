@@ -14,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../../constants/colors';
+import DynamicRouteSlipRenderer from '../../../common/DynamicRouteSlipRenderer';
 
 import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail } from '../../../../hooks/redux';
 import { useSelector, useDispatch } from 'react-redux';
@@ -337,127 +338,13 @@ const RouteSlipDialog = () => {
 
       {/* MODAL BODY (Print Target) */}
       <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
-
-        {/* Print-only Medflow Logo at Top Center */}
-        <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>
-          <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
-        </Box>
-
-        {/* Print Layout Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 3 }}>
-          <Typography sx={{ fontSize: '14px', color: '#334155' }}>
-            {primaryDateStr}
-          </Typography>
-          <Typography sx={{ fontSize: '18px', fontWeight: 'bold', color: '#1e3a8a' }}>
-            PATIENT ROUTE SLIP
-          </Typography>
-          <Typography sx={{ fontSize: '14px', color: '#334155' }}>
-            {patientName}
-          </Typography>
-        </Box>
-
-        {/* PATIENT SECTION */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title="PATIENT" />
-          <SectionContainer>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <InfoRow label="Name" value={patientName} />
-                <InfoRow label="Address" value={address} />
-                <InfoRow label="Date of Birth" value={dob} />
-                <InfoRow label="Email" value={email} />
-                <InfoRow label="Phone Number" value={phone} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ pl: { sm: 6, md: 10 } }}>
-                  <InfoRow label="Preferred Dentist" value={preferredDentistName} />
-                  <InfoRow label="Preferred Hygienist" value={preferredHygienistName} />
-                  <InfoRow label="Referring Sources" value={referringSource} />
-
-                </Box>
-              </Grid>
-            </Grid>
-          </SectionContainer>
-        </Box>
-
-        {/* ACCOUNT & INSURANCE SECTIONS */}
-        <Box sx={{ display: 'flex', gap: '16px', mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <SectionHeader title="ACCOUNT" />
-            <SectionContainer sx={{ height: '100px' }}>
-              <InfoRow label="Total Outstanding" value={formatMoney(totalOutstanding)} alignValue="right" />
-              <InfoRow label="Individual Outstanding" value={formatMoney(individualOutstanding)} alignValue="right" />
-              <InfoRow label="Insurance Outstanding" value={formatMoney(insuranceOutstanding)} alignValue="right" />
-            </SectionContainer>
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <SectionHeader title="INSURANCE" />
-            <SectionContainer sx={{ minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {activeInsuranceRows.length > 0 ? (
-                activeInsuranceRows.map((insurance, index) => (
-                  <Box key={insurance._id || insurance.id || index} sx={{ mb: index === activeInsuranceRows.length - 1 ? 0 : 1 }}>
-                    <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 600 }}>
-                      {getInsuranceName(insurance)}
-                    </Typography>
-                    <Typography sx={{ color: '#64748b', fontSize: '12px' }}>
-                      ID: {insurance.subscriberId || insurance.memberId || insurance.policyNumber || '--'}
-                      {' | '}
-                      Group: {insurance.groupNumber || insurance.groupId || '--'}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
-                  No active insurance
-                </Typography>
-              )}
-            </SectionContainer>
-          </Box>
-        </Box>
-
-        {/* PRIMARY APPOINTMENT */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title={primaryApptTitle} />
-          <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
-            {routeSlipAppt ? (
-              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
-                <RouteSlipApptDisplay
-                  appt={routeSlipAppt}
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-                  getProviderName={getProviderName}
-                />
-              </Box>
-            ) : (
-              <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>
-                No appointments for this day!
-              </Typography>
-            )}
-          </SectionContainer>
-        </Box>
-
-        {/* NEXT APPOINTMENT */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title="NEXT APPOINTMENT" />
-          <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
-            {nextAppt ? (
-              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
-                <Box sx={{ px: 2, boxSizing: 'border-box', width: '100%' }}>
-                  <InfoRow label="Date" value={dayjs(nextAppt.appointmentDate || nextAppt.start).format('MM/DD/YYYY')} />
-                </Box>
-                <RouteSlipApptDisplay
-                  appt={nextAppt}
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-                  getProviderName={getProviderName}
-                />
-              </Box>
-            ) : (
-              <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>
-                No future appointments scheduled.
-              </Typography>
-            )}
-          </SectionContainer>
-        </Box>
-
+        <DynamicRouteSlipRenderer 
+          patient={currentPatient} 
+          appointment={routeSlipAppt} 
+          procedures={routeSlipAppt?.procedures || []} 
+          insurances={activeInsuranceRows} 
+          planTitle={routeSlipAppt?.planTitle || 'Treatment Plan'}
+        />
       </DialogContent>
 
       <DialogActions className="no-print-in-modal" sx={{ p: '12px 24px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE, justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>

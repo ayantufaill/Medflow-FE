@@ -65,7 +65,7 @@ import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 // AFTER
-import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById } from '../../store/slices/patientSlice';
+import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById, invalidatePatientBalance } from '../../store/slices/patientSlice';
 import { selectProviderDropdownList } from '../../store/slices/providerSlice';
 import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
@@ -74,8 +74,11 @@ import { useBranch } from '../../hooks/redux/useBranch';
 import { hasRequiredPermission } from '../../config/navMenuItems';
 import { appointmentService } from '../../services/appointment.service';
 import { invoiceService } from '../../services/invoice.service';
+import { invalidateLedger, invalidatePaymentInvoices, fetchLedgerItems } from '../../store/slices/billingSlice';
 import { authorizationService } from '../../services/authorization.service';
 import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
+import { mapProcedureToPayloadItem, statusLabelToCode } from '../../utils/treatmentPlanPayload';
+import { getProcedureIcd, findAppointmentProcedureIndex } from '../../utils/icd10';
 
 const formatMoney = (val, fallback = '-') => {
   if (typeof val === 'number') return `$${val.toFixed(2)}`;
@@ -128,38 +131,6 @@ const mergePlanItemsIntoDrafts = (drafts, planId, items, extraFields = {}) => {
   ));
 };
 
-const mapProcedureToPayloadItem = (item) => {
-  const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
-  const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
-  const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
-  return {
-    id: item.id,
-    procedureCode: item.code,
-    description: item.description,
-    tooth: item.tooth || '',
-    site: item.site,
-    fee: itemFee,
-    charge: itemFee,
-    priority: item.priority,
-    status: statusLabelToCode(item.status),
-    icd: item.icd,
-    provider: item.provider || null,
-    prognosis: item.prognosis || '',
-    creditToPractice: Boolean(item.creditToPractice),
-    siteSelection: item.siteSelection || '',
-    scheduled: item.scheduled,
-    preAuth: item.preAuth,
-    preAuthId: item.preAuthId || null,
-    labCase: item.labCase,
-    insEst: item.insEst,
-    ptEst: item.ptEst,
-    insPortion: itemIns,
-    ptPortion: itemPt,
-    insuranceAmount: `$${itemIns.toFixed(2)}`,
-    patientAmount: `$${itemPt.toFixed(2)}`,
-  };
-};
-
 const STATUS_CODE_TO_LABEL = {
   P: 'Planned',
   S: 'Scheduled',
@@ -172,29 +143,6 @@ const STATUS_CODE_TO_LABEL = {
 
 const normalizeStatusLabel = (status) => STATUS_CODE_TO_LABEL[status] || status || 'Planned';
 
-const statusLabelToCode = (status) => {
-  switch (status) {
-    case 'Scheduled':
-      return 'S';
-    case 'Unplanned':
-      return 'U';
-    case 'Rejected':
-      return 'R';
-    case 'Referred':
-      return 'R';
-    case 'Completed':
-      return 'C';
-    case 'Existing Current':
-      return 'EC';
-    case 'Existing Other':
-    case 'Existing':
-      return 'EO';
-    case 'Planned':
-    default:
-      return 'P';
-  }
-};
-
 const mapPlanItems = (items, createdAt) => {
   if (!items || !Array.isArray(items)) return [];
   return items.map((item, idx) => {
@@ -204,6 +152,8 @@ const mapPlanItems = (items, createdAt) => {
 
     return {
       id: item.id || idx + 1,
+      providerId: item.providerId || null,
+      clinicId: item.clinicId || null,
       priority: item.priority || '- -',
       status: normalizeStatusLabel(item.status),
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
@@ -268,7 +218,7 @@ const normalizeAppointmentProcedures = (appointment) => {
 
       return {
         ...procedure,
-        id: procedure.id || procedure._id || idx,
+        id: procedure.id ?? procedure._id ?? idx,
         code,
         description:
           procedure.treatment ||
@@ -303,7 +253,7 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
           tooth: p.tooth || p.site || '',
           code: p.code,
           description: p.description || '-',
-          icd: '-',
+          icd: getProcedureIcd(p) || '-',
           provider: (() => {
             const getProvStr = (val) => (typeof val === 'object' && val !== null ? (val.providerCode || val._id || val.name) : val);
             return getProvStr(p.provider) || getProvStr(appt.providerId) || getProvStr(appt.provider) || '-';
@@ -422,6 +372,20 @@ const NewTreatmentPlanPage = () => {
     appointmentTypes: true,
   });
 
+
+  // Extract downgrade codes from the patient's primary insurance coverage book
+  const downgradeCodes = useMemo(() => {
+    const insurances = insurancesCache?.[currentPatientId]?.data || [];
+    const primary = insurances.find((ins) => ins.insuranceType === 'primary') || insurances[0];
+    const coverageBook = primary?.coverageBookData || [];
+    return coverageBook
+      .filter((row) => row.hasDowngrade === true && row.downgrade)
+      .map((row) => ({
+        code: row.downgrade,
+        fromCode: row.code,
+        description: row.description || row.Descript || '',
+      }));
+  }, [insurancesCache, currentPatientId]);
 
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -936,7 +900,27 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const refreshPatientBilling = () => {
+    const patientId = currentPatient?._id || currentPatient?.id;
+    if (!patientId) return;
+    dispatch(invalidateLedger(patientId));
+    dispatch(invalidatePaymentInvoices(patientId));
+    dispatch(invalidatePatientBalance(patientId));
+    dispatch(fetchLedgerItems(patientId));
+  };
+
+  const billingSaveMessage = (result, fallback) => {
+    const plan = result?.treatmentPlan || result;
+    const created = result?.createdInvoice || plan?.createdInvoice;
+    const existing = plan?.existingInvoices || [];
+    if (created || existing.length) refreshPatientBilling();
+    if (created) return `${fallback} Invoice ${created.invoiceNumber} created.`;
+    if (existing.length) return `${fallback} Linked invoice ${existing.map((invoice) => invoice.invoiceNumber).join(', ')} available in Billing.`;
+    return fallback;
+  };
+
   const handleAddProcedure = async (procedure) => {
+    if (isSaving) return;
     if (!currentPatient) {
       setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
       return;
@@ -947,7 +931,7 @@ const NewTreatmentPlanPage = () => {
       return;
     }
 
-    const newId = treatmentPlans.length > 0 ? Math.max(...treatmentPlans.map(p => p.id)) + 1 : 1;
+    const newId = `new-${crypto.randomUUID()}`;
     const surfaceStr = selectedSurfaces.length > 0 ? ' ' + selectedSurfaces.join(' ') : '';
     const formattedSite = selectedTeeth.length > 0 ? selectedTeeth.map(t => `#${t}${surfaceStr}`).join(', ') : (selectedSurfaces.join(' ') || '-');
     const procedureCode = procedure.code || procedure.procedureCode || `D${Math.floor(1000 + Math.random() * 9000)}`;
@@ -991,32 +975,7 @@ const NewTreatmentPlanPage = () => {
         patientId: currentPatient._id || currentPatient.id,
         title: `Treatment Plan - ${dayjs().format('MM/DD/YYYY')}`,
         status: TREATMENT_PLAN_STATUS_ACTIVE,
-        items: newTreatmentPlans.map(item => {
-          const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
-          const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
-          const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
-          return {
-            procedureCode: item.code,
-            description: item.description,
-            tooth: item.tooth || '',
-            site: item.site,
-            fee: itemFee,
-            charge: itemFee,
-            priority: item.priority,
-            status: statusLabelToCode(item.status),
-            icd: item.icd,
-            provider: item.provider || null,
-            preAuth: item.preAuth,
-            preAuthId: item.preAuthId || null,
-            labCase: item.labCase,
-            insEst: item.insEst,
-            ptEst: item.ptEst,
-            insPortion: itemIns,
-            ptPortion: itemPt,
-            insuranceAmount: `$${itemIns.toFixed(2)}`,
-            patientAmount: `$${itemPt.toFixed(2)}`,
-          };
-        })
+        items: newTreatmentPlans.map(mapProcedureToPayloadItem)
       };
       Object.assign(payload, buildTreatmentPlanTotalsPayload(payload.items));
 
@@ -1027,7 +986,7 @@ const NewTreatmentPlanPage = () => {
           ...buildTreatmentPlanTotalsPayload(payload.items),
         });
         const updatedPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
-        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payload.items, buildTreatmentPlanTotalsPayload(payload.items)));
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, updatedPlan?.items || payload.items, updatedPlan || buildTreatmentPlanTotalsPayload(payload.items)));
         if (updatedPlan?.items && Array.isArray(updatedPlan.items)) {
           const updatedItems = mapPlanItems(updatedPlan.items, updatedPlan.createdAt).map((item) => ({
             ...item,
@@ -1035,7 +994,7 @@ const NewTreatmentPlanPage = () => {
           }));
           setTreatmentPlans(updatedItems);
         }
-        setToast({ open: true, message: 'Treatment plan auto-saved!', type: 'success' });
+        setToast({ open: true, message: billingSaveMessage(res, 'Treatment plan auto-saved!'), type: 'success' });
       } else {
         // Create initial plan
         const res = await treatmentPlanService.create(payload);
@@ -1052,7 +1011,7 @@ const NewTreatmentPlanPage = () => {
           setTreatmentPlans(newItems);
         }
         setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== String(createdId))]);
-        setToast({ open: true, message: 'Treatment plan created and saved!', type: 'success' });
+        setToast({ open: true, message: billingSaveMessage(res, 'Treatment plan created and saved!'), type: 'success' });
       }
     } catch (error) {
       console.error('Failed to auto-save treatment plan:', error);
@@ -1236,7 +1195,119 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const handleBulkUpdateItemStatus = async (selectedIds, newStatus) => {
+    if (isSaving) return;
+    if (!currentPatient || !selectedIds?.length) return;
+    const ids = new Set(selectedIds.map(String));
+    const selectedItems = allProcedures.filter((item) => ids.has(String(item.id || item._id)));
+    const selectedAppointmentItems = selectedItems.filter((item) => String(item.id).startsWith('appt-'));
+    const selectedPlanItems = selectedItems.filter((item) => !String(item.id).startsWith('appt-'));
+    const newTreatmentPlans = treatmentPlans.map((item) =>
+      ids.has(String(item.id)) ? { ...item, status: newStatus } : item
+    );
+    setTreatmentPlans(newTreatmentPlans);
+    setAppointmentProcedures((previous) => previous.map((item) =>
+      ids.has(String(item.id)) ? { ...item, status: newStatus } : item
+    ));
+    try {
+      setIsSaving(true);
+      const invoiceNumbers = [];
+      const linkedInvoiceNumbers = [];
+
+      if (selectedPlanItems.length) {
+        if (!activePlanId) throw new Error('No active treatment plan is selected.');
+        const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
+        const totals = buildTreatmentPlanTotalsPayload(payloadItems);
+        const result = await treatmentPlanService.update(activePlanId, { items: payloadItems, ...totals });
+        const savedItems = result?.treatmentPlan?.items
+          ? mapPlanItems(result.treatmentPlan.items, result.treatmentPlan.createdAt)
+          : newTreatmentPlans;
+        setTreatmentPlans(savedItems);
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, result?.treatmentPlan?.items || payloadItems, totals));
+        const invoiceNumber = result?.createdInvoice?.invoiceNumber || result?.treatmentPlan?.createdInvoice?.invoiceNumber;
+        if (invoiceNumber) invoiceNumbers.push(invoiceNumber);
+        (result?.treatmentPlan?.existingInvoices || []).forEach((invoice) => linkedInvoiceNumbers.push(invoice.invoiceNumber));
+      }
+
+      // Appointment-backed rows are saved together per appointment, so one
+      // backend request creates one invoice for the selected procedures.
+      const appointmentGroups = new Map();
+      selectedAppointmentItems.forEach((item) => {
+        const appointmentId = String(item.appointmentId || item._appointmentId || '').trim();
+        if (!appointmentId) return;
+        if (!appointmentGroups.has(appointmentId)) appointmentGroups.set(appointmentId, []);
+        appointmentGroups.get(appointmentId).push(item);
+      });
+      for (const [appointmentId, group] of appointmentGroups) {
+        const appointment = await appointmentService.getAppointmentById(appointmentId);
+        const procedures = [...(appointment?.customFields?.procedures || appointment?.procedures || [])];
+        group.forEach((row) => {
+          const procId = String(row.id).split('-').slice(2).join('-');
+          const index = procedures.findIndex((procedure, idx) => String(procedure?.id ?? idx) === procId);
+          if (index >= 0) {
+            procedures[index] = { ...procedures[index], completed: newStatus === 'Completed', status: newStatus };
+          }
+        });
+        const updatedAppointment = await appointmentService.updateAppointment(appointmentId, {
+          customFields: { ...appointment.customFields, procedures },
+          procedures,
+        });
+        if (updatedAppointment?.createdInvoice?.invoiceNumber) {
+          invoiceNumbers.push(updatedAppointment.createdInvoice.invoiceNumber);
+        }
+        setAppointmentProcedures((previous) => [
+          ...previous.filter((row) => String(row.appointmentId || row._appointmentId) !== appointmentId),
+          ...mapAppointmentsToTreatmentRows([updatedAppointment]),
+        ]);
+      }
+
+      setSelectedRows([]);
+      if (invoiceNumbers.length || linkedInvoiceNumbers.length) refreshPatientBilling();
+      const billingMessage = invoiceNumbers.length
+        ? `Invoice ${invoiceNumbers.join(', ')} created.`
+        : linkedInvoiceNumbers.length
+          ? `Linked invoice ${[...new Set(linkedInvoiceNumbers)].join(', ')} available in Billing.`
+          : '';
+      setToast({ open: true, message: billingMessage
+        ? `Status updated. ${billingMessage}`
+        : newStatus === 'Completed'
+          ? 'Status saved, but no invoice was returned. Reload the plan and check Billing.'
+          : 'Status updated successfully!', type: newStatus === 'Completed' && !billingMessage ? 'warning' : 'success' });
+    } catch (error) {
+      console.error('Failed to update item status:', error);
+      const errData = error.response?.data?.error;
+      setToast({ open: true, message: typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update status.'), type: 'error' });
+      setTreatmentPlans(treatmentPlans);
+      setAppointmentProcedures(appointmentProcedures);
+      // A mixed selection can save one group before another fails. Reconcile
+      // persisted records instead of leaving successful saves visually undone.
+      const appointmentIds = [...new Set(selectedAppointmentItems.map((item) => item.appointmentId || item._appointmentId).filter(Boolean))];
+      const refreshed = await Promise.allSettled([
+        ...(selectedPlanItems.length && activePlanId
+          ? [treatmentPlanService.getById(activePlanId).then((result) => ({ plan: result.treatmentPlan }))]
+          : []),
+        ...appointmentIds.map((id) => appointmentService.getAppointmentById(id).then((appointment) => ({ appointment, id }))),
+      ]);
+      refreshed.forEach((result) => {
+        if (result.status !== 'fulfilled') return;
+        const { plan, appointment, id } = result.value;
+        if (plan) {
+          setTreatmentPlans(mapPlanItems(plan.items, plan.createdAt));
+          setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, plan.items, plan));
+        }
+        if (appointment) setAppointmentProcedures((prev) => [
+          ...prev.filter((row) => String(row.appointmentId || row._appointmentId) !== String(id)),
+          ...mapAppointmentsToTreatmentRows([appointment]),
+        ]);
+      });
+      refreshPatientBilling();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleUpdateItemStatus = async (itemId, newStatus) => {
+    if (isSaving) return;
     if (!currentPatient) return;
 
     if (String(itemId).startsWith('appt-')) {
@@ -1263,11 +1334,18 @@ const NewTreatmentPlanPage = () => {
 
           if (targetIdx >= 0 && targetIdx < procs.length) {
             procs[targetIdx].completed = (newStatus === 'Completed');
-            await appointmentService.updateAppointment(apptId, { 
+            const updatedAppointment = await appointmentService.updateAppointment(apptId, {
               customFields: { ...appt.customFields, procedures: procs },
               procedures: procs 
             });
-            setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
+            if (updatedAppointment?.createdInvoice) refreshPatientBilling();
+            setToast({
+              open: true,
+              message: updatedAppointment?.createdInvoice?.invoiceNumber
+                ? `Procedure completed and invoice ${updatedAppointment.createdInvoice.invoiceNumber} created successfully.`
+                : 'Status updated successfully!',
+              type: 'success',
+            });
           }
         }
       } catch (error) {
@@ -1280,37 +1358,7 @@ const NewTreatmentPlanPage = () => {
       return;
     }
 
-    if (!activePlanId) return;
-
-    const newTreatmentPlans = treatmentPlans.map(item =>
-      item.id === itemId ? { ...item, status: newStatus } : item
-    );
-
-    // Optimistic UI update
-    setTreatmentPlans(newTreatmentPlans);
-
-    // Auto-save logic
-    try {
-      setIsSaving(true);
-
-      const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
-
-      await treatmentPlanService.update(activePlanId, {
-        items: payloadItems,
-        ...buildTreatmentPlanTotalsPayload(payloadItems),
-      });
-      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
-      setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
-    } catch (error) {
-      console.error('Failed to update item status:', error);
-      const errData = error.response?.data?.error;
-      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update status.');
-      setToast({ open: true, message: errMsg, type: 'error' });
-      // Revert optimistic update
-      setTreatmentPlans(treatmentPlans);
-    } finally {
-      setIsSaving(false);
-    }
+    await handleBulkUpdateItemStatus([itemId], newStatus);
   };
 
   const handleSelectTreatmentPlan = (event) => {
@@ -1568,9 +1616,7 @@ const NewTreatmentPlanPage = () => {
         setIsSaving(true);
         const appt = await appointmentService.getAppointmentById(apptId);
         const procs = appt?.customFields?.procedures || appt?.procedures || [];
-        const targetIdx = procs.some((p) => String(p.id) === procIdOrIdx)
-          ? procs.findIndex((p) => String(p.id) === procIdOrIdx)
-          : parseInt(procIdOrIdx, 10);
+        const targetIdx = findAppointmentProcedureIndex(procs, procIdOrIdx);
 
         if (targetIdx >= 0 && targetIdx < procs.length) {
           const updatedProcs = [...procs];
@@ -1588,11 +1634,16 @@ const NewTreatmentPlanPage = () => {
             creditToPractice: updatedProcedure.creditToPractice,
             siteSelection: updatedProcedure.siteSelection
           };
-          await appointmentService.updateAppointment(apptId, {
+          const saved = await appointmentService.updateAppointment(apptId, {
             customFields: { ...appt.customFields, procedures: updatedProcs },
             procedures: updatedProcs
           });
+          const refreshed = await appointmentService.getAppointmentById(apptId).catch(() => saved);
+          const refreshedRows = mapAppointmentsToTreatmentRows([refreshed]);
+          setAppointmentProcedures(previous => previous.map(row => refreshedRows.find(next => next.id === row.id) || row));
           setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+        } else {
+          throw new Error('The selected appointment procedure could not be found.');
         }
       } catch (error) {
         console.error('Failed to update appointment procedure:', error);
@@ -1616,12 +1667,14 @@ const NewTreatmentPlanPage = () => {
     try {
       setIsSaving(true);
       const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
-      await treatmentPlanService.update(activePlanId, {
+      const result = await treatmentPlanService.update(activePlanId, {
         items: payloadItems,
         ...buildTreatmentPlanTotalsPayload(payloadItems),
       });
-      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
-      setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+      const savedPlan = result.treatmentPlan;
+      setTreatmentPlans(mapPlanItems(savedPlan.items, savedPlan.createdAt));
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, savedPlan.items, savedPlan));
+      setToast({ open: true, message: billingSaveMessage(result, 'Procedure updated successfully!'), type: 'success' });
     } catch (error) {
       console.error('Failed to update treatment plan procedure:', error);
       const errData = error.response?.data?.error;
@@ -1672,18 +1725,21 @@ const NewTreatmentPlanPage = () => {
           '.MuiBox-root, .MuiPaper-root': { backgroundColor: 'transparent !important', boxShadow: 'none !important', border: 'none !important' },
           '@page': { margin: '10mm' },
           '.MuiTableContainer-root': { overflow: 'visible !important' },
-          'table': { width: '100% !important', zoom: '0.65' },
+          'table': { width: '100% !important', borderCollapse: 'collapse' },
           '.MuiTableCell-root': {
-            padding: '2px 4px !important',
-            fontSize: '9px !important',
-            lineHeight: '1.1 !important',
+            padding: '4px 6px !important',
+            fontSize: '10px !important',
+            lineHeight: '1.2 !important',
             whiteSpace: 'normal !important',
             minWidth: '0 !important',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            borderBottom: '1px solid #e2e8f0 !important'
           },
           '.MuiTableCell-head': {
             fontSize: '9px !important',
-            fontWeight: 'bold !important'
+            fontWeight: 'bold !important',
+            color: '#64748b !important',
+            textTransform: 'uppercase'
           },
           '.MuiSelect-select': {
             fontSize: '9px !important'
@@ -1711,7 +1767,7 @@ const NewTreatmentPlanPage = () => {
 
         {/* Left Pane - Odontogram */}
         {showOdontogram && (
-          <Box className={activeTab === 2 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
+          <Box className={activeTab !== 0 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
             <NewTreatmentPlanOdontogram
               selectedTeeth={selectedTeeth}
               onToothClick={handleToothClick}
@@ -1750,8 +1806,8 @@ const NewTreatmentPlanPage = () => {
           </Box>
         )}
         {activeTab === 1 && (
-          <Box sx={{ p: 2, overflowX: 'auto' }}>
-            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900 }}>
+          <Box sx={{ p: 2, overflowX: 'auto', '@media print': { p: 0, overflowX: 'visible', overflow: 'visible' } }}>
+            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900, '@media print': { minWidth: 0, width: '100%', border: 'none', p: 0, m: 0, boxShadow: 'none' } }}>
               {/* Top Toolbar matching screenshot */}
               <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ width: 260 }}>
@@ -1958,6 +2014,8 @@ const NewTreatmentPlanPage = () => {
                     onEditAppointment={handleEditAppointmentFromPlan}
                     onSendPreAuth={handleOpenPreAuth}
                     onUpdateItemStatus={handleUpdateItemStatus}
+                    onBulkUpdateItemStatus={handleBulkUpdateItemStatus}
+                    isSaving={isSaving}
                     onSaveAsHold={handleSaveAsHold}
                     onDeleteDraft={handleDeleteDraft}
                     selectedRows={selectedRows}
@@ -2150,6 +2208,7 @@ const NewTreatmentPlanPage = () => {
         onSave={handleSaveEditedFees}
         onRevert={String(editingFeesProcedure?.id || '').startsWith('appt-') ? undefined : handleRevertFees}
         saving={isSaving}
+        downgradeCodes={downgradeCodes}
       />
       <NotesDrawer
         open={isNotesDrawerOpen}
