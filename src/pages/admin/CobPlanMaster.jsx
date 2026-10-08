@@ -5,6 +5,7 @@ import PlanMasterActionBar from '../../components/admin/insurance-management/pla
 import PlanMasterTable from '../../components/admin/insurance-management/plan-master/PlanMasterTable';
 import PlanMasterEditDialog from '../../components/admin/insurance-management/plan-master/PlanMasterEditDialog';
 import PlanMasterHistoryDialog from '../../components/admin/insurance-management/plan-master/PlanMasterHistoryDialog';
+import PlanRequestsPanel from '../../components/admin/insurance-management/plan-master/PlanRequestsPanel';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useCobPlans, useUpdateCobPlan } from '../../hooks/queries/useCob';
@@ -128,6 +129,10 @@ const CobPlanMaster = () => {
               You can view these settings. Changing them needs the plan master-data permission.
             </Alert>
           )}
+
+          {/* The other half of the front desk's "plan isn't listed" flow.
+              Renders nothing when the queue is empty. */}
+          <PlanRequestsPanel canResolve={canEdit} plans={plans} />
 
           <PlanMasterActionBar
             search={search}

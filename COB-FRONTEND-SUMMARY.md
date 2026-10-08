@@ -167,20 +167,23 @@ ranked order → "Not part of claim order" → actions.
 
 ## 2. Tests
 
-`npm test` → **13 suites, 264 tests, all passing** (the 4 pre-existing suites
-included).
+`npm test` → **13 suites, 277 tests, all passing** (the 4 pre-existing suites
+included). Backend: `npx vitest run tests/cob-*` → 122 passing.
 
 | Suite | Covers |
 |---|---|
 | `utils/__tests__/cobUtils.test.js` (46) | Conditional-question matrix, validation, ranked/excluded split, server-driven blockers plus the fallback, badges, estimate formatting, historical detection, mismatch comparison, `payerReportedRanking` refusing to guess, and `deriveCoverageFormContext` |
 | `constants/__tests__/cobConstants.test.js` (36) | Every status has a badge, every flag has title/body/action, the blocking flag AND status sets match the backend's, the permission map matches the routes', the validator minimums match, no "COB" in front-desk labels, **and a drift guard that parses the backend's `types.ts` and asserts every enum matches** (auto-skips when the backend checkout isn't alongside) |
-| `cob/__tests__/CoverageFormDialog.test.jsx` (15) | Each conditional scenario shows/hides correctly; subscriber DOB required when not self and not required for self; hidden answers nulled on submit; **the two-payload split and the `subscriberEmploymentStatus` rename**; custody answers sent only when on screen; fixed-benefit note; plan-not-listed flow |
+| `cob/__tests__/CoverageFormDialog.test.jsx` (20) | Plus card photos: disabled until the coverage exists, uploaded on pick rather than on save, one call per side, a stored card linked rather than rendered inline, and removal. |
+| `cob/__tests__/CoverageFormDialog.test.jsx` (form, within the same file) | Each conditional scenario shows/hides correctly; subscriber DOB required when not self and not required for self; hidden answers nulled on submit; **the two-payload split and the `subscriberEmploymentStatus` rename**; custody answers sent only when on screen; fixed-benefit note; plan-not-listed flow |
 | `cob/__tests__/CoverageOrderPanel.test.jsx` (25) | Loading/error/empty/not-yet-evaluated; no query at all without `coverage_order.read`; reasons always shown; fixed-benefit in its own section and *not* in the order; badges incl. nested verification; date-of-service note; **the server's blocking sentence rendered verbatim**; each flag's banner, action and resolution note; override and record-payer gated on their real keys; **no "confirm" button** |
 | `cob/__tests__/PayerMismatch.test.jsx` (13) | Side-by-side view, provenance, note; "use the insurer's order" calling override **then** resolve-flag on the new version; the 10-char reason floor; keep-ours and re-checked calling resolve-flag only; and the partial-report path refusing to apply, offering the manual override, or naming who to ask |
 | `cob/__tests__/CoverageOrderOverrideDialog.test.jsx` (9) | Reason required and ≥ 10 chars; no-op blocked; confirmation shows old vs new; `orderedCoverageIds` payload; full keyboard reordering; spoken labels; end-of-list buttons disabled |
-| `cob/__tests__/ClaimResponsibility.test.jsx` (14) | Balance split by party in billing order; adjustments per party and as a labelled total, kept out of the paid column; estimates labelled; range when method unknown; empty/unlinked/error; secondary claim disabled before the remittance, enabled after, **a $0 denial counting as posted**, and the adjudication summary |
+| `cob/__tests__/ClaimResponsibility.test.jsx` (17) | Plus estimates: fetched in ONE call keyed on the claim, the backend's explanation used for an unconfirmed method, and no estimates at all before the primary remits. |
+| `cob/__tests__/ClaimResponsibility.test.jsx` (balances, within the same file) | Balance split by party in billing order; adjustments per party and as a labelled total, kept out of the paid column; estimates labelled; range when method unknown; empty/unlinked/error; secondary claim disabled before the remittance, enabled after, **a $0 denial counting as posted**, and the adjudication summary |
 | `cob/__tests__/InjuryQuestions.test.jsx` (9) | Injury type conditional, cleared on "no"; eligibility button hidden behind the flag; incomplete injury answer not sent; injury answered as claim context on `evaluate`; the panel asked about the claim's own date of service |
-| `pages/admin/__tests__/CobPlanMaster.test.jsx` (14) | Nothing shown without `plan_master.read`; edit hidden without `plan_master.edit`; "does not coordinate" chip; "not recorded" marker; `carrierId` filter; unconfirmed-only filter; **affected-patient count from the dry-run endpoint, shown before saving, save blocked until it arrives, and NOT claimed for a change that re-ranks nobody**; unconfirmed-"No" warning; PATCH sending only changed fields |
+| `pages/admin/__tests__/CobPlanMaster.test.jsx` (19) | Plus the plan-request worklist: hidden when empty, lists what was read off the card, close action gated on `plan_master.edit`, resolving requires the created plan, declining requires a note. |
+| `pages/admin/__tests__/CobPlanMaster.test.jsx` (plan master, within the same file) | Nothing shown without `plan_master.read`; edit hidden without `plan_master.edit`; "does not coordinate" chip; "not recorded" marker; `carrierId` filter; unconfirmed-only filter; **affected-patient count from the dry-run endpoint, shown before saving, save blocked until it arrives, and NOT claimed for a change that re-ranks nobody**; unconfirmed-"No" warning; PATCH sending only changed fields |
 | `cob/__tests__/cob.e2e.test.jsx` (5) | The three end-to-end scenarios |
 
 The end-to-end scenarios run the real components and hooks against a stateful
@@ -255,6 +258,13 @@ PATCH  /cob/carriers/:carrierId/payer-type
 GET    /cob/coverages/:coverageId/detail
 PATCH  /cob/coverages/:coverageId/detail             COB facts only
 POST   /cob/coverages/:coverageId/secondary-estimate -> range when method UNKNOWN
+GET    /cob/coverages/:coverageId/cards              card images (ADDED)
+POST   /cob/coverages/:coverageId/cards/:side        one side per request (ADDED)
+DELETE /cob/coverages/:coverageId/cards/:side        (ADDED)
+
+POST   /cob/plan-requests                            "plan isn't listed" (ADDED)
+GET    /cob/plan-requests?status=                    admin worklist (ADDED)
+PATCH  /cob/plan-requests/:requestId                 resolve / reject (ADDED)
 
 GET    /cob/patients/:patientId/coverage-order?dateOfService=
                                      -> { order, coverages, submittable }
@@ -268,6 +278,7 @@ GET    /cob/patients/:patientId/payer-reported-coverage
 POST   /cob/patients/:patientId/payer-reported-coverage
 
 GET    /cob/claims/:claimId/secondary-readiness      -> { posted, reason, ... }
+GET    /cob/claims/:claimId/downstream-estimates     -> { basis, byParty } (ADDED)
 GET    /cob/claims/:claimId/primary-payment
 GET    /cob/invoices/:invoiceId/responsibility       -> { byParty[], ... }
 POST   /claims/:primaryClaimId/generate-secondary    (claims API, not COB)
@@ -329,25 +340,127 @@ POST   /claims/:primaryClaimId/generate-secondary    (claims API, not COB)
     computes each diff against the version below it, and labels the oldest as
     the starting point instead of rendering it as a change from nothing.
 
-### One backend addition
+### Backend additions
 
-The spec requires the affected-patient count **before** saving, and
+Four endpoint groups were added to close gaps the spec required and the first
+backend cut did not cover.
+
+**1. Pre-save impact (`GET /cob/plans/:planId/cob-impact`)**
+
+The spec requires the affected-patient count **before** saving;
 `updateCobFields` only reports the fan-out **after** it (`reEvaluated`). So a
-read-only dry run was added:
-
-- `planMasterService.previewCobChangeImpact(planId)` →
-  `{ planId, affectedPatients, openClaims, patientsOnPlan }`
-- `CobController.getPlanCobImpact`
-- `GET /cob/plans/:planId/cob-impact`, gated on `insurance.plan_master.edit`
+read-only dry run was added: `planMasterService.previewCobChangeImpact` →
+`{ planId, affectedPatients, openClaims, patientsOnPlan }`, gated on
+`insurance.plan_master.edit`.
 
 Its `where` clause is a deliberate copy of `reEvaluatePatientsOnPlan`'s, with a
 comment on both saying so: the number shown before the save has to be the same
 number that happens, and "open claim" is defined by Open Dental status codes the
-client should not model. The frontend still reports the *actual* `reEvaluated`
-count in the success message, so prediction and outcome are both visible.
+client should not model. The UI still reports the *actual* `reEvaluated` count in
+the success message, so prediction and outcome are both visible.
 
-BE `tsc --noEmit` is clean, `tests/rbac/catalog-drift.test.ts` passes with the
-new route, and `tests/cob-pipeline` + `tests/cob-estimate` (53 tests) still pass.
+**2. Insurance card images**
+
+```
+GET    /cob/coverages/:coverageId/cards              canRead
+POST   /cob/coverages/:coverageId/cards/:side        coverage_detail.edit (multipart)
+DELETE /cob/coverages/:coverageId/cards/:side        coverage_detail.edit
+```
+
+New table `cob_coverage_card` — `(patplan_num, side)` → `doc_num`. **A card
+image IS a document**: the bytes go through the existing `uploadToS3` helper and
+`documentService.createDocument`, so the whole pipeline comes for free —
+checksum, mime filter, the `document` table's own RLS, and the delete path. The
+alternative (a `card_front_url` column on the coverage detail) would have been a
+second, weaker file pipeline inside COB.
+
+`side` is part of the primary key, not a plain column, because staff routinely
+re-shoot one side and an upsert keyed on the coverage alone would silently
+destroy the other. A replaced image's old file is deleted only *after* the new
+row is in place, so a failed upload never leaves the coverage with nothing.
+Cards are written as `isConfidential: true` — they carry the member ID and the
+subscriber's name.
+
+In the UI, each side **uploads as soon as it is picked**, not on save: the
+upload is a separate endpoint, so bundling it into the form's submit would mean
+a half-failed save with no good recovery, and a front desk photographing a card
+wants to see it land before handing the card back. On a brand-new coverage the
+slots are disabled with a note, because there is nothing to attach an image to
+until the coverage row exists. A stored card renders as a **link, not a
+thumbnail** — a card image on a shared front-desk screen is a card anyone
+walking past can read.
+
+**3. Plan requests ("the plan isn't in the list")**
+
+```
+POST   /cob/plan-requests              coverage_detail.edit   ← the front desk finds the gap
+GET    /cob/plan-requests?status=      plan_master.read
+PATCH  /cob/plan-requests/:requestId   plan_master.edit       ← an admin fills it
+```
+
+New table `cob_plan_request`. This replaces the earlier `/tasks` row with a real
+record, and the permission split is deliberately asymmetric: raising a request
+needs only `coverage_detail.edit`, resolving one needs `plan_master.edit` —
+because resolving is the action that creates a plan whose COB fields rank every
+patient on it.
+
+`RESOLVED` requires the `planId` the admin created. "Resolved" with nothing to
+point at is indistinguishable from "ignored" a month later, and the front desk's
+coverage still needs a plan to attach to. `REJECTED` requires a note instead,
+because it is the one path with nothing to show for it and the person who asked
+is looking at a patient's card.
+
+Raising a request notifies everyone holding `insurance.plan_master.edit`,
+resolved through roles rather than a hard-coded role name — the permission
+decides who *can* act, so it also decides who hears about it. Notification
+failure never fails the request: the row is the durable record, and losing the
+request because a notification write failed would send the front desk back to
+the patient for the card again.
+
+The admin side is a new `PlanRequestsPanel` above the plan table, which renders
+nothing when the queue is empty — an empty box every day teaches people to stop
+looking at that area.
+
+**4. Batched downstream estimates (`GET /cob/claims/:claimId/downstream-estimates`)**
+
+`getDownstreamEstimates` returns `{ claimId, dateOfService, basis, byParty }`,
+where `byParty` is keyed by responsible party and already carries `low`, `high`
+and `isRange`. The balance table feeds straight from it and does no arithmetic.
+
+Server-side and batched for three reasons, any one of which would be enough:
+the inputs aren't on the claim screen (billed, allowed and the primary's
+paid/patient split come from `claimproc` rows and 835 adjustment codes, which
+`getPrimaryRemittanceStatus` already derives correctly); which payer counts as
+"downstream" depends on the order in force **on the date of service** and on
+each plan's own `cob_payment_method`; and an `UNKNOWN` method must produce a
+**range** — a client assembling this from parts is one forgotten branch away
+from showing a midpoint, which is a figure the front desk quotes to a patient
+and then has to take back. The range tooltip now shows the backend's own
+explanation, which names the actual spread and the one question worth asking the
+payer.
+
+`byParty` comes back **empty, not an error**, before the primary has remitted:
+there is nothing to estimate from yet, and a claim screen asking early is normal.
+
+**RLS.** `prisma/rls/09-cob-tables.sql` covers both new tables.
+`cob_coverage_card` joins the parent-scoped loop through `patplan`, exactly like
+`cob_coverage_detail`. `cob_plan_request` gets its own block: it is a queue, not
+a chart — `pat_num` is context for the job, not the subject of the row — so it is
+scoped on the patient when there is one and left visible when there is not.
+Scoping it like a chart would hide group-wide requests from the one admin who can
+resolve them, which is how a front desk ends up creating the duplicate plan the
+table exists to prevent.
+
+BE `tsc --noEmit` is clean; `tests/rbac/catalog-drift.test.ts` passes with the
+new routes; `cob-pipeline` + `cob-estimate` + `cob-rules` (106 tests) pass; and
+`tests/cob-endpoints-extra.test.ts` (16 tests) covers the new surface.
+
+> Note on the local database: `tests/cob-api.test.ts` fails 22 of 35 here
+> because login returns a token that `authenticate` then rejects as "Invalid
+> token" — a JWT-secret/access-version mismatch between the seed and the running
+> app. That is pre-existing and unrelated to these changes. The new BE suite
+> probes for it and skips the HTTP assertions rather than reporting an
+> environment problem as a code failure.
 
 ### Permissions — the flagged item, resolved
 
@@ -395,27 +508,29 @@ actually switches the form's custody branch on.
 
 ### Remaining gaps
 
-- **"The plan isn't listed" raises a TASK, not a plan request.** There is no COB
-  endpoint for it and there should not be — letting the front desk mint plans is
-  how duplicate rows with unconfirmed defaults appear. It posts to the existing
-  `/tasks` API with a description telling a billing admin what to add and where.
-  If a dedicated endpoint is wanted later, only `cobPlanRequestService` changes.
-- **Card photo upload has no backend.** The UI collects front/back and hands the
-  files to the caller in `onSubmit`; nothing uploads them yet. The existing
-  patient-document endpoints are the obvious home, but wiring them is a
-  decision about where insurance card images should live.
-- **Secondary estimates are not yet fetched per party.** The balance table
-  accepts `estimatesByParty` and renders ranges correctly (tested), but the
-  claim panel does not yet call `POST /coverages/:id/secondary-estimate` to fill
-  it — that needs the billed/allowed/primary-paid figures from the claim, which
-  the claim screen has in a shape I did not want to guess at.
+All three previously-open items now have endpoints and UI. What is left is
+smaller:
+
+- **Card images are linked, not previewed.** Deliberate for PHI on a shared
+  screen, but a click-to-reveal thumbnail behind a confirm would be friendlier
+  than a new tab if someone wants it.
+- **A plan request does not auto-attach its coverage.** When an admin resolves a
+  request, the front desk is notified and re-picks the plan. Re-pointing the
+  saved `patplan` automatically is possible (the request stores `patplan_num`)
+  but it changes a patient's coverage without anyone looking at it, which felt
+  like the wrong default to choose unasked.
+- **Secondary estimates assume a 0% secondary benefit percentage.** `insplan`
+  does not model it, and inventing one would make a point estimate look
+  authoritative. Zero keeps the non-duplication/carve-out arms conservative, and
+  the default `UNKNOWN` method produces a range regardless — but a real
+  percentage would tighten every estimate once there is somewhere to store it.
 
 ## 4. Testing steps
 
 ```bash
 npm install          # jest + RTL were added
 npm test             # 13 suites / 217 tests
-npm run lint         # ~1249 problems repo-wide (was 1555); 7 are in new code,
+npm run lint         # ~1249 problems repo-wide (was 1555); 6 are in new code,
                      # all one rule (react-hooks/set-state-in-effect) on the
                      # reset-form-state-when-the-dialog-opens / sync-with-loaded-
                      # prop pattern this repo's other dialogs already use
@@ -434,6 +549,9 @@ Routes to click through once the backend endpoints exist:
 | same, with a COB_DENIAL order | Claim number, payer, denial date, group/reason code and the payer's words; "Open the denied claim"; "Re-verify with payer" opens the payer-statement form. |
 | `/patients/:id/insurance/new` | Policyholder = spouse → name and DOB appear and DOB is required. Payer = Medicare → reason appears; choose ESRD → start date appears; choose Age → it disappears. Coverage held = COBRA → employment status appears. Select a fixed-benefit plan → the "pays the patient directly" note appears. "The plan isn't in this list" → fill the plan name → the pending-request line appears. |
 | `/claims/:claimId` | Injury question (choose Yes → the type question appears; nothing is sent until the type is chosen, then the order is worked out again for this visit). Order panel shows the order effective on the **date of service**, with the "not the order in force today" banner when it is a past version, and the server's blocking sentence when a claim for that date can't go out. Balance table splits by party in billing order, adjustments on their own labelled total, estimates chipped, an unknown-method figure as a range. "Create secondary claim" disabled with a tooltip until the primary remittance is posted — including a $0 denial, which counts. |
+| card photos | Open an EXISTING coverage's COB answers (via a NEEDS_INFO "fix this", or the coverage form): pick a front image → it uploads straight away and becomes a "View photo" link, not a thumbnail; pick a back image → the front is still there; remove one → the other survives. On a NEW coverage the slots are disabled with "Save the insurance first". |
+| plan requests | On a coverage form, "The plan isn't in this list" → fill the plan name → a request is raised and everyone with `insurance.plan_master.edit` gets a notification. Then at `/admin/insurance-management/plan-coordination` the "Plans waiting to be added" panel lists it; **without** `plan_master.edit` there is no "Close this" button; **with** it, "I added the plan" needs the plan picked before Save enables, and "This isn't a plan we need" needs a note. The requester is notified either way. |
+| estimates | On a claim whose primary has remitted and which has a secondary/tertiary: each downstream payer shows an "Estimate" chip; a plan with a confirmed method shows one figure, one with method Unknown shows a range plus an info icon whose tooltip is the backend's own explanation. Before the primary remits, no estimates appear at all. |
 | feature flag | Set `VITE_FEATURE_AUTO_ELIGIBILITY=true` in `.env.local` and restart: "Check eligibility automatically" appears next to "Record what the insurer said". Unset: it is absent. |
 
 Keyboard/screen-reader pass: in the override dialog, Tab to a drag handle and
