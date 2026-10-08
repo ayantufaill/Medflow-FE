@@ -36,6 +36,7 @@ import {
   IconCalendar,
 } from "./FinanceActionIcons";
 import FinanceDialogManager from "./FinanceDialogManager";
+import LateFeeAcceptanceDialog from "./LateFeeAcceptanceDialog";
 import apiClient from "../../config/api";
 import { claimService } from "../../services/claim.service";
 import { useSelector } from 'react-redux';
@@ -76,6 +77,7 @@ const PatientFinanceInfo = forwardRef(
     const [showInsurancePayment, setShowInsurancePayment] = useState(false);
     const [showAddPayment, setShowAddPayment] = useState(false);
     const [showAccountNotes, setShowAccountNotes] = useState(false);
+    const [showLateFeeTerms, setShowLateFeeTerms] = useState(false);
     const [showNewInvoice, setShowNewInvoice] = useState(false);
     // Persisted so leaving the finance page mid-invoice doesn't lose the rows
     // the user added. Re-opened by LedgerList when they come back — see
@@ -670,6 +672,23 @@ const PatientFinanceInfo = forwardRef(
               </Button>
               <Button
                 variant="text"
+                onClick={() => setShowLateFeeTerms(true)}
+                sx={{
+                  textTransform: "none",
+                  color: "#2362EF",
+                  fontSize: "14px",
+                  p: 0,
+                  minWidth: 0,
+                  "&:hover": {
+                    bgcolor: "transparent",
+                    textDecoration: "underline",
+                  },
+                }}
+              >
+                late fee policy
+              </Button>
+              <Button
+                variant="text"
                 startIcon={
                   <Box
                     component="img"
@@ -715,19 +734,22 @@ const PatientFinanceInfo = forwardRef(
           showLateFee={showLateFee}
           setShowLateFee={setShowLateFee}
           selectedAdjustment={selectedAdjustment}
-          handleAddLateFee={async ({ invoiceIds, basis }) => {
+          handleAddLateFee={async ({ invoiceIds, basis, mode, rate }) => {
             const patientId = patient?._id || patient?.id;
             const tier = selectedAdjustment?.tier ?? null;
             if (!patientId || !invoiceIds?.length) return;
             try {
-              // No rate is sent — each tier has a fixed amount decided on the
-              // server. Ages, buckets, balances and the duplicate rule are all
-              // recomputed there too, so this is a request, not a calculation.
+              // No amount is computed here: the fee is sent straight through when
+              // a policy defines it, otherwise the tier decides it server-side.
+              // Ages, buckets, balances and the duplicate rule are all recomputed
+              // on the backend too, so this is a request, not a calculation.
               const result = await invoiceService.applyLateFee({
                 patientId: parseInt(patientId, 10) || patientId,
                 tier,
                 invoiceIds,
                 basis,
+                mode,
+                rate,
                 branchId: currentBranchId,
               });
 
@@ -778,6 +800,13 @@ const PatientFinanceInfo = forwardRef(
           setShowSimpleStatement={setShowSimpleStatement}
           showDetailedStatement={showDetailedStatement}
           setShowDetailedStatement={setShowDetailedStatement}
+        />
+
+        <LateFeeAcceptanceDialog
+          open={showLateFeeTerms}
+          onClose={() => setShowLateFeeTerms(false)}
+          patientId={patient?._id || patient?.id}
+          clinicId={currentBranchId}
         />
       </>
     );

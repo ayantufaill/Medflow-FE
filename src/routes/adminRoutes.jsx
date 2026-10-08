@@ -73,6 +73,8 @@ const adminRoutes = [
   <Route key="/admin/finance-management/payment-presentation" path="/admin/finance-management/payment-presentation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/coverage-book-shortcut" path="/admin/finance-management/coverage-book-shortcut" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/ar-automation" path="/admin/finance-management/ar-automation" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/late-fee-policy" path="/admin/finance-management/late-fee-policy" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/late-fee-waivers" path="/admin/finance-management/late-fee-waivers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management" path="/admin/insurance-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication" path="/admin/patient-communication" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/settings" path="/admin/patient-communication/settings" element={adminOnly(<AdminPage />)} />,
