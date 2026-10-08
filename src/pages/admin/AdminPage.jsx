@@ -37,6 +37,7 @@ import TreatmentPlanPresentation from './TreatmentPlanPresentation';
 import InsuranceCarriers from './InsuranceCarriers';
 import InsurancePlans from './InsurancePlans';
 import MembershipPlans from './MembershipPlans';
+import CobPlanMaster from './CobPlanMaster';
 import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
 import PatientCommunicationSettings from './PatientCommunicationSettings';
@@ -133,6 +134,7 @@ const INSURANCE_MANAGEMENT_SUB_TABS = [
   { label: 'Insurance Carriers', path: '/admin/insurance-management/carriers' },
   { label: 'Insurance Plans', path: '/admin/insurance-management/plans' },
   { label: 'Membership Plans', path: '/admin/insurance-management/membership-plans' },
+  { label: 'Plan Coordination', path: '/admin/insurance-management/plan-coordination' },
   { label: 'Match Converted Carriers', path: '/admin/insurance-management/match-converted-carriers' },
   { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
 ];
@@ -529,6 +531,8 @@ const AdminPage = () => {
             <InsurancePlans />
           ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
             <MembershipPlans />
+          ) : location.pathname === '/admin/insurance-management/plan-coordination' ? (
+            <CobPlanMaster />
           ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
             <MatchConvertedCarriers />
           ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (
