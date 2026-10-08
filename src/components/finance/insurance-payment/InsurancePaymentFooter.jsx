@@ -9,7 +9,8 @@ const InsurancePaymentFooter = ({
   onClose,
   totalWo = 0,
   totalPay = 0,
-  overpaymentAmount = 0
+  overpaymentAmount = 0,
+  underpaymentAmount = 0
 }) => {
   return (
     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }}>
@@ -38,6 +39,15 @@ const InsurancePaymentFooter = ({
               <InfoOutlinedIcon sx={{ fontSize: '0.9rem', color: '#1976d2' }} />
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1565c0' }}>
                 Ins Overpay: ${overpaymentAmount.toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+
+          {underpaymentAmount > 0.005 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: '#fdecea', border: '1px solid #f5a9a0', borderRadius: '6px', px: 1, py: 0.25 }}>
+              <InfoOutlinedIcon sx={{ fontSize: '0.9rem', color: '#c0392b' }} />
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#c0392b' }}>
+                Ins Underpay: ${underpaymentAmount.toFixed(2)}
               </Typography>
             </Box>
           )}

@@ -8,11 +8,14 @@ const CashPlusMenu = ({ anchorEl, onClose, onSelect }) => {
   const open = Boolean(anchorEl);
 
   const menuItems = [
+    // `tier` is the number of days past due an invoice must have reached before
+    // it can be charged. Left unset on the un-tiered adjustments, which apply to
+    // any overdue invoice instead of one band.
     { id: 'broken-appt', label: 'Broken appt' },
     { id: 'late-cancellation', label: 'Late cancellation' },
-    { id: 'late-payment-30', label: 'Late payment 30 days' },
-    { id: 'late-payment-60', label: 'Late payment 60 days' },
-    { id: 'late-payment-90', label: 'Late payment 90 days' },
+    { id: 'late-payment-30', label: 'Late payment 30 days', tier: 30 },
+    { id: 'late-payment-60', label: 'Late payment 60 days', tier: 60 },
+    { id: 'late-payment-90', label: 'Late payment 90 days', tier: 90 },
     { id: 'flat-rate', label: 'Flat rate' },
     { id: 'percentage', label: 'Percentage' }
   ];

@@ -9,6 +9,7 @@ import {
   selectFeeGuidesLoading,
 } from "../../../store/slices/feeGuideSlice";
 import { buildCoveragePayload } from "../utils/coveragePayloadBuilder";
+import { COVERAGE_DATA } from "../../../components/insurance/utils/insuranceConstants";
 import { monthMapReverse } from "../utils/coverageConstants";
 import { useNavigate } from "react-router-dom";
 
@@ -216,7 +217,13 @@ export const useCoverageData = (
               setCoverageBookData(editTarget.coverageBookData);
             }
 
-            if (editTarget.coverageCategoryTable) {
+            if (
+              editTarget.coverageCategoryTable &&
+              ((Array.isArray(editTarget.coverageCategoryTable) &&
+                editTarget.coverageCategoryTable.length > 0) ||
+                (!Array.isArray(editTarget.coverageCategoryTable) &&
+                  Object.keys(editTarget.coverageCategoryTable).length > 0))
+            ) {
               const covDataArray = editTarget.coverageCategoryTable;
 
               if (
@@ -233,6 +240,8 @@ export const useCoverageData = (
               } else if (covDataArray && !Array.isArray(covDataArray)) {
                 setCoverageCategoryData(covDataArray);
               }
+            } else {
+              setCoverageCategoryData(COVERAGE_DATA);
             }
           }
         }

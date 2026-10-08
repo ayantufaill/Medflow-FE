@@ -232,6 +232,9 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             ptAmount: itemPtAmount,
             insAmount: itemInsAmount,
             amount: itemInsAmount,
+            allowedFee: item.allowedFee !== undefined && item.allowedFee !== null && Number(item.allowedFee) > 0 ? Number(item.allowedFee) : undefined,
+            coveragePct: item.coveragePct !== undefined && item.coveragePct !== null ? Number(item.coveragePct) : undefined,
+            deductibleApplied: item.deductibleApplied !== undefined && item.deductibleApplied !== null ? Number(item.deductibleApplied) : undefined,
           });
         }
       });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
   Box,
@@ -20,7 +20,6 @@ import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 import { createInvoiceAdjustment } from '../../store/slices/billingSlice';
 import { usePatient } from '../../hooks/redux/usePatient';
-import apiClient from '../../config/api';
 
 const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const dispatch = useDispatch();
@@ -28,24 +27,17 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   
   const [adjustmentType, setAdjustmentType] = useState("Write Off");
   const [reason, setReason] = useState("");
-  const [calcMode, setCalcMode] = useState("Percentage");
+  const [calcMode, setCalcMode] = useState("Flat rate");
   const [calcValue, setCalcValue] = useState("");
-  const [adjustmentTypeOptions, setAdjustmentTypeOptions] = useState([]);
-
-  useEffect(() => {
-    const fetchDefinitions = async () => {
-      try {
-        const res = await apiClient.get('/admin-finance/definitions/1');
-        const data = res.data?.data || res.data || [];
-        if (Array.isArray(data) && data.length > 0) {
-          setAdjustmentTypeOptions(data);
-        }
-      } catch (err) {
-        // fallback silently
-      }
-    };
-    fetchDefinitions();
-  }, []);
+  const [adjustmentTypeOptions] = useState([
+    { type: 'Write Off' },
+    { type: 'Un-Collected' },
+    { type: 'Pre Payment' },
+    { type: 'Wellness' },
+    { type: 'Small Balance W/O' },
+    { type: 'Curtsey W/O' },
+    { type: 'Non Payment' },
+  ]);
 
   const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
   const rawDate = editTarget?.invoiceDate || editTarget?.date || editTarget?.createdAt || editTarget?.dateService;
@@ -66,11 +58,13 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   let totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
   let hasSummary = false;
   let totalWo = 0;
+  let summaryPtPaid = 0;
+  let summaryInsPaid = 0;
   if (editTarget?.summary) {
     hasSummary = true;
-    const ptP = Number(editTarget.summary.ptPaid?.replace(/[^0-9.-]+/g,"")) || 0;
-    const insP = Number(editTarget.summary.insPaid?.replace(/[^0-9.-]+/g,"")) || 0;
-    totalPayment = ptP + insP;
+    summaryPtPaid = Number(editTarget.summary.ptPaid?.replace(/[^0-9.-]+/g,"")) || 0;
+    summaryInsPaid = Number(editTarget.summary.insPaid?.replace(/[^0-9.-]+/g,"")) || 0;
+    totalPayment = summaryPtPaid + summaryInsPaid;
     totalWo = Number(editTarget.summary.insWo?.replace(/[^0-9.-]+/g,"")) || 0;
   }
   
@@ -88,7 +82,15 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
 
     let ptBalance = Number(p.patientBalance || p.ptBalance || parseFloat(String(p.ptPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
     let insBalance = Number(p.insuranceBalance || p.insBalance || parseFloat(String(p.insPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
+    let insurancePaidAmt = Number(p.insurancePaid || 0);
+    let patientPaidAmt = Number(p.patientPaid || 0);
     let pay = Number(p.paidAmount || p.payAmount || p.patientPaid || 0) + Number(p.insurancePaid || 0);
+    // When insurance payment isn't broken out on the line item, the collected
+    // amount is treated as insurance up to the insurance portion.
+    if (insurancePaidAmt === 0) {
+      insurancePaidAmt = Math.min(pay - patientPaidAmt, insBalance);
+    }
+    if (insurancePaidAmt < 0) insurancePaidAmt = 0;
 
     // Only override with summary pro-ration if line items don't have their own balances defined
     // and there is an actual summary
@@ -104,36 +106,65 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     if (hasSummary && pay === 0 && totalPayment > 0) {
       pay = totalPayment * weight;
     }
-    
+
+    // If the procedure doesn't track patientPaid individually but the invoice summary
+    // does, pro-rate the summary's patient paid amount across procedures by charge weight.
+    // This ensures the "Patient:" column shows the *remaining* balance, not the gross portion.
+    if (hasSummary && patientPaidAmt === 0 && summaryPtPaid > 0) {
+      patientPaidAmt = summaryPtPaid * weight;
+    }
+    if (hasSummary && insurancePaidAmt === 0 && summaryInsPaid > 0) {
+      insurancePaidAmt = summaryInsPaid * weight;
+    }
+
+    const ptRemaining = Math.max(0, ptBalance - patientPaidAmt);
+    const insRemaining = Math.max(0, insBalance - insurancePaidAmt);
+
     return {
       code: p.code || p.cptCode || p.ProcCode || 'Item',
       patient: patientName,
       values: [
         { val: `$${writeoff.toFixed(2)}` },
-        { val: `$${ptBalance.toFixed(2)}` },
-        { val: `$${insBalance.toFixed(2)}` },
+        { val: `$${ptRemaining.toFixed(2)}` },
+        { val: `$${insRemaining.toFixed(2)}` },
         { val: `$${charge.toFixed(2)}` },
         { val: `$${pay.toFixed(2)}` },
       ],
       charge,
+      ptRemaining,
     };
   });
 
-  const totalWriteOff = dynamicLineItems.reduce((sum, item) => sum + parseFloat(item.values[0].val.replace(/[^0-9.-]+/g,"")), 0);
-  const totalPtBalance = dynamicLineItems.reduce((sum, item) => sum + parseFloat(item.values[1].val.replace(/[^0-9.-]+/g,"")), 0);
+  const totalPtBalance = dynamicLineItems.reduce((sum, item) => sum + (item.ptRemaining || 0), 0);
+  const totalWriteOff = procedures.reduce((sum, p) => {
+    let wo = Number(p.writeoff || p.estimatedWriteOff || 0);
+    if (!wo && p.BillingNote) {
+      try {
+        const bn = JSON.parse(p.BillingNote);
+        if (bn.writeoff) wo = Number(bn.writeoff);
+      } catch { /* ignore invalid BillingNote */ }
+    }
+    return sum + wo;
+  }, 0);
 
   const parsedValue = parseFloat(calcValue) || 0;
   let baseAmount = totalCharges;
   if (adjustmentType === "Curtsey W/O") {
     baseAmount = totalPtBalance;
   }
-  
-  let adjustmentAmount = calcMode === "Percentage" 
-    ? baseAmount * (parsedValue / 100) 
+
+  let adjustmentAmount = calcMode === "Percentage"
+    ? baseAmount * (parsedValue / 100)
     : parsedValue;
 
   if (adjustmentType === "Write Off") {
     adjustmentAmount = totalWriteOff;
+  }
+
+  if (adjustmentType === "Curtsey W/O") {
+    adjustmentAmount = calcMode === "Percentage"
+      ? totalPtBalance * (parsedValue / 100)
+      : totalPtBalance;
   }
 
   if (adjustmentType === "Curtsey W/O" && adjustmentAmount > totalPtBalance) {
@@ -145,6 +176,12 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     let percentStr = "0%";
     if (adjustmentType === "Write Off") {
       percentStr = item.values[0].val; // Shows the exact write-off amount for this item
+    } else if (adjustmentType === "Curtsey W/O") {
+      const patientRemaining = item.ptRemaining || 0;
+      const applied = calcMode === "Percentage"
+        ? patientRemaining * (parsedValue / 100)
+        : patientRemaining;
+      percentStr = `$${applied.toFixed(2)}`;
     } else if (calcMode === "Percentage") {
       percentStr = `${parsedValue}%`;
     }
@@ -253,7 +290,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
           </Box>
         </Stack>
 
-        {adjustmentType !== "Write Off" && (
+        {(adjustmentType !== "Write Off") && (
           <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
             <Select
               variant="outlined"
@@ -269,6 +306,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
             <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
               {calcMode === "Percentage" ? "%" : "$"}
             </Typography>
+            {calcMode === "Percentage" && (
             <TextField
               variant="outlined"
               size="small"
@@ -293,6 +331,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               type="number"
               sx={{ width: 120, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
             />
+            )}
             <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
               = ${adjustmentAmount.toFixed(2)}
             </Typography>
@@ -305,14 +344,14 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               Invoice {invoiceNum} : {invoiceDate} for {patientName}
             </Typography>
           </Box>
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Ins Writeoff</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Patient:</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Insurance:</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Charges: ${totalCharges.toFixed(2)}</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: '#22c55e' }}>Payment: ${totalPayment.toFixed(2)}</Typography>
-             <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: -${adjustmentAmount.toFixed(2)}</Typography>
-          </Box>
+           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Ins Writeoff</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Patient:</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Insurance:</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Charges: ${totalCharges.toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: '#22c55e' }}>Payment: ${totalPayment.toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: -${adjustmentAmount.toFixed(2)}</Typography>
+           </Box>
         </Box>
 
         {finalLineItems.map((item, idx) => (
@@ -322,27 +361,27 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.patient}</Typography>
             </Box>
             <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
-                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[0].val}</Typography>
-               </Box>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
-                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[1].val}</Typography>
-               </Box>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
-                 <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[2].val}</Typography>
-               </Box>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
-                 <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 600 }}>{item.values[3].val}</Typography>
-               </Box>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1 }}>
-                 <Typography sx={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>{item.values[4].val}</Typography>
-               </Box>
-               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1, pr: 1 }}>
-                 <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px' }}>
-                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.percent}</Typography>
-                 </Box>
-               </Box>
-            </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[0].val}</Typography>
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[1].val}</Typography>
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.values[2].val}</Typography>
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666', fontWeight: 600 }}>{item.values[3].val}</Typography>
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1 }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>{item.values[4].val}</Typography>
+                </Box>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1, pr: 1 }}>
+                  <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px' }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.percent}</Typography>
+                  </Box>
+                </Box>
+             </Box>
           </Box>
         ))}
       </DialogContent>

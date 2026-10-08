@@ -42,7 +42,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState('select a claim');
   const [paymentMethod, setPaymentMethod] = useState('EFT');
-  const [paymentAmount, setPaymentAmount] = useState('0.00');
   const [procedures, setProcedures] = useState([]);
   const [updateAllowedFee, setUpdateAllowedFee] = useState(false);
   const [updateInsFlatPortion, setUpdateInsFlatPortion] = useState(false);
@@ -109,14 +108,12 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [selectedPaymentOption, setSelectedPaymentOption] = useState('swipe');
   const [rememberCard, setRememberCard] = useState(false);
   const [claims, setClaims] = useState([]);
-  const [loadingClaims, setLoadingClaims] = useState(true);
 
   useEffect(() => {
     const fetchClaims = async () => {
       const patientId = patient?._id || patient?.id;
       if (!patientId) return;
       try {
-        setLoadingClaims(true);
         const data = await claimService.getAllClaims({ patientId, limit: 1000 });
         const claimsList = data.claims || [];
         setClaims(claimsList);
@@ -125,8 +122,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         }
       } catch (err) {
         console.error('Error fetching claims:', err);
-      } finally {
-        setLoadingClaims(false);
       }
     };
     fetchClaims();
@@ -168,13 +163,24 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       }, 0);
 
       claimProcs = eligibleProcs.map(p => {
-        const submittedNum = Number(p.fee || p.ProcFee || p.charge || 0);
+        const submittedNum = Number(p.insPayEst !== undefined && p.insPayEst !== null && Number(p.insPayEst) > 0 ? Number(p.insPayEst) : (p.insPortion !== undefined && p.insPortion !== null && Number(p.insPortion) > 0 ? Number(p.insPortion) : 0));
+        const billedNum = Number(p.fee || p.ProcFee || p.charge || 0);
         const existingWo = Number(p.writeOffEst ?? p.writeoff ?? p.writeOff ?? 0);
-        const allowedNum = p.allowedOverride !== undefined && p.allowedOverride !== null && Number(p.allowedOverride) > 0
+        const dedNum = Number(p.deductibleApplied ?? p.dedApplied ?? p.deductible ?? 0) || 0;
+        const explicitAllowed = (p.allowedOverride !== undefined && p.allowedOverride !== null && Number(p.allowedOverride) > 0)
           ? Number(p.allowedOverride)
           : (p.feeAllowed !== undefined && p.feeAllowed !== null && Number(p.feeAllowed) > 0
             ? Number(p.feeAllowed)
-            : Math.max(0, submittedNum - existingWo));
+            : null);
+        const procAllowed = (p.allowedFee !== undefined && p.allowedFee !== null && Number(p.allowedFee) > 0)
+          ? Number(p.allowedFee)
+          : null;
+        // Allowed column displays the backend-calculated, post-deductible
+        // insurance-covered amount (insPortion/insPayEst) — never recomputed
+        // in the UI, so the deductible already baked into it is honored.
+        const allowedNum = submittedNum > 0
+          ? submittedNum
+          : (explicitAllowed ?? procAllowed ?? Math.max(0, billedNum - existingWo));
         const woNum = existingWo;
         const initialEst = p.insPayEst !== undefined && p.insPayEst !== null
           ? Number(p.insPayEst)
@@ -210,8 +216,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           invoiceDate: p.invoiceDate,
           code: `${p.ProcCode || p.code || p.cptCode || ''} - ${p.Descript || p.description || p.name || ''}`,
           submitted: `$${submittedNum.toFixed(2)}`,
-          bal: `$${Number(p.balance || submittedNum).toFixed(2)}`,
-          ded: '0.00',
+          bal: `$${Number(p.balance || billedNum).toFixed(2)}`,
+          ded: dedNum.toFixed(2),
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
@@ -241,14 +247,28 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         return sum + estPortion;
       }, 0);
 
+      const secondaryExpectedInsurance = (item) => {
+        if (isSecondary) {
+          return (item.secondaryInsPortion !== undefined && item.secondaryInsPortion !== null && Number(item.secondaryInsPortion) > 0)
+            ? Number(item.secondaryInsPortion)
+            : ((item.insPortion !== undefined && item.insPortion !== null && Number(item.insPortion) > 0) ? Number(item.insPortion) : 0);
+        }
+        return (item.insPortion !== undefined && item.insPortion !== null && Number(item.insPortion) > 0)
+          ? Number(item.insPortion)
+          : ((item.insPayEst !== undefined && item.insPayEst !== null && Number(item.insPayEst) > 0) ? Number(item.insPayEst) : 0);
+      };
+
       claimProcs = eligibleItems.map(l => {
-        const submittedNum = Number(l.charge || l.totalPrice || l.fee || 0);
+        const submittedNum = secondaryExpectedInsurance(l);
+        const billedNum = Number(l.charge || l.totalPrice || l.fee || 0);
         const existingWo = Number(l.writeoff ?? l.estimatedWriteOff ?? 0);
-        const allowedNum = l.allowedFee !== undefined && l.allowedFee !== null && Number(l.allowedFee) > 0
+        const dedNum = Number(l.deductibleApplied ?? l.dedApplied ?? l.deductible ?? 0) || 0;
+        const explicitAllowed = (l.allowedFee !== undefined && l.allowedFee !== null && Number(l.allowedFee) > 0)
           ? Number(l.allowedFee)
           : (l.feeAllowed !== undefined && l.feeAllowed !== null && Number(l.feeAllowed) > 0
             ? Number(l.feeAllowed)
-            : Math.max(0, submittedNum - existingWo));
+            : null);
+        const allowedNum = submittedNum > 0 ? submittedNum : (explicitAllowed ?? Math.max(0, billedNum - existingWo));
         const woNum = existingWo;
         const initialEst = isSecondary
           ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : 0)
@@ -281,8 +301,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           invoiceDate: l.invoiceDate,
           code: `${l.code || ''} - ${l.description || l.name || ''}`,
           submitted: `$${submittedNum.toFixed(2)}`,
-          bal: `$${Number(l.balance || submittedNum).toFixed(2)}`,
-          ded: '0.00',
+          bal: `$${Number(l.balance || billedNum).toFixed(2)}`,
+          ded: dedNum.toFixed(2),
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
@@ -299,9 +319,18 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       const totalClaimEst = eligibleItems.reduce((sum, item) => sum + Number(item.amount || item.fee || 0), 0);
 
       claimProcs = eligibleItems.map(item => {
-        const submittedNum = Number(item.fee || item.amount || 0);
+        const submittedNum = Number(item.amount !== undefined && item.amount !== null && Number(item.amount) > 0 ? Number(item.amount) : (item.insAmount !== undefined && item.insAmount !== null && Number(String(item.insAmount).replace(/[^0-9.-]/g,'')) > 0 ? Number(String(item.insAmount).replace(/[^0-9.-]/g,'')) : 0));
+        const billedNum = Number(item.fee || 0);
         const existingWo = Number(item.writeoff ?? item.writeOff ?? 0);
-        const allowedNum = Math.max(0, submittedNum - existingWo);
+        const dedNum = Number(item.deductibleApplied ?? item.dedApplied ?? 0) || 0;
+        const itemAllowed = (item.allowedFee !== undefined && item.allowedFee !== null && Number(item.allowedFee) > 0)
+          ? Number(item.allowedFee)
+          : null;
+        // Allowed = post-deductible, coverage-adjusted insurance amount from
+        // the backend (same value used as Submitted/Ins pay basis).
+        const allowedNum = submittedNum > 0
+          ? submittedNum
+          : (itemAllowed ?? Math.max(0, billedNum - existingWo));
         const itemCode = item.code ? (item.description ? `${item.code} - ${item.description}` : item.code) : `Item ID: ${item.itemId}`;
         const procInvoiceId = item.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
         const initialEst = item.amount !== undefined && item.amount !== null && Number(item.amount) > 0
@@ -329,8 +358,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           invoiceDate: item.invoiceDate,
           code: itemCode,
           submitted: `$${submittedNum.toFixed(2)}`,
-          bal: `$${submittedNum.toFixed(2)}`,
-          ded: '0.00',
+          bal: `$${billedNum.toFixed(2)}`,
+          ded: dedNum.toFixed(2),
           allowed: allowedNum.toFixed(2),
           wo: existingWo.toFixed(2),
           pay: remainingPay.toFixed(2),
@@ -344,13 +373,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setProcedures(claimProcs);
   }, [selectedClaim, claims]);
   
-  const headerBackground = '#7788bb';
-  const greenHeader = '#8fb884';
-  const warningRed = '#c0392b';
-  const greenButton = '#7788bb';
-  const tanButton = '#d4c197';
-  const linkBlue = '#5c7cb6';
-
   const checkboxOptions = [
     { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
     { label: 'Update Ins. Flat Portion', checked: updateInsFlatPortion, onChange: (e) => setUpdateInsFlatPortion(e.target.checked) },
@@ -455,6 +477,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           paymentMethod: backendMethod,
           paymentSource: 'insurance_company',
           paymentDate: new Date().toISOString(),
+          isPartialPayment: isPartialPayment,
+          claimStatus: !isPartialPayment && invPay === 0 ? 'rejected' : undefined,
           insuranceCompanyId: (
             selectedClaimObj.insuranceCompanyId?._id ||
             selectedClaimObj.insuranceCompanyId?.id ||
@@ -474,6 +498,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             wo: Number(p.wo || 0),
             pay: Number(p.pay || 0),
             ded: Number(p.ded || 0),
+            excess: Math.max(
+              0,
+              Math.round((Number(p.wo || 0) + Number(p.pay || 0) - Number(p.insPortionEst || 0)) * 100) / 100,
+            ),
             claimId: selectedClaimObj.id || selectedClaimObj._id
           }))
         };
@@ -487,12 +515,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
       // Update claim paidAmount and status:
       // If Partial Payment is checked, claim remains 'partial' (unadjudicated balance stays with insurance).
+      // If payment is $0.00, claim is marked as 'rejected' (insurance denied/rejected with no payment).
       // Otherwise, claim status is set to 'paid' (final adjudication, underpayment transfers to patient responsibility).
       const claimPaidAmt = totalPay > 0 ? totalPay : 0;
       const priorClaimPaid = Number(selectedClaimObj.paidAmount || 0);
       const newTotalClaimPaid = Math.round((priorClaimPaid + claimPaidAmt) * 100) / 100;
+      const claimStatus = isPartialPayment ? 'partial' : (totalPay === 0 ? 'rejected' : 'paid');
       await claimService.updateClaim(selectedClaimObj.id, {
-        status: isPartialPayment ? 'partial' : 'paid',
+        status: claimStatus,
         paidAmount: newTotalClaimPaid,
         paidDate: new Date().toISOString()
       });
@@ -515,7 +545,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const bc = new BroadcastChannel('medflow-payments');
         bc.postMessage(eventPayload);
         bc.close();
-      } catch (e) {}
+      } catch (e) {
+        void e;
+      }
 
       showSnackbar('Insurance payment applied successfully', 'success');
 
@@ -548,7 +580,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setShowPaymentOptions(false);
   };
 
-  const handleSecondarySubmit = async ({ claimType, invoiceId, primaryClaimId }) => {
+  const handleSecondarySubmit = async ({ claimType, primaryClaimId }) => {
     setIsSubmitting(true);
     try {
       const generatedClaimRes = await claimService.generateSecondaryClaim(primaryClaimId);
@@ -575,6 +607,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     const wo = Number(proc.wo || 0);
     const pay = Number(proc.pay || 0);
     return total + Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+  }, 0);
+
+  // Derived: real-time underpayment amount (insurance estimate not covered by entered pay + write-off)
+  const underpaymentAmount = procedures.reduce((total, proc) => {
+    const insEst = Number(proc.insPortionEst || 0);
+    const wo = Number(proc.wo || 0);
+    const pay = Number(proc.pay || 0);
+    return total + Math.max(0, Math.round((insEst - (wo + pay)) * 100) / 100);
   }, 0);
 
   // Overpaid procedure details for the alert dialog
@@ -660,6 +700,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         totalWo={procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0)}
         totalPay={procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0)}
         overpaymentAmount={overpaymentAmount}
+        underpaymentAmount={underpaymentAmount}
       />
 
       {/* Simple Billing Alert Dialog */}
@@ -858,7 +899,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
         <DialogContent sx={{ pt: '24px !important', px: '25px', pb: 2 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 2, lineHeight: 1.6 }}>
-            The following procedures are overpaid by the entered amounts. How would you like to handle the overpayment?
+            The following procedures are overpaid by the entered amounts. If the patient has not yet paid
+            their portion, the overpayment will be deducted from the patient&apos;s portion automatically.
           </Typography>
           <Box sx={{ bgcolor: '#f0f7ff', border: '1px solid #b8d5f8', borderRadius: '8px', px: 2, py: 1.5, mb: 1 }}>
             {overpaidProcedures.map((proc, idx) => (

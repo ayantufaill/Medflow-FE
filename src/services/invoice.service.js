@@ -56,6 +56,14 @@ export const invoiceService = {
     return {
       ...invoice,
       id: invoice._id || invoice.id,
+      insuranceCompany: invoice.insuranceCompany ?? null,
+      secondaryInsuranceCompany: invoice.secondaryInsuranceCompany ?? null,
+      // The patient's active coverages, ordinal-ordered. This is what the
+      // estimator actually priced the lines against, so it is the reliable
+      // source for carrier names — the invoice's own insuranceCompany is only
+      // set when the invoice was created from an appointment with a carrier
+      // attached, and is null otherwise.
+      coverages: invoice.coverages ?? [],
       // Map items to lineItems for frontend display
       lineItems: items?.map(item => ({
         ...item,
@@ -96,6 +104,40 @@ export const invoiceService = {
       ...invoice,
       id: invoice._id || invoice.id,
     };
+  },
+
+  /**
+   * Apply a late fee to one or more of a patient's overdue invoices.
+   *
+   * Ages, tier buckets, balances and the one-fee-per-invoice-per-tier rule are
+   * all recomputed server-side; invoices that turn out to be ineligible come
+   * back under `rejected` rather than being charged.
+   */
+  async applyLateFee({ patientId, tier, invoiceIds, mode, rate, basis, branchId }) {
+    const response = await apiClient.post('/invoices/late-fee', {
+      patientId,
+      tier,
+      invoiceIds,
+      mode,
+      rate,
+      basis,
+      branchId,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Invoices eligible for a late-fee tier.
+   *
+   * Server-computed so the dialog and the charge always agree on tier buckets
+   * and on which invoices already carry a fee for this tier.
+   */
+  async getLateFeeEligibility(patientId, tier) {
+    const response = await apiClient.get(
+      `/invoices/patient/${patientId}/late-fee-eligibility`,
+      { params: { tier } },
+    );
+    return response.data.data;
   },
 
   /**
