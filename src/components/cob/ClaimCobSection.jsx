@@ -89,6 +89,8 @@ const ClaimCobSection = ({
         onOpenClaim={onOpenClaim}
       />
 
+      {/* The panel fetches its own downstream estimates — one call keyed on
+          the claim, rather than this component assembling them. */}
       <ClaimResponsibilityPanel claimId={claimId} invoiceId={invoiceId} />
     </Stack>
   );

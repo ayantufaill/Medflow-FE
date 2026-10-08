@@ -131,35 +131,45 @@ export const cobPlanMasterService = {
 
 export const cobPlanRequestService = {
   /**
-   * The front desk found a plan that is not in the master list.
+   * The front desk found a plan the master list doesn't have.
    *
-   * There is no COB endpoint for this, and there should not be: the plan
-   * master carries the coordination settings every patient on a plan
-   * inherits, so letting the front desk mint plans is how duplicate rows with
-   * unconfirmed defaults get created. Instead this raises a TASK, which is the
-   * app's existing mechanism for "a human needs to do something" — a billing
-   * admin picks it up and adds the plan properly.
+   * This raises a REQUEST, not a plan — the backend notifies everyone holding
+   * `insurance.plan_master.edit` and they create the plan with its
+   * coordination settings in one action. Letting the front desk mint plans is
+   * how duplicate rows with unconfirmed defaults appear, and each of those
+   * silently ranks every patient on it.
+   *
+   * Only `planName` is required; everything else on the card is a bonus. The
+   * returned `id` travels with the coverage, so the patient is never blocked
+   * at the desk waiting for a plan.
    */
-  async requestPlan({ planName, groupNumber, payerPhone, note, carrierId, carrierName, patientId }) {
-    const description = [
-      `Plan not in the master list: "${planName}"`,
-      carrierName ? `Payer: ${carrierName}` : carrierId ? `Carrier id: ${carrierId}` : '',
-      groupNumber ? `Group number: ${groupNumber}` : '',
-      payerPhone ? `Phone on card: ${payerPhone}` : '',
-      note ? `Note: ${note}` : '',
-      'Add the plan and record its coordination settings in Admin → Insurance Management → Plan Coordination.',
-    ]
-      .filter(Boolean)
-      .join('\n');
+  async createPlanRequest(payload) {
+    return unwrap(await apiClient.post('/cob/plan-requests', payload));
+  },
 
-    const response = await apiClient.post('/tasks', {
-      title: `Add insurance plan: ${planName}`,
-      description,
-      priority: 'high',
-      category: 'insurance',
-      patientId: patientId ?? undefined,
-    });
-    return response?.data?.data;
+  /** The admin worklist. -> { requests, page, limit, total } */
+  async getPlanRequests({ status = 'OPEN', page = 1, limit = 25 } = {}) {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+
+    return unwrap(await apiClient.get(`/cob/plan-requests?${params.toString()}`));
+  },
+
+  /**
+   * Close a request. `RESOLVED` requires the `planId` the admin created —
+   * "resolved" with nothing to point at is indistinguishable from "ignored"
+   * a month later. `REJECTED` requires a `resolutionNote` instead.
+   */
+  async resolvePlanRequest(requestId, { status, planId, resolutionNote }) {
+    return unwrap(
+      await apiClient.patch(`/cob/plan-requests/${requestId}`, {
+        status,
+        planId,
+        resolutionNote,
+      })
+    );
   },
 };
 
@@ -186,6 +196,43 @@ export const cobCoverageService = {
    */
   async updateCoverageDetail(coverageId, payload) {
     return unwrap(await apiClient.patch(`/cob/coverages/${coverageId}/detail`, payload));
+  },
+
+  /**
+   * Both sides of the insurance card.
+   * -> { coverageId, cards: [{ side, documentId, url, ... }], missingSides }
+   */
+  async getCoverageCards(coverageId) {
+    return unwrap(await apiClient.get(`/cob/coverages/${coverageId}/cards`));
+  },
+
+  /**
+   * Upload one side. The backend stores it as a confidential patient document
+   * and records which document is which side — so this reuses the whole
+   * existing file pipeline (checksum, mime filter, delete path).
+   *
+   * One side per request on purpose: staff routinely re-shoot one, and a
+   * combined upload keyed on the coverage would silently drop the other.
+   */
+  async uploadCoverageCard(coverageId, side, file) {
+    const body = new FormData();
+    body.append('file', file);
+
+    return unwrap(
+      await apiClient.post(
+        `/cob/coverages/${coverageId}/cards/${String(side).toUpperCase()}`,
+        body,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
+    );
+  },
+
+  async deleteCoverageCard(coverageId, side) {
+    return unwrap(
+      await apiClient.delete(
+        `/cob/coverages/${coverageId}/cards/${String(side).toUpperCase()}`
+      )
+    );
   },
 
   /**
@@ -328,6 +375,25 @@ export const cobBillingService = {
    */
   async getSecondaryReadiness(claimId) {
     return unwrap(await apiClient.get(`/cob/claims/${claimId}/secondary-readiness`));
+  },
+
+  /**
+   * Every downstream payer's expected payment on this claim, in one call.
+   * -> { claimId, dateOfService, basis, byParty: { SECONDARY: {...}, ... } }
+   *
+   * One request rather than one per payer, and server-side rather than client
+   * arithmetic: the inputs (billed, allowed, the primary's paid/patient split)
+   * come from claimproc rows and 835 adjustment codes, which payer counts as
+   * "downstream" depends on the order in force on the DATE OF SERVICE, and an
+   * UNKNOWN payment method has to produce a range. Assembling that in the UI
+   * is one forgotten branch away from showing a midpoint.
+   *
+   * `byParty` is empty — not an error — before the primary has remitted:
+   * there is nothing to estimate from yet, and a claim screen asking early is
+   * normal.
+   */
+  async getDownstreamEstimates(claimId) {
+    return unwrap(await apiClient.get(`/cob/claims/${claimId}/downstream-estimates`));
   },
 
   /** -> { primaryPayment } — the adjudication a secondary claim is carrying. */

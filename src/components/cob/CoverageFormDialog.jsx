@@ -36,6 +36,11 @@ import {
 } from '../../constants/cobConstants';
 import { getVisibleConditionalSections, validateCoverageForm } from '../../utils/cobUtils';
 import { formatDateForPayload } from '../../utils/dateUtils';
+import {
+  useCoverageCards,
+  useUploadCoverageCard,
+  useDeleteCoverageCard,
+} from '../../hooks/queries/useCob';
 
 const EMPTY = {
   carrierId: '',
@@ -92,7 +97,7 @@ const CoverageFormDialog = ({
 }) => {
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState({});
-  const [cardFiles, setCardFiles] = useState({ front: null, back: null });
+  const [cardFiles, setCardFiles] = useState({});
   const [planRequestOpen, setPlanRequestOpen] = useState(false);
 
   const coverageRef = useRef(null);
@@ -105,7 +110,7 @@ const CoverageFormDialog = ({
     if (!open) return;
     setValues({ ...EMPTY, ...(initialValues || {}) });
     setErrors({});
-    setCardFiles({ front: null, back: null });
+    setCardFiles({});
   }, [open, initialValues]);
 
   // Scroll the requested section into view once the dialog has painted. The
@@ -121,6 +126,58 @@ const CoverageFormDialog = ({
     }[focusSection]?.current;
     if (node) node.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [open, focusSection]);
+
+  /*
+   * CARD IMAGES UPLOAD IMMEDIATELY, not on save.
+   *
+   * They go to their own endpoint (one per side), so bundling them into the
+   * form's submit would mean a half-failed save with no good recovery — and a
+   * front desk photographing a card wants to see it land before handing the
+   * card back. The uploads therefore need an existing coverage; on a NEW
+   * coverage the slots are disabled with a note, because there is nothing to
+   * attach an image to until the coverage row exists.
+   */
+  const coverageId = initialValues?.coverageId;
+  const cardsQuery = useCoverageCards(coverageId, { enabled: open && !!coverageId });
+  const uploadCard = useUploadCoverageCard();
+  const deleteCard = useDeleteCoverageCard();
+  const [uploadingSide, setUploadingSide] = useState(null);
+
+  /** Stored cards as { FRONT: url, BACK: url } for the slot component. */
+  const existingCards = useMemo(
+    () =>
+      (cardsQuery.data?.cards || []).reduce((acc, card) => {
+        acc[card.side] = card.url;
+        return acc;
+      }, {}),
+    [cardsQuery.data]
+  );
+
+  const handleCardPick = async (side, file) => {
+    if (!file) return;
+    setCardFiles((current) => ({ ...current, [side]: file }));
+    if (!coverageId) return;
+
+    setUploadingSide(side);
+    try {
+      await uploadCard.mutateAsync({ coverageId, side, file });
+      // The stored card is now authoritative; drop the local file so the slot
+      // shows "View photo" rather than a filename that no longer matters.
+      setCardFiles((current) => ({ ...current, [side]: null }));
+    } finally {
+      setUploadingSide(null);
+    }
+  };
+
+  const handleCardRemove = async (side) => {
+    if (!coverageId) return;
+    setUploadingSide(side);
+    try {
+      await deleteCard.mutateAsync({ coverageId, side });
+    } finally {
+      setUploadingSide(null);
+    }
+  };
 
   const set = (field) => (eventOrValue) => {
     const value = eventOrValue?.target
@@ -226,7 +283,12 @@ const CoverageFormDialog = ({
       // The plan request, when the front desk could not find the plan. Carried
       // through so the caller can attach it to whatever it creates.
       planRequest: values.planNotListed || null,
-      cardFiles,
+      // Card images are NOT here: they went to their own endpoint as they were
+      // picked. Only the ones that could not be uploaded (a brand-new
+      // coverage) are passed on, so the caller can retry after it has an id.
+      pendingCardFiles: Object.fromEntries(
+        Object.entries(cardFiles).filter(([, file]) => !!file)
+      ),
     });
   };
 
@@ -421,12 +483,23 @@ const CoverageFormDialog = ({
               </TextField>
             </Grid>
 
-            <Grid size={{ xs: 12 }} >
+            <Grid size={{ xs: 12 }}>
               <CardPhotoUpload
                 files={cardFiles}
-                existing={initialValues?.cardPhotos || {}}
-                onPick={(side, file) => setCardFiles((c) => ({ ...c, [side]: file }))}
+                existing={existingCards}
+                uploadingSide={uploadingSide}
+                onPick={handleCardPick}
+                onRemove={handleCardRemove}
+                disabled={!coverageId}
               />
+              {!coverageId && (
+                <Typography
+                  data-testid="cob-card-photo-needs-save"
+                  sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, color: COLORS.TEXT_MUTED, mt: 0.5 }}
+                >
+                  Save the insurance first, then re-open it to add card photos.
+                </Typography>
+              )}
             </Grid>
           </Grid>
 

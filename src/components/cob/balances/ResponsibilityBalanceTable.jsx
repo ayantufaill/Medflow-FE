@@ -134,11 +134,14 @@ const ResponsibilityBalanceTable = ({
           {rows.map((row) => {
             const estimate = estimatesByParty[row.responsibleParty];
             const isEstimated = !!estimate;
+            // The server says whether this is a range; the value comparison is
+            // the fallback for a caller that supplies estimates directly.
             const isRange =
               isEstimated &&
-              estimate.low != null &&
-              estimate.high != null &&
-              Number(estimate.low) !== Number(estimate.high);
+              (estimate.isRange === true ||
+                (estimate.low != null &&
+                  estimate.high != null &&
+                  Number(estimate.low) !== Number(estimate.high)));
 
             return (
               <TableRow key={row.responsibleParty} data-testid={`cob-balance-row-${row.responsibleParty}`}>
@@ -165,7 +168,15 @@ const ResponsibilityBalanceTable = ({
                     )}
 
                     {isRange && (
-                      <Tooltip title="We haven't confirmed how this plan calculates a secondary payment, so we show the whole possible range.">
+                      <Tooltip
+                        title={
+                          // The backend's explanation names the actual spread
+                          // and the one question worth asking the payer, which
+                          // is more use than our generic sentence.
+                          estimate.explanation ||
+                          "We haven't confirmed how this plan calculates a secondary payment, so we show the whole possible range."
+                        }
+                      >
                         <InfoIcon
                           data-testid={`cob-estimate-range-info-${row.responsibleParty}`}
                           sx={{ fontSize: 15, color: COLORS.TEXT_MUTED }}

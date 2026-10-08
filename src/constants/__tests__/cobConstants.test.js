@@ -152,11 +152,40 @@ const beAvailable = fs.existsSync(BE_TYPES);
 (beAvailable ? describe : describe.skip)('cobConstants — matches the backend enums', () => {
   const source = beAvailable ? fs.readFileSync(BE_TYPES, 'utf8') : '';
 
-  /** Pulls the string-literal members out of `export type X = 'A' | 'B';`. */
+  /**
+   * Reads the members of a backend enum type, in either style the backend
+   * uses:
+   *
+   *   export type X = 'A' | 'B';                  // literal union
+   *   export const XS = ['A','B'] as const;       // const array...
+   *   export type X = (typeof XS)[number];        // ...plus a derived type
+   *
+   * Both appear in `types.ts` today, and the second is the one the backend
+   * has been migrating to — a parser that only understood unions silently
+   * returned an empty list and the guard passed by accident.
+   */
   const beEnum = (typeName) => {
-    const match = source.match(new RegExp(`export type ${typeName}\\s*=([^;]+);`));
-    if (!match) return null;
-    return [...match[1].matchAll(/'([A-Z0-9_]+)'/g)].map((m) => m[1]).sort();
+    const typeMatch = source.match(new RegExp(`export type ${typeName}\\s*=([^;]+);`));
+    if (!typeMatch) return null;
+    const rhs = typeMatch[1];
+
+    const literals = (text) => [...text.matchAll(/'([A-Z0-9_]+)'/g)].map((m) => m[1]);
+
+    // Literal union: the members are right there.
+    const direct = literals(rhs);
+    if (direct.length > 0) return direct.sort();
+
+    // Derived from a const array: follow the reference.
+    const derived = rhs.match(/\(\s*typeof\s+([A-Za-z0-9_]+)\s*\)\s*\[\s*number\s*\]/);
+    if (!derived) return null;
+
+    const arrayMatch = source.match(
+      new RegExp(`export const ${derived[1]}\\s*(?::[^=]+)?=\\s*\\[([^\\]]*)\\]`)
+    );
+    if (!arrayMatch) return null;
+
+    const members = literals(arrayMatch[1]);
+    return members.length > 0 ? members.sort() : null;
   };
 
   const cases = [
@@ -177,15 +206,22 @@ const beAvailable = fs.existsSync(BE_TYPES);
 
   it.each(cases)('%s covers exactly the backend values', (typeName, list) => {
     const expected = beEnum(typeName);
+    // A null or empty read means the parser lost track of the backend's
+    // style, which must fail the guard rather than silently pass it.
     expect(expected).not.toBeNull();
+    expect(expected.length).toBeGreaterThan(0);
     expect(list.map((o) => o.value).sort()).toEqual(expected);
   });
 
   it('ReviewFlag covers exactly the backend values', () => {
-    expect(Object.keys(REVIEW_FLAGS).sort()).toEqual(beEnum('ReviewFlag'));
+    const expected = beEnum('ReviewFlag');
+    expect(expected?.length).toBeGreaterThan(0);
+    expect(Object.keys(REVIEW_FLAGS).sort()).toEqual(expected);
   });
 
   it('OrderStatus covers exactly the backend values', () => {
-    expect(Object.keys(ORDER_STATUS).sort()).toEqual(beEnum('OrderStatus'));
+    const expected = beEnum('OrderStatus');
+    expect(expected?.length).toBeGreaterThan(0);
+    expect(Object.keys(ORDER_STATUS).sort()).toEqual(expected);
   });
 });
