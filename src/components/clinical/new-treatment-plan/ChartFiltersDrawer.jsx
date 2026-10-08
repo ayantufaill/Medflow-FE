@@ -10,7 +10,6 @@ import {
   Switch
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import TuneIcon from '@mui/icons-material/Tune';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
@@ -312,34 +311,16 @@ const ChartFiltersDrawer = ({ open, onClose, onApply }) => {
       open={open} 
       onClose={onClose}
       sx={{ zIndex: 1400 }}
-      PaperProps={{ sx: { width: { xs: '100%', sm: 600 }, maxWidth: '100%', display: 'flex', flexDirection: 'column' } }}
+      PaperProps={{
+        sx: { width: { xs: '100%', sm: 600 }, maxWidth: '100%', display: 'flex', flexDirection: 'column', bgcolor: COLORS.SURFACE_PAGE }
+      }}
     >
-      <Box sx={{
-        boxSizing: "border-box",
-        px: "25px",
-        py: "16px",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        borderBottom: `1px solid ${COLORS.BORDER}`,
-        backgroundColor: COLORS.SURFACE_TINT,
-        m: 0,
-        flexShrink: 0,
-      }}>
-        <TuneIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
-        <Typography
-          sx={{
-            fontSize: "15px",
-            fontWeight: 600,
-            color: COLORS.TEXT_PRIMARY,
-            flex: 1,
-          }}
-        >
-          Adjust Chart
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
-          <CloseIcon sx={{ fontSize: "18px" }} />
-        </IconButton>
+      <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography sx={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>Adjust Chart</Typography>
+          <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: fontSize.base }}>Filter and customize chart view</Typography>
+        </Box>
+        <IconButton onClick={onClose} aria-label="Close Adjust Chart"><CloseIcon /></IconButton>
       </Box>
 
       <Box sx={{ px: 2.5, borderBottom: `1px solid ${COLORS.BORDER}` }}>
@@ -400,9 +381,13 @@ const ChartFiltersDrawer = ({ open, onClose, onApply }) => {
         )}
       </Box>
 
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', borderTop: `1px solid ${COLORS.BORDER}`, flexShrink: 0 }}>
-        <Button onClick={onClose} variant="outlined" sx={{ minWidth: 112, height: 38, borderRadius: '6px', borderColor: COLORS.BORDER, color: COLORS.ACCENT, textTransform: 'none', fontWeight: 400, '&:hover': { borderColor: COLORS.BORDER, bgcolor: COLORS.SURFACE_HOVER } }}>Cancel</Button>
-        <Button onClick={handleApply} variant="contained" sx={{ minWidth: 112, height: 38, borderRadius: '6px', bgcolor: COLORS.ACCENT, boxShadow: 'none', textTransform: 'none', fontWeight: 400, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>Apply</Button>
+      <Box sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_FOOTER, display: 'flex', justifyContent: 'flex-end', gap: 1.25 }}>
+        <Button variant="outlined" onClick={onClose} sx={{ borderRadius: radius.md, textTransform: 'none' }}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={handleApply} sx={{ bgcolor: COLORS.ACCENT, borderRadius: radius.md, textTransform: 'none' }}>
+          Apply
+        </Button>
       </Box>
     </Drawer>
   );
