@@ -220,10 +220,27 @@ const AddCoveragePage = () => {
 
       if (!formData.subscriber.subscriberId?.trim()) {
         newErrors.subscriberId = 'Subscriber ID is required';
-      } else if (formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
-        newErrors.subscriberId = 'Subscriber ID must be between 5 and 30 characters';
-      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.subscriber.subscriberId)) {
-        newErrors.subscriberId = 'Subscriber ID must be alphanumeric, and can contain spaces or hyphens';
+      } else if (formData.subscriber.subscriberId.length < 4 || formData.subscriber.subscriberId.length > 17) {
+        newErrors.subscriberId = 'Subscriber ID must be between 4 and 17 characters';
+      } else if (!/^[A-Z0-9-]+$/.test(formData.subscriber.subscriberId)) {
+        newErrors.subscriberId = 'Subscriber ID can only contain alphanumeric characters and hyphens';
+      }
+
+      if (formData.subscriber.ssn) {
+        const rawSsn = formData.subscriber.ssn.replace(/\D/g, ''); // Temporarily strip hyphens
+        const areaNumber = rawSsn.substring(0, 3);
+        const groupNumber = rawSsn.substring(3, 5);
+        const serialNumber = rawSsn.substring(5, 9);
+        
+        if (rawSsn.length !== 9) {
+          newErrors.ssn = 'SSN must be exactly 9 digits';
+        } else if (areaNumber === '000' || areaNumber === '666' || parseInt(areaNumber, 10) >= 900) {
+          newErrors.ssn = 'Invalid SSN (Invalid Area Number)';
+        } else if (groupNumber === '00') {
+          newErrors.ssn = 'Invalid SSN (Invalid Group Number)';
+        } else if (serialNumber === '0000') {
+          newErrors.ssn = 'Invalid SSN (Invalid Serial Number)';
+        }
       }
 
       if (!formData.subscriber.dateOfBirth) {
@@ -247,6 +264,10 @@ const AddCoveragePage = () => {
 
       if (!formData.policyStarted) {
         newErrors.policyStarted = 'Policy Started date is required';
+      }
+
+      if (!formData.renewalMonth) {
+        newErrors.renewalMonth = 'Renewal Month is required';
       }
 
       if (formData.policyEnds && formData.policyStarted) {
@@ -301,6 +322,15 @@ const AddCoveragePage = () => {
         setErrors(newErrors);
         const errorFields = Object.keys(newErrors).join(', ');
         showSnackbar(`Please correct the highlighted errors: ${errorFields}`, 'error');
+        
+        // Auto-scroll to the first highlighted error field
+        setTimeout(() => {
+          const firstErrorElement = document.querySelector('.Mui-error');
+          if (firstErrorElement) {
+            firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+
         console.error('Validation errors:', newErrors);
         return;
       }
@@ -361,7 +391,7 @@ const AddCoveragePage = () => {
         coverageBookData: coverageBookData,
         planFeeGuide: formData.planFeeGuide,
         coverageType: formData.coverageType,
-        subscriberSsn: formData.subscriber.ssn || undefined,
+        subscriberSsn: formData.subscriber.ssn ? formData.subscriber.ssn.replace(/\D/g, '') : undefined,
         renewalMonth: renewalMonthNum,
         assignmentOfBenefits: formData.assignmentOfBenefits.toString(),
         honorWriteOff: formData.honorWriteOff,
@@ -558,9 +588,34 @@ const AddCoveragePage = () => {
 
   const handleSubscriberChange = (field, value) => {
     setFormData(prev => {
+      let sanitizedValue = value;
+      if (field === 'subscriberId') {
+        sanitizedValue = value.toUpperCase().replace(/\s+/g, '');
+        // Physically prevent typing more than 17 characters
+        if (sanitizedValue.length > 17) {
+          sanitizedValue = sanitizedValue.slice(0, 17);
+        }
+      }
+      
+      if (field === 'ssn') {
+        let numbers = value.replace(/\D/g, ''); // Strip everything to get raw digits
+        if (numbers.length > 9) {
+          numbers = numbers.slice(0, 9); // Enforce max 9 digits
+        }
+        
+        // Add hyphens based on length
+        if (numbers.length > 5) {
+          sanitizedValue = `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`;
+        } else if (numbers.length > 3) {
+          sanitizedValue = `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+        } else {
+          sanitizedValue = numbers;
+        }
+      }
+
       const newSubscriber = {
         ...prev.subscriber,
-        [field]: value
+        [field]: sanitizedValue
       };
       
       if (field === 'relationship') {
@@ -603,13 +658,48 @@ const AddCoveragePage = () => {
     }
   };
 
+  const calculatePolicyEndDate = (startDateStr, renewalMonthStr) => {
+    if (!startDateStr || !renewalMonthStr) return '';
+    const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+    const rm = monthMap[renewalMonthStr];
+    if (!rm) return '';
+
+    // Parse the YYYY-MM-DD manually to avoid timezone shifting
+    const parts = startDateStr.split('-');
+    if (parts.length !== 3) return '';
+    
+    const startYear = parseInt(parts[0], 10);
+    const startMonth = parseInt(parts[1], 10);
+    if (isNaN(startYear) || isNaN(startMonth)) return '';
+
+    const renewalYear = startMonth >= rm ? startYear + 1 : startYear;
+    
+    // Day 0 of the renewal month yields the final day of the preceding month
+    const end = new Date(renewalYear, rm - 1, 0);
+    if (isNaN(end.getTime())) return '';
+
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, '0');
+    const day = String(end.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleRenewalChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    if (field === 'policyStarted' || field === 'policyEnds') {
-      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      if (field === 'policyStarted' || field === 'renewalMonth') {
+        const calculatedEnd = calculatePolicyEndDate(newData.policyStarted, newData.renewalMonth);
+        if (calculatedEnd) {
+          newData.policyEnds = calculatedEnd;
+        }
+      }
+      
+      return newData;
+    });
+
+    if (field === 'policyStarted' || field === 'policyEnds' || field === 'renewalMonth') {
+      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null, renewalMonth: null }));
     }
   };
 
@@ -618,6 +708,11 @@ const AddCoveragePage = () => {
       ...prev,
       [field]: value
     }));
+    
+    if (field === 'saveAsTemplate' && value === true) {
+      showSnackbar("Save as template", 'info');
+    }
+
     if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
       setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
     } else if (field === 'groupName') {
