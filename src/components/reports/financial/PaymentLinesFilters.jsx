@@ -107,7 +107,8 @@ const PaymentLinesFilters = ({
         options={[
           { value: 'All', label: 'All Statuses' },
           { value: 'Failed', label: 'Failed' },
-          { value: 'Pending', label: 'Pending' },
+          { value: 'Overdue', label: 'Overdue' },
+            { value: 'Partially Paid', label: 'Partially Paid' },
           { value: 'Scheduled', label: 'Scheduled' },
           { value: 'Paid', label: 'Paid' },
         ]} 
