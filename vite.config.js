@@ -27,5 +27,16 @@ export default defineConfig(({ mode }) => {
     build: {
       chunkSizeWarningLimit: 1000,
     },
+    // `npm run test:vitest` runs only the suites written for vitest; every
+    // other *.test.* file is a Jest suite (`npm test`), which vitest can't run.
+    // Keep in step with testPathIgnorePatterns in jest.config.cjs.
+    test: {
+      environment: 'jsdom',
+      include: [
+        'src/config/navMenuItems.test.jsx',
+        'src/utils/icd10.test.js',
+        'src/utils/createTreatmentPlanDraft.test.js',
+      ],
+    },
   }
 })

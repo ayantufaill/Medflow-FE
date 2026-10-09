@@ -10,8 +10,10 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "<rootDir>/.claude/",
-    // Authored against vitest (imports from 'vitest'); run it with `npm run test:vitest`.
+    // Authored against vitest (imports from 'vitest'); run them with `npm run test:vitest`.
     "<rootDir>/src/config/navMenuItems.test.jsx",
+    "<rootDir>/src/utils/icd10.test.js",
+    "<rootDir>/src/utils/createTreatmentPlanDraft.test.js",
   ],
   // The COB integration suites drive full MUI dialogs through userEvent (which
   // advances real timers between keystrokes). They finish in ~2s alone but can
