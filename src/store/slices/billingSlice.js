@@ -57,6 +57,37 @@ function withConcurrency(concurrency, tasks) {
   });
 }
 
+// Display name of whoever created an invoice / payment / adjustment / claim.
+// The backend resolves this from the entering user (SecUserNumEntry / meta.createdBy)
+// into `createdByName`; older rows may not have one, in which case we fall back to
+// a generic label rather than inventing a name.
+const creatorDisplay = (entity) => entity?.createdByName || "STAFF";
+
+// Procedure numbers named in an adjustment note. The API now also returns the
+// stored link (`procedureId`); the note is only a fallback for rows written
+// before that link was being saved.
+const parseProcedureRefs = (note) => {
+  const refs = new Set();
+  const regex = /procedure\s*#?\s*(\d+)/gi;
+  let match;
+  while ((match = regex.exec(String(note || ""))) !== null) {
+    refs.add(String(match[1]));
+  }
+  return [...refs];
+};
+
+// Procedures an adjustment was posted against: the stored link first, then any
+// procedure the note names. Adjustments written before the link was stored only
+// carry the note, and both point at the same ProcNum for current rows.
+const procedureTargetsOf = (adjustment) => {
+  const targets = new Set();
+  if (adjustment?.procedureId) targets.add(String(adjustment.procedureId));
+  parseProcedureRefs(adjustment?.notes).forEach((procNum) => {
+    targets.add(procNum);
+  });
+  return [...targets];
+};
+
 const isDbiProcedure = (item = {}) =>
   item.dbi === true ||
   item.dbi === 1 ||
@@ -133,6 +164,86 @@ export const fetchLedgerItems = createAsyncThunk(
       } = composite;
       const linkedAdjustmentIds = new Set();
 
+      // Every procedure of every invoice, indexed by ProcNum, plus the total
+      // procedure-level write-off each one is carrying. An adjustment stores the
+      // line it was posted against (procedureId), so it can expand into that
+      // procedure with the patient portion restated after the write-off.
+      const proceduresByProcNum = new Map();
+      invoices.forEach((inv) => {
+        (inv.lineItems || []).forEach((proc) => {
+          const key = String(proc._id || proc.id);
+          if (key && !proceduresByProcNum.has(key)) {
+            proceduresByProcNum.set(key, proc);
+          }
+        });
+      });
+
+      const appliedWriteOffByProc = new Map();
+      adjustments.forEach((adj) => {
+        // Income transfers move liability between insurance and patient, they
+        // are not a write-off of the charge. Voided rows no longer affect it.
+        if (adj.isVoided) return;
+        if (String(adj.notes || "").toLowerCase().includes("income transfer")) {
+          return;
+        }
+        const amount = Math.abs(Number(adj.amount || 0));
+        if (!(amount > 0)) return;
+        procedureTargetsOf(adj).forEach((procNum) => {
+          appliedWriteOffByProc.set(
+            procNum,
+            (appliedWriteOffByProc.get(procNum) || 0) + amount,
+          );
+        });
+      });
+
+      // Restate a line item the way it reads after every live procedure-level
+      // write-off has been applied: the write-off comes off the patient
+      // portion first and then the insurance estimate, so fee still equals
+      // patient + insurance + write-off, and is reported as the line's total
+      // write-off (the pricing write-off plus the adjustments).
+      const procedureAfterAdjustments = (proc) => {
+        const key = String(proc._id || proc.id);
+        const fee = Number(proc.totalPrice || proc.ProcFee || proc.charge || 0);
+        const ptPortion = Number(proc.ptPortion || proc.patientPortion || 0);
+        const insPortion = Number(proc.totalInsPortion || proc.insPortion || 0);
+        const appliedWriteOff = appliedWriteOffByProc.get(key) || 0;
+        const pricingWriteOff = Number(proc.writeoff || proc.estimatedWriteOff || 0);
+
+        let remaining = appliedWriteOff;
+        const ptAfter = Math.max(0, ptPortion - remaining);
+        remaining -= Math.max(0, ptPortion - ptAfter);
+        const insAfter = Math.max(0, insPortion - remaining);
+
+        return {
+          ...proc,
+          fee,
+          ptPortion: ptAfter,
+          insPortion: insAfter,
+          writeoff: pricingWriteOff + appliedWriteOff,
+          estimatedWriteOff: pricingWriteOff + appliedWriteOff,
+        };
+      };
+
+      // The line items an adjustment was posted against, restated with the
+      // write-offs folded in. `procedureId` is the reliable link; the note is
+      // only a fallback for rows written before the link was stored.
+      const proceduresForAdjustment = (adj) => {
+        const targets = procedureTargetsOf(adj)
+          .map((procNum) => proceduresByProcNum.get(procNum))
+          .filter(Boolean);
+        // De-duplicate by ProcNum so a note that names the same line twice (or
+        // a link plus a note about it) never renders it twice.
+        const seen = new Set();
+        return targets
+          .filter((proc) => {
+            const key = String(proc._id || proc.id);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map(procedureAfterAdjustments);
+      };
+
       const mappedInvoices = invoices.map((invoice) => {
         // Reconstruct the original total charge. The backend may update totalAmount to
         // reflect the remaining balance (not the original charge) after a payment is recorded.
@@ -186,6 +297,11 @@ export const fetchLedgerItems = createAsyncThunk(
 
         let totalInsPaidAmt = 0;
         let totalAdjAmt = 0;
+        // Only insurance write-offs posted by the insurance payment flow
+        // ("Invoice #x - Insurance W/O: $y"). Everything else that reduces the
+        // invoice — courtesy write-offs, un-collected, small balance, etc. —
+        // is an adjustment and must NOT be reported as an Applied W/O.
+        let totalInsWoAmt = 0;
         let runningBalance = originalTotal;
 
         // Combine payments and adjustments to calculate a single unified running balance chronologically
@@ -234,6 +350,9 @@ export const fetchLedgerItems = createAsyncThunk(
                   : `$${Math.max(0, runningBalance).toFixed(2)}`,
                 isPayment: true,
                 isVoided,
+                initials: creatorDisplay(payment),
+                createdByName: payment.createdByName || null,
+                createdAt: payment.paidAt || null,
               };
             } else {
               const adj = item;
@@ -243,8 +362,20 @@ export const fetchLedgerItems = createAsyncThunk(
               const isTransfer = !!(
                 adj.notes && adj.notes.toLowerCase().includes("income transfer")
               );
+              // Insurance write-off adjustments are posted by the insurance
+              // payment flow ("Invoice #x - Insurance W/O: $y"). They reduce
+              // the invoice balance exactly like the write-off amount, but are
+              // not money received from the patient, so they must never be
+              // counted as patient-paid.
+              const isInsWriteOff = !!(
+                adj.notes &&
+                (adj.notes.toLowerCase().includes("insurance w/o") ||
+                  adj.notes.toLowerCase().includes("insurance writeoff") ||
+                  adj.notes.toLowerCase().includes("insurance write-off"))
+              );
               const isCourtesy = !!(
                 (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
+                (adj.notes && adj.notes.toLowerCase().includes("small balance")) ||
                 adj.type === "Write-off" ||
                 (adj.type || "").toLowerCase() === "write-off" ||
                 (adj.type || "").toLowerCase() === "writeoff" ||
@@ -255,14 +386,17 @@ export const fetchLedgerItems = createAsyncThunk(
               const adjAmt = isVoided ? 0 : Math.abs(Number(adj.amount || 0));
 
               totalAdjAmt += adjAmt;
-              if (isCourtesy || isTransfer) totalPtAdjAmt += adjAmt;
+              if (isInsWriteOff) totalInsWoAmt += adjAmt;
+              if ((isCourtesy || isTransfer) && !isInsWriteOff) totalPtAdjAmt += adjAmt;
               runningBalance -= adjAmt;
 
               return {
                 id: adj._id || adj.id,
                 title: isTransfer
                   ? adj.notes
-                  : `Adjustment #${adj._id || adj.id}: ${adj.type || "Write-off"} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
+                  : isInsWriteOff
+                    ? `Applied write-off : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
+                    : `Adjustment #${adj._id || adj.id}: ${adj.type || "Write-off"} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
                 amount: isVoided
                   ? "(Voided)"
                   : `$${Math.max(0, runningBalance).toFixed(2)}`,
@@ -273,6 +407,12 @@ export const fetchLedgerItems = createAsyncThunk(
                 isAdjustment: true,
                 isTransfer,
                 isVoided,
+                initials: creatorDisplay(adj),
+                createdByName: adj.createdByName || null,
+                createdAt: adj.createdAt || null,
+                // The line items this adjustment hit, restated with the
+                // write-off folded in, so the row can expand into them.
+                procedures: proceduresForAdjustment(adj),
               };
             }
           })
@@ -408,6 +548,9 @@ export const fetchLedgerItems = createAsyncThunk(
             isLocked: Boolean(claim.isLocked),
             lockedDate: claim.lockedDate || null,
             procedures: specificProcedures,
+            initials: creatorDisplay(claim),
+            createdByName: claim.createdByName || null,
+            createdAt: claim.createdAt || null,
           };
         });
 
@@ -434,6 +577,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 isGrouped: true,
                 isPayment: false,
                 procedures: invoiceProcedures,
+                createdAt: invoice.createdAt || invoice.invoiceDate || null,
               },
             ];
           }
@@ -590,7 +734,8 @@ export const fetchLedgerItems = createAsyncThunk(
           totalAmount: `$${originalTotal.toFixed(2)}`,
           color: "#5c6bc0",
           isAdjustment: false,
-          initials: "STAFF",
+          initials: creatorDisplay(invoice),
+          createdByName: invoice.createdByName || null,
           isVoided:
             String(invoice.status || "").toLowerCase() === "voided" ||
             String(invoice.status || "").toLowerCase() === "void",
@@ -599,11 +744,18 @@ export const fetchLedgerItems = createAsyncThunk(
             String(invoice.status || "").toLowerCase() !== "voided" &&
             String(invoice.status || "").toLowerCase() !== "void",
           summary: {
-            insWo: `$${(Number(invoice.writeoffAmount) || 0).toFixed(2)}`,
+            // Ins WO is the write-off still outstanding: the priced estimate
+            // less what the insurance payment flow has already applied. Once
+            // the W/O is posted it moves into Applied WO, so the same dollars
+            // are never counted in both columns.
+            insWo: `$${Math.max(0, (Number(invoice.writeoffAmount) || 0) - totalInsWoAmt).toFixed(2)}`,
             ptBal: `$${adjustedPtBal.toFixed(2)}`,
             insBal: `$${adjustedInsBal.toFixed(2)}`,
             invBal: `$${adjustedInvBal.toFixed(2)}`,
-            appliedWo: `$${totalAdjAmt.toFixed(2)}`,
+            // Insurance write-offs only — general adjustments (courtesy,
+            // un-collected, small balance…) belong on the invoice balance, not
+            // in Applied W/O.
+            appliedWo: `$${totalInsWoAmt.toFixed(2)}`,
             ptPaid: `$${ptPaidDisplay.toFixed(2)}`,
             insPaid: `$${totalInsPaidAmt.toFixed(2)}`,
           },
@@ -635,6 +787,11 @@ export const fetchLedgerItems = createAsyncThunk(
             !adj.type
           );
 
+          // The line items this adjustment was posted against, restated with the
+          // write-off folded in. An adjustment with no procedure link keeps its
+          // old single note row, since there is nothing to expand into.
+          const targetProcedures = proceduresForAdjustment(adj);
+
           return {
             id: adj._id || adj.id,
             invoiceNumber: isTransfer
@@ -648,7 +805,8 @@ export const fetchLedgerItems = createAsyncThunk(
             isAdjustment: true,
             isTransfer,
             useCheckmark: false,
-            initials: "STAFF",
+            initials: creatorDisplay(adj),
+            createdByName: adj.createdByName || null,
             isVoided,
             success: !isVoided,
             summary: {
@@ -668,6 +826,11 @@ export const fetchLedgerItems = createAsyncThunk(
                   : adj.notes || "Patient Account Adjustment",
                 amount: `$${amt.toFixed(2)}`,
                 isTransfer,
+                createdAt: adj.createdAt || null,
+                // Post-adjustment line items, so the row expands into them the
+                // way an invoice does (see LedgerSubRow's procedure table).
+                procedures: targetProcedures,
+                defaultExpanded: targetProcedures.length > 0,
               },
             ],
           };
@@ -708,7 +871,8 @@ export const fetchLedgerItems = createAsyncThunk(
             isAdjustment: false,
             isTopLevelPayment: true,
             useCheckmark: true,
-            initials: "STAFF",
+            initials: creatorDisplay(pay),
+            createdByName: pay.createdByName || null,
             isVoided,
             success: !isVoided,
             summary: {
@@ -736,6 +900,7 @@ export const fetchLedgerItems = createAsyncThunk(
                   `Patient Payment via ${pay.paymentMethod || "Card"}`,
                 amount: isVoided ? "(Voided)" : `$${amt.toFixed(2)}`,
                 isVoided,
+                createdAt: pay.paidAt || null,
               },
             ],
           };
@@ -837,6 +1002,7 @@ export const fetchInvoiceDetails = createAsyncThunk(
                 : `$${Math.max(0, runningBalance).toFixed(2)}`,
               isPayment: true,
               isVoided,
+              createdAt: payment.paidAt || null,
             };
           })
           .reverse();
@@ -894,6 +1060,7 @@ export const fetchInvoiceDetails = createAsyncThunk(
             isClaim: true,
             isPayment: false,
             procedures: specificProcedures,
+            createdAt: claim.createdAt || null,
           };
         });
       } catch (e) {
@@ -1017,9 +1184,23 @@ export const voidTransaction = createAsyncThunk(
           }
         }
       } else if (isGrouped) {
-        await apiClient.delete(`/admin-finance/invoices/${invoiceId}`);
+        // Voiding an entire invoice goes through the invoice void endpoint.
+        // It marks the statement void and reverses any deductible the invoice
+        // posted, which a plain delete cannot do — /admin-finance has no
+        // invoice route, so that path 404'd.
+        await invoiceService.voidInvoice(
+          invoiceId,
+          "Voided from Ledger",
+        );
       } else {
-        await invoiceService.deleteInvoiceItem(invoiceId, itemId);
+        // A single procedure off an invoice. It is flagged voided rather than
+        // deleted, so the invoice can still list it under "include voided
+        // transactions" while every total ignores it.
+        await invoiceService.voidInvoiceItem(
+          invoiceId,
+          itemId,
+          "Voided from Ledger",
+        );
       }
 
       // Recalculate invoice balances if we didn't just delete the whole invoice
@@ -1274,6 +1455,16 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
         if (!adj) return false;
         const notes = (adj.notes || "").toLowerCase();
         const type = (adj.type || "").toLowerCase();
+        // Insurance write-off adjustments ("Insurance W/O") are posted by the
+        // insurance payment flow and are NOT patient courtesy — excluding them
+        // here mirrors the Ledger mapping so remaining balances agree.
+        if (
+          notes.includes("insurance w/o") ||
+          notes.includes("insurance writeoff") ||
+          notes.includes("insurance write-off")
+        ) {
+          return false;
+        }
         return Boolean(
           notes.includes("courtesy") ||
             adj.type === "Write-off" ||
@@ -1361,8 +1552,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           );
           const ins = Number(item.insPortion || item.insurancePortion || 0) + Number(item.secondaryInsPortion || 0);
           let patientBal;
-          if (totalInsurancePaid > 0) patientBal = owed;
-          else if (item.dbi === true) patientBal = owed;
+          if (item.dbi === true) patientBal = owed;
           else if (item.dbi === false) patientBal = pt;
           else if (ins > 0 && pt > 0) patientBal = pt;
           else if (ins > 0 && pt === 0) patientBal = 0;
@@ -1394,10 +1584,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
             const owed = Math.max(0, total - writeoff);
 
             let patientBal, insBal;
-            if (totalInsurancePaid > 0) {
-              patientBal = owed;
-              insBal = 0;
-            } else if (item.dbi === true) {
+            if (item.dbi === true) {
               patientBal = owed;
               insBal = 0;
             } else if (item.dbi === false) {
@@ -1419,6 +1606,19 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
 
             const alreadyPaid = Number(item.paidAmount || 0);
 
+            // What the PATIENT has already paid on this line. payment.service
+            // maintains `patientPaidAmount` per procedure every time a payment is
+            // allocated, so prefer it: `paidAmount` is the WHOLE line total paid
+            // (patient + insurance), and subtracting that would wipe out a
+            // patient portion the insurance alone never covered — the exact
+            // deductible case, where the line is insurance-paid in full and the
+            // deductible still belongs to the patient.
+            const patientPaidOnItem =
+              item.patientPaidAmount !== undefined &&
+              item.patientPaidAmount !== null
+                ? Number(item.patientPaidAmount) || 0
+                : null;
+
             // Calculate sum of all items' alreadyPaid to detect backend void bugs
             const sumAlreadyPaid = items.reduce(
               (sum, i) => sum + Number(i.paidAmount || 0),
@@ -1428,7 +1628,11 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               sumAlreadyPaid > totalPatientPaid + totalInsurancePaid + 0.01;
 
             let netPatientBal;
-            if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
+            if (patientPaidOnItem !== null) {
+              // Authoritative per-procedure split — insurance money never
+              // reduces what the patient owes.
+              netPatientBal = Math.max(0, patientBal - patientPaidOnItem);
+            } else if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
               // If there are NO active payments, the patient owes the full balance regardless of buggy item.paidAmount
               netPatientBal = patientBal;
             } else if (totalInsurancePaid === 0 && !hasVoidedBug) {
@@ -1436,11 +1640,13 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               // ALL payments are from the patient. This perfectly respects manual per-item allocations.
               netPatientBal = Math.max(0, patientBal - alreadyPaid);
             } else {
-              // Distribute patient payments proportionally across items by their gross patient balance.
-              // This is a safe fallback when insurance and patient payments are mixed, or when void bugs corrupt item.paidAmount.
+              // Distribute PATIENT payments proportionally across items by their
+              // gross patient balance. Insurance payments are deliberately not
+              // part of this: they settle the insurance portion, never the
+              // patient's deductible/coinsurance.
               const itemShare =
                 totalGrossPatient > 0 ? patientBal / totalGrossPatient : 0;
-              const itemTotalPaid = itemShare * (totalPatientPaid + totalInsurancePaid);
+              const itemTotalPaid = itemShare * totalPatientPaid;
               netPatientBal = Math.max(0, patientBal - itemTotalPaid);
             }
 

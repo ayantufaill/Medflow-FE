@@ -9,7 +9,7 @@ import Lock from '@mui/icons-material/Lock';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
-import { radius, fontWeight } from '../../constants/styles';
+import { radius } from '../../constants/styles';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 // Redux — providers & patients
@@ -102,6 +102,21 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     ? (insurancesCache[patientId].data || []).filter((ins) => ins.isActive !== false)
     : [];
 
+  // Default the insurance dropdown to the patient's primary plan (the first
+  // active, non-secondary one) whenever nothing is selected yet. Keeping this
+  // as a derived value lets the default survive patient switches without a
+  // setState-in-effect.
+  const defaultInsurance = (activeInsurances || []).find((ins) => {
+    const type = String(ins.insuranceType || ins.type || '').toLowerCase();
+    const isSecondary = type === 'secondary' || Number(ins.ordinal) === 2;
+    return !isSecondary;
+  });
+  const effectiveInsuranceId = String(
+    selectedInsuranceId ||
+    (defaultInsurance && (defaultInsurance._id || defaultInsurance.id)) ||
+    ''
+  );
+
   // ── Bootstrap dropdowns ──────────────────────────────────────────────────
   useEffect(() => {
     dispatch(fetchAllProvidersForDropdown());
@@ -163,7 +178,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   };
 
   const handleSendToBatch = async () => {
-    if (!selectedInsuranceId) {
+    if (!effectiveInsuranceId) {
       showSnackbar('Please select an insurance plan.', 'warning');
       return;
     }
@@ -177,7 +192,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     }
 
     const selectedInsurance = activeInsurances.find(
-      (ins) => String(ins._id || ins.id) === String(selectedInsuranceId)
+      (ins) => String(ins._id || ins.id) === String(effectiveInsuranceId)
     );
     const isSecondary =
       selectedInsurance?.insuranceType?.toLowerCase() === 'secondary' ||
@@ -248,7 +263,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     const result = await dispatch(
       createManualClaim({
         patientId,
-        insuranceId: selectedInsuranceId,
+        insuranceId: effectiveInsuranceId,
         treatingProviderId: selectedTreatingProvider,
         billingEntityId: selectedBillingEntity,
         claimType: isSecondary ? 'Secondary' : claimType,
@@ -281,7 +296,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
       : '';
 
   const selectedInsurance = activeInsurances.find(
-    (ins) => String(ins._id || ins.id) === String(selectedInsuranceId)
+    (ins) => String(ins._id || ins.id) === String(effectiveInsuranceId)
   );
   const isSecondary =
     selectedInsurance?.insuranceType?.toLowerCase() === 'secondary' ||
@@ -397,7 +412,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>To</Typography>
             <Select
-              value={selectedInsuranceId}
+              value={effectiveInsuranceId}
               onChange={(e) => setSelectedInsuranceId(e.target.value)}
               displayEmpty
               size="small"

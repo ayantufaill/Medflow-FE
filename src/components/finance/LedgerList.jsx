@@ -93,6 +93,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [showWriteOffDialog, setShowWriteOffDialog] = useState(false);
   const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [showVoidProceduresDialog, setShowVoidProceduresDialog] = useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
   const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
@@ -394,10 +395,63 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
   const handleVoidClick = (item) => {
     setVoidTarget(item);
-    setShowVoidDialog(true);
+    // A void on an invoice row is a per-procedure decision: ask which ones
+    // rather than dropping the whole invoice in one shot.
+    if (item?.isGrouped && !item?.isAdjustment) {
+      setShowVoidProceduresDialog(true);
+    } else {
+      setShowVoidDialog(true);
+    }
   };
   const handleVoidCancel = () => {
     setShowVoidDialog(false);
+    setVoidTarget(null);
+  };
+  const handleVoidProceduresCancel = () => {
+    setShowVoidProceduresDialog(false);
+    setVoidTarget(null);
+  };
+  // Void only the chosen procedures; each one is removed from the invoice and
+  // the invoice is recalculated, so the untouched rows survive intact.
+  const handleVoidProceduresConfirm = async (selectedIds) => {
+    if (!voidTarget || !selectedIds || selectedIds.length === 0) return;
+
+    const failed = [];
+    let firstError = null;
+    for (const itemId of selectedIds) {
+      try {
+        await dispatch(
+          voidTransaction({
+            patientId,
+            invoiceId: voidTarget.invoiceId,
+            itemId,
+            isAdjustment: false,
+            isGrouped: false,
+            isPayment: false,
+          }),
+        ).unwrap();
+      } catch (err) {
+        // The thunk rejects with the server's message, which for a finalized
+        // invoice explains that the whole invoice has to be voided instead.
+        if (firstError === null) firstError = err;
+        failed.push(itemId);
+      }
+    }
+
+    if (failed.length > 0) {
+      showSnackbar(
+        firstError?.message ||
+          `Could not void ${failed.length} ${failed.length === 1 ? "procedure" : "procedures"}.`,
+        "error",
+      );
+    } else {
+      showSnackbar(
+        `${selectedIds.length} ${selectedIds.length === 1 ? "procedure" : "procedures"} voided`,
+        "success",
+      );
+    }
+
+    setShowVoidProceduresDialog(false);
     setVoidTarget(null);
   };
   const handleVoidConfirm = async () => {
@@ -1033,7 +1087,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
                     unallocatedCourtesy += adj.rawAmount || 0;
                   });
 
-                  const proceduresWithBalance = d.procedures
+                  let proceduresWithBalance = d.procedures
                     .map((p) => {
                       const procedureId = p.ProcNum || p._id || p.id;
                       const courtesyAdjs = displayItem.details.filter(
@@ -1060,16 +1114,32 @@ const LedgerList = ({ patient, expanded, filters }) => {
                         ptPortion: Math.max(0, Number(p.ptPortion || 0) - totalCourtesy)
                       };
                     })
-                    // Hide procedures whose remaining patient portion is $0.00
-                    .filter((p) => Number(Number(p.ptPortion || 0).toFixed(2)) > 0);
+                  // Hide procedures whose remaining patient portion is $0.00.
+                  // Voided ones are an exception when "include voided
+                  // transactions" is on — they are shown for audit regardless
+                  // of their (now irrelevant) patient portion.
+                  .filter((p) =>
+                    Number(Number(p.ptPortion || 0).toFixed(2)) > 0 ||
+                    (filters?.includeVoided && p.isVoided),
+                  );
 
-                  // Every procedure is $0.00 (e.g. an invoice created with a
-                  // 0.00 charge). Fall back to showing all of them rather than
-                  // dropping the row and claiming nothing is attached.
+                  // If all procedures have $0 patient portion, fall back to showing all
+                  // rather than dropping the row. Otherwise, keep procedures
+                  // with $0 balance so they remain visible alongside those with balances.
                   if (proceduresWithBalance.length === 0) {
                     if (!d.procedures || d.procedures.length === 0)
                       return null;
                     return { ...d };
+                  }
+
+                  const zeroBalanceProcedures = d.procedures.filter(
+                    (p) => Number(Number(p.ptPortion || 0).toFixed(2)) === 0
+                  );
+                  if (zeroBalanceProcedures.length > 0) {
+                    proceduresWithBalance = [
+                      ...proceduresWithBalance,
+                      ...zeroBalanceProcedures,
+                    ];
                   }
 
                   return {
@@ -1143,6 +1213,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
         showVoidDialog={showVoidDialog}
         handleVoidCancel={handleVoidCancel}
         handleVoidConfirm={handleVoidConfirm}
+        showVoidProceduresDialog={showVoidProceduresDialog}
+        handleVoidProceduresCancel={handleVoidProceduresCancel}
+        handleVoidProceduresConfirm={handleVoidProceduresConfirm}
         voidTarget={voidTarget}
         showCourtesyCredit={showCourtesyCredit}
         handleCourtesyCreditCancel={handleCourtesyCreditCancel}

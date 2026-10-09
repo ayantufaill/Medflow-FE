@@ -29,6 +29,9 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Flat rate");
   const [calcValue, setCalcValue] = useState("");
+  // Per-line adjustment overrides, keyed by line index. When a line has an
+  // entry here the typed amount wins over the pro-rated default.
+  const [lineAdjustments, setLineAdjustments] = useState({});
   const [adjustmentTypeOptions] = useState([
     { type: 'Write Off' },
     { type: 'Un-Collected' },
@@ -68,6 +71,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     totalWo = Number(editTarget.summary.insWo?.replace(/[^0-9.-]+/g,"")) || 0;
   }
   
+  const parseAmount = (v) => {
+    const n = parseFloat(String(v ?? '').replace(/[^0-9.-]+/g, ""));
+    return isNaN(n) ? 0 : n;
+  };
+
   const dynamicLineItems = procedures.map(p => {
     const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
     const weight = totalCharges > 0 ? charge / totalCharges : 0;
@@ -171,21 +179,29 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     adjustmentAmount = totalPtBalance;
   }
 
-  const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems.map(item => {
+  const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems.map((item) => {
     // Pro-rate adjustment for line items if it's a percentage or just show 0 if flat
     let percentStr = "0%";
+    let defaultAdjust = 0;
     if (adjustmentType === "Write Off") {
       percentStr = item.values[0].val; // Shows the exact write-off amount for this item
+      defaultAdjust = parseAmount(percentStr);
     } else if (adjustmentType === "Curtsey W/O") {
       const patientRemaining = item.ptRemaining || 0;
       const applied = calcMode === "Percentage"
         ? patientRemaining * (parsedValue / 100)
         : patientRemaining;
       percentStr = `$${applied.toFixed(2)}`;
+      defaultAdjust = applied;
     } else if (calcMode === "Percentage") {
       percentStr = `${parsedValue}%`;
+      defaultAdjust = (item.charge || 0) * (parsedValue / 100);
+    } else {
+      // Flat rate: pro-rate the flat amount across the lines by charge weight.
+      defaultAdjust = totalCharges > 0 ? parsedValue * (item.charge / totalCharges) : 0;
+      percentStr = `$${defaultAdjust.toFixed(2)}`;
     }
-    return { ...item, percent: percentStr };
+    return { ...item, percent: percentStr, defaultAdjust };
   }) : [
     {
       code: "No items found",
@@ -194,11 +210,26 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" }, { val: "$0.00" },
       ],
       percent: "0%",
+      defaultAdjust: 0,
     }
   ];
 
+  // The amount actually posted for a line: the manual override when the user
+  // typed one, otherwise the pro-rated default.
+  const lineAdjustmentValue = (item, idx) =>
+    lineAdjustments[idx] !== undefined ? parseAmount(lineAdjustments[idx]) : (item.defaultAdjust || 0);
+
+  const hasLineItems = dynamicLineItems.length > 0;
+  const totalLineAdjustments = finalLineItems.reduce(
+    (sum, item, idx) => sum + lineAdjustmentValue(item, idx),
+    0,
+  );
+  // Header/footer totals follow the per-line values, so editing a line
+  // immediately re-totals the adjustment.
+  const adjustmentTotal = hasLineItems ? totalLineAdjustments : adjustmentAmount;
+
   const handleAdjust = async () => {
-    if (!adjustmentAmount) {
+    if (!(adjustmentTotal > 0)) {
       alert("Please enter a valid adjustment value.");
       return;
     }
@@ -209,7 +240,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         patientId,
         invoiceId: editTarget?.id,
         adjustmentType,
-        adjustmentAmount,
+        adjustmentAmount: adjustmentTotal,
+        lineItems: finalLineItems.map((item, idx) => ({
+          code: item.code,
+          amount: lineAdjustmentValue(item, idx),
+        })),
         reason,
         typeId: selectedDef?.id || undefined
       })).unwrap();
@@ -350,7 +385,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Insurance:</Typography>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'left', color: '#555' }}>Charges: ${totalCharges.toFixed(2)}</Typography>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: '#22c55e' }}>Payment: ${totalPayment.toFixed(2)}</Typography>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: -${adjustmentAmount.toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'right', color: COLORS.ACCENT }}>Adjust: -${adjustmentTotal.toFixed(2)}</Typography>
            </Box>
         </Box>
 
@@ -377,8 +412,20 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
                   <Typography sx={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>{item.values[4].val}</Typography>
                 </Box>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', py: 1, pr: 1 }}>
-                  <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px' }}>
-                    <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{item.percent}</Typography>
+                  <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px', width: '80px' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: '#666' }}>$</Typography>
+                    <input
+                      type="text"
+                      value={lineAdjustments[idx] !== undefined ? lineAdjustments[idx] : (item.defaultAdjust || 0).toFixed(2)}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setLineAdjustments((prev) => ({ ...prev, [idx]: e.target.value.replace(/[^0-9.]/g, '') }))}
+                      onBlur={() => {
+                        const raw = lineAdjustments[idx];
+                        if (raw === undefined || raw === '') return;
+                        setLineAdjustments((prev) => ({ ...prev, [idx]: parseAmount(raw).toFixed(2) }));
+                      }}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '50px', fontSize: '0.75rem', fontWeight: 600, padding: 0, color: '#666' }}
+                    />
                   </Box>
                 </Box>
              </Box>

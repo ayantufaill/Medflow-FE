@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { Box, Typography, Stack, Tooltip, Menu, MenuItem } from "@mui/material";
+import dayjs from "dayjs";
+import { formatDate } from "../../utils/dateUtils";
+
 import {
   Edit,
   NotInterested,
@@ -29,12 +32,32 @@ import ButtonPrintIcon from "../../assets/finance icons/Button - Print → SVG.s
 import ButtonSettingsIcon from "../../assets/finance icons/Button - Settings → SVG.svg";
 import ButtonMagicIcon from "../../assets/finance icons/Button - Magic actions → SVG.svg";
 
+// Ledger entry dates are frequently date-only (claims, adjustments and invoice
+// statements store a calendar date, not a time of day), so the "at [time]"
+// part is only appended when the stored value actually carries one.
+const isDateOnlyValue = (value) => {
+  if (value instanceof Date) {
+    return (
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0
+    );
+  }
+  const text = String(value).trim();
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(text) ||
+    /T00:00:00(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(text)
+  );
+};
+
 const LedgerSubRow = ({
   id,
   date,
   title,
   amount,
   initials,
+  createdByName,
+  createdAt,
   isAdjustment,
   isPayment,
   isClaim,
@@ -72,10 +95,13 @@ const LedgerSubRow = ({
   onVoidClaimClick,
   onChangeClaimStatusClick,
   isPatientDeposit,
+  defaultExpanded,
 }) => {
-  const [expanded, setExpanded] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
+  // Rows that exist purely to carry their procedures (an adjustment's affected
+  // line items) start open, so the ledger shows them without a second click.
+  const [expanded, setExpanded] = useState(Boolean(defaultExpanded));
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
@@ -154,6 +180,17 @@ const LedgerSubRow = ({
     transition: "all 0.15s ease",
     "&:hover": { bgcolor: "#DBEAFE", color: "#2362EF" },
   };
+
+  // Hover text for the initials: "Created by [name] on [date] at [time]".
+  const createdByTooltip = (() => {
+    const name = createdByName || initials || "Staff";
+    const parsed = createdAt ? dayjs(createdAt) : null;
+    if (!parsed?.isValid()) return `Created by ${name}`;
+    if (isDateOnlyValue(createdAt)) {
+      return `Created by ${name} on ${formatDate(createdAt)}`;
+    }
+    return `Created by ${name} on ${formatDate(parsed.toDate())} at ${parsed.format("h:mm A")}`;
+  })();
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -399,19 +436,24 @@ const LedgerSubRow = ({
           </Typography>
         )}
 
-        <Typography
-          variant="caption"
-          sx={{
-            width: 40,
-            color: textSecondaryColor,
-            fontSize: "12px",
-            textAlign: "center",
-            mr: 2,
-            display: hasProcedures && expanded ? "none" : "block",
-          }}
-        >
-          {initials || "MAG"}
-        </Typography>
+        <Tooltip title={createdByTooltip} placement="top">
+          <Typography
+            variant="caption"
+            sx={{
+              width: 90,
+              color: textSecondaryColor,
+              fontSize: "12px",
+              textAlign: "center",
+              mr: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: hasProcedures && expanded ? "none" : "block",
+            }}
+          >
+            {initials || "STAFF"}
+          </Typography>
+        </Tooltip>
 
         <Stack
           direction="row"
@@ -787,6 +829,17 @@ const LedgerSubRow = ({
                   onClick={(e) => onMagicStickClick?.(e)}
                 />
               </Tooltip>
+              <Tooltip title="Void Invoice" placement="top">
+                <Box
+                  component="img"
+                  src={ButtonVoidIcon}
+                  sx={{ width: 18, height: 18, cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onVoidClick?.(voidData);
+                  }}
+                />
+              </Tooltip>
             </>
           ) : (
             <>
@@ -928,27 +981,49 @@ const LedgerSubRow = ({
             >
               Fee
             </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                width: 100,
+                color: expandedHeaderTextColor,
+                fontSize: "10px",
+                fontWeight: 600,
+                textAlign: "right",
+                mr: 2,
+              }}
+            >
+              Write-Off
+            </Typography>
             <Box sx={{ minWidth: 120 }} />
           </Box>
 
-          {procedures.map((proc, idx) => (
-            <Box
-              key={idx}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                py: 0.75,
-                borderBottom:
-                  idx !== procedures.length - 1
-                    ? `1px dashed ${expandedRowBorderColor}`
-                    : "none",
-              }}
-            >
+          {procedures.map((proc, idx) => {
+            // A voided procedure is only ever listed when the ledger asked for
+            // voided rows; it reads as struck-through red so it is obviously
+            // not a live line, while live rows keep their own column colour.
+            const procIsVoided = Boolean(proc.isVoided);
+            const voidedCell = (baseColor) =>
+              procIsVoided
+                ? { color: "#fca5a5", textDecoration: "line-through", opacity: 0.85 }
+                : { color: baseColor };
+            return (
+              <Box
+                key={idx}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  py: 0.75,
+                  borderBottom:
+                    idx !== procedures.length - 1
+                      ? `1px dashed ${expandedRowBorderColor}`
+                      : "none",
+                }}
+              >
               <Box sx={{ width: 80, display: "flex", alignItems: "center" }}>
                 <Typography
                   variant="caption"
                   sx={{
-                    color: expandedRowTextColor,
+                    ...voidedCell(expandedRowTextColor),
                     fontSize: "11px",
                   }}
                 >
@@ -959,7 +1034,7 @@ const LedgerSubRow = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    color: textPrimaryColor,
+                    ...voidedCell(textPrimaryColor),
                     fontSize: "11px",
                     fontWeight: 600,
                   }}
@@ -971,7 +1046,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   flexGrow: 1,
-                  color: expandedDescTextColor,
+                  ...voidedCell(expandedDescTextColor),
                   fontSize: "11px",
                 }}
               >
@@ -982,7 +1057,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   width: 120,
-                  color: expandedRowTextColor,
+                  ...voidedCell(expandedRowTextColor),
                   fontSize: "11px",
                 }}
               >
@@ -992,7 +1067,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   width: 100,
-                  color: textPrimaryColor,
+                  ...voidedCell(textPrimaryColor),
                   fontSize: "11px",
                   textAlign: "right",
                   mr: 2,
@@ -1009,7 +1084,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   width: 110,
-                  color: textPrimaryColor,
+                  ...voidedCell(textPrimaryColor),
                   fontSize: "11px",
                   textAlign: "right",
                   mr: 2,
@@ -1036,7 +1111,7 @@ const LedgerSubRow = ({
                 variant="caption"
                 sx={{
                   width: 140,
-                  color: textPrimaryColor,
+                  ...voidedCell(textPrimaryColor),
                   fontSize: "11px",
                   fontWeight: 600,
                   textAlign: "right",
@@ -1053,9 +1128,22 @@ const LedgerSubRow = ({
                     0,
                 ).toFixed(2)}
               </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  width: 100,
+                  ...voidedCell(textPrimaryColor),
+                  fontSize: "11px",
+                  textAlign: "right",
+                  mr: 2,
+                }}
+              >
+                ${Number(proc.writeoff || proc.estimatedWriteOff || 0).toFixed(2)}
+              </Typography>
               <Box sx={{ minWidth: 120 }} />
-            </Box>
-          ))}
+              </Box>
+            );
+          })}
         </Box>
       )}
     </Box>

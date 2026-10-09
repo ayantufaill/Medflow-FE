@@ -149,6 +149,15 @@ export const invoiceService = {
   },
 
   /**
+   * Void a single procedure on an invoice. The row is kept (flagged voided)
+   * rather than deleted, so the invoice can still list it.
+   */
+  async voidInvoiceItem(invoiceId, itemId, reason) {
+    const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}/void`, { reason });
+    return response.data.data;
+  },
+
+  /**
    * Delete invoice (only draft invoices can be deleted)
    */
   async deleteInvoice(invoiceId) {
