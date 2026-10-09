@@ -4,11 +4,14 @@ import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import { ACCESS_LEVELS, ACCESS_LEVEL_LABELS, isLevelWithin, featureBase } from '../../../constants/teamModuleAccess';
 
-// Same Full / View / None colouring as the screen access matrix.
+// Same Full / View / None meaning as the screen access matrix. None is a real
+// choice (the module is turned off), so it needs a tint that reads as
+// selected: the page's input grey was indistinguishable from an unselected
+// button, and a saved "None" looked like nothing was picked.
 const LEVEL_TONES = {
   full: { bg: '#E7F4EC', fg: COLORS.STATUS_SUCCESS },
   view: { bg: '#FDF3E1', fg: '#B26A00' },
-  none: { bg: COLORS.SURFACE_INPUT, fg: COLORS.TEXT_SECONDARY },
+  none: { bg: '#FDECEC', fg: COLORS.STATUS_ERROR },
 };
 
 const toggleSx = {
