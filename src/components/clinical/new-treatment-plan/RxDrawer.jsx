@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   Box, Typography, Button, Tabs, Tab, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, Grid, Select, MenuItem, Stack, Drawer, IconButton
+  Dialog, Grid, Select, MenuItem, Stack, Drawer, IconButton, CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -18,6 +18,18 @@ import {
   addPatientRxThunk, 
   selectPatientPrescriptions 
 } from '../../../store/slices/patientSlice';
+import { useMedicalHistory } from '../../../hooks/redux/useMedicalHistory';
+
+const parseQuestionOptions = (questionText) => {
+  if (!questionText) return { cleanQuestion: '', options: null };
+  const match = questionText.match(/\(Options:\s*(.*?)\)/);
+  if (match) {
+    const options = match[1].split(',').map(s => s.trim());
+    const cleanQuestion = questionText.replace(/\s*\(Options:\s*.*?\)/, '');
+    return { cleanQuestion, options };
+  }
+  return { cleanQuestion: questionText, options: null };
+};
 
 const RxDrawer = ({ open, onClose }) => {
   const dispatch = useDispatch();
@@ -44,6 +56,25 @@ const RxDrawer = ({ open, onClose }) => {
   useEffect(() => {
     setLocalPrescriptions(reduxPrescriptions);
   }, [reduxPrescriptions]);
+
+  const { medicalHistory, fetch: fetchMedicalHistory, loading: medicalHistoryLoading } = useMedicalHistory();
+
+  const patientDbId = currentPatient?._id || currentPatient?.id;
+
+  useEffect(() => {
+    if (patientDbId && patientDbId !== 'N/A') {
+      fetchMedicalHistory(patientDbId);
+    }
+  }, [patientDbId, fetchMedicalHistory]);
+
+  const allergyQuestionNumbers = [2, 12, 36, 41, 42];
+  const activeAllergies = (medicalHistory?.sections || []).filter((section, index) => {
+    const sectionNum = Number(section.number || index + 1);
+    const isTarget = allergyQuestionNumbers.includes(sectionNum);
+    const answerLower = (section.answer || '').toLowerCase();
+    const isYes = answerLower !== 'no' && answerLower !== 'not answered' && answerLower !== '';
+    return isTarget && isYes;
+  });
 
   const [tabValue, setTabValue] = useState(0);
   const [view, setView] = useState('list');
@@ -130,7 +161,16 @@ const RxDrawer = ({ open, onClose }) => {
         </Box>
 
         {view === 'list' && (
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 4, display: 'flex', flexDirection: 'column', gap: 4, bgcolor: '#fff' }}>
+          <Box sx={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            p: 4, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 4, 
+            bgcolor: '#fff',
+            '& > *': { flexShrink: 0 }
+          }}>
             <Typography sx={{ fontSize: '1rem', color: '#64748b' }}>
               Prescription records and medication history
             </Typography>
@@ -261,10 +301,47 @@ const RxDrawer = ({ open, onClose }) => {
             </CardWrapper>
 
             {/* Allergies Section */}
-            <CardWrapper title="Allergies & Adverse Reactions">
-              <Box sx={{ minHeight: 100, px: 1 }}>
-                <Typography sx={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>No allergies recorded</Typography>
-              </Box>
+            <CardWrapper title="Allergies & Adverse Reactions" noPadding>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, color: '#4B5563', borderBottom: '1px solid #E5E7EB' }}>Condition / Allergy</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#4B5563', borderBottom: '1px solid #E5E7EB' }}>Details</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {medicalHistoryLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
+                          <CircularProgress size={24} />
+                        </TableCell>
+                      </TableRow>
+                    ) : activeAllergies.length > 0 ? (
+                      activeAllergies.map((allergy, index) => {
+                        const { cleanQuestion } = parseQuestionOptions(allergy.question);
+                        const details = [
+                          (allergy.answer || '').toLowerCase() !== 'yes' ? allergy.answer : '',
+                          Array.isArray(allergy.additionalInfo) ? allergy.additionalInfo.join(', ') : allergy.additionalInfo,
+                          Array.isArray(allergy.comment) ? allergy.comment.join(', ') : allergy.comment
+                        ].map(s => String(s || '').trim()).filter(Boolean).join(' - ');
+                        return (
+                          <TableRow key={allergy.number || index} hover>
+                            <TableCell sx={{ color: '#334155' }}>{cleanQuestion}</TableCell>
+                            <TableCell sx={{ color: '#64748b' }}>{details || '—'}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={2} align="center" sx={{ py: 4, color: '#9CA3AF', fontStyle: 'italic' }}>
+                          No allergies recorded
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </CardWrapper>
           </Box>
         )}
