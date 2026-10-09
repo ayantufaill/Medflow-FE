@@ -327,6 +327,32 @@ export const updateDentalHistoryThunk = createAsyncThunk(
   }
 );
 
+// ─── Rx (Prescriptions) Thunks ───────────────────────────────
+
+export const fetchPatientRxThunk = createAsyncThunk(
+  'patient/fetchPatientRx',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const data = await patientService.getPatientPrescriptions(patientId);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch prescriptions');
+    }
+  }
+);
+
+export const addPatientRxThunk = createAsyncThunk(
+  'patient/addPatientRx',
+  async ({ patientId, rxData }, { rejectWithValue }) => {
+    try {
+      const data = await patientService.createPatientPrescription(patientId, rxData);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add prescription');
+    }
+  }
+);
+
 // ─── Slice ───────────────────────────────────────────────────
 
 const initialState = {
@@ -377,6 +403,10 @@ const initialState = {
   // Global Insurances
   globalInsurances: [],
   globalInsurancesLoading: false,
+
+  // Prescriptions
+  prescriptions: [],
+  prescriptionsLoading: false,
 };
 
 // Cache disabled - always fetch fresh data from backend
@@ -600,6 +630,20 @@ const patientSlice = createSlice({
       .addCase(fetchDentalHistoryThunk.rejected, (state, action) => {
         state.dentalHistoryLoading = false;
         state.dentalHistoryError = action.payload;
+      })
+      // Prescriptions
+      .addCase(fetchPatientRxThunk.pending, (state) => {
+        state.prescriptionsLoading = true;
+      })
+      .addCase(fetchPatientRxThunk.fulfilled, (state, action) => {
+        state.prescriptionsLoading = false;
+        state.prescriptions = action.payload || [];
+      })
+      .addCase(fetchPatientRxThunk.rejected, (state) => {
+        state.prescriptionsLoading = false;
+      })
+      .addCase(addPatientRxThunk.fulfilled, (state, action) => {
+        state.prescriptions.push(action.payload);
       });
   },
 });
@@ -647,6 +691,8 @@ export const selectPatientBalanceLoading = (state) => state.patient.balanceLoadi
 export const selectInsuranceUsage = (state) => state.patient.insuranceUsage;
 export const selectInsuranceUsageCache = (state) => state.patient.insuranceUsageCache;
 export const selectInsuranceUsageLoading = (state) => state.patient.insuranceUsageLoading;
+export const selectPatientPrescriptions = (state) => state.patient.prescriptions;
+export const selectPatientPrescriptionsLoading = (state) => state.patient.prescriptionsLoading;
 
 // Check if cache is valid
 export const selectIsCacheValid = (state) => {

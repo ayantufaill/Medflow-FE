@@ -62,6 +62,7 @@ import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable'
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
+import RxDrawer from '../../components/clinical/new-treatment-plan/RxDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
 import { useSelector, useDispatch } from 'react-redux';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
@@ -401,6 +402,7 @@ const NewTreatmentPlanPage = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
   const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+  const [isRxDrawerOpen, setIsRxDrawerOpen] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState(null);
   const [editingFeesProcedure, setEditingFeesProcedure] = useState(null);
   const [isEstimatePrintOpen, setIsEstimatePrintOpen] = useState(false);
@@ -1866,6 +1868,7 @@ const NewTreatmentPlanPage = () => {
           showOdontogram={showOdontogram}
           setShowOdontogram={setShowOdontogram}
           onNotesClick={() => setIsNotesDrawerOpen(true)}
+          onRxClick={() => setIsRxDrawerOpen(true)}
           pastDates={headerDates.pastDates}
           currentDate={headerDates.currentDate}
         />
@@ -2372,6 +2375,10 @@ const NewTreatmentPlanPage = () => {
         appointmentId={activeAppointmentId}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
+      />
+      <RxDrawer 
+        open={isRxDrawerOpen} 
+        onClose={() => setIsRxDrawerOpen(false)} 
       />
 
       {/* Summary dialog — shown when multiple providers are detected */}

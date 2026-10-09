@@ -536,4 +536,15 @@ export const patientService = {
     const response = await apiClient.get(`/patients/${patientId}/insurance-usage`);
     return response.data?.data ?? response.data;
   },
+  // ---------------- Prescriptions ----------------
+
+  async getPatientPrescriptions(patientId) {
+    const response = await apiClient.get(`/rx?patientId=${patientId}`);
+    return response.data?.data?.prescriptions ?? response.data;
+  },
+
+  async createPatientPrescription(patientId, rxData) {
+    const response = await apiClient.post(`/rx`, { patientId, ...rxData });
+    return response.data?.data ?? response.data;
+  }
 };
