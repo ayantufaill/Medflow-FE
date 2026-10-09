@@ -23,6 +23,7 @@ import {
   roundedSelectMenuProps,
 } from "../../constants/styles";
 import { COLORS } from "../../constants/colors";
+import { patientValidations } from "../../validations/patientValidations";
 
 // Radio option text (Male/Female, Male/Man/Female/Woman) had no fontFamily/size set,
 // so it fell back to the theme default (Manrope, 1rem) instead of matching the
@@ -43,6 +44,7 @@ export default function PatientDetailsSection({
   onPatientDataChange,
 }) {
   const [localPatientData, setLocalPatientData] = useState(patient || {});
+  const [ssnError, setSsnError] = useState("");
 
   // Update local data when patient prop changes
   useEffect(() => {
@@ -367,10 +369,24 @@ export default function PatientDetailsSection({
               : ""
           }
           placeholder="xxx-xx-xxxx"
-          onChange={(e) =>
-            handleFieldChange("ssn", e.target.value.replace(/[^0-9]/g, ""))
-          }
+          onChange={(e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, "");
+            if (digits.length <= 9) {
+              handleFieldChange("ssn", digits);
+              
+              if (isEditMode) {
+                if (!digits) {
+                  setSsnError("");
+                } else {
+                  const validationResult = patientValidations.ssn.validate(digits);
+                  setSsnError(validationResult === true ? "" : validationResult);
+                }
+              }
+            }
+          }}
           InputProps={{ readOnly: !isEditMode }}
+          error={!!ssnError}
+          helperText={ssnError}
         />
       </Box>
     </Box>

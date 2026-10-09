@@ -86,13 +86,6 @@ const RxDrawer = ({ open, onClose }) => {
     'Long Term', 'Refills', 'Dose', 'Prints', 'Provider', 'Notes'
   ];
 
-  const formatRxNum = (rxNum) => {
-    if (!rxNum) return '-';
-    const str = String(rxNum);
-    if (str.toUpperCase().startsWith('RX-')) return str;
-    return `RX-${str.padStart(6, '0')}`;
-  };
-
   return (
     <Drawer
       anchor="right"
@@ -249,7 +242,7 @@ const RxDrawer = ({ open, onClose }) => {
                     ) : (
                       localPrescriptions.map((row) => (
                         <TableRow key={row.id}>
-                          <TableCell sx={{ fontSize: '0.8rem', borderBottom: `1px solid #e2e8f0`, borderRight: `1px solid #e2e8f0` }}>{formatRxNum(row.rxNum)}</TableCell>
+                          <TableCell sx={{ fontSize: '0.8rem', borderBottom: `1px solid #e2e8f0`, borderRight: `1px solid #e2e8f0` }}>{row.rxNum}</TableCell>
                           <TableCell sx={{ fontSize: '0.8rem', borderBottom: `1px solid #e2e8f0`, borderRight: `1px solid #e2e8f0` }}>{row.description}</TableCell>
                           <TableCell sx={{ fontSize: '0.8rem', borderBottom: `1px solid #e2e8f0`, borderRight: `1px solid #e2e8f0` }}>{row.startDate}</TableCell>
                           <TableCell sx={{ fontSize: '0.8rem', borderBottom: `1px solid #e2e8f0`, borderRight: `1px solid #e2e8f0` }}>{row.duration}</TableCell>

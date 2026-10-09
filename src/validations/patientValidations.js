@@ -165,13 +165,20 @@ export const patientValidations = {
   ssn: {
     validate: (value) => {
       if (!value) return true; // Optional
-      // Remove hyphens for validation
-      const digitsOnly = value.replace(/-/g, '');
-      if (digitsOnly.length !== 9) {
-        return 'SSN must contain exactly 9 digits';
-      }
-      if (!/^\d+$/.test(digitsOnly)) {
-        return 'SSN must contain only numbers';
+      
+      const rawSsn = value.replace(/\D/g, ''); // Temporarily strip hyphens
+      const areaNumber = rawSsn.substring(0, 3);
+      const groupNumber = rawSsn.substring(3, 5);
+      const serialNumber = rawSsn.substring(5, 9);
+      
+      if (rawSsn.length !== 9) {
+        return 'SSN must be exactly 9 digits';
+      } else if (areaNumber === '000' || areaNumber === '666' || parseInt(areaNumber, 10) >= 900) {
+        return 'Invalid SSN (Invalid Area Number)';
+      } else if (groupNumber === '00') {
+        return 'Invalid SSN (Invalid Group Number)';
+      } else if (serialNumber === '0000') {
+        return 'Invalid SSN (Invalid Serial Number)';
       }
       return true;
     },

@@ -17,6 +17,7 @@ const renderInput = (field, { register, errors }) => {
     rules.required = typeof field.required === "string" ? field.required : `${field.label} is required`;
   }
   if (field.pattern) rules.pattern = field.pattern;
+  if (field.validate) rules.validate = field.validate;
 
   const error = errors?.[field.name];
   const registered = register(field.name, rules);

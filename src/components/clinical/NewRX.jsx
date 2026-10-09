@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentPatient } from '../../store/slices/patientSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
-import { 
-  Box, Typography, Grid, TextField, Select, MenuItem, 
+import {
+  Box, Typography, Grid, TextField, Select, MenuItem,
   Checkbox, FormControlLabel, Button, Stack, IconButton, Divider, InputAdornment,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableHead, TableRow
@@ -16,17 +16,17 @@ import { fontSize, fontWeight, standardFieldSx, roundedSelectMenuProps } from '.
 import CardWrapper from '../admin/AddUserDrawer/CardWrapper';
 import RxPrintPreviewDialog from './RxPrintPreviewDialog';
 const Label = ({ children, required }) => (
-  <Typography 
+  <Typography
     component="label"
-    sx={{ 
-      fontFamily: 'Inter', 
-      fontSize: fontSize.xs, 
-      fontWeight: fontWeight.semibold, 
+    sx={{
+      fontFamily: 'Inter',
+      fontSize: fontSize.xs,
+      fontWeight: fontWeight.semibold,
       color: COLORS.TEXT_SECONDARY,
       textTransform: 'uppercase',
       letterSpacing: '0.3px',
       display: 'block',
-      mb: 0.5 
+      mb: 0.5
     }}
   >
     {children} {required && <Box component="span" sx={{ color: COLORS.ACCENT, ml: 0.5, fontWeight: "bold" }}>*</Box>}
@@ -71,18 +71,18 @@ const StyledSelect = (props) => {
 const numberToWords = (numStr) => {
   const num = parseInt(numStr, 10);
   if (isNaN(num)) return '';
-  
+
   const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
   const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
   const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
 
   if (num === 0) return 'ZERO';
-  
+
   let word = '';
   if (num >= 100) {
     word += ones[Math.floor(num / 100)] + ' HUNDRED ';
   }
-  
+
   const remainder = num % 100;
   if (remainder >= 10 && remainder < 20) {
     word += teens[remainder - 10];
@@ -96,7 +96,7 @@ const numberToWords = (numStr) => {
       word += ones[remainder];
     }
   }
-  
+
   return word.trim();
 };
 
@@ -191,8 +191,8 @@ const NewRX = ({ onClose, onSave }) => {
 
   const getProviderName = () => {
     const providerObj = providerList.find(p => (p._id || p.id) === selectedProvider);
-    return providerObj 
-      ? (providerObj.name || `${providerObj.firstName || ''} ${providerObj.lastName || ''}`.trim()) 
+    return providerObj
+      ? (providerObj.name || `${providerObj.firstName || ''} ${providerObj.lastName || ''}`.trim())
       : '';
   };
 
@@ -208,7 +208,7 @@ const NewRX = ({ onClose, onSave }) => {
   const handleSave = () => {
     if (onSave) {
       const providerObj = providerList.find(p => (p._id || p.id) === selectedProvider);
-        
+
       onSave({
         rxNum: 'RX-' + Math.floor(Math.random() * 10000),
         description: drugName || 'New Prescription',
@@ -224,8 +224,8 @@ const NewRX = ({ onClose, onSave }) => {
         rxInstructions,
         prints: hasPrinted ? 'Yes' : 'No',
         providerId: providerObj?._id || providerObj?.id || selectedProvider,
-        provider: providerObj 
-          ? (providerObj.name || `${providerObj.firstName || ''} ${providerObj.lastName || ''}`.trim()) 
+        provider: providerObj
+          ? (providerObj.name || `${providerObj.firstName || ''} ${providerObj.lastName || ''}`.trim())
           : 'Unknown',
         notes: notes
       });
@@ -234,10 +234,10 @@ const NewRX = ({ onClose, onSave }) => {
 
   return (
     <Box sx={{ width: '100%', bgcolor: '#fff', borderRadius: 0, p: 0, display: 'flex', flexDirection: 'column' }}>
-      
+
       {/* Main Content Area */}
       <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: '600px', p: 3, gap: 3 }}>
-        
+
         {/* Top Section - New Rx Form */}
         <Box sx={{ width: '100%' }}>
           <CardWrapper title="New Rx">
@@ -245,15 +245,15 @@ const NewRX = ({ onClose, onSave }) => {
               <Box>
                 <Typography sx={{ fontSize: '13px', color: '#334155', mb: 0.5 }}>Patient #: <Box component="span" sx={{ fontWeight: 700 }}>{patientId}</Box></Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
-                   <Typography sx={{ fontSize: '13px', color: '#334155' }}>Patient Name:</Typography>
-                   <Typography sx={{ fontSize: '13px', fontWeight: 700, color: COLORS.ACCENT }}>{patientName}</Typography>
+                  <Typography sx={{ fontSize: '13px', color: '#334155' }}>Patient Name:</Typography>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 700, color: COLORS.ACCENT }}>{patientName}</Typography>
                 </Stack>
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Typography sx={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>Add From Template:</Typography>
-                <StyledTextField 
-                  size="small" 
-                  placeholder="Select Template" 
+                <StyledTextField
+                  size="small"
+                  placeholder="Select Template"
                   variant="outlined"
                   sx={{ width: 180 }}
                 />
@@ -278,7 +278,7 @@ const NewRX = ({ onClose, onSave }) => {
                 <Box sx={{ flex: 1 }}>
                   <Label>Route</Label>
                   <StyledSelect size="small" fullWidth displayEmpty value="">
-                     <MenuItem value="">Select</MenuItem>
+                    <MenuItem value="">Select</MenuItem>
                   </StyledSelect>
                 </Box>
               </Box>
@@ -288,7 +288,7 @@ const NewRX = ({ onClose, onSave }) => {
                 <Box sx={{ flex: 1 }}>
                   <Label>Forms</Label>
                   <StyledSelect size="small" fullWidth displayEmpty value="">
-                     <MenuItem value="">Select</MenuItem>
+                    <MenuItem value="">Select</MenuItem>
                   </StyledSelect>
                 </Box>
                 <Box sx={{ flex: 1 }}>
@@ -297,23 +297,23 @@ const NewRX = ({ onClose, onSave }) => {
                 </Box>
                 <Box sx={{ flex: 1.5 }}>
                   <Label>Quantity</Label>
-                  <StyledTextField 
-                    fullWidth size="small" 
-                    value={quantity} 
+                  <StyledTextField
+                    fullWidth size="small"
+                    value={quantity}
                     onChange={(e) => {
                       setQuantity(e.target.value);
                       setSpelledQuantity(numberToWords(e.target.value));
                     }}
-                    variant="outlined" 
+                    variant="outlined"
                   />
                 </Box>
                 <Box sx={{ flex: 2 }}>
                   <Label>Spelled out quantity</Label>
-                  <StyledTextField 
-                    fullWidth size="small" 
-                    value={spelledQuantity} 
+                  <StyledTextField
+                    fullWidth size="small"
+                    value={spelledQuantity}
                     onChange={(e) => setSpelledQuantity(e.target.value)}
-                    variant="outlined" 
+                    variant="outlined"
                   />
                 </Box>
               </Box>
@@ -340,20 +340,20 @@ const NewRX = ({ onClose, onSave }) => {
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Box sx={{ flex: 1 }}>
                   <Label>Patient Instructions</Label>
-                  <StyledTextField 
-                    multiline 
+                  <StyledTextField
+                    multiline
                     minRows={2}
-                    fullWidth 
-                    variant="outlined" 
+                    fullWidth
+                    variant="outlined"
                     value={patientInstructions}
                     onChange={(e) => setPatientInstructions(e.target.value)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end" sx={{ alignSelf: 'flex-end', pb: 0, mb: -1, mr: -1 }}>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleVoiceInput(setPatientInstructions, 'patient')}
-                            sx={{ 
+                            sx={{
                               p: 0.5,
                               animation: listeningField === 'patient' ? 'pulse 1.5s infinite' : 'none'
                             }}
@@ -367,20 +367,20 @@ const NewRX = ({ onClose, onSave }) => {
                 </Box>
                 <Box sx={{ flex: 1 }}>
                   <Label>Rx Instructions</Label>
-                  <StyledTextField 
-                    multiline 
+                  <StyledTextField
+                    multiline
                     minRows={2}
-                    fullWidth 
-                    variant="outlined" 
+                    fullWidth
+                    variant="outlined"
                     value={rxInstructions}
                     onChange={(e) => setRxInstructions(e.target.value)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end" sx={{ alignSelf: 'flex-end', pb: 0, mb: -1, mr: -1 }}>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleVoiceInput(setRxInstructions, 'rx')}
-                            sx={{ 
+                            sx={{
                               p: 0.5,
                               animation: listeningField === 'rx' ? 'pulse 1.5s infinite' : 'none'
                             }}
@@ -406,19 +406,19 @@ const NewRX = ({ onClose, onSave }) => {
                 </Box>
                 <Box sx={{ flex: 1 }}>
                   <Label>Provider</Label>
-                  <StyledSelect 
-                    size="small" 
-                    fullWidth 
-                    displayEmpty 
+                  <StyledSelect
+                    size="small"
+                    fullWidth
+                    displayEmpty
                     value={selectedProvider}
                     onChange={(e) => setSelectedProvider(e.target.value)}
                   >
-                     <MenuItem value="">Select</MenuItem>
-                     {providerList.map(prov => (
-                       <MenuItem key={prov._id || prov.id} value={prov._id || prov.id}>
-                         {prov.name || `${prov.firstName || ''} ${prov.lastName || ''}`.trim()}
-                       </MenuItem>
-                     ))}
+                    <MenuItem value="">Select</MenuItem>
+                    {providerList.map(prov => (
+                      <MenuItem key={prov._id || prov.id} value={prov._id || prov.id}>
+                        {prov.name || `${prov.firstName || ''} ${prov.lastName || ''}`.trim()}
+                      </MenuItem>
+                    ))}
                   </StyledSelect>
                 </Box>
                 <Box sx={{ flex: 1 }}>
@@ -431,20 +431,20 @@ const NewRX = ({ onClose, onSave }) => {
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Box sx={{ flex: 1 }}>
                   <Label>Notes</Label>
-                  <StyledTextField 
-                    multiline 
+                  <StyledTextField
+                    multiline
                     minRows={2}
-                    fullWidth 
-                    variant="outlined" 
+                    fullWidth
+                    variant="outlined"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end" sx={{ alignSelf: 'flex-end', pb: 0, mb: -1, mr: -1 }}>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={() => handleVoiceInput(setNotes, 'notes')}
-                            sx={{ 
+                            sx={{
                               p: 0.5,
                               animation: listeningField === 'notes' ? 'pulse 1.5s infinite' : 'none'
                             }}
@@ -464,87 +464,87 @@ const NewRX = ({ onClose, onSave }) => {
         {/* Bottom Section - Active Rx / Allergies */}
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <CardWrapper title="Active Rx">
-             <Stack direction="row" sx={{ borderBottom: `2px solid #2362EF`, pb: 1, mb: 2 }}>
-                <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 3, color: '#4B5563' }}>Rx</Typography>
-                <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 2, color: '#4B5563' }}>Duration</Typography>
-                <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 2, color: '#4B5563' }}>Dose</Typography>
-             </Stack>
-             
-             <Box sx={{ minHeight: 120, mb: 1 }}>
-                <Typography sx={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>No active prescriptions</Typography>
-             </Box>
+            <Stack direction="row" sx={{ borderBottom: `1px solid #000000`, pb: 1, mb: 2 }}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 3, color: '#4B5563' }}>Rx</Typography>
+              <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 2, color: '#4B5563' }}>Duration</Typography>
+              <Typography sx={{ fontSize: '14px', fontWeight: 600, flex: 2, color: '#4B5563' }}>Dose</Typography>
+            </Stack>
+
+            <Box sx={{ minHeight: 120, mb: 1 }}>
+              <Typography sx={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>No active prescriptions</Typography>
+            </Box>
           </CardWrapper>
 
           <CardWrapper title="Allergies & Adverse Reactions">
-             <Box sx={{ minHeight: 120 }}>
-                <Typography sx={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>No allergies recorded</Typography>
-             </Box>
+            <Box sx={{ minHeight: 120 }}>
+              <Typography sx={{ fontSize: '14px', color: '#9CA3AF', fontStyle: 'italic' }}>No allergies recorded</Typography>
+            </Box>
           </CardWrapper>
         </Box>
       </Box>
 
       {/* Footer Actions */}
-      <Box sx={{ 
-        position: 'sticky', 
-        bottom: 0, 
+      <Box sx={{
+        position: 'sticky',
+        bottom: 0,
         zIndex: 10,
-        p: 3, 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        gap: 1.5, 
+        p: 3,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 1.5,
         bgcolor: '#fff',
         borderTop: '1px solid #e2e8f0',
         boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.05)'
       }}>
-        <Button 
-          variant="outlined" 
-          onClick={onClose} 
-          sx={{ 
-            color: '#64748b', 
-            borderColor: '#cbd5e1', 
-            borderRadius: '8px', 
-            px: 3, 
-            fontSize: '14px', 
-            fontWeight: 600, 
+        <Button
+          variant="outlined"
+          onClick={onClose}
+          sx={{
+            color: '#64748b',
+            borderColor: '#cbd5e1',
+            borderRadius: '8px',
+            px: 3,
+            fontSize: '14px',
+            fontWeight: 600,
             fontFamily: 'Inter, sans-serif',
             textTransform: 'none',
-            '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' } 
+            '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' }
           }}
         >
           Cancel
         </Button>
-        <Button 
+        <Button
           onClick={handleOpenPrintPreview}
           variant="contained"
-          sx={{ 
-            bgcolor: COLORS.ACCENT, 
-            color: '#fff', 
-            textTransform: 'none', 
-            borderRadius: '8px', 
-            px: 3, 
-            fontSize: '14px', 
+          sx={{
+            bgcolor: COLORS.ACCENT,
+            color: '#fff',
+            textTransform: 'none',
+            borderRadius: '8px',
+            px: 3,
+            fontSize: '14px',
             fontWeight: 600,
             fontFamily: 'Inter, sans-serif',
             boxShadow: 'none',
-            '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } 
+            '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
           }}
         >
           Print
         </Button>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={handleSave}
-          sx={{ 
-            bgcolor: COLORS.ACCENT, 
-            color: '#fff', 
-            textTransform: 'none', 
-            borderRadius: '8px', 
-            px: 4, 
-            fontSize: '14px', 
+          sx={{
+            bgcolor: COLORS.ACCENT,
+            color: '#fff',
+            textTransform: 'none',
+            borderRadius: '8px',
+            px: 4,
+            fontSize: '14px',
             fontWeight: 600,
             fontFamily: 'Inter, sans-serif',
             boxShadow: 'none',
-            '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } 
+            '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' }
           }}
         >
           Save
