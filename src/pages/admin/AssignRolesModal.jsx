@@ -30,7 +30,6 @@ import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { roleService } from '../../services/role.service';
 import { userService } from '../../services/user.service';
-import { useBranch } from '../../hooks/redux';
 import ConfirmationDialog from '../../components/shared/ConfirmationDialog';
 import rolesIcon from '../../assets/usermanagement icons/roles.svg';
 
@@ -62,7 +61,6 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
   const [allRoles, setAllRoles] = useState([]);
   const [userRoles, setUserRoles] = useState(propUser?.roles || []);
   const fetchInProgressRef = useRef(false);
-  const { currentBranchId } = useBranch();
 
   // New 8-role-model elevation state — separate from the legacy chip grid
   // above, which keeps managing legacy multi-role assignment unchanged.
@@ -167,7 +165,10 @@ const AssignRolesModal = ({ open, onClose, user: propUser, onSuccess }) => {
     try {
       setElevating(true);
       setError('');
-      const result = await userService.elevateRole(userId, selectedRoleKey, currentBranchId);
+      // No branch id: the backend scopes the change by the user's own
+      // branches. Sending the header's selected branch failed for
+      // single-branch admins (none selected) and for a stale selection.
+      const result = await userService.elevateRole(userId, selectedRoleKey);
       setCurrentRoleKey(result.newRole);
       showSnackbar(result.message || `Role changed to "${result.newRole}".`, 'success');
       if (onSuccess) onSuccess();

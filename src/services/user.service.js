@@ -141,7 +141,7 @@ export const userService = {
    * touching any legacy role they hold.
    * @param {string} userId
    * @param {string} roleSlug - e.g. 'dentist', 'front_desk'
-   * @param {string|number} [branchId] - required when the caller is a branch_admin
+   * @param {string|number} [branchId] - optional; the backend scopes the change by the target user's own branches
    * @returns {Promise<{message: string, oldRole: string|null, newRole: string}>}
    */
   async elevateRole(userId, roleSlug, branchId) {
