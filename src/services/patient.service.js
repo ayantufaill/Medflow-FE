@@ -223,14 +223,18 @@ export const patientService = {
     return response.data.data.updateRequests || [];
   },
 
-  async getPatientAuditHistory(patientId) {
+  async getPatientAuditHistory(patientId, { strict = false } = {}) {
     try {
       const response = await apiClient.get(
         `/patients/${patientId}/audit-history`,
       );
-      return response.data.data.auditEvents || [];
+      const events = response.data?.data?.auditEvents;
+      if (strict && !Array.isArray(events)) {
+        throw new Error("Invalid patient history response");
+      }
+      return events || [];
     } catch (error) {
-      if (error.response?.status === 404) return [];
+      if (!strict && error.response?.status === 404) return [];
       throw error;
     }
   },

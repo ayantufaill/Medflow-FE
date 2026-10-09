@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
-const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, activeAppointmentId }) => {
+const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, activeAppointmentId, onEventClick, activeEventId }) => {
   if (!visitDates || visitDates.length === 0) return null;
 
   const ITEM_WIDTH = 120;
@@ -53,18 +53,25 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, active
           const xPos = index * ITEM_WIDTH + (ITEM_WIDTH / 2);
           const label = typeof dateItem === 'object' ? dateItem.label : dateItem;
           
-          const isActive = activeAppointmentId 
+          const isEvent = typeof dateItem === 'object' && dateItem.eventId != null;
+          const clickable = typeof dateItem === 'object' && Boolean(isEvent ? onEventClick : onDateClick);
+          const isActive = isEvent
+            ? String(dateItem.eventId) === String(activeEventId)
+            : activeAppointmentId
             ? (typeof dateItem === 'object' && String(dateItem.appointmentId) === String(activeAppointmentId))
             : isLast;
 
           const handleDateClick = () => {
-            if (onDateClick && typeof dateItem === 'object') {
+            if (isEvent && onEventClick) {
+              onEventClick(dateItem.eventId);
+            } else if (onDateClick && typeof dateItem === 'object') {
               onDateClick(dateItem.appointmentId || null);
             }
           };
 
           return (
-            <g key={`group-${index}`}>
+            <g key={isEvent ? dateItem.eventId : `group-${index}`}>
+              {clickable && <title>{dateItem.description || label}</title>}
               {/* 2. SVG Circle (Print-Safe) */}
               <circle 
                 cx={xPos} 
@@ -72,7 +79,17 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, active
                 r={isActive ? LARGE_R : SMALL_R} 
                 fill={isActive ? "#2362EF" : "rgba(35, 98, 239, 0.35)"} 
                 onClick={handleDateClick}
-                style={{ cursor: 'pointer' }}
+                role={clickable ? 'button' : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                aria-label={clickable ? (dateItem.description || label) : undefined}
+                aria-pressed={clickable ? isActive : undefined}
+                onKeyDown={clickable ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleDateClick();
+                  }
+                } : undefined}
+                style={{ cursor: clickable ? 'pointer' : 'default' }}
               />
 
               {/* 3. Date Label */}
@@ -85,7 +102,7 @@ const VisitDatesTimeline = ({ visitDates = [], onRemoveDate, onDateClick, active
                 fontWeight={isActive ? "700" : "400"}
                 fill={isActive ? "#333" : "#7a869a"}
                 onClick={handleDateClick}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: clickable ? 'pointer' : 'default' }}
               >
                 {label}
               </text>

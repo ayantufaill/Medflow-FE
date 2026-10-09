@@ -3,6 +3,29 @@ import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
 
+// Audit timestamps represent instants, unlike date-only clinical fields.
+export function resolveHistoryTimeZone(timeZone) {
+  if (typeof timeZone === 'string' && timeZone.trim()) {
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone;
+    } catch { /* Use an explicit UTC fallback for missing/invalid clinic settings. */ }
+  }
+  return null;
+}
+
+export function formatHistoryTimestamp(value, timeZone, dateOnly = false) {
+  if (!value) return 'Date unavailable';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: resolveHistoryTimeZone(timeZone) || 'UTC',
+    month: 'short', day: '2-digit', year: 'numeric',
+    ...(dateOnly ? {} : {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
+    }),
+  }).format(date);
+}
+
 /**
  * System-independent date formatter:
  * 1. Immune to laptop timezone (no -1 day shift in US/Western timezones)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -21,11 +21,11 @@ import {
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
-import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
+import { usePatientHistoryTimeline } from "../../hooks/queries/usePatientHistoryTimeline";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import medflowLogo from "../../assets/medflow-logo.png";
 import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
-import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
+import PatientHistoryTimeline from "../../components/patients/PatientHistoryTimeline";
 import {
   DentalGeneralInfo,
   DentalHistorySummaryTab,
@@ -76,23 +76,6 @@ const formatDate = (value) => {
   }
 };
 
-// Matches PatientMedicalHistoryPage's timeline date format ("Dec 08, 2025")
-// so the History Timeline reads identically on both pages.
-const formatVisitDate = (dateStr) => {
-  if (!dateStr) return "";
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "";
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
-};
-
 const dateInputValue = (value) => {
   if (!value) return "";
   try {
@@ -121,25 +104,10 @@ const PatientDentalHistoryPage = () => {
 
   const { dentalHistory, loading, error, fetch, update } = useDentalHistory();
   const { currentPatient: patient, fetchById } = usePatient();
-  const { data: patientAppointments = [] } = usePatientAppointments(
-    patientId,
-    20,
-  );
+  const historyTimeline = usePatientHistoryTimeline(patientId, "dental_history");
 
   const [saving, setSaving] = useState(false);
   const [signature, setSignature] = useState(null);
-
-  // History Timeline nodes — the patient's actual appointment history
-  // (oldest to newest; backend returns most-recent-first), same source as
-  // the Medical History page's timeline.
-  const visitDates = useMemo(
-    () =>
-      [...patientAppointments]
-        .reverse()
-        .map((apt) => formatVisitDate(apt.date))
-        .filter(Boolean),
-    [patientAppointments],
-  );
 
   // Local draft state to prevent UI freezing
   const [localGeneralInfo, setLocalGeneralInfo] = useState(
@@ -318,6 +286,8 @@ const PatientDentalHistoryPage = () => {
         sectionSummaries: localSectionSummaries,
         review,
       }).unwrap();
+
+      void historyTimeline.refresh();
 
       setLocalGeneralInfo({
         ...EMPTY_HISTORY.generalInfo,
@@ -670,13 +640,7 @@ const PatientDentalHistoryPage = () => {
           >
             <Box sx={{ minWidth: 0 }}>
               <SectionCard icon={HistoryTimelineIcon} title="History Timeline">
-                {visitDates.length ? (
-                  <VisitDatesTimeline visitDates={visitDates} />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                    No appointment history recorded yet.
-                  </Typography>
-                )}
+                <PatientHistoryTimeline key={patientId} timeline={historyTimeline} historyLabel="Dental" />
               </SectionCard>
 
               <DentalGeneralInfo
