@@ -1,4 +1,4 @@
-import apiClient from '../config/api';
+import apiClient from "../config/api";
 
 /**
  * Invoice Service
@@ -10,36 +10,50 @@ export const invoiceService = {
    * Get all invoices with pagination and filters
    */
   async getAllInvoices(options = {}) {
-    const { page = 1, limit = 10, search = '', status = '', patientId = '', startDate = '', endDate = '', includeItems = false } = options;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      status = "",
+      patientId = "",
+      startDate = "",
+      endDate = "",
+      includeItems = false,
+    } = options;
     const params = new URLSearchParams();
-    if (page) params.append('page', page);
-    if (limit) params.append('limit', limit);
-    if (search) params.append('search', search);
-    if (status) params.append('status', status);
-    if (patientId) params.append('patientId', patientId);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    if (includeItems) params.append('includeItems', 'true');
+    if (page) params.append("page", page);
+    if (limit) params.append("limit", limit);
+    if (search) params.append("search", search);
+    if (status) params.append("status", status);
+    if (patientId) params.append("patientId", patientId);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    if (includeItems) params.append("includeItems", "true");
     const response = await apiClient.get(`/invoices?${params.toString()}`);
     const data = response.data.data;
     // Normalize invoices: map backend fields to frontend expected fields
     if (data.invoices) {
-      data.invoices = data.invoices.map(invoice => ({
+      data.invoices = data.invoices.map((invoice) => ({
         ...invoice,
         id: invoice._id || invoice.id,
         // If backend returned items inline, map them to lineItems
-        lineItems: invoice.lineItems || invoice.items?.map(item => ({
-          ...item,
-          id: item._id || item.id,
-          total: item.totalPrice,
-        })) || undefined,
+        lineItems:
+          invoice.lineItems ||
+          invoice.items?.map((item) => ({
+            ...item,
+            id: item._id || item.id,
+            total: item.totalPrice,
+          })) ||
+          undefined,
         // Prefer populated nested objects from backend; fallback only when id field itself is an object.
         patient:
           invoice.patient ||
-          (invoice.patientId && typeof invoice.patientId === 'object' ? invoice.patientId : null),
+          (invoice.patientId && typeof invoice.patientId === "object"
+            ? invoice.patientId
+            : null),
         appointment:
           invoice.appointment ||
-          (invoice.appointmentId && typeof invoice.appointmentId === 'object'
+          (invoice.appointmentId && typeof invoice.appointmentId === "object"
             ? invoice.appointmentId
             : null),
       }));
@@ -50,8 +64,9 @@ export const invoiceService = {
   /**
    * Get invoice by ID (includes line items)
    */
-  async getInvoiceById(invoiceId) {
-    const response = await apiClient.get(`/invoices/${invoiceId}`);
+  async getInvoiceById(invoiceId, includeVoided = false) {
+    const query = includeVoided ? "?includeVoided=true" : "";
+    const response = await apiClient.get(`/invoices/${invoiceId}${query}`);
     const { invoice, items } = response.data.data;
     return {
       ...invoice,
@@ -65,11 +80,12 @@ export const invoiceService = {
       // attached, and is null otherwise.
       coverages: invoice.coverages ?? [],
       // Map items to lineItems for frontend display
-      lineItems: items?.map(item => ({
-        ...item,
-        id: item._id || item.id,
-        total: item.totalPrice, // Map totalPrice to total for frontend
-      })) || [],
+      lineItems:
+        items?.map((item) => ({
+          ...item,
+          id: item._id || item.id,
+          total: item.totalPrice, // Map totalPrice to total for frontend
+        })) || [],
     };
   },
 
@@ -86,7 +102,10 @@ export const invoiceService = {
    * NOTE: Backend only supports creating invoices from appointments
    */
   async createInvoiceFromAppointment(appointmentId, invoiceData) {
-    const response = await apiClient.post(`/invoices/from-appointment/${appointmentId}`, invoiceData);
+    const response = await apiClient.post(
+      `/invoices/from-appointment/${appointmentId}`,
+      invoiceData,
+    );
     const invoice = response.data.data.invoice;
     return {
       ...invoice,
@@ -98,7 +117,7 @@ export const invoiceService = {
    * Create standalone invoice directly with items
    */
   async createStandaloneInvoice(invoiceData) {
-    const response = await apiClient.post('/invoices', invoiceData);
+    const response = await apiClient.post("/invoices", invoiceData);
     const invoice = response.data.data;
     return {
       ...invoice,
@@ -113,8 +132,16 @@ export const invoiceService = {
    * all recomputed server-side; invoices that turn out to be ineligible come
    * back under `rejected` rather than being charged.
    */
-  async applyLateFee({ patientId, tier, invoiceIds, mode, rate, basis, branchId }) {
-    const response = await apiClient.post('/invoices/late-fee', {
+  async applyLateFee({
+    patientId,
+    tier,
+    invoiceIds,
+    mode,
+    rate,
+    basis,
+    branchId,
+  }) {
+    const response = await apiClient.post("/invoices/late-fee", {
       patientId,
       tier,
       invoiceIds,
@@ -153,7 +180,10 @@ export const invoiceService = {
    * rather than deleted, so the invoice can still list it.
    */
   async voidInvoiceItem(invoiceId, itemId, reason) {
-    const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}/void`, { reason });
+    const response = await apiClient.patch(
+      `/invoices/${invoiceId}/items/${itemId}/void`,
+      { reason },
+    );
     return response.data.data;
   },
 
@@ -169,7 +199,10 @@ export const invoiceService = {
    * Add item to invoice
    */
   async addInvoiceItem(invoiceId, itemData) {
-    const response = await apiClient.post(`/invoices/${invoiceId}/items`, itemData);
+    const response = await apiClient.post(
+      `/invoices/${invoiceId}/items`,
+      itemData,
+    );
     return response.data.data;
   },
 
@@ -177,7 +210,10 @@ export const invoiceService = {
    * Update invoice item
    */
   async updateInvoiceItem(invoiceId, itemId, updates) {
-    const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}`, updates);
+    const response = await apiClient.patch(
+      `/invoices/${invoiceId}/items/${itemId}`,
+      updates,
+    );
     return response.data.data;
   },
 
@@ -185,7 +221,10 @@ export const invoiceService = {
    * Mark a line item as (partially) paid — stores paidAmount in BillingNote
    */
   async markItemPaid(invoiceId, itemId, amount) {
-    const response = await apiClient.patch(`/invoices/${invoiceId}/items/${itemId}/paid`, { amount });
+    const response = await apiClient.patch(
+      `/invoices/${invoiceId}/items/${itemId}/paid`,
+      { amount },
+    );
     return response.data;
   },
 
@@ -193,7 +232,9 @@ export const invoiceService = {
    * Delete invoice item
    */
   async deleteInvoiceItem(invoiceId, itemId) {
-    const response = await apiClient.delete(`/invoices/${invoiceId}/items/${itemId}`);
+    const response = await apiClient.delete(
+      `/invoices/${invoiceId}/items/${itemId}`,
+    );
     return response.data.data;
   },
 
@@ -201,7 +242,10 @@ export const invoiceService = {
    * Recalculate invoice totals
    */
   async recalculateInvoice(invoiceId) {
-    const response = await apiClient.post(`/invoices/${invoiceId}/recalculate`, {});
+    const response = await apiClient.post(
+      `/invoices/${invoiceId}/recalculate`,
+      {},
+    );
     return response.data.data;
   },
 
@@ -209,7 +253,9 @@ export const invoiceService = {
    * Generate invoice from appointment
    */
   async generateFromAppointment(appointmentId) {
-    const response = await apiClient.post(`/invoices/from-appointment/${appointmentId}`);
+    const response = await apiClient.post(
+      `/invoices/from-appointment/${appointmentId}`,
+    );
     return response.data.data.invoice;
   },
 
@@ -225,7 +271,9 @@ export const invoiceService = {
    * Void invoice
    */
   async voidInvoice(invoiceId, reason) {
-    const response = await apiClient.patch(`/invoices/${invoiceId}/void`, { reason });
+    const response = await apiClient.patch(`/invoices/${invoiceId}/void`, {
+      reason,
+    });
     return response.data.data;
   },
 
@@ -233,17 +281,22 @@ export const invoiceService = {
    * Get patient account balance
    */
   async getPatientBalance(patientId) {
-    const response = await apiClient.get(`/invoices/patient/${patientId}/balance`);
+    const response = await apiClient.get(
+      `/invoices/patient/${patientId}/balance`,
+    );
     return response.data.data;
   },
 
   /**
    * Get patient composite ledger (invoices, adjustments, payments, claims)
    */
-  async getPatientCompositeLedger(patientId) {
+  async getPatientCompositeLedger(patientId, includeVoided = false) {
     // Invoices are the ledger's backbone — if that call fails there is genuinely
     // nothing to render, so it is the only one allowed to reject.
-    const invoicesResult = await this.getAllInvoices({ patientId, limit: 1000 });
+    const invoicesResult = await this.getAllInvoices({
+      patientId,
+      limit: 1000,
+    });
 
     // Adjustments / payments / claims only *enrich* the invoice rows. They are
     // fetched with allSettled rather than Promise.all because each sits behind
@@ -252,23 +305,25 @@ export const invoiceService = {
     // `adjustments.read` — rejected the whole thunk and the ledger rendered
     // completely empty, hiding invoices the user had just created. Degrade one
     // panel at a time instead of blanking the page.
-    const [adjustmentsResult, paymentsResult, claimsResult] = await Promise.allSettled([
-      apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
-      apiClient.get(`/payments/patient/${patientId}?limit=1000`),
-      apiClient.get(`/claims?patientId=${patientId}&limit=1000`),
-    ]);
+    const [adjustmentsResult, paymentsResult, claimsResult] =
+      await Promise.allSettled([
+        apiClient.get(`/adjustments?patientId=${patientId}&limit=1000`),
+        apiClient.get(`/payments/patient/${patientId}?limit=1000`),
+        apiClient.get(`/claims?patientId=${patientId}&limit=1000`),
+      ]);
 
     // Unwrap an allSettled entry, logging why a section came back empty so a
     // silent 403 is still traceable in the console.
     const settledRows = (settled, key) => {
-      if (settled.status === 'fulfilled') {
+      if (settled.status === "fulfilled") {
         return settled.value.data?.data?.[key] || [];
       }
       console.warn(
         `Composite ledger: could not load ${key} for patient ${patientId} — ` +
           `rendering the ledger without them.`,
         settled.reason?.response?.status,
-        settled.reason?.response?.data?.error?.message || settled.reason?.message
+        settled.reason?.response?.data?.error?.message ||
+          settled.reason?.message,
       );
       return [];
     };
@@ -278,7 +333,10 @@ export const invoiceService = {
     const enrichedInvoices = await Promise.all(
       invoices.map(async (inv) => {
         try {
-          const detail = await this.getInvoiceById(inv._id || inv.id);
+          const detail = await this.getInvoiceById(
+            inv._id || inv.id,
+            includeVoided,
+          );
           return {
             ...inv,
             ...detail,
@@ -287,14 +345,14 @@ export const invoiceService = {
         } catch (e) {
           return inv;
         }
-      })
+      }),
     );
 
     return {
       invoices: enrichedInvoices,
-      adjustments: settledRows(adjustmentsResult, 'adjustments'),
-      payments: settledRows(paymentsResult, 'payments'),
-      claims: settledRows(claimsResult, 'claims'),
+      adjustments: settledRows(adjustmentsResult, "adjustments"),
+      payments: settledRows(paymentsResult, "payments"),
+      claims: settledRows(claimsResult, "claims"),
     };
   },
 
@@ -302,7 +360,10 @@ export const invoiceService = {
    * Estimate insurance and patient portions for invoice items
    */
   async estimateInvoiceItems(patientId, items) {
-    const response = await apiClient.post('/invoices/estimate', { patientId, items });
+    const response = await apiClient.post("/invoices/estimate", {
+      patientId,
+      items,
+    });
     return response.data.data;
   },
 
@@ -310,12 +371,11 @@ export const invoiceService = {
    * Reject a claim and transfer its expected amount to patient balance
    */
   async transferRejectedClaim(invoiceId, claimId) {
-    const url = invoiceId && invoiceId !== 'undefined'
-      ? `/invoices/${invoiceId}/transfer-rejected-claim`
-      : `/invoices/transfer-rejected-claim`;
+    const url =
+      invoiceId && invoiceId !== "undefined"
+        ? `/invoices/${invoiceId}/transfer-rejected-claim`
+        : `/invoices/transfer-rejected-claim`;
     const response = await apiClient.post(url, { claimId, invoiceId });
     return response.data.data;
   },
 };
-
-

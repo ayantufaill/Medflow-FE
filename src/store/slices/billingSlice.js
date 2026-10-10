@@ -88,6 +88,13 @@ const procedureTargetsOf = (adjustment) => {
   return [...targets];
 };
 
+const adjustmentDisplayType = (adjustment = {}) => {
+  const note = String(adjustment.notes || "");
+  const selectedType = note.match(/^\s*(.*?)\s+applied\s+to\s+/i)?.[1]?.trim();
+  if (selectedType) return selectedType;
+  return adjustment.type || "Adjustment";
+};
+
 const isDbiProcedure = (item = {}) =>
   item.dbi === true ||
   item.dbi === 1 ||
@@ -122,7 +129,7 @@ const isPatientPenaltyItem = (item = {}) => {
     desc.includes("no-show") ||
     desc.includes("late fee") ||
     desc.includes("late payment") ||
-    desc.includes("penalty")
+    desc.includes("penalty"),
   );
 };
 
@@ -152,10 +159,16 @@ export const createInvoice = createAsyncThunk(
  */
 export const fetchLedgerItems = createAsyncThunk(
   "billing/fetchLedgerItems",
-  async (patientId, { rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const composite =
-        await invoiceService.getPatientCompositeLedger(patientId);
+      const patientId =
+        typeof payload === "object" ? payload.patientId : payload;
+      const includeVoided =
+        typeof payload === "object" ? Boolean(payload.includeVoided) : false;
+      const composite = await invoiceService.getPatientCompositeLedger(
+        patientId,
+        includeVoided,
+      );
       const {
         invoices = [],
         adjustments = [],
@@ -177,13 +190,50 @@ export const fetchLedgerItems = createAsyncThunk(
           }
         });
       });
+      const isLiveClaim = (claim) => {
+        if (!claim) return false;
+        if (claim.isVoided || claim.isVoid) return false;
+        const status = String(claim.status || "").toLowerCase();
+        return status !== "void" && status !== "voided";
+      };
+      const claimProcedureKeys = new Set(
+        claims
+          .filter(isLiveClaim)
+          .flatMap((claim) => claim.procedures || claim.items || [])
+          .flatMap((proc) => [
+            proc.id,
+            proc._id,
+            proc.ProcNum,
+            proc.procedureId,
+            proc.procId,
+            proc.itemId,
+            proc.code ? `code:${proc.code}` : null,
+            proc.cptCode ? `code:${proc.cptCode}` : null,
+            proc.ProcCode ? `code:${proc.ProcCode}` : null,
+          ])
+          .filter(Boolean)
+          .map(String),
+      );
+      const procedureIsClaimed = (proc) =>
+        claimProcedureKeys.has(String(proc._id || proc.id || "")) ||
+        claimProcedureKeys.has(String(proc.ProcNum || "")) ||
+        claimProcedureKeys.has(String(proc.procedureId || "")) ||
+        claimProcedureKeys.has(String(proc.procId || "")) ||
+        claimProcedureKeys.has(String(proc.itemId || "")) ||
+        claimProcedureKeys.has(
+          `code:${proc.code || proc.cptCode || proc.ProcCode || ""}`,
+        );
 
       const appliedWriteOffByProc = new Map();
       adjustments.forEach((adj) => {
         // Income transfers move liability between insurance and patient, they
         // are not a write-off of the charge. Voided rows no longer affect it.
         if (adj.isVoided) return;
-        if (String(adj.notes || "").toLowerCase().includes("income transfer")) {
+        if (
+          String(adj.notes || "")
+            .toLowerCase()
+            .includes("income transfer")
+        ) {
           return;
         }
         const amount = Math.abs(Number(adj.amount || 0));
@@ -196,18 +246,31 @@ export const fetchLedgerItems = createAsyncThunk(
         });
       });
 
+      const procedureBaseAmounts = (proc) => {
+        const key = String(proc._id || proc.id);
+        const fee = Number(proc.totalPrice || proc.ProcFee || proc.charge || 0);
+        let ptPortion = Number(proc.ptPortion || proc.patientPortion || 0);
+        let insPortion = Number(proc.totalInsPortion || proc.insPortion || 0);
+        const pricingWriteOff = Number(
+          proc.writeoff || proc.estimatedWriteOff || 0,
+        );
+        if (!procedureIsClaimed(proc)) {
+          ptPortion += insPortion;
+          insPortion = 0;
+        }
+
+        return { key, fee, ptPortion, insPortion, pricingWriteOff };
+      };
+
       // Restate a line item the way it reads after every live procedure-level
       // write-off has been applied: the write-off comes off the patient
       // portion first and then the insurance estimate, so fee still equals
       // patient + insurance + write-off, and is reported as the line's total
       // write-off (the pricing write-off plus the adjustments).
       const procedureAfterAdjustments = (proc) => {
-        const key = String(proc._id || proc.id);
-        const fee = Number(proc.totalPrice || proc.ProcFee || proc.charge || 0);
-        const ptPortion = Number(proc.ptPortion || proc.patientPortion || 0);
-        const insPortion = Number(proc.totalInsPortion || proc.insPortion || 0);
+        const { key, fee, ptPortion, insPortion, pricingWriteOff } =
+          procedureBaseAmounts(proc);
         const appliedWriteOff = appliedWriteOffByProc.get(key) || 0;
-        const pricingWriteOff = Number(proc.writeoff || proc.estimatedWriteOff || 0);
 
         let remaining = appliedWriteOff;
         const ptAfter = Math.max(0, ptPortion - remaining);
@@ -221,13 +284,29 @@ export const fetchLedgerItems = createAsyncThunk(
           insPortion: insAfter,
           writeoff: pricingWriteOff + appliedWriteOff,
           estimatedWriteOff: pricingWriteOff + appliedWriteOff,
+          // Just the adjustment portion, so the ledger can report it in its
+          // own "Adjustment" column instead of hiding it inside the write-off.
+          appliedAdjustment: appliedWriteOff,
         };
       };
 
-      // The line items an adjustment was posted against, restated with the
-      // write-offs folded in. `procedureId` is the reliable link; the note is
-      // only a fallback for rows written before the link was stored.
+      // The line items an adjustment was posted against. Keep the original
+      // procedure estimate columns intact and report only this adjustment's
+      // amount in the dedicated Adjustment column; otherwise the same write-off
+      // appears twice and reduces the insurance column twice.
       const proceduresForAdjustment = (adj) => {
+        const adjustmentAmount = Math.abs(Number(adj.amount || 0));
+        const adjustmentText = `${adj.type || ""} ${adj.notes || ""}`.toLowerCase();
+        const isPatientCreditAdjustment =
+          adjustmentText.includes("un-collected") ||
+          adjustmentText.includes("uncollected") ||
+          adjustmentText.includes("pre payment") ||
+          adjustmentText.includes("prepayment") ||
+          adjustmentText.includes("wellness") ||
+          adjustmentText.includes("small balance") ||
+          adjustmentText.includes("courtesy") ||
+          adjustmentText.includes("curtsey") ||
+          adjustmentText.includes("non payment");
         const targets = procedureTargetsOf(adj)
           .map((procNum) => proceduresByProcNum.get(procNum))
           .filter(Boolean);
@@ -241,7 +320,110 @@ export const fetchLedgerItems = createAsyncThunk(
             seen.add(key);
             return true;
           })
-          .map(procedureAfterAdjustments);
+          .map((proc) => {
+            const { fee, ptPortion, insPortion, pricingWriteOff } =
+              procedureBaseAmounts(proc);
+            const patientCreditBase = Math.max(0, fee - pricingWriteOff);
+            return {
+              ...proc,
+              fee,
+              ptPortion: isPatientCreditAdjustment
+                ? Math.max(0, patientCreditBase - adjustmentAmount)
+                : ptPortion,
+              insPortion: isPatientCreditAdjustment ? 0 : insPortion,
+              writeoff: pricingWriteOff,
+              estimatedWriteOff: pricingWriteOff,
+              appliedAdjustment: adjustmentAmount,
+            };
+          });
+      };
+
+      const patientCreditAdjustmentForProcedure = (proc) => {
+        const procKey = String(proc._id || proc.id || proc.ProcNum || "");
+        const codeKey = proc.code || proc.cptCode || proc.ProcCode;
+        return adjustments
+          .filter((adj) => {
+            if (adj.isVoided) return false;
+            const text = `${adj.type || ""} ${adj.notes || ""}`.toLowerCase();
+            const isPatientCredit =
+              text.includes("un-collected") ||
+              text.includes("uncollected") ||
+              text.includes("pre payment") ||
+              text.includes("prepayment") ||
+              text.includes("wellness") ||
+              text.includes("small balance") ||
+              text.includes("courtesy") ||
+              text.includes("curtsey") ||
+              text.includes("non payment");
+            if (!isPatientCredit) return false;
+            const targets = procedureTargetsOf(adj);
+            return (
+              targets.includes(procKey) ||
+              (codeKey && String(adj.notes || "").includes(`(${codeKey})`))
+            );
+          })
+          .reduce((sum, adj) => sum + Math.abs(Number(adj.amount || 0)), 0);
+      };
+
+      const proceduresForPayment = (payment) => {
+        const splits = payment.splits || payment.paysplits || [];
+        const targets = splits
+          .map((split) => {
+            const procedureId =
+              split.procedureId || split.procNum || split.ProcNum;
+            const proc = proceduresByProcNum.get(String(procedureId));
+            if (!proc) return null;
+            const { fee, ptPortion, insPortion, pricingWriteOff } =
+              procedureBaseAmounts(proc);
+            const patientCreditAmount = patientCreditAdjustmentForProcedure(proc);
+            const patientCreditBase = Math.max(0, fee - pricingWriteOff);
+            const adjustedPtPortion =
+              patientCreditAmount > 0
+                ? Math.max(0, patientCreditBase - patientCreditAmount)
+                : ptPortion;
+            return {
+              ...proc,
+              fee,
+              ptPortion: Math.max(
+                0,
+                adjustedPtPortion -
+                  Math.abs(Number(split.amount || split.SplitAmt || 0)),
+              ),
+              insPortion: patientCreditAmount > 0 ? 0 : insPortion,
+              writeoff: pricingWriteOff,
+              estimatedWriteOff: pricingWriteOff,
+              appliedPayment: Math.abs(Number(split.amount || split.SplitAmt || 0)),
+            };
+          })
+          .filter(Boolean);
+
+        if (targets.length > 0) return targets;
+
+        const amount = Math.abs(Number(payment.amount || 0));
+        const invoiceLines = (payment.invoiceId
+          ? invoices.find(
+              (inv) => String(inv._id || inv.id) === String(payment.invoiceId),
+            )?.lineItems
+          : []) || [];
+        return invoiceLines.map((proc, idx) => {
+          const { fee, ptPortion, insPortion, pricingWriteOff } =
+            procedureBaseAmounts(proc);
+          const patientCreditAmount = patientCreditAdjustmentForProcedure(proc);
+          const patientCreditBase = Math.max(0, fee - pricingWriteOff);
+          const adjustedPtPortion =
+            patientCreditAmount > 0
+              ? Math.max(0, patientCreditBase - patientCreditAmount)
+              : ptPortion;
+          return {
+            ...proc,
+            fee,
+            ptPortion: Math.max(0, adjustedPtPortion - (idx === 0 ? amount : 0)),
+            insPortion: patientCreditAmount > 0 ? 0 : insPortion,
+            writeoff: pricingWriteOff,
+            estimatedWriteOff: pricingWriteOff,
+            appliedPayment: idx === 0 ? amount : 0,
+          };
+        });
       };
 
       const mappedInvoices = invoices.map((invoice) => {
@@ -252,7 +434,9 @@ export const fetchLedgerItems = createAsyncThunk(
         const rawPaid = Number(invoice.paidAmount || 0);
         const rawBal = Number(invoice.balanceDue || 0);
         const rawPt = Number(invoice.patientPortion || 0);
-        const rawIns = Number(invoice.insurancePortion || 0) + Number(invoice.secondaryInsPortion || 0);
+        const rawIns =
+          Number(invoice.insurancePortion || 0) +
+          Number(invoice.secondaryInsPortion || 0);
         const originalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
         const penaltyItems = (invoice.lineItems || []).filter(
           isPatientPenaltyItem,
@@ -353,6 +537,8 @@ export const fetchLedgerItems = createAsyncThunk(
                 initials: creatorDisplay(payment),
                 createdByName: payment.createdByName || null,
                 createdAt: payment.paidAt || null,
+                description: payment.notes || "",
+                procedures: proceduresForPayment(payment),
               };
             } else {
               const adj = item;
@@ -375,7 +561,8 @@ export const fetchLedgerItems = createAsyncThunk(
               );
               const isCourtesy = !!(
                 (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
-                (adj.notes && adj.notes.toLowerCase().includes("small balance")) ||
+                (adj.notes &&
+                  adj.notes.toLowerCase().includes("small balance")) ||
                 adj.type === "Write-off" ||
                 (adj.type || "").toLowerCase() === "write-off" ||
                 (adj.type || "").toLowerCase() === "writeoff" ||
@@ -387,7 +574,8 @@ export const fetchLedgerItems = createAsyncThunk(
 
               totalAdjAmt += adjAmt;
               if (isInsWriteOff) totalInsWoAmt += adjAmt;
-              if ((isCourtesy || isTransfer) && !isInsWriteOff) totalPtAdjAmt += adjAmt;
+              if ((isCourtesy || isTransfer) && !isInsWriteOff)
+                totalPtAdjAmt += adjAmt;
               runningBalance -= adjAmt;
 
               return {
@@ -396,7 +584,7 @@ export const fetchLedgerItems = createAsyncThunk(
                   ? adj.notes
                   : isInsWriteOff
                     ? `Applied write-off : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
-                    : `Adjustment #${adj._id || adj.id}: ${adj.type || "Write-off"} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
+                    : `Adjustment #${adj._id || adj.id}: ${adjustmentDisplayType(adj)} : $${Math.abs(Number(adj.amount || 0)).toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
                 amount: isVoided
                   ? "(Voided)"
                   : `$${Math.max(0, runningBalance).toFixed(2)}`,
@@ -410,6 +598,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 initials: creatorDisplay(adj),
                 createdByName: adj.createdByName || null,
                 createdAt: adj.createdAt || null,
+                description: adj.notes || "",
                 // The line items this adjustment hit, restated with the
                 // write-off folded in, so the row can expand into them.
                 procedures: proceduresForAdjustment(adj),
@@ -429,18 +618,21 @@ export const fetchLedgerItems = createAsyncThunk(
             claimStatus.toLowerCase().includes("denied");
 
           const isSecondaryClaim =
-            String(claim.insuranceType || '').toLowerCase() === 'secondary' ||
-            String(claim.claimType || '').toLowerCase() === 'secondary' ||
-            String(claim.ClaimType || '').toLowerCase() === 'secondary';
+            String(claim.insuranceType || "").toLowerCase() === "secondary" ||
+            String(claim.claimType || "").toLowerCase() === "secondary" ||
+            String(claim.ClaimType || "").toLowerCase() === "secondary";
 
-          const effectiveInsuranceType = isSecondaryClaim ? 'secondary' : (claim.insuranceType || 'primary');
+          const effectiveInsuranceType = isSecondaryClaim
+            ? "secondary"
+            : claim.insuranceType || "primary";
 
           let specificProcedures = [];
           if (claim.procedures && claim.procedures.length > 0) {
             specificProcedures = claim.procedures
               .filter((proc) => {
                 const belongsToThisInvoice =
-                  String(proc.invoiceId) === String(invoice._id || invoice.id) ||
+                  String(proc.invoiceId) ===
+                    String(invoice._id || invoice.id) ||
                   (invoice.lineItems || []).some(
                     (l) =>
                       String(
@@ -460,28 +652,40 @@ export const fetchLedgerItems = createAsyncThunk(
               });
           } else if (claim.selectedItems && claim.selectedItems.length > 0) {
             const thisInvoiceItems = claim.selectedItems.filter(
-              (item) => String(item.invoiceId) === String(invoice._id || invoice.id)
+              (item) =>
+                String(item.invoiceId) === String(invoice._id || invoice.id),
             );
             if (thisInvoiceItems.length > 0) {
-              specificProcedures = (invoice.lineItems || []).filter((l) =>
-                thisInvoiceItems.some(
-                  (item) =>
-                    String(item.itemId) ===
-                    String(l.id || l._id || l.procedureId || l.procId || l.ProcNum),
-                ) && !isDbiProcedure(l)
-              ).map((l) => {
-                const matchedSel = thisInvoiceItems.find(
-                  (item) =>
-                    String(item.itemId) ===
-                    String(l.id || l._id || l.procedureId || l.procId || l.ProcNum)
-                );
-                return {
-                  ...l,
-                  amount: matchedSel?.amount,
-                  insAmount: matchedSel?.insAmount || matchedSel?.amount,
-                  insPayEst: matchedSel?.amount,
-                };
-              });
+              specificProcedures = (invoice.lineItems || [])
+                .filter(
+                  (l) =>
+                    thisInvoiceItems.some(
+                      (item) =>
+                        String(item.itemId) ===
+                        String(
+                          l.id ||
+                            l._id ||
+                            l.procedureId ||
+                            l.procId ||
+                            l.ProcNum,
+                        ),
+                    ) && !isDbiProcedure(l),
+                )
+                .map((l) => {
+                  const matchedSel = thisInvoiceItems.find(
+                    (item) =>
+                      String(item.itemId) ===
+                      String(
+                        l.id || l._id || l.procedureId || l.procId || l.ProcNum,
+                      ),
+                  );
+                  return {
+                    ...l,
+                    amount: matchedSel?.amount,
+                    insAmount: matchedSel?.insAmount || matchedSel?.amount,
+                    insPayEst: matchedSel?.amount,
+                  };
+                });
             } else {
               specificProcedures = [];
             }
@@ -508,19 +712,27 @@ export const fetchLedgerItems = createAsyncThunk(
             (sum, line) =>
               sum +
               Number(
-                line.secondaryInsPortion !== undefined && line.secondaryInsPortion !== null && Number(line.secondaryInsPortion) > 0
+                line.secondaryInsPortion !== undefined &&
+                  line.secondaryInsPortion !== null &&
+                  Number(line.secondaryInsPortion) > 0
                   ? line.secondaryInsPortion
-                  : (line.insPayEst || line.amount || 0)
+                  : line.insPayEst || line.amount || 0,
               ),
-            0
+            0,
           );
 
-          const rawClaimAmount = Number(claim.submittedAmount) || Number(claim.claimAmount) || 0;
+          const rawClaimAmount =
+            Number(claim.submittedAmount) || Number(claim.claimAmount) || 0;
           const finalClaimAmount = isSecondaryClaim
-            ? (rawClaimAmount > 0 && rawClaimAmount < Number(invoice.totalAmount || 0)
-                ? rawClaimAmount
-                : (specificSecondaryAmount > 0 ? specificSecondaryAmount : rawClaimAmount))
-            : (rawClaimAmount > 0 ? rawClaimAmount : specificAmount);
+            ? rawClaimAmount > 0 &&
+              rawClaimAmount < Number(invoice.totalAmount || 0)
+              ? rawClaimAmount
+              : specificSecondaryAmount > 0
+                ? specificSecondaryAmount
+                : rawClaimAmount
+            : rawClaimAmount > 0
+              ? rawClaimAmount
+              : specificAmount;
 
           return {
             id: claim.id || claim._id,
@@ -538,7 +750,7 @@ export const fetchLedgerItems = createAsyncThunk(
             title: `${claim.claimNumber || claim.id || claim._id} to ${claim.insuranceCompany?.name || "Insurance"}(${claim.insuranceCompany?.payerId || "00000"})${claim.isVoided ? " (VOIDED)" : ""} :`,
             amount: `$${finalClaimAmount.toFixed(2)}`,
             insuranceType: effectiveInsuranceType,
-            ClaimType: isSecondaryClaim ? 'Secondary' : claim.claimType,
+            ClaimType: isSecondaryClaim ? "Secondary" : claim.claimType,
             claimFormat: claim.claimFormat,
             claimAmount: finalClaimAmount,
             isClaim: true,
@@ -551,6 +763,7 @@ export const fetchLedgerItems = createAsyncThunk(
             initials: creatorDisplay(claim),
             createdByName: claim.createdByName || null,
             createdAt: claim.createdAt || null,
+            description: claim.notes || claim.description || "",
           };
         });
 
@@ -578,6 +791,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 isPayment: false,
                 procedures: invoiceProcedures,
                 createdAt: invoice.createdAt || invoice.invoiceDate || null,
+                description: invoice.notes || "",
               },
             ];
           }
@@ -591,27 +805,68 @@ export const fetchLedgerItems = createAsyncThunk(
         const hasApprovedClaim = claimsMapped.some((c) => c.isApproved);
         const hasInsurancePaymentRecord = invoicePms.some(
           (p) =>
-            (p.paymentSource === "insurance_company" || p.method === "insurance") &&
+            (p.paymentSource === "insurance_company" ||
+              p.method === "insurance") &&
             String(p.status || "").toLowerCase() !== "void" &&
-            String(p.status || "").toLowerCase() !== "voided"
+            String(p.status || "").toLowerCase() !== "voided",
         );
         // Voided claims are retained for the "include voided transactions" view but
         // must not hold insurance money out of the invoice any more.
         const isLiveClaim = (c) =>
           !c.isVoided && String(c.status || "").toLowerCase() !== "void";
 
-        const hasInsurancePayment = totalInsPaidAmt > 0 || hasInsurancePaymentRecord;
+        const hasInsurancePayment =
+          totalInsPaidAmt > 0 || hasInsurancePaymentRecord;
         const hasPendingClaim = claimsMapped.some(
-          (c) => !c.isApproved && isLiveClaim(c)
+          (c) => !c.isApproved && isLiveClaim(c),
         );
         const hasPrimaryClaim = claimsMapped.some(
-          (c) => isLiveClaim(c) &&
-                 String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
+          (c) =>
+            isLiveClaim(c) &&
+            String(c.insuranceType || c.ClaimType || "").toLowerCase() !==
+              "secondary",
         );
         const hasSecondaryClaim = claimsMapped.some(
-          (c) => isLiveClaim(c) &&
-                 String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
+          (c) =>
+            isLiveClaim(c) &&
+            String(c.insuranceType || c.ClaimType || "").toLowerCase() ===
+              "secondary",
         );
+        const claimExpectedInsurance = (claim) => {
+          const isSecondary =
+            String(claim.insuranceType || claim.ClaimType || "")
+              .toLowerCase() === "secondary";
+          const procedures = claim.procedures || [];
+          const procedureTotal = procedures.reduce((sum, line) => {
+            if (isSecondary) {
+              return (
+                sum +
+                Number(
+                  line.secondaryInsPortion !== undefined &&
+                    line.secondaryInsPortion !== null
+                    ? line.secondaryInsPortion
+                    : (line.insPayEst ?? line.amount ?? 0),
+                )
+              );
+            }
+            return (
+              sum +
+              Number(
+                line.primaryInsPortion !== undefined &&
+                  line.primaryInsPortion !== null &&
+                  Number(line.primaryInsPortion) > 0
+                  ? line.primaryInsPortion
+                  : (line.insPayEst ?? line.insPortion ?? line.amount ?? 0),
+              )
+            );
+          }, 0);
+          return procedureTotal > 0
+            ? procedureTotal
+            : Number(claim.claimAmount || 0);
+        };
+        const claimedInsuranceAmount = claimsMapped
+          .filter(isLiveClaim)
+          .reduce((sum, claim) => sum + claimExpectedInsurance(claim), 0);
 
         let unbilledInsurance = 0;
         if (!hasPrimaryClaim) {
@@ -624,36 +879,27 @@ export const fetchLedgerItems = createAsyncThunk(
         const hasUnbilledInsurance = unbilledInsurance > 0.01;
 
         const isInsuranceSettled =
-          (hasApprovedClaim || hasInsurancePayment) && !hasPendingClaim && !hasUnbilledInsurance;
+          (hasApprovedClaim || hasInsurancePayment) &&
+          !hasPendingClaim &&
+          !hasUnbilledInsurance;
 
-        let totalPendingClaimAmount = 0;
-        
-        const pendingPrimaryClaim = claimsMapped.find(
-          (c) => !c.isApproved && isLiveClaim(c) &&
-                 String(c.insuranceType || c.ClaimType || "").toLowerCase() !== "secondary"
-        );
-        if (pendingPrimaryClaim) {
-          totalPendingClaimAmount += Number(invoice.insurancePortion) || 0;
-        }
-
-        const pendingSecondaryClaim = claimsMapped.find(
-          (c) => !c.isApproved && isLiveClaim(c) &&
-                 String(c.insuranceType || c.ClaimType || "").toLowerCase() === "secondary"
-        );
-        if (pendingSecondaryClaim) {
-          totalPendingClaimAmount += Number(invoice.secondaryInsPortion) || 0;
-        }
+        const totalPendingClaimAmount = claimsMapped
+          .filter((c) => !c.isApproved && isLiveClaim(c))
+          .reduce((sum, claim) => sum + claimExpectedInsurance(claim), 0);
 
         const insOverpayment = Math.max(0, totalInsPaidAmt - rawIns);
         const ptOverpayment = Math.max(0, effectivePtPaid - rawPt);
 
-        const isClaimPartial = claimsMapped.some(
-          (c) => String(c.status || "").toLowerCase().includes("partial")
+        const isClaimPartial = claimsMapped.some((c) =>
+          String(c.status || "")
+            .toLowerCase()
+            .includes("partial"),
         );
         const hasPartialPayment = invoicePms.some(
           (p) =>
-            (p.paymentSource === "insurance_company" || p.method === "insurance") &&
-            Boolean(p.isPartialPayment)
+            (p.paymentSource === "insurance_company" ||
+              p.method === "insurance") &&
+            Boolean(p.isPartialPayment),
         );
         const isPartialAdjudication = isClaimPartial || hasPartialPayment;
 
@@ -666,10 +912,17 @@ export const fetchLedgerItems = createAsyncThunk(
             // Claim remains open/ongoing. Underpayment remains in insurance balance.
             // Patient portion is preserved and NOT charged for underpayment.
             const unallocatedPenalty = Math.max(0, penaltyTotal - rawPt);
-            adjustedPtBal = Math.max(0, rawPt + unallocatedPenalty - effectivePtPaid);
+            adjustedPtBal = Math.max(
+              0,
+              rawPt + unallocatedPenalty - effectivePtPaid,
+            );
             adjustedInsBal = Math.max(
               0,
-              originalTotal - rawPt - unallocatedPenalty - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt,
+              originalTotal -
+                rawPt -
+                unallocatedPenalty -
+                (Number(invoice.writeoffAmount) || 0) -
+                totalInsPaidAmt,
             );
           } else {
             // Final Payment (Partial Payment unchecked / final):
@@ -680,11 +933,22 @@ export const fetchLedgerItems = createAsyncThunk(
             // Use the larger of rawIns or (total - writeoff - ptPortion) as the
             // true expected insurance in case the backend stored totalInsPaid
             // instead of the original expected amount.
-            const effectiveExpectedIns = Math.max(
-              rawIns,
-              Math.max(0, originalTotal - (Number(invoice.writeoffAmount) || 0) - rawPt),
+            const effectiveExpectedIns =
+              claimedInsuranceAmount > 0
+                ? claimedInsuranceAmount
+                : Math.max(
+                    rawIns,
+                    Math.max(
+                      0,
+                      originalTotal -
+                        (Number(invoice.writeoffAmount) || 0) -
+                        rawPt,
+                    ),
+                  );
+            adjustedInsBal = Math.max(
+              0,
+              effectiveExpectedIns - totalInsPaidAmt,
             );
-            adjustedInsBal = Math.max(0, effectiveExpectedIns - totalInsPaidAmt);
             adjustedPtBal = Math.max(
               0,
               originalTotal -
@@ -697,27 +961,40 @@ export const fetchLedgerItems = createAsyncThunk(
         } else {
           // Insurance pending: patient owes their portion, insurance owes their portion
           const penaltyInIns = Math.min(rawIns, penaltyTotal);
-          let calcInsBal = Math.max(
-            0,
-            rawIns - penaltyInIns - totalInsPaidAmt - ptOverpayment,
-          );
-          
-          // Cap insurance balance at pending claims + unbilled insurance ONLY IF we've received an insurance payment 
-          // (which means there was an underpayment on primary and the remaining liability is just the pending + unbilled claims).
-          if (hasInsurancePayment || hasApprovedClaim) {
-             const expectedRemainingIns = totalPendingClaimAmount + unbilledInsurance;
-             calcInsBal = Math.min(calcInsBal, expectedRemainingIns);
+          const hasLiveClaim = hasPrimaryClaim || hasSecondaryClaim;
+          let calcInsBal = hasLiveClaim
+            ? Math.max(
+                0,
+                rawIns - penaltyInIns - totalInsPaidAmt - ptOverpayment,
+              )
+            : 0;
+
+          // Once a claim exists, only the procedures actually on that claim
+          // remain with insurance. Any unclaimed procedure's estimate moves to
+          // the patient balance, even while the claim is still pending.
+          if (hasLiveClaim || hasInsurancePayment || hasApprovedClaim) {
+            const expectedRemainingIns =
+              totalPendingClaimAmount + unbilledInsurance;
+            calcInsBal = Math.min(calcInsBal, expectedRemainingIns);
           }
-          
+
           adjustedInsBal = calcInsBal;
           adjustedPtBal = Math.max(
             0,
-            originalTotal - (Number(invoice.writeoffAmount) || 0) - totalInsPaidAmt - effectivePtPaid - adjustedInsBal
+            originalTotal -
+              (Number(invoice.writeoffAmount) || 0) -
+              totalInsPaidAmt -
+              effectivePtPaid -
+              adjustedInsBal,
           );
         }
         const adjustedInvBal = Math.max(
           0,
-          originalTotal - (Number(invoice.writeoffAmount) || 0) - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
+          originalTotal -
+            (Number(invoice.writeoffAmount) || 0) -
+            totalPtPaidAmt -
+            totalInsPaidAmt -
+            totalAdjAmt,
         );
 
         const ptPaidDisplay = totalPtPaidAmt;
@@ -827,6 +1104,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 amount: `$${amt.toFixed(2)}`,
                 isTransfer,
                 createdAt: adj.createdAt || null,
+                description: adj.notes || "",
                 // Post-adjustment line items, so the row expands into them the
                 // way an invoice does (see LedgerSubRow's procedure table).
                 procedures: targetProcedures,
@@ -941,9 +1219,15 @@ export const fetchLedgerItems = createAsyncThunk(
  */
 export const fetchInvoiceDetails = createAsyncThunk(
   "billing/fetchInvoiceDetails",
-  async ({ patientId, invoiceId }, { rejectWithValue }) => {
+  async (
+    { patientId, invoiceId, includeVoided = false },
+    { rejectWithValue },
+  ) => {
     try {
-      const fullInvoice = await invoiceService.getInvoiceById(invoiceId);
+      const fullInvoice = await invoiceService.getInvoiceById(
+        invoiceId,
+        includeVoided,
+      );
 
       let totalPaidAmt = 0;
       let paymentsMapped = [];
@@ -1061,6 +1345,7 @@ export const fetchInvoiceDetails = createAsyncThunk(
             isPayment: false,
             procedures: specificProcedures,
             createdAt: claim.createdAt || null,
+            description: claim.notes || claim.description || "",
           };
         });
       } catch (e) {
@@ -1094,6 +1379,7 @@ export const fetchInvoiceDetails = createAsyncThunk(
               isGrouped: true,
               isPayment: false,
               procedures: invoiceProcedures,
+              description: fullInvoice.notes || "",
             },
           ];
         }
@@ -1188,10 +1474,7 @@ export const voidTransaction = createAsyncThunk(
         // It marks the statement void and reverses any deductible the invoice
         // posted, which a plain delete cannot do — /admin-finance has no
         // invoice route, so that path 404'd.
-        await invoiceService.voidInvoice(
-          invoiceId,
-          "Voided from Ledger",
-        );
+        await invoiceService.voidInvoice(invoiceId, "Voided from Ledger");
       } else {
         // A single procedure off an invoice. It is flagged voided rather than
         // deleted, so the invoice can still list it under "include voided
@@ -1325,17 +1608,47 @@ export const applyCourtesyCredit = createAsyncThunk(
 export const createInvoiceAdjustment = createAsyncThunk(
   "billing/createInvoiceAdjustment",
   async (
-    { patientId, invoiceId, adjustmentType, adjustmentAmount, reason, typeId },
+    {
+      patientId,
+      invoiceId,
+      adjustmentType,
+      adjustmentAmount,
+      reason,
+      typeId,
+      lineItems,
+    },
     { dispatch, rejectWithValue },
   ) => {
     try {
-      await apiClient.post("/adjustments", {
-        patientId,
-        amount: -Math.abs(adjustmentAmount),
-        date: new Date(),
-        type: typeId || undefined,
-        notes: `${adjustmentType} applied to Invoice #${invoiceId}${reason ? ` - ${reason}` : ""}`,
-      });
+      const procedureAdjustments = (lineItems || [])
+        .map((line) => ({
+          ...line,
+          amount: Number(line.amount || 0),
+        }))
+        .filter((line) => line.procedureId && line.amount > 0);
+
+      if (procedureAdjustments.length > 0) {
+        for (const line of procedureAdjustments) {
+          await apiClient.post("/adjustments", {
+            patientId,
+            invoiceId,
+            procedureId: line.procedureId,
+            amount: -Math.abs(line.amount),
+            date: new Date(),
+            type: typeId || undefined,
+            notes: `${adjustmentType} applied to Invoice #${invoiceId} Procedure #${line.procedureId}${line.code ? ` (${line.code})` : ""}${reason ? ` - ${reason}` : ""}`,
+          });
+        }
+      } else {
+        await apiClient.post("/adjustments", {
+          patientId,
+          invoiceId,
+          amount: -Math.abs(adjustmentAmount),
+          date: new Date(),
+          type: typeId || undefined,
+          notes: `${adjustmentType} applied to Invoice #${invoiceId}${reason ? ` - ${reason}` : ""}`,
+        });
+      }
       if (invoiceId) {
         await apiClient.post(`/invoices/${invoiceId}/recalculate`);
       }
@@ -1467,12 +1780,20 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
         }
         return Boolean(
           notes.includes("courtesy") ||
-            adj.type === "Write-off" ||
-            type === "write-off" ||
-            type === "writeoff" ||
-            notes.includes("write-off") ||
-            notes.includes("writeoff") ||
-            !adj.type,
+          notes.includes("curtsey") ||
+          notes.includes("un-collected") ||
+          notes.includes("uncollected") ||
+          notes.includes("pre payment") ||
+          notes.includes("prepayment") ||
+          notes.includes("wellness") ||
+          notes.includes("small balance") ||
+          notes.includes("non payment") ||
+          adj.type === "Write-off" ||
+          type === "write-off" ||
+          type === "writeoff" ||
+          notes.includes("write-off") ||
+          notes.includes("writeoff") ||
+          !adj.type,
         );
       };
 
@@ -1520,6 +1841,13 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           }
           return totalCourtesy;
         });
+        const patientCreditProcedureIds = new Set(
+          invoiceAdjs
+            .filter((adj) => adjIsCourtesy(adj) && !adjIsVoided(adj))
+            .map((adj) => adj.procedureId)
+            .filter(Boolean)
+            .map(String),
+        );
 
         // Compute total patient and insurance payments for this invoice.
         const invoicePayments = fullInv._payments || [];
@@ -1550,7 +1878,9 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           const pt = Number(
             item.ptPortion || item.patientPortion || item.ptAmt || 0,
           );
-          const ins = Number(item.insPortion || item.insurancePortion || 0) + Number(item.secondaryInsPortion || 0);
+          const ins =
+            Number(item.insPortion || item.insurancePortion || 0) +
+            Number(item.secondaryInsPortion || 0);
           let patientBal;
           if (item.dbi === true) patientBal = owed;
           else if (item.dbi === false) patientBal = pt;
@@ -1568,13 +1898,14 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           lineItems: items.map((item, itemIndex) => {
             const itemId = item.id || item._id;
             const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
-            const ins = Number(
-              item.insPortion ||
-                item.insurancePortion ||
-                item.insAmt ||
-                item.insurance ||
-                0,
-            ) + Number(item.secondaryInsPortion || 0);
+            const ins =
+              Number(
+                item.insPortion ||
+                  item.insurancePortion ||
+                  item.insAmt ||
+                  item.insurance ||
+                  0,
+              ) + Number(item.secondaryInsPortion || 0);
             const pt = Number(
               item.ptPortion || item.patientPortion || item.ptAmt || 0,
             );
@@ -1600,6 +1931,10 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               patientBal = pt;
               insBal = 0;
             } else {
+              patientBal = owed;
+              insBal = 0;
+            }
+            if (patientCreditProcedureIds.has(String(itemId))) {
               patientBal = owed;
               insBal = 0;
             }
@@ -2041,7 +2376,7 @@ export const fetchArAgingReport = createAsyncThunk(
       if (billing.arAgingLoading) return false;
       return true;
     },
-  }
+  },
 );
 
 export const fetchPatientAgingReport = createAsyncThunk(
@@ -2063,7 +2398,7 @@ export const fetchPatientAgingReport = createAsyncThunk(
       if (billing.patientAgingLoading) return false;
       return true;
     },
-  }
+  },
 );
 
 export const fetchModificationsReport = createAsyncThunk(
@@ -2761,7 +3096,9 @@ const billingSlice = createSlice({
         const idx = items.findIndex((i) => i.id === invoiceId);
         if (idx === -1) return;
         // Preserve existing adjustments that fetchLedgerItems added
-        const existingAdjs = (items[idx].details || []).filter(d => d.isAdjustment);
+        const existingAdjs = (items[idx].details || []).filter(
+          (d) => d.isAdjustment,
+        );
         items[idx].details = [...existingAdjs, ...details];
         if (totalPaidAmt > 0) {
           items[idx].summary.ptPaid = `$${totalPaidAmt.toFixed(2)}`;

@@ -14,6 +14,10 @@ const money = (v) => `$${num(v).toFixed(2)}`;
  */
 const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
   const invoiceNum = target?.invoiceNumber || target?.id || 'N/A';
+  const claimedProcedureIds = useMemo(
+    () => new Set((target?.claimedProcedureIds || []).map(String)),
+    [target],
+  );
   const procedures = useMemo(
     () =>
       (target?.procedures || []).map((p) => ({
@@ -24,26 +28,32 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
         // Already voided when the ledger was opened with "include voided
         // transactions" — shown for context but not selectable again.
         alreadyVoided: Boolean(p.isVoided),
+        claimedByLiveClaim: claimedProcedureIds.has(
+          String(p.id || p._id || p.ProcNum),
+        ),
         writeoff: num(p.writeoff || p.estimatedWriteOff || 0),
         patient: num(p.ptPortion || p.patientPortion || 0),
         insurance: num(p.totalInsPortion || p.insPortion || p.insurancePortion || 0),
         fee: num(p.totalPrice || p.total || p.charge || p.ProcFee || 0),
       })),
-    [target],
+    [target, claimedProcedureIds],
   );
 
   // Selection is keyed by invoice so opening the dialog on a different invoice
   // Already-voided rows (listed when the ledger was opened with "include
   // voided transactions") are shown for context but never selectable.
-  const selectableIds = procedures.filter((p) => !p.alreadyVoided).map((p) => p.id);
+  const selectableIds = procedures
+    .filter((p) => !p.alreadyVoided && !p.claimedByLiveClaim)
+    .map((p) => p.id);
 
   // Selection is keyed by invoice so opening the dialog on a different invoice
   // starts fresh (all of ITS procedures selected) without a reset effect.
   // `undefined` means "no choice made yet", which defaults to everything
   // still voidable.
   const [selection, setSelection] = useState({});
-  const selectedIds =
-    selection[invoiceNum] === undefined ? selectableIds : selection[invoiceNum];
+  const selectedIds = (
+    selection[invoiceNum] === undefined ? selectableIds : selection[invoiceNum]
+  ).filter((id) => selectableIds.includes(id));
 
   const setSelectedIds = (ids) =>
     setSelection((prev) => ({ ...prev, [invoiceNum]: ids }));
@@ -107,7 +117,7 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
               '&.Mui-disabled': { bgcolor: '#fca5a5', color: '#fff' },
             }}
           >
-            {selectedIds.length === procedures.length
+            {selectedIds.length === selectableIds.length
               ? 'Void All'
               : `Void ${selectedIds.length} ${selectedIds.length === 1 ? 'Procedure' : 'Procedures'}`}
           </Button>
@@ -117,7 +127,8 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
       <Box sx={{ px: 3, pt: 2, pb: 1 }}>
         <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_SECONDARY, mb: 2 }}>
           Select the procedures to void. Only the selected ones will be voided —
-          the rest of the invoice stays as it is. This action cannot be undone.
+          the rest of the invoice stays as it is. Procedures attached to a live
+          claim must have that claim voided first. This action cannot be undone.
         </Typography>
 
         {procedures.length === 0 ? (
@@ -141,6 +152,7 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
                   <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Code</TableCell>
                   <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Description</TableCell>
                   <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Provider</TableCell>
+                  <TableCell sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Status</TableCell>
                   <TableCell align="right" sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Ins WO</TableCell>
                   <TableCell align="right" sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Patient</TableCell>
                   <TableCell align="right" sx={{ fontSize: '11px', fontWeight: 700, color: COLORS.TEXT_SECONDARY, borderBottom: `1px solid ${COLORS.BORDER}` }}>Insurance</TableCell>
@@ -150,14 +162,15 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
               <TableBody>
                 {procedures.map((p) => {
                   const checked = selectedIds.includes(p.id);
+                  const disabled = p.alreadyVoided || p.claimedByLiveClaim;
                   return (
                     <TableRow
                       key={p.id}
-                      hover={!p.alreadyVoided}
-                      onClick={() => !p.alreadyVoided && toggleOne(p.id)}
+                      hover={!disabled}
+                      onClick={() => !disabled && toggleOne(p.id)}
                       sx={{
-                        cursor: p.alreadyVoided ? 'default' : 'pointer',
-                        opacity: p.alreadyVoided ? 0.6 : 1,
+                        cursor: disabled ? 'default' : 'pointer',
+                        opacity: disabled ? 0.6 : 1,
                         '&:last-child td': { borderBottom: 'none' },
                       }}
                     >
@@ -165,7 +178,7 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
                         <Checkbox
                           size="small"
                           checked={checked}
-                          disabled={p.alreadyVoided}
+                          disabled={disabled}
                           onChange={() => toggleOne(p.id)}
                           onClick={(e) => e.stopPropagation()}
                           sx={{ p: 0.5, color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: '#ef4444' } }}
@@ -174,6 +187,13 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
                       <TableCell sx={{ fontSize: '12px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium }}>{p.code}</TableCell>
                       <TableCell sx={{ fontSize: '12px', color: COLORS.TEXT_BODY }}>{p.description}</TableCell>
                       <TableCell sx={{ fontSize: '12px', color: COLORS.TEXT_SECONDARY }}>{p.provider}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', color: p.claimedByLiveClaim ? COLORS.ERROR || '#ef4444' : COLORS.TEXT_SECONDARY }}>
+                        {p.alreadyVoided
+                          ? 'Voided'
+                          : p.claimedByLiveClaim
+                            ? 'Claimed'
+                            : 'Voidable'}
+                      </TableCell>
                       <TableCell align="right" sx={{ fontSize: '12px', color: COLORS.TEXT_PRIMARY }}>{money(p.writeoff)}</TableCell>
                       <TableCell align="right" sx={{ fontSize: '12px', color: COLORS.TEXT_PRIMARY }}>{money(p.patient)}</TableCell>
                       <TableCell align="right" sx={{ fontSize: '12px', color: COLORS.TEXT_PRIMARY }}>{money(p.insurance)}</TableCell>

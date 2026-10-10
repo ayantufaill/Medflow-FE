@@ -51,6 +51,7 @@ const LedgerItemCard = ({
   onLockClaimClick,
   onVoidClaimClick,
   onChangeClaimStatusClick,
+  onDescriptionSave,
 }) => {
   const isPatientDeposit = Boolean(
     displayItem?.isPatientDeposit ||
@@ -372,13 +373,14 @@ const LedgerItemCard = ({
                     }}
                   >
                     {(() => {
-                      const claim = displayItem.details.find(
-                        (d) => d.isClaim,
-                      );
+                      const claim = displayItem.details.find((d) => d.isClaim);
                       const rawFormat = String(
                         claim?.claimFormat || claim?.ClaimFormat || "",
                       ).toLowerCase();
-                      if (rawFormat.includes("manual") || rawFormat.includes("paper"))
+                      if (
+                        rawFormat.includes("manual") ||
+                        rawFormat.includes("paper")
+                      )
                         return "Manual Claim";
                       return "Electronic Claim";
                     })()}
@@ -496,8 +498,13 @@ const LedgerItemCard = ({
                 title={detail.title}
                 amount={detail.amount}
                 id={detail.id}
+                invoiceNumber={
+                  detail.invoiceNumber || displayItem.invoiceNumber || displayItem.id
+                }
                 initials={detail.initials || displayItem.initials}
-                createdByName={detail.createdByName || displayItem.createdByName}
+                createdByName={
+                  detail.createdByName || displayItem.createdByName
+                }
                 createdAt={detail.createdAt || displayItem.rawDate}
                 isPayment={detail.isPayment}
                 isClaim={detail.isClaim}
@@ -536,6 +543,28 @@ const LedgerItemCard = ({
                   // The invoice's own line items, so the void dialog can ask
                   // which of them to void instead of dropping them all at once.
                   procedures: detail.procedures,
+                  claimedProcedureIds: [
+                    ...new Set(
+                      (displayItem.details || [])
+                        .filter(
+                          (row) =>
+                            row.isClaim &&
+                            !row.isVoided &&
+                            String(row.status || "").toLowerCase() !== "void",
+                        )
+                        .flatMap((claim) => claim.procedures || [])
+                        .map(
+                          (proc) =>
+                            proc.id ||
+                            proc._id ||
+                            proc.ProcNum ||
+                            proc.procedureId ||
+                            proc.itemId,
+                        )
+                        .filter(Boolean)
+                        .map(String),
+                    ),
+                  ],
                 }}
                 editData={{
                   id: detail.id,
@@ -552,7 +581,10 @@ const LedgerItemCard = ({
                   isAdjustment: displayItem.isAdjustment || detail.isAdjustment,
                   isPayment: detail.isPayment,
                 }}
-                eobData={{ ...detail, invoiceId: detail.invoiceId || displayItem.id }}
+                eobData={{
+                  ...detail,
+                  invoiceId: detail.invoiceId || displayItem.id,
+                }}
                 onPrintClaimClick={onPrintClaimClick}
                 onToggleClaimClosed={onToggleClaimClosed}
                 onEditClaimClick={onEditClaimClick}
@@ -563,6 +595,15 @@ const LedgerItemCard = ({
                 onVoidClaimClick={onVoidClaimClick}
                 onChangeClaimStatusClick={onChangeClaimStatusClick}
                 isAdjustment={displayItem.isAdjustment}
+                // Adjustment rows (standalone, or an invoice's own adjustment
+                // detail) render one extra "Adjustment" column in their
+                // procedure table showing the adjustment applied per line.
+                showAdjustmentColumn={Boolean(
+                  displayItem.isAdjustment || detail.isAdjustment,
+                )}
+                showPaymentColumn={Boolean(
+                  detail.isPayment && !detail.isAdjustment,
+                )}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);
                   setTransferTarget({ ...detail, invoiceId: displayItem.id });
@@ -590,6 +631,15 @@ const LedgerItemCard = ({
                 closedClaimOverrides={closedClaimOverrides}
                 statusResponse={detail.statusResponse}
                 isApproved={detail.isApproved}
+                description={detail.description}
+                onDescriptionSave={(description, options) =>
+                  onDescriptionSave?.({
+                    detail,
+                    displayItem,
+                    description,
+                    options,
+                  })
+                }
               />
             ))
           )}

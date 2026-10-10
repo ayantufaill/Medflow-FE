@@ -25,7 +25,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const dispatch = useDispatch();
   const { currentPatient } = usePatient();
   
-  const [adjustmentType, setAdjustmentType] = useState("Write Off");
+  const [adjustmentType, setAdjustmentType] = useState("Un-Collected");
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Flat rate");
   const [calcValue, setCalcValue] = useState("");
@@ -33,12 +33,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   // entry here the typed amount wins over the pro-rated default.
   const [lineAdjustments, setLineAdjustments] = useState({});
   const [adjustmentTypeOptions] = useState([
-    { type: 'Write Off' },
     { type: 'Un-Collected' },
     { type: 'Pre Payment' },
     { type: 'Wellness' },
     { type: 'Small Balance W/O' },
-    { type: 'Curtsey W/O' },
+    { type: 'Courtesy W/O' },
     { type: 'Non Payment' },
   ]);
 
@@ -55,6 +54,42 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
                      editTarget?.procedures || 
                      (editTarget?.details?.find(d => d.isGrouped)?.procedures) || 
                      [];
+  const liveClaims = (editTarget?.details || []).filter((detail) => {
+    if (!detail?.isClaim) return false;
+    if (detail.isVoided || detail.isVoid) return false;
+    const status = String(detail.status || "").toLowerCase();
+    return status !== "void" && status !== "voided";
+  });
+  const claimedProcedureIds = new Set(
+    liveClaims
+      .flatMap((claim) => claim.procedures || [])
+      .flatMap((proc) => [
+        proc.id,
+        proc._id,
+        proc.ProcNum,
+        proc.procedureId,
+        proc.procId,
+        proc.itemId,
+        proc.code ? `code:${proc.code}` : null,
+        proc.cptCode ? `code:${proc.cptCode}` : null,
+        proc.ProcCode ? `code:${proc.ProcCode}` : null,
+      ])
+      .filter(Boolean)
+      .map(String),
+  );
+  const hasLiveClaims = liveClaims.length > 0;
+  const procedureKey = (proc) =>
+    String(
+      proc.id ||
+        proc._id ||
+        proc.ProcNum ||
+        proc.procedureId ||
+        proc.procId ||
+        proc.itemId ||
+        (proc.code || proc.cptCode || proc.ProcCode
+          ? `code:${proc.code || proc.cptCode || proc.ProcCode}`
+          : ""),
+    );
 
   const totalCharges = procedures.reduce((sum, p) => sum + Number(p.totalPrice || p.charge || p.ProcFee || 0), 0);
   
@@ -90,13 +125,30 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
 
     let ptBalance = Number(p.patientBalance || p.ptBalance || parseFloat(String(p.ptPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
     let insBalance = Number(p.insuranceBalance || p.insBalance || parseFloat(String(p.insPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
+    const rawInsBalance = insBalance;
+    const procedureIsClaimed = claimedProcedureIds.has(procedureKey(p));
+    if (!procedureIsClaimed) {
+      ptBalance += insBalance;
+      insBalance = 0;
+    } else if (!hasLiveClaims) {
+      ptBalance += insBalance;
+      insBalance = 0;
+    }
     let insurancePaidAmt = Number(p.insurancePaid || 0);
     let patientPaidAmt = Number(p.patientPaid || 0);
-    let pay = Number(p.paidAmount || p.payAmount || p.patientPaid || 0) + Number(p.insurancePaid || 0);
+    let pay = Number(p.paidAmount || p.payAmount || 0);
+    if (pay === 0) {
+      pay = patientPaidAmt + insurancePaidAmt;
+    }
+    if (hasSummary && totalPayment === 0) {
+      pay = 0;
+      patientPaidAmt = 0;
+      insurancePaidAmt = 0;
+    }
     // When insurance payment isn't broken out on the line item, the collected
     // amount is treated as insurance up to the insurance portion.
     if (insurancePaidAmt === 0) {
-      insurancePaidAmt = Math.min(pay - patientPaidAmt, insBalance);
+      insurancePaidAmt = Math.min(Math.max(0, pay - patientPaidAmt), rawInsBalance);
     }
     if (insurancePaidAmt < 0) insurancePaidAmt = 0;
 
@@ -129,6 +181,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     const insRemaining = Math.max(0, insBalance - insurancePaidAmt);
 
     return {
+      id: p.id || p._id || p.ProcNum || p.procedureId || p.procId || p.itemId,
       code: p.code || p.cptCode || p.ProcCode || 'Item',
       patient: patientName,
       values: [
@@ -144,63 +197,27 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   });
 
   const totalPtBalance = dynamicLineItems.reduce((sum, item) => sum + (item.ptRemaining || 0), 0);
-  const totalWriteOff = procedures.reduce((sum, p) => {
-    let wo = Number(p.writeoff || p.estimatedWriteOff || 0);
-    if (!wo && p.BillingNote) {
-      try {
-        const bn = JSON.parse(p.BillingNote);
-        if (bn.writeoff) wo = Number(bn.writeoff);
-      } catch { /* ignore invalid BillingNote */ }
-    }
-    return sum + wo;
-  }, 0);
-
   const parsedValue = parseFloat(calcValue) || 0;
-  let baseAmount = totalCharges;
-  if (adjustmentType === "Curtsey W/O") {
-    baseAmount = totalPtBalance;
-  }
-
-  let adjustmentAmount = calcMode === "Percentage"
-    ? baseAmount * (parsedValue / 100)
-    : parsedValue;
-
-  if (adjustmentType === "Write Off") {
-    adjustmentAmount = totalWriteOff;
-  }
-
-  if (adjustmentType === "Curtsey W/O") {
-    adjustmentAmount = calcMode === "Percentage"
+  const adjustmentAmount = Math.min(
+    totalPtBalance,
+    calcMode === "Percentage"
       ? totalPtBalance * (parsedValue / 100)
-      : totalPtBalance;
-  }
-
-  if (adjustmentType === "Curtsey W/O" && adjustmentAmount > totalPtBalance) {
-    adjustmentAmount = totalPtBalance;
-  }
+      : totalPtBalance,
+  );
 
   const finalLineItems = dynamicLineItems.length > 0 ? dynamicLineItems.map((item) => {
-    // Pro-rate adjustment for line items if it's a percentage or just show 0 if flat
+    // Credit subtraction adjustments always reduce the patient portion.
     let percentStr = "0%";
     let defaultAdjust = 0;
-    if (adjustmentType === "Write Off") {
-      percentStr = item.values[0].val; // Shows the exact write-off amount for this item
-      defaultAdjust = parseAmount(percentStr);
-    } else if (adjustmentType === "Curtsey W/O") {
-      const patientRemaining = item.ptRemaining || 0;
-      const applied = calcMode === "Percentage"
-        ? patientRemaining * (parsedValue / 100)
-        : patientRemaining;
-      percentStr = `$${applied.toFixed(2)}`;
-      defaultAdjust = applied;
-    } else if (calcMode === "Percentage") {
+    const patientRemaining = item.ptRemaining || 0;
+    if (calcMode === "Percentage") {
       percentStr = `${parsedValue}%`;
-      defaultAdjust = (item.charge || 0) * (parsedValue / 100);
+      defaultAdjust = patientRemaining * (parsedValue / 100);
     } else {
-      // Flat rate: pro-rate the flat amount across the lines by charge weight.
-      defaultAdjust = totalCharges > 0 ? parsedValue * (item.charge / totalCharges) : 0;
+      defaultAdjust = patientRemaining;
       percentStr = `$${defaultAdjust.toFixed(2)}`;
     }
+    defaultAdjust = Math.min(patientRemaining, defaultAdjust);
     return { ...item, percent: percentStr, defaultAdjust };
   }) : [
     {
@@ -217,7 +234,12 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   // The amount actually posted for a line: the manual override when the user
   // typed one, otherwise the pro-rated default.
   const lineAdjustmentValue = (item, idx) =>
-    lineAdjustments[idx] !== undefined ? parseAmount(lineAdjustments[idx]) : (item.defaultAdjust || 0);
+    Math.min(
+      item.ptRemaining || 0,
+      lineAdjustments[idx] !== undefined
+        ? parseAmount(lineAdjustments[idx])
+        : (item.defaultAdjust || 0),
+    );
 
   const hasLineItems = dynamicLineItems.length > 0;
   const totalLineAdjustments = finalLineItems.reduce(
@@ -242,6 +264,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         adjustmentType,
         adjustmentAmount: adjustmentTotal,
         lineItems: finalLineItems.map((item, idx) => ({
+          procedureId: item.id,
           code: item.code,
           amount: lineAdjustmentValue(item, idx),
         })),
@@ -295,13 +318,12 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
                 ))
               ) : (
                 <>
-                  <MenuItem value="Write Off" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Write Off</MenuItem>
                   <MenuItem value="Un-Collected" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Un-Collected</MenuItem>
-                  <MenuItem value="pre payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Pre Payment</MenuItem>
-                  <MenuItem value="wellness" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Wellness</MenuItem>
+                  <MenuItem value="Pre Payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Pre Payment</MenuItem>
+                  <MenuItem value="Wellness" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Wellness</MenuItem>
                   <MenuItem value="Small Balance W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Small Balance W/O</MenuItem>
-                  <MenuItem value="Curtsey W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Curtsey W/O</MenuItem>
-                  <MenuItem value="NON PAYMENT" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Non Payment</MenuItem>
+                  <MenuItem value="Courtesy W/O" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Courtesy W/O</MenuItem>
+                  <MenuItem value="Non Payment" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Non Payment</MenuItem>
                 </>
               )}
             </Select>
@@ -325,53 +347,43 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
           </Box>
         </Stack>
 
-        {(adjustmentType !== "Write Off") && (
-          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
-            <Select
-              variant="outlined"
-              size="small"
-              value={calcMode}
-              onChange={(e) => setCalcMode(e.target.value)}
-              sx={{ height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
-              MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
-            >
-              <MenuItem value="Percentage" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Percentage</MenuItem>
-              <MenuItem value="Flat rate" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Flat rate</MenuItem>
-            </Select>
-            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
-              {calcMode === "Percentage" ? "%" : "$"}
-            </Typography>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+          <Select
+            variant="outlined"
+            size="small"
+            value={calcMode}
+            onChange={(e) => setCalcMode(e.target.value)}
+            sx={{ height: 36, fontSize: '13px', fontFamily: 'Inter', fontWeight: 500, color: '#09121f', backgroundColor: '#fafbfe', borderRadius: '4px', '& .MuiSelect-select': { py: 1, pl: 2, display: 'flex', alignItems: 'center', gap: 0.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e2e8f0' } }}
+            MenuProps={{ sx: { zIndex: 150000 }, PaperProps: { sx: { boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: `1px solid ${COLORS.BORDER_LIGHT}`, borderRadius: radius.sm, mt: 0.5, '& .MuiMenuItem-root': { fontSize: '13px', fontFamily: 'Inter', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 } } } }}
+          >
+            <MenuItem value="Percentage" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Percentage</MenuItem>
+            <MenuItem value="Flat rate" sx={{ fontFamily: "Inter", fontSize: "13px" }}>Flat rate</MenuItem>
+          </Select>
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>
+            {calcMode === "Percentage" ? "%" : "$"}
+          </Typography>
             {calcMode === "Percentage" && (
-            <TextField
-              variant="outlined"
-              size="small"
-              value={calcValue}
-              onChange={(e) => {
-                let val = e.target.value;
-                if (calcMode === "Percentage") {
+              <TextField
+                variant="outlined"
+                size="small"
+                value={calcValue}
+                onChange={(e) => {
+                  let val = e.target.value;
                   if (val !== "") {
                     let num = parseFloat(val);
                     if (num > 100) val = "100";
                     if (num < 0) val = "0";
                   }
-                } else if (adjustmentType === "Curtsey W/O" && calcMode === "Flat rate") {
-                  if (val !== "") {
-                    let num = parseFloat(val);
-                    if (num > totalPtBalance) val = totalPtBalance.toString();
-                    if (num < 0) val = "0";
-                  }
-                }
-                setCalcValue(val);
-              }}
-              type="number"
-              sx={{ width: 120, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
-            />
+                  setCalcValue(val);
+                }}
+                type="number"
+                sx={{ width: 120, '& .MuiInputBase-root': { height: '36px', borderRadius: radius.sm, fontSize: '13px', bgcolor: COLORS.SURFACE_TINT }, '& input': { textAlign: "center", py: 0 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER } }}
+              />
             )}
-            <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
-              = ${adjustmentAmount.toFixed(2)}
-            </Typography>
-          </Stack>
-        )}
+          <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
+            = ${adjustmentAmount.toFixed(2)}
+          </Typography>
+        </Stack>
 
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
           <Box sx={{ width: '220px', display: 'flex', alignItems: 'center' }}>
