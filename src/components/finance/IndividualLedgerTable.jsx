@@ -140,7 +140,7 @@ const IndividualLedgerTable = ({ patient }) => {
                       {amtStr}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>{balStr}</TableCell>
-                    <TableCell>STAFF</TableCell>
+                    <TableCell>{row.createdByName || 'STAFF'}</TableCell>
                   </TableRow>
                 );
               })}

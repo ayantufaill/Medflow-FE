@@ -4,7 +4,6 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
-import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 
 import AddPaymentTopRow from './add-payment/AddPaymentTopRow';
@@ -19,11 +18,122 @@ import {
   fetchPaymentDraftInvoices,
   togglePaymentInvoiceChecked,
   togglePaymentLineItemChecked,
+  setPaymentInvoicesForPatient,
+  selectLedgerItemsForPatient,
   selectPaymentInvoicesForPatient,
   selectPaymentInvoicesLoading,
   invalidatePaymentInvoices,
   toggleAllPaymentInvoices,
 } from '../../store/slices/billingSlice';
+
+const moneyNumber = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Number(String(value).replace(/[^0-9.-]+/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toLedgerPaymentInvoices = (ledgerItems = []) => {
+  return ledgerItems
+    .filter((item) => item?.method === "Invoice" && !item.isVoided)
+    .map((item) => {
+      const patientBalance = moneyNumber(item.summary?.ptBal);
+      if (!(patientBalance > 0)) return null;
+
+      const grouped = (item.details || []).find(
+        (detail) => detail.isGrouped && Array.isArray(detail.procedures),
+      );
+      const procedures = grouped?.procedures || [];
+      const liveClaims = (item.details || []).filter((detail) => {
+        if (!detail.isClaim || detail.isVoided) return false;
+        const status = String(detail.status || "").toLowerCase();
+        return status !== "void" && status !== "voided";
+      });
+      const claimedProcedureIds = new Set(
+        liveClaims
+          .flatMap((claim) => claim.procedures || [])
+          .flatMap((proc) => [
+            proc.id,
+            proc._id,
+            proc.ProcNum,
+            proc.procedureId,
+            proc.itemId,
+          ])
+          .filter(Boolean)
+          .map(String),
+      );
+      const hasLiveClaim = liveClaims.length > 0;
+      const sourceProcedures = procedures.length > 0 ? procedures : [item];
+      const allocationProcedures = hasLiveClaim
+        ? sourceProcedures.filter(
+            (proc) =>
+              !claimedProcedureIds.has(
+                String(proc.id || proc._id || proc.ProcNum || proc.procedureId),
+              ),
+          )
+        : sourceProcedures;
+      const patientProcedures =
+        allocationProcedures.length > 0 ? allocationProcedures : sourceProcedures;
+      const weights = patientProcedures.map((proc) =>
+        Math.max(
+          0,
+          moneyNumber(proc.ptPortion) ||
+            moneyNumber(proc.patientPortion) ||
+            moneyNumber(proc.patientAmount) ||
+            moneyNumber(proc.fee) ||
+            moneyNumber(proc.totalPrice) ||
+            moneyNumber(proc.total) ||
+            moneyNumber(proc.charge) ||
+            moneyNumber(item.amount),
+        ),
+      );
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      let remaining = patientBalance;
+
+      const lineItems = patientProcedures.map(
+        (proc, index, arr) => {
+          const isLast = index === arr.length - 1;
+          const share = isLast
+            ? remaining
+            : Math.round(
+                patientBalance *
+                  ((totalWeight > 0 ? weights[index] : 1) /
+                    (totalWeight > 0 ? totalWeight : arr.length)) *
+                  100,
+              ) / 100;
+          remaining = Math.round((remaining - share) * 100) / 100;
+          return {
+            ...proc,
+            id: proc.id || proc._id || proc.ProcNum || `${item.id}-${index}`,
+            checked: false,
+            payAmount: share.toFixed(2),
+            patientBalance: share,
+            totalAmount: moneyNumber(
+              proc.fee || proc.totalPrice || proc.total || proc.charge || item.amount,
+            ),
+            writeoffAmount: 0,
+            adjustmentAmount: 0,
+            insuranceAmount: 0,
+          };
+        },
+      ).filter((proc) => proc.patientBalance > 0);
+
+      if (lineItems.length === 0) return null;
+      return {
+        id: item.id,
+        invoiceNumber: item.invoiceNumber || item.id,
+        invoiceDate: item.rawDate || item.date,
+        checked: false,
+        patientBalance,
+        totalBalance: moneyNumber(item.amount || item.totalAmount),
+        insuranceBalance: moneyNumber(item.summary?.insBal),
+        insWriteoffAmount: moneyNumber(item.summary?.insWo),
+        adjustmentAmount: moneyNumber(item.summary?.appliedWo),
+        lineItems,
+      };
+    })
+    .filter(Boolean);
+};
 
 const MENU_PROPS = {
   disablePortal: true,
@@ -44,6 +154,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
 
   // ── Redux state ──────────────────────────────────────────────────────────
   const invoices = useSelector(selectPaymentInvoicesForPatient(patientId));
+  const ledgerItems = useSelector(selectLedgerItemsForPatient(patientId));
   const loading  = useSelector(selectPaymentInvoicesLoading);
 
   // ── Local form state ─────────────────────────────────────────────────────
@@ -69,6 +180,16 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         .catch(err => console.warn("Failed to fetch account credit", err));
     }
   }, [dispatch, patientId]);
+
+  useEffect(() => {
+    if (!patientId || loading || invoices.length > 0 || ledgerItems.length === 0) {
+      return;
+    }
+    const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
+    if (ledgerInvoices.length > 0) {
+      dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
+    }
+  }, [dispatch, patientId, loading, invoices.length, ledgerItems]);
 
   // ── Derived totals ───────────────────────────────────────────────────────
   const { totalChecked } = useMemo(() => {
@@ -190,11 +311,6 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     });
     onClose();
   };
-
-  const headerBackground = COLORS.SURFACE_TINT;
-  const greenHeader      = COLORS.BORDER;
-  const greenText        = COLORS.TEXT_PRIMARY;
-  const linkBlue         = COLORS.ACCENT;
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (

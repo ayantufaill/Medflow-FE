@@ -94,7 +94,12 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       const lockedInvoices = {};
       claims.forEach((c) => {
         const cStatus = String(c.status || '').toLowerCase();
-        if (cStatus === 'void' || cStatus === 'voided') return;
+        if (
+          cStatus === 'void' ||
+          cStatus === 'voided' ||
+          cStatus === 'cancelled' ||
+          Boolean(c.isVoided)
+        ) return;
         const isLocked = Boolean(c.isLocked);
         const isPaid = cStatus === 'paid' || cStatus === 'acceptedpaid' || Number(c.paidAmount || 0) > 0;
         if (isLocked && !isPaid && c.invoiceId) {

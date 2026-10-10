@@ -1,5 +1,16 @@
-import React, { useState } from "react";
-import { Box, Typography, Stack, Tooltip, Menu, MenuItem } from "@mui/material";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Box,
+  Typography,
+  Stack,
+  Tooltip,
+  Menu,
+  MenuItem,
+  TextField,
+} from "@mui/material";
+import dayjs from "dayjs";
+import { formatDate } from "../../utils/dateUtils";
+
 import {
   Edit,
   NotInterested,
@@ -29,12 +40,33 @@ import ButtonPrintIcon from "../../assets/finance icons/Button - Print → SVG.s
 import ButtonSettingsIcon from "../../assets/finance icons/Button - Settings → SVG.svg";
 import ButtonMagicIcon from "../../assets/finance icons/Button - Magic actions → SVG.svg";
 
+// Ledger entry dates are frequently date-only (claims, adjustments and invoice
+// statements store a calendar date, not a time of day), so the "at [time]"
+// part is only appended when the stored value actually carries one.
+const isDateOnlyValue = (value) => {
+  if (value instanceof Date) {
+    return (
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0
+    );
+  }
+  const text = String(value).trim();
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(text) ||
+    /T00:00:00(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(text)
+  );
+};
+
 const LedgerSubRow = ({
   id,
+  invoiceNumber,
   date,
   title,
   amount,
   initials,
+  createdByName,
+  createdAt,
   isAdjustment,
   isPayment,
   isClaim,
@@ -72,10 +104,28 @@ const LedgerSubRow = ({
   onVoidClaimClick,
   onChangeClaimStatusClick,
   isPatientDeposit,
+  defaultExpanded,
+  // Adjustment rows get one extra "Adjustment" column at the end of their
+  // procedure table, reporting the adjustment applied to each line.
+  showAdjustmentColumn,
+  showPaymentColumn,
+  description,
+  onDescriptionSave,
 }) => {
-  const [expanded, setExpanded] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
+  // Rows that exist purely to carry their procedures (an adjustment's affected
+  // line items) start open, so the ledger shows them without a second click.
+  const [expanded, setExpanded] = useState(Boolean(defaultExpanded));
+  const [descriptionDraft, setDescriptionDraft] = useState(description || "");
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [savingDescription, setSavingDescription] = useState(false);
+  const lastSavedDescriptionRef = useRef(description || "");
+
+  useEffect(() => {
+    setDescriptionDraft(description || "");
+    lastSavedDescriptionRef.current = description || "";
+  }, [description]);
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
@@ -86,6 +136,30 @@ const LedgerSubRow = ({
     setAnchorEl(null);
   };
 
+  const handleDescriptionSave = async (nextDescription) => {
+    if (!onDescriptionSave) return;
+    if (nextDescription === lastSavedDescriptionRef.current) return;
+    setSavingDescription(true);
+    try {
+      await onDescriptionSave(nextDescription, { silent: true });
+      lastSavedDescriptionRef.current = nextDescription;
+    } finally {
+      setSavingDescription(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!editingDescription) return undefined;
+    if (!onDescriptionSave) return undefined;
+    if (descriptionDraft === lastSavedDescriptionRef.current) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      handleDescriptionSave(descriptionDraft).catch(() => {});
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [descriptionDraft, editingDescription, onDescriptionSave]);
+
   const hasProcedures = procedures && procedures.length > 0;
 
   const patientTotal = hasProcedures
@@ -94,8 +168,29 @@ const LedgerSubRow = ({
   const insTotal = hasProcedures
     ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0)
     : 0;
+  const writeoffTotal = hasProcedures
+    ? procedures.reduce(
+        (sum, proc) =>
+          sum + Number(proc.writeoff || proc.estimatedWriteOff || 0),
+        0,
+      )
+    : 0;
+  const adjustmentTotal = hasProcedures
+    ? procedures.reduce(
+        (sum, proc) => sum + Number(proc.appliedAdjustment || 0),
+        0,
+      )
+    : 0;
+  const paymentTotal = hasProcedures
+    ? procedures.reduce((sum, proc) => sum + Number(proc.appliedPayment || 0), 0)
+    : 0;
+  const displayPatientTotal = showPaymentColumn
+    ? Math.max(0, patientTotal - paymentTotal)
+    : patientTotal;
 
-  const statusIsClosed = ["paid", "cancelled"].includes(claimStatus?.toLowerCase());
+  const statusIsClosed = ["paid", "cancelled"].includes(
+    claimStatus?.toLowerCase(),
+  );
   const isClosedClaim =
     isClaim && (closedClaimOverrides?.[id] ?? statusIsClosed);
   const isUnsentClaim =
@@ -121,16 +216,57 @@ const LedgerSubRow = ({
       : isClosedClaimStyled
         ? "#568b31"
         : "#fbfbfb";
-  const expandedBorderColor = isFrozenClaim ? "#374151" : isClosedClaimStyled ? "#6b9e42" : "#eee";
-  const expandedHeaderBorderColor = isFrozenClaim ? "#374151" : isClosedClaimStyled ? "#6b9e42" : "#ddd";
-  const expandedHeaderTextColor = isFrozenClaim ? "#FFFFFF" : isClosedClaimStyled ? "#E0E0E0" : "#666";
-  const expandedRowTextColor = isFrozenClaim ? "#FFFFFF" : isClosedClaimStyled ? "#E0E0E0" : "#555";
-  const expandedDescTextColor = isFrozenClaim ? "#FFFFFF" : isClosedClaimStyled ? "#F0F0F0" : "#444";
-  const expandedRowBorderColor = isFrozenClaim ? "#374151" : isClosedClaimStyled ? "#6b9e42" : "#e0e0e0";
+  const expandedBorderColor = isFrozenClaim
+    ? "#374151"
+    : isClosedClaimStyled
+      ? "#6b9e42"
+      : "#eee";
+  const expandedHeaderBorderColor = isFrozenClaim
+    ? "#374151"
+    : isClosedClaimStyled
+      ? "#6b9e42"
+      : "#ddd";
+  const expandedHeaderTextColor = isFrozenClaim
+    ? "#FFFFFF"
+    : isClosedClaimStyled
+      ? "#E0E0E0"
+      : "#666";
+  const expandedRowTextColor = isFrozenClaim
+    ? "#FFFFFF"
+    : isClosedClaimStyled
+      ? "#E0E0E0"
+      : "#555";
+  const expandedDescTextColor = isFrozenClaim
+    ? "#FFFFFF"
+    : isClosedClaimStyled
+      ? "#F0F0F0"
+      : "#444";
+  const expandedRowBorderColor = isFrozenClaim
+    ? "#374151"
+    : isClosedClaimStyled
+      ? "#6b9e42"
+      : "#e0e0e0";
   const textPrimaryColor =
     isVoided || isLockedActive || isClosedClaim ? "#FFFFFF" : "#1A1A1A";
   const textSecondaryColor =
     isVoided || isLockedActive || isClosedClaim ? "#E0E0E0" : "#6B778C";
+
+  // Summary cells (Ins. Writeoff / Patient / Insurance / Previous Total
+  // Balance). They stack the label over the value so long labels never wrap
+  // or spill into the neighbouring column.
+  const summaryLabelSx = {
+    display: "block",
+    fontWeight: 600,
+    color: isClosedClaim ? "#fff" : "#d97706",
+    fontSize: "10px",
+    textAlign: "right",
+    whiteSpace: "nowrap",
+  };
+  const summaryValueSx = {
+    ...summaryLabelSx,
+    fontWeight: 700,
+    fontSize: "11px",
+  };
 
   // Attachment presence. The ledger's claims come from GET /claims (getAllClaims),
   // which decorates each row with a `hasAttachment` boolean via
@@ -139,8 +275,8 @@ const LedgerSubRow = ({
   // hasAttachment, with array fallbacks in case the shape changes.
   const hasAttachment = Boolean(
     attachData?.hasAttachment ||
-      attachData?.attachments?.length ||
-      attachData?.documents?.length,
+    attachData?.attachments?.length ||
+    attachData?.documents?.length,
   );
 
   const menuItemSx = {
@@ -154,6 +290,17 @@ const LedgerSubRow = ({
     transition: "all 0.15s ease",
     "&:hover": { bgcolor: "#DBEAFE", color: "#2362EF" },
   };
+
+  // Hover text for the initials: "Created by [name] on [date] at [time]".
+  const createdByTooltip = (() => {
+    const name = createdByName || initials || "Staff";
+    const parsed = createdAt ? dayjs(createdAt) : null;
+    if (!parsed?.isValid()) return `Created by ${name}`;
+    if (isDateOnlyValue(createdAt)) {
+      return `Created by ${name} on ${formatDate(createdAt)}`;
+    }
+    return `Created by ${name} on ${formatDate(parsed.toDate())} at ${parsed.format("h:mm A")}`;
+  })();
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -291,96 +438,41 @@ const LedgerSubRow = ({
             </Typography>
           )}
         </Typography>
-        {hasProcedures && expanded && !isClaim ? (
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 100,
-                fontWeight: 600,
-                color: isClosedClaim ? "#fff" : "#e57373",
-                fontSize: "11px",
-                textAlign: "right",
-                mr: 2,
-              }}
-            >
-              Patient: ${patientTotal.toFixed(2)}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 110,
-                fontWeight: 600,
-                color: isClosedClaim ? "#fff" : "#e57373",
-                fontSize: "11px",
-                textAlign: "right",
-                mr: 2,
-              }}
-            >
-              Insurance: ${insTotal.toFixed(2)}
-            </Typography>
-            <Box
-              sx={{
-                width: 140,
-                textAlign: "right",
-                mr: 2,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 600,
-                  color: isClosedClaim ? "#fff" : "#e57373",
-                  fontSize: "10px",
-                }}
-              >
-                Previous Total Balance:
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 600,
-                  color: isClosedClaim ? "#fff" : "#e57373",
-                  fontSize: "11px",
-                }}
-              >
-                {amount}
-              </Typography>
-            </Box>
-          </Box>
-        ) : isClaim ? (
+        {isClaim ? (
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mr: 2 }}>
             {!hideClaimStatus && (
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 600,
-                color: isClosedClaim
-                  ? "#fff"
-                  : claimStatus?.toLowerCase() === "rejected" || claimStatus?.toLowerCase() === "denied"
-                    ? "#ef4444"
-                    : "#f59e0b",
-                fontSize: "11px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {isVoided
-                ? "Voided"
-                : claimStatus?.toLowerCase() === "cancelled"
-                ? "Cancelled"
-                : claimStatus?.toLowerCase() === "paid"
-                  ? "Paid"
-                  : claimStatus?.toLowerCase() === "rejected"
-                    ? "Rejected"
-                  : claimStatus?.toLowerCase() === "denied"
-                    ? "Denied"
-                  : claimStatus?.toLowerCase() === "draft" ||
-                      claimStatus?.toLowerCase() === "readyforsubmission"
-                    ? "Ready for submission"
-                    : statusResponse || claimStatus || "Claim in process"}
-            </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  color: isClosedClaim
+                    ? "#fff"
+                    : claimStatus?.toLowerCase() === "rejected" ||
+                        claimStatus?.toLowerCase() === "denied"
+                      ? "#ef4444"
+                      : "#f59e0b",
+                  fontSize: "11px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isVoided
+                  ? "Voided"
+                  : claimStatus?.toLowerCase() === "cancelled"
+                    ? "Cancelled"
+                    : claimStatus?.toLowerCase() === "paid"
+                      ? "Paid"
+                      : claimStatus?.toLowerCase() === "rejected"
+                        ? "Rejected"
+                        : claimStatus?.toLowerCase() === "denied"
+                          ? "Denied"
+                          : claimStatus?.toLowerCase() === "draft" ||
+                              claimStatus?.toLowerCase() ===
+                                "readyforsubmission"
+                            ? "Ready for submission"
+                            : statusResponse ||
+                              claimStatus ||
+                              "Claim in process"}
+              </Typography>
             )}
           </Box>
         ) : (
@@ -399,19 +491,24 @@ const LedgerSubRow = ({
           </Typography>
         )}
 
-        <Typography
-          variant="caption"
-          sx={{
-            width: 40,
-            color: textSecondaryColor,
-            fontSize: "12px",
-            textAlign: "center",
-            mr: 2,
-            display: hasProcedures && expanded ? "none" : "block",
-          }}
-        >
-          {initials || "MAG"}
-        </Typography>
+        <Tooltip title={createdByTooltip} placement="top">
+          <Typography
+            variant="caption"
+            sx={{
+              width: 90,
+              color: textSecondaryColor,
+              fontSize: "12px",
+              textAlign: "center",
+              mr: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: hasProcedures && expanded ? "none" : "block",
+            }}
+          >
+            {initials || "STAFF"}
+          </Typography>
+        </Tooltip>
 
         <Stack
           direction="row"
@@ -520,7 +617,10 @@ const LedgerSubRow = ({
                 </Box>
               </Tooltip>
               {/* Arrows pointing in */}
-              <Tooltip title={isClosedClaim ? "Open Claim" : "Close Claim"} placement="top">
+              <Tooltip
+                title={isClosedClaim ? "Open Claim" : "Close Claim"}
+                placement="top"
+              >
                 <Box
                   onClick={(e) => {
                     e.stopPropagation();
@@ -787,6 +887,17 @@ const LedgerSubRow = ({
                   onClick={(e) => onMagicStickClick?.(e)}
                 />
               </Tooltip>
+              <Tooltip title="Void Invoice" placement="top">
+                <Box
+                  component="img"
+                  src={ButtonVoidIcon}
+                  sx={{ width: 18, height: 18, cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onVoidClick?.(voidData);
+                  }}
+                />
+              </Tooltip>
             </>
           ) : (
             <>
@@ -835,208 +946,246 @@ const LedgerSubRow = ({
             borderTop: `1px solid ${expandedBorderColor}`,
           }}
         >
-          {/* Header for the procedures */}
           <Box
             sx={{
+              position: "relative",
               display: "flex",
               alignItems: "center",
-              py: 0.5,
+              pb: 1,
               borderBottom: `1px solid ${expandedHeaderBorderColor}`,
               mb: 1,
             }}
           >
+            {/* Mirrors the procedure-row column widths below (date 80, code
+                60, flexible description, provider 120, writeoff 100, patient
+                100, insurance 110, total 140) so every total lines up with the
+                column it sums. */}
             <Typography
               variant="caption"
               sx={{
-                width: 80,
+                position: "absolute",
+                left: 0,
+                fontWeight: 700,
                 color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
+                fontSize: "12px",
               }}
             >
-              Date
+              {showAdjustmentColumn ? "Adjustment" : "Invoice"} #
+              {(showAdjustmentColumn ? id : invoiceNumber || id) || "-"}
             </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 60,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-              }}
-            >
-              Code
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                flexGrow: 1,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-              }}
-            >
-              Description
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 120,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-              }}
-            >
-              Provider
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 100,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-                textAlign: "right",
-                mr: 2,
-              }}
-            >
-              Patient
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 110,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-                textAlign: "right",
-                mr: 2,
-              }}
-            >
-              Insurance
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                width: 140,
-                color: expandedHeaderTextColor,
-                fontSize: "10px",
-                fontWeight: 600,
-                textAlign: "right",
-                mr: 2,
-              }}
-            >
-              Fee
-            </Typography>
+            <Box sx={{ width: 80 }} />
+            <Box sx={{ width: 60 }} />
+            <Box sx={{ flexGrow: 1 }} />
+            <Box sx={{ width: 120 }} />
+            <Box sx={{ width: 100, mr: 2, textAlign: "right" }}>
+              <Typography variant="caption" sx={summaryLabelSx}>
+                Ins. Writeoff:
+              </Typography>
+              <Typography variant="caption" sx={summaryValueSx}>
+                ${writeoffTotal.toFixed(2)}
+              </Typography>
+            </Box>
+            <Box sx={{ width: 100, mr: 2, textAlign: "right" }}>
+              <Typography variant="caption" sx={summaryLabelSx}>
+                Patient:
+              </Typography>
+              <Typography variant="caption" sx={summaryValueSx}>
+                ${displayPatientTotal.toFixed(2)}
+              </Typography>
+            </Box>
+            <Box sx={{ width: 110, mr: 2, textAlign: "right" }}>
+              <Typography variant="caption" sx={summaryLabelSx}>
+                Insurance:
+              </Typography>
+              <Typography variant="caption" sx={summaryValueSx}>
+                ${insTotal.toFixed(2)}
+              </Typography>
+            </Box>
+            <Box sx={{ width: 140, mr: 2, textAlign: "right" }}>
+              <Typography variant="caption" sx={summaryLabelSx}>
+                Previous Total Balance:
+              </Typography>
+              <Typography variant="caption" sx={summaryValueSx}>
+                {amount}
+              </Typography>
+            </Box>
+            {(showAdjustmentColumn || showPaymentColumn) && (
+              <Box sx={{ width: 110, mr: 2, textAlign: "right" }}>
+                <Typography variant="caption" sx={summaryLabelSx}>
+                  {showPaymentColumn ? "Payment:" : "Adjustment:"}
+                </Typography>
+                <Typography variant="caption" sx={summaryValueSx}>
+                  $
+                  {(showPaymentColumn ? paymentTotal : adjustmentTotal).toFixed(
+                    2,
+                  )}
+                </Typography>
+              </Box>
+            )}
             <Box sx={{ minWidth: 120 }} />
           </Box>
-
-          {procedures.map((proc, idx) => (
-            <Box
-              key={idx}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                py: 0.75,
-                borderBottom:
-                  idx !== procedures.length - 1
-                    ? `1px dashed ${expandedRowBorderColor}`
-                    : "none",
-              }}
-            >
-              <Box sx={{ width: 80, display: "flex", alignItems: "center" }}>
+          {procedures.map((proc, idx) => {
+            // A voided procedure is only ever listed when the ledger asked for
+            // voided rows; it reads as struck-through red so it is obviously
+            // not a live line, while live rows keep their own column colour.
+            const procIsVoided = Boolean(proc.isVoided);
+            const transactionBalanceAmount =
+              Number(String(amount || "").replace(/[^0-9.-]+/g, "")) || 0;
+            const lineTotalAmount =
+              showPaymentColumn
+                ? Number(proc.ptPortion || 0)
+                : showAdjustmentColumn
+                ? transactionBalanceAmount
+                : Number(
+                    proc.fee ||
+                      proc.ProcFee ||
+                      proc.total ||
+                      proc.totalPrice ||
+                      proc.charge ||
+                      0,
+                  );
+            const voidedCell = (baseColor) =>
+              procIsVoided
+                ? {
+                    color: "#fca5a5",
+                    textDecoration: "line-through",
+                    opacity: 0.85,
+                  }
+                : { color: baseColor };
+            return (
+              <Box
+                key={idx}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  py: 0.75,
+                  borderBottom:
+                    idx !== procedures.length - 1
+                      ? `1px dashed ${expandedRowBorderColor}`
+                      : "none",
+                }}
+              >
+                <Box sx={{ width: 80, display: "flex", alignItems: "center" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      ...voidedCell(expandedRowTextColor),
+                      fontSize: "11px",
+                    }}
+                  >
+                    {date || proc.date}
+                  </Typography>
+                </Box>
+                <Box sx={{ width: 60, display: "flex", alignItems: "center" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      ...voidedCell(textPrimaryColor),
+                      fontSize: "11px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {proc.cptCode || proc.code || "-"}
+                  </Typography>
+                </Box>
                 <Typography
                   variant="caption"
                   sx={{
-                    color: expandedRowTextColor,
+                    flexGrow: 1,
+                    ...voidedCell(expandedDescTextColor),
                     fontSize: "11px",
                   }}
                 >
-                  {date || proc.date}
+                  {proc.description || proc.treatment}{" "}
+                  {proc.site && `(Tooth ${proc.site})`}
                 </Typography>
-              </Box>
-              <Box sx={{ width: 60, display: "flex", alignItems: "center" }}>
                 <Typography
                   variant="caption"
                   sx={{
-                    color: textPrimaryColor,
+                    width: 120,
+                    ...voidedCell(expandedRowTextColor),
                     fontSize: "11px",
-                    fontWeight: 600,
                   }}
                 >
-                  {proc.cptCode || proc.code || "-"}
+                  {proc.provider || initials || "Staff"}
                 </Typography>
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  flexGrow: 1,
-                  color: expandedDescTextColor,
-                  fontSize: "11px",
-                }}
-              >
-                {proc.description || proc.treatment}{" "}
-                {proc.site && `(Tooth ${proc.site})`}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  width: 120,
-                  color: expandedRowTextColor,
-                  fontSize: "11px",
-                }}
-              >
-                {proc.provider || initials || "Staff"}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  width: 100,
-                  color: textPrimaryColor,
-                  fontSize: "11px",
-                  textAlign: "right",
-                  mr: 2,
-                }}
-              >
-                ${(isClaim 
-                    ? (insuranceType?.toLowerCase() === 'secondary' 
-                        ? 0 // Secondary claim patient portion is typically 0 (remaining is primary's responsibility at generation)
-                        : Number(proc.ptPortion || 0)) // Primary claim patient portion
+                <Typography
+                  variant="caption"
+                  sx={{
+                    width: 100,
+                    ...voidedCell(textPrimaryColor),
+                    fontSize: "11px",
+                    textAlign: "right",
+                    mr: 2,
+                  }}
+                >
+                  $
+                  {Number(proc.writeoff || proc.estimatedWriteOff || 0).toFixed(
+                    2,
+                  )}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    width: 100,
+                    ...voidedCell(textPrimaryColor),
+                    fontSize: "11px",
+                    textAlign: "right",
+                    mr: 2,
+                  }}
+                >
+                  $
+                  {(isClaim
+                    ? insuranceType?.toLowerCase() === "secondary"
+                      ? 0 // Secondary claim patient portion is typically 0 (remaining is primary's responsibility at generation)
+                      : Number(proc.ptPortion || 0) // Primary claim patient portion
                     : Number(proc.ptPortion || 0)
                   ).toFixed(2)}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  width: 110,
-                  color: textPrimaryColor,
-                  fontSize: "11px",
-                  textAlign: "right",
-                  mr: 2,
-                }}
-              >
-                ${(isClaim
-                    ? (claimStatus?.toLowerCase() === 'rejected' || claimStatus?.toLowerCase() === 'denied'
-                        ? 0
-                        : (insuranceType?.toLowerCase() === 'secondary'
-                            ? Number(
-                                (proc.secondaryInsPortion !== undefined && proc.secondaryInsPortion !== null && Number(proc.secondaryInsPortion) > 0)
-                                  ? proc.secondaryInsPortion
-                                  : (proc.insPayEst ?? proc.amount ?? proc.secondaryInsPortion ?? 0)
-                              )
-                            : Number(
-                                (proc.primaryInsPortion !== undefined && proc.primaryInsPortion !== null && Number(proc.primaryInsPortion) > 0)
-                                  ? proc.primaryInsPortion
-                                  : (proc.insPayEst ?? proc.insPortion ?? proc.amount ?? 0)
-                              ))) // Show primary expected insurance portion
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    width: 110,
+                    ...voidedCell(textPrimaryColor),
+                    fontSize: "11px",
+                    textAlign: "right",
+                    mr: 2,
+                  }}
+                >
+                  $
+                  {(isClaim
+                    ? claimStatus?.toLowerCase() === "rejected" ||
+                      claimStatus?.toLowerCase() === "denied"
+                      ? 0
+                      : insuranceType?.toLowerCase() === "secondary"
+                        ? Number(
+                            proc.secondaryInsPortion !== undefined &&
+                              proc.secondaryInsPortion !== null &&
+                              Number(proc.secondaryInsPortion) > 0
+                              ? proc.secondaryInsPortion
+                              : (proc.insPayEst ??
+                                  proc.amount ??
+                                  proc.secondaryInsPortion ??
+                                  0),
+                          )
+                        : Number(
+                            proc.primaryInsPortion !== undefined &&
+                              proc.primaryInsPortion !== null &&
+                              Number(proc.primaryInsPortion) > 0
+                              ? proc.primaryInsPortion
+                              : (proc.insPayEst ??
+                                  proc.insPortion ??
+                                  proc.amount ??
+                                  0),
+                          ) // Show primary expected insurance portion
                     : Number(proc.insPortion || 0)
                   ).toFixed(2)}
-              </Typography>
+                </Typography>
               <Typography
                 variant="caption"
                 sx={{
                   width: 140,
-                  color: textPrimaryColor,
+                  ...voidedCell(textPrimaryColor),
                   fontSize: "11px",
                   fontWeight: 600,
                   textAlign: "right",
@@ -1044,18 +1193,108 @@ const LedgerSubRow = ({
                 }}
               >
                 $
-                {Number(
-                  proc.fee ||
-                    proc.ProcFee ||
-                    proc.total ||
-                    proc.totalPrice ||
-                    proc.charge ||
-                    0,
-                ).toFixed(2)}
+                {lineTotalAmount.toFixed(2)}
               </Typography>
+              {(showAdjustmentColumn || showPaymentColumn) && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    width: 110,
+                    ...voidedCell(textPrimaryColor),
+                    fontSize: "11px",
+                    textAlign: "right",
+                    mr: 2,
+                  }}
+                >
+                  $
+                  {Number(
+                    showPaymentColumn
+                      ? proc.appliedPayment || 0
+                      : proc.appliedAdjustment || 0,
+                  ).toFixed(2)}
+                </Typography>
+              )}
               <Box sx={{ minWidth: 120 }} />
-            </Box>
-          ))}
+              </Box>
+            );
+          })}
+          <Box
+            onClick={(event) => event.stopPropagation()}
+            sx={{
+              mt: 1,
+              pt: 1,
+              pl: "90px",
+            }}
+          >
+            {editingDescription ? (
+              <TextField
+                autoFocus
+                value={descriptionDraft}
+                onChange={(event) => setDescriptionDraft(event.target.value)}
+                onBlur={() => {
+                  handleDescriptionSave(descriptionDraft).catch(() => {});
+                  setEditingDescription(false);
+                }}
+                placeholder="Add description"
+                variant="standard"
+                size="small"
+                multiline
+                minRows={1}
+                maxRows={4}
+                fullWidth
+                disabled={!onDescriptionSave}
+                sx={{
+                  "& .MuiInputBase-root": {
+                    color: expandedDescTextColor,
+                    fontSize: "12px",
+                    lineHeight: 1.45,
+                  },
+                  "& .MuiInput-underline:before": {
+                    borderBottomColor: expandedHeaderBorderColor,
+                  },
+                  "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
+                    borderBottomColor: expandedHeaderTextColor,
+                  },
+                  "& .MuiInput-underline:after": {
+                    borderBottomColor: "#2362EF",
+                  },
+                  "& textarea::placeholder": {
+                    color: expandedHeaderTextColor,
+                    opacity: 0.8,
+                  },
+                }}
+              />
+            ) : (
+              <Typography
+                component="button"
+                type="button"
+                onClick={() => setEditingDescription(true)}
+                disabled={!onDescriptionSave}
+                sx={{
+                  border: 0,
+                  p: 0,
+                  m: 0,
+                  bgcolor: "transparent",
+                  color: descriptionDraft
+                    ? expandedDescTextColor
+                    : isFrozenClaim || isClosedClaimStyled
+                      ? "#fff"
+                      : "#2362EF",
+                  cursor: onDescriptionSave ? "text" : "default",
+                  fontSize: "12px",
+                  fontWeight: descriptionDraft ? 500 : 700,
+                  textAlign: "left",
+                  whiteSpace: "pre-wrap",
+                  opacity: savingDescription ? 0.7 : 1,
+                  "&:hover": {
+                    textDecoration: onDescriptionSave ? "underline" : "none",
+                  },
+                }}
+              >
+                {descriptionDraft || "+ Add description"}
+              </Typography>
+            )}
+          </Box>
         </Box>
       )}
     </Box>

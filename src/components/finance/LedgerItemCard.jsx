@@ -15,6 +15,11 @@ import ButtonVoidIcon from "../../assets/finance icons/Button - Void → SVG.svg
 
 import LedgerSubRow from "./LedgerSubRow";
 
+// Summary amounts arrive pre-formatted ("$12.50"). Parse them so a $0.00 cell
+// can be told apart from a real amount before it gets a highlight colour.
+const parseAmount = (val) =>
+  Math.abs(Number(String(val || "$0").replace(/[^0-9.-]+/g, "")));
+
 const LedgerItemCard = ({
   idx,
   displayItem,
@@ -46,6 +51,7 @@ const LedgerItemCard = ({
   onLockClaimClick,
   onVoidClaimClick,
   onChangeClaimStatusClick,
+  onDescriptionSave,
 }) => {
   const isPatientDeposit = Boolean(
     displayItem?.isPatientDeposit ||
@@ -187,7 +193,11 @@ const LedgerItemCard = ({
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: displayItem.isVoided ? "#FFFFFF" : "#1A1A1A",
+                  color: displayItem.isVoided
+                    ? "#FFFFFF"
+                    : parseAmount(displayItem.summary?.appliedWo) > 0
+                      ? "#7c3aed"
+                      : "#1A1A1A",
                   fontSize: "11px",
                 }}
               >
@@ -240,7 +250,11 @@ const LedgerItemCard = ({
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: displayItem.isVoided ? "#FFFFFF" : "#1A1A1A",
+                  color: displayItem.isVoided
+                    ? "#FFFFFF"
+                    : parseAmount(displayItem.summary?.ptPaid) > 0
+                      ? "#22c55e"
+                      : "#1A1A1A",
                   fontSize: "11px",
                 }}
               >
@@ -293,7 +307,11 @@ const LedgerItemCard = ({
                 variant="caption"
                 sx={{
                   fontWeight: 600,
-                  color: displayItem.isVoided ? "#FFFFFF" : "#1A1A1A",
+                  color: displayItem.isVoided
+                    ? "#FFFFFF"
+                    : parseAmount(displayItem.summary?.insPaid) > 0
+                      ? "#22c55e"
+                      : "#1A1A1A",
                   fontSize: "11px",
                 }}
               >
@@ -355,13 +373,14 @@ const LedgerItemCard = ({
                     }}
                   >
                     {(() => {
-                      const claim = displayItem.details.find(
-                        (d) => d.isClaim,
-                      );
+                      const claim = displayItem.details.find((d) => d.isClaim);
                       const rawFormat = String(
                         claim?.claimFormat || claim?.ClaimFormat || "",
                       ).toLowerCase();
-                      if (rawFormat.includes("manual") || rawFormat.includes("paper"))
+                      if (
+                        rawFormat.includes("manual") ||
+                        rawFormat.includes("paper")
+                      )
                         return "Manual Claim";
                       return "Electronic Claim";
                     })()}
@@ -454,7 +473,7 @@ const LedgerItemCard = ({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <Box sx={{ bgcolor: "#FFFFFF" }}>
+        <Box sx={{ bgcolor: displayItem.isVoided ? "#ef4444" : "#FFFFFF" }}>
           {!displayItem.details ? (
             <Box sx={{ p: 2, textAlign: "center" }}>
               <Typography variant="caption" sx={{ color: "#6B778C" }}>
@@ -479,11 +498,18 @@ const LedgerItemCard = ({
                 title={detail.title}
                 amount={detail.amount}
                 id={detail.id}
-                initials={displayItem.initials}
+                invoiceNumber={
+                  detail.invoiceNumber || displayItem.invoiceNumber || displayItem.id
+                }
+                initials={detail.initials || displayItem.initials}
+                createdByName={
+                  detail.createdByName || displayItem.createdByName
+                }
+                createdAt={detail.createdAt || displayItem.rawDate}
                 isPayment={detail.isPayment}
                 isClaim={detail.isClaim}
                 insuranceType={detail.insuranceType}
-                isVoided={detail.isVoided}
+                isVoided={displayItem.isVoided || detail.isVoided}
                 isLocked={detail.isLocked}
                 hideClaimStatus={
                   detail.isClaim &&
@@ -499,6 +525,7 @@ const LedgerItemCard = ({
                   adjustmentTypeMap[`${displayItem.id}-${detail.id}`]
                 }
                 isPatientDeposit={isPatientDeposit}
+                defaultExpanded={detail.defaultExpanded}
                 onVoidClick={handleVoidClick}
                 onEditClick={handleEditClick}
                 onRefreshClick={handleRefreshClick}
@@ -509,9 +536,35 @@ const LedgerItemCard = ({
                   amount: detail.amount,
                   date: displayItem.date,
                   invoiceId: displayItem.id,
+                  invoiceNumber: displayItem.invoiceNumber || displayItem.id,
                   isAdjustment: detail.isAdjustment || displayItem.isAdjustment,
                   isGrouped: detail.isGrouped,
                   isPayment: detail.isPayment,
+                  // The invoice's own line items, so the void dialog can ask
+                  // which of them to void instead of dropping them all at once.
+                  procedures: detail.procedures,
+                  claimedProcedureIds: [
+                    ...new Set(
+                      (displayItem.details || [])
+                        .filter(
+                          (row) =>
+                            row.isClaim &&
+                            !row.isVoided &&
+                            String(row.status || "").toLowerCase() !== "void",
+                        )
+                        .flatMap((claim) => claim.procedures || [])
+                        .map(
+                          (proc) =>
+                            proc.id ||
+                            proc._id ||
+                            proc.ProcNum ||
+                            proc.procedureId ||
+                            proc.itemId,
+                        )
+                        .filter(Boolean)
+                        .map(String),
+                    ),
+                  ],
                 }}
                 editData={{
                   id: detail.id,
@@ -528,7 +581,10 @@ const LedgerItemCard = ({
                   isAdjustment: displayItem.isAdjustment || detail.isAdjustment,
                   isPayment: detail.isPayment,
                 }}
-                eobData={{ ...detail, invoiceId: detail.invoiceId || displayItem.id }}
+                eobData={{
+                  ...detail,
+                  invoiceId: detail.invoiceId || displayItem.id,
+                }}
                 onPrintClaimClick={onPrintClaimClick}
                 onToggleClaimClosed={onToggleClaimClosed}
                 onEditClaimClick={onEditClaimClick}
@@ -539,6 +595,15 @@ const LedgerItemCard = ({
                 onVoidClaimClick={onVoidClaimClick}
                 onChangeClaimStatusClick={onChangeClaimStatusClick}
                 isAdjustment={displayItem.isAdjustment}
+                // Adjustment rows (standalone, or an invoice's own adjustment
+                // detail) render one extra "Adjustment" column in their
+                // procedure table showing the adjustment applied per line.
+                showAdjustmentColumn={Boolean(
+                  displayItem.isAdjustment || detail.isAdjustment,
+                )}
+                showPaymentColumn={Boolean(
+                  detail.isPayment && !detail.isAdjustment,
+                )}
                 onMagicStickClick={(e) => {
                   setMagicStickAnchorEl(e.currentTarget);
                   setTransferTarget({ ...detail, invoiceId: displayItem.id });
@@ -566,11 +631,20 @@ const LedgerItemCard = ({
                 closedClaimOverrides={closedClaimOverrides}
                 statusResponse={detail.statusResponse}
                 isApproved={detail.isApproved}
+                description={detail.description}
+                onDescriptionSave={(description, options) =>
+                  onDescriptionSave?.({
+                    detail,
+                    displayItem,
+                    description,
+                    options,
+                  })
+                }
               />
             ))
           )}
 
-          {displayItem.method === "Invoice" && (
+          {displayItem.method === "Invoice" && !displayItem.isVoided && (
             <Box
               sx={{
                 mt: displayItem.details?.length > 0 ? 2 : 0,
