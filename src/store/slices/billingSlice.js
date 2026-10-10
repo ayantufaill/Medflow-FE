@@ -25,68 +25,24 @@ import { claimService } from "../../services/claim.service";
 import { paymentService } from "../../services/payment.service";
 import { reportingService } from "../../services/reporting.service";
 import dayjs from "dayjs";
+import { buildLedgerProcedureContext } from "../../utils/ledgerCalculations";
 
-/**
- * Inline concurrency limiter — runs at most `concurrency` promises at a time.
- * Prevents N+1 waterfall of individual invoice detail requests.
- */
-function withConcurrency(concurrency, tasks) {
-  return new Promise((resolve) => {
-    const results = new Array(tasks.length);
-    let started = 0;
-    let finished = 0;
-    function runNext() {
-      if (started === tasks.length) return;
-      const idx = started++;
-      Promise.resolve()
-        .then(() => tasks[idx]())
-        .then((r) => {
-          results[idx] = r;
-        })
-        .catch(() => {
-          results[idx] = null;
-        })
-        .finally(() => {
-          finished++;
-          if (finished === tasks.length) resolve(results);
-          else runNext();
-        });
-    }
-    for (let i = 0; i < Math.min(concurrency, tasks.length); i++) runNext();
-    if (tasks.length === 0) resolve(results);
-  });
-}
+const EMPTY_ARRAY = Object.freeze([]);
+
+const moneyNumber = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Number(String(value).replace(/[^0-9.-]+/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const roundMoney = (value) => Math.round(moneyNumber(value) * 100) / 100;
 
 // Display name of whoever created an invoice / payment / adjustment / claim.
 // The backend resolves this from the entering user (SecUserNumEntry / meta.createdBy)
 // into `createdByName`; older rows may not have one, in which case we fall back to
 // a generic label rather than inventing a name.
 const creatorDisplay = (entity) => entity?.createdByName || "STAFF";
-
-// Procedure numbers named in an adjustment note. The API now also returns the
-// stored link (`procedureId`); the note is only a fallback for rows written
-// before that link was being saved.
-const parseProcedureRefs = (note) => {
-  const refs = new Set();
-  const regex = /procedure\s*#?\s*(\d+)/gi;
-  let match;
-  while ((match = regex.exec(String(note || ""))) !== null) {
-    refs.add(String(match[1]));
-  }
-  return [...refs];
-};
-
-// Procedures an adjustment was posted against: the stored link first, then any
-// procedure the note names. Adjustments written before the link was stored only
-// carry the note, and both point at the same ProcNum for current rows.
-const procedureTargetsOf = (adjustment) => {
-  const targets = new Set();
-  if (adjustment?.procedureId) targets.add(String(adjustment.procedureId));
-  parseProcedureRefs(adjustment?.notes).forEach((procNum) => {
-    targets.add(procNum);
-  });
-  return [...targets];
-};
 
 const adjustmentDisplayType = (adjustment = {}) => {
   const note = String(adjustment.notes || "");
@@ -177,254 +133,17 @@ export const fetchLedgerItems = createAsyncThunk(
       } = composite;
       const linkedAdjustmentIds = new Set();
 
-      // Every procedure of every invoice, indexed by ProcNum, plus the total
-      // procedure-level write-off each one is carrying. An adjustment stores the
-      // line it was posted against (procedureId), so it can expand into that
-      // procedure with the patient portion restated after the write-off.
-      const proceduresByProcNum = new Map();
-      invoices.forEach((inv) => {
-        (inv.lineItems || []).forEach((proc) => {
-          const key = String(proc._id || proc.id);
-          if (key && !proceduresByProcNum.has(key)) {
-            proceduresByProcNum.set(key, proc);
-          }
-        });
+      // One definition of "what this procedure still owes", shared with the
+      // Add Payment dialog so both screens agree.
+      const ledgerProcedures = buildLedgerProcedureContext({
+        invoices,
+        claims,
+        adjustments,
       });
-      const isLiveClaim = (claim) => {
-        if (!claim) return false;
-        if (claim.isVoided || claim.isVoid) return false;
-        const status = String(claim.status || "").toLowerCase();
-        return status !== "void" && status !== "voided";
-      };
-      const claimProcedureKeys = new Set(
-        claims
-          .filter(isLiveClaim)
-          .flatMap((claim) => claim.procedures || claim.items || [])
-          .flatMap((proc) => [
-            proc.id,
-            proc._id,
-            proc.ProcNum,
-            proc.procedureId,
-            proc.procId,
-            proc.itemId,
-            proc.code ? `code:${proc.code}` : null,
-            proc.cptCode ? `code:${proc.cptCode}` : null,
-            proc.ProcCode ? `code:${proc.ProcCode}` : null,
-          ])
-          .filter(Boolean)
-          .map(String),
-      );
-      const procedureIsClaimed = (proc) =>
-        claimProcedureKeys.has(String(proc._id || proc.id || "")) ||
-        claimProcedureKeys.has(String(proc.ProcNum || "")) ||
-        claimProcedureKeys.has(String(proc.procedureId || "")) ||
-        claimProcedureKeys.has(String(proc.procId || "")) ||
-        claimProcedureKeys.has(String(proc.itemId || "")) ||
-        claimProcedureKeys.has(
-          `code:${proc.code || proc.cptCode || proc.ProcCode || ""}`,
-        );
-
-      const appliedWriteOffByProc = new Map();
-      adjustments.forEach((adj) => {
-        // Income transfers move liability between insurance and patient, they
-        // are not a write-off of the charge. Voided rows no longer affect it.
-        if (adj.isVoided) return;
-        if (
-          String(adj.notes || "")
-            .toLowerCase()
-            .includes("income transfer")
-        ) {
-          return;
-        }
-        const amount = Math.abs(Number(adj.amount || 0));
-        if (!(amount > 0)) return;
-        procedureTargetsOf(adj).forEach((procNum) => {
-          appliedWriteOffByProc.set(
-            procNum,
-            (appliedWriteOffByProc.get(procNum) || 0) + amount,
-          );
-        });
-      });
-
-      const procedureBaseAmounts = (proc) => {
-        const key = String(proc._id || proc.id);
-        const fee = Number(proc.totalPrice || proc.ProcFee || proc.charge || 0);
-        let ptPortion = Number(proc.ptPortion || proc.patientPortion || 0);
-        let insPortion = Number(proc.totalInsPortion || proc.insPortion || 0);
-        const pricingWriteOff = Number(
-          proc.writeoff || proc.estimatedWriteOff || 0,
-        );
-        if (!procedureIsClaimed(proc)) {
-          ptPortion += insPortion;
-          insPortion = 0;
-        }
-
-        return { key, fee, ptPortion, insPortion, pricingWriteOff };
-      };
-
-      // Restate a line item the way it reads after every live procedure-level
-      // write-off has been applied: the write-off comes off the patient
-      // portion first and then the insurance estimate, so fee still equals
-      // patient + insurance + write-off, and is reported as the line's total
-      // write-off (the pricing write-off plus the adjustments).
-      const procedureAfterAdjustments = (proc) => {
-        const { key, fee, ptPortion, insPortion, pricingWriteOff } =
-          procedureBaseAmounts(proc);
-        const appliedWriteOff = appliedWriteOffByProc.get(key) || 0;
-
-        let remaining = appliedWriteOff;
-        const ptAfter = Math.max(0, ptPortion - remaining);
-        remaining -= Math.max(0, ptPortion - ptAfter);
-        const insAfter = Math.max(0, insPortion - remaining);
-
-        return {
-          ...proc,
-          fee,
-          ptPortion: ptAfter,
-          insPortion: insAfter,
-          writeoff: pricingWriteOff + appliedWriteOff,
-          estimatedWriteOff: pricingWriteOff + appliedWriteOff,
-          // Just the adjustment portion, so the ledger can report it in its
-          // own "Adjustment" column instead of hiding it inside the write-off.
-          appliedAdjustment: appliedWriteOff,
-        };
-      };
-
-      // The line items an adjustment was posted against. Keep the original
-      // procedure estimate columns intact and report only this adjustment's
-      // amount in the dedicated Adjustment column; otherwise the same write-off
-      // appears twice and reduces the insurance column twice.
-      const proceduresForAdjustment = (adj) => {
-        const adjustmentAmount = Math.abs(Number(adj.amount || 0));
-        const adjustmentText = `${adj.type || ""} ${adj.notes || ""}`.toLowerCase();
-        const isPatientCreditAdjustment =
-          adjustmentText.includes("un-collected") ||
-          adjustmentText.includes("uncollected") ||
-          adjustmentText.includes("pre payment") ||
-          adjustmentText.includes("prepayment") ||
-          adjustmentText.includes("wellness") ||
-          adjustmentText.includes("small balance") ||
-          adjustmentText.includes("courtesy") ||
-          adjustmentText.includes("curtsey") ||
-          adjustmentText.includes("non payment");
-        const targets = procedureTargetsOf(adj)
-          .map((procNum) => proceduresByProcNum.get(procNum))
-          .filter(Boolean);
-        // De-duplicate by ProcNum so a note that names the same line twice (or
-        // a link plus a note about it) never renders it twice.
-        const seen = new Set();
-        return targets
-          .filter((proc) => {
-            const key = String(proc._id || proc.id);
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          })
-          .map((proc) => {
-            const { fee, ptPortion, insPortion, pricingWriteOff } =
-              procedureBaseAmounts(proc);
-            const patientCreditBase = Math.max(0, fee - pricingWriteOff);
-            return {
-              ...proc,
-              fee,
-              ptPortion: isPatientCreditAdjustment
-                ? Math.max(0, patientCreditBase - adjustmentAmount)
-                : ptPortion,
-              insPortion: isPatientCreditAdjustment ? 0 : insPortion,
-              writeoff: pricingWriteOff,
-              estimatedWriteOff: pricingWriteOff,
-              appliedAdjustment: adjustmentAmount,
-            };
-          });
-      };
-
-      const patientCreditAdjustmentForProcedure = (proc) => {
-        const procKey = String(proc._id || proc.id || proc.ProcNum || "");
-        const codeKey = proc.code || proc.cptCode || proc.ProcCode;
-        return adjustments
-          .filter((adj) => {
-            if (adj.isVoided) return false;
-            const text = `${adj.type || ""} ${adj.notes || ""}`.toLowerCase();
-            const isPatientCredit =
-              text.includes("un-collected") ||
-              text.includes("uncollected") ||
-              text.includes("pre payment") ||
-              text.includes("prepayment") ||
-              text.includes("wellness") ||
-              text.includes("small balance") ||
-              text.includes("courtesy") ||
-              text.includes("curtsey") ||
-              text.includes("non payment");
-            if (!isPatientCredit) return false;
-            const targets = procedureTargetsOf(adj);
-            return (
-              targets.includes(procKey) ||
-              (codeKey && String(adj.notes || "").includes(`(${codeKey})`))
-            );
-          })
-          .reduce((sum, adj) => sum + Math.abs(Number(adj.amount || 0)), 0);
-      };
-
-      const proceduresForPayment = (payment) => {
-        const splits = payment.splits || payment.paysplits || [];
-        const targets = splits
-          .map((split) => {
-            const procedureId =
-              split.procedureId || split.procNum || split.ProcNum;
-            const proc = proceduresByProcNum.get(String(procedureId));
-            if (!proc) return null;
-            const { fee, ptPortion, insPortion, pricingWriteOff } =
-              procedureBaseAmounts(proc);
-            const patientCreditAmount = patientCreditAdjustmentForProcedure(proc);
-            const patientCreditBase = Math.max(0, fee - pricingWriteOff);
-            const adjustedPtPortion =
-              patientCreditAmount > 0
-                ? Math.max(0, patientCreditBase - patientCreditAmount)
-                : ptPortion;
-            return {
-              ...proc,
-              fee,
-              ptPortion: Math.max(
-                0,
-                adjustedPtPortion -
-                  Math.abs(Number(split.amount || split.SplitAmt || 0)),
-              ),
-              insPortion: patientCreditAmount > 0 ? 0 : insPortion,
-              writeoff: pricingWriteOff,
-              estimatedWriteOff: pricingWriteOff,
-              appliedPayment: Math.abs(Number(split.amount || split.SplitAmt || 0)),
-            };
-          })
-          .filter(Boolean);
-
-        if (targets.length > 0) return targets;
-
-        const amount = Math.abs(Number(payment.amount || 0));
-        const invoiceLines = (payment.invoiceId
-          ? invoices.find(
-              (inv) => String(inv._id || inv.id) === String(payment.invoiceId),
-            )?.lineItems
-          : []) || [];
-        return invoiceLines.map((proc, idx) => {
-          const { fee, ptPortion, insPortion, pricingWriteOff } =
-            procedureBaseAmounts(proc);
-          const patientCreditAmount = patientCreditAdjustmentForProcedure(proc);
-          const patientCreditBase = Math.max(0, fee - pricingWriteOff);
-          const adjustedPtPortion =
-            patientCreditAmount > 0
-              ? Math.max(0, patientCreditBase - patientCreditAmount)
-              : ptPortion;
-          return {
-            ...proc,
-            fee,
-            ptPortion: Math.max(0, adjustedPtPortion - (idx === 0 ? amount : 0)),
-            insPortion: patientCreditAmount > 0 ? 0 : insPortion,
-            writeoff: pricingWriteOff,
-            estimatedWriteOff: pricingWriteOff,
-            appliedPayment: idx === 0 ? amount : 0,
-          };
-        });
-      };
+      const {
+        proceduresForAdjustment,
+        proceduresForPayment,
+      } = ledgerProcedures;
 
       const mappedInvoices = invoices.map((invoice) => {
         // Reconstruct the original total charge. The backend may update totalAmount to
@@ -988,13 +707,15 @@ export const fetchLedgerItems = createAsyncThunk(
               adjustedInsBal,
           );
         }
+        // The estimated write-off is NOT a posted adjustment yet — it only
+        // comes off the invoice balance once the insurance payment flow
+        // actually applies it, at which point it is already counted inside
+        // totalAdjAmt. Subtracting it here as well dropped the outstanding
+        // W/O from the balance ($165 instead of $194 = $45 patient +
+        // $120 insurance + $29 pending Ins WO).
         const adjustedInvBal = Math.max(
           0,
-          originalTotal -
-            (Number(invoice.writeoffAmount) || 0) -
-            totalPtPaidAmt -
-            totalInsPaidAmt -
-            totalAdjAmt,
+          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
         );
 
         const ptPaidDisplay = totalPtPaidAmt;
@@ -1703,372 +1424,199 @@ export const undoCourtesyCredit = createAsyncThunk(
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch draft invoices for payment allocation. Enriches each line item with
- * patient/insurance balance breakdowns and filters out fully-paid items.
+ * Fetch draft invoices for payment allocation.
+ *
+ * Every per-procedure number (patient balance, insurance balance, write-off,
+ * adjustment) comes from the same shared ledger context the patient ledger
+ * uses, so a line can never read "$25 patient / $0 insurance / $20 adjustment"
+ * in the ledger and something else here. Fully-settled lines and invoices are
+ * dropped - this dialog only collects money the patient still owes.
  * Cached by patientId in `paymentInvoicesCache`.
  */
 export const fetchPaymentDraftInvoices = createAsyncThunk(
   "billing/fetchPaymentDraftInvoices",
   async (patientId, { rejectWithValue }) => {
     try {
-      const res = await invoiceService.getAllInvoices({
+      const composite = await invoiceService.getPatientCompositeLedger(
         patientId,
-        limit: 1000,
-        includeItems: true,
+        false,
+      );
+      const {
+        invoices = [],
+        adjustments = [],
+        claims = [],
+      } = composite || {};
+      const ledgerProcedures = buildLedgerProcedureContext({
+        invoices,
+        claims,
+        adjustments,
       });
-      const fetchedInvoices = res.invoices || [];
 
-      // Fetch full invoice details + payments for each invoice concurrently.
-      // payments are needed to compute patient-only paid amounts (excluding insurance payments).
-      // Adjustments are needed to apply courtesy write-offs exactly like LedgerList.
-      const [rawInvoices, adjustmentsRes] = await Promise.all([
-        withConcurrency(
-          3,
-          fetchedInvoices.map((inv) => async () => {
-            const invId = inv._id || inv.id;
-            try {
-              const [fullInv, paymentsRes] = await Promise.all([
-                inv.lineItems ? inv : invoiceService.getInvoiceById(invId),
-                apiClient
-                  .get(`/payments/invoice/${invId}?limit=1000`)
-                  .catch(() => ({ data: { data: { payments: [] } } })),
-              ]);
-              const payments =
-                paymentsRes?.data?.data?.payments ||
-                paymentsRes?.data?.data ||
-                [];
-              return {
-                ...fullInv,
-                _payments: Array.isArray(payments) ? payments : [],
-              };
-            } catch {
-              return null;
-            }
-          }),
-        ),
-        apiClient
-          .get(`/adjustments?patientId=${patientId}&limit=1000`)
-          .catch(() => ({ data: { data: { adjustments: [] } } })),
-      ]);
-      const patientAdjustments =
-        adjustmentsRes?.data?.data?.adjustments ||
-        adjustmentsRes?.data?.data ||
-        [];
-      const adjustments = Array.isArray(patientAdjustments)
-        ? patientAdjustments
-        : [];
-
-      // Courtesy classification — mirrors the Ledger mapping so both screens
-      // share one definition of "remaining patient balance".
-      const adjIsVoided = (adj) => {
-        const status = String(adj?.status || "").toLowerCase();
-        return status === "void" || status === "voided";
-      };
-      const adjIsCourtesy = (adj) => {
-        if (!adj) return false;
-        const notes = (adj.notes || "").toLowerCase();
-        const type = (adj.type || "").toLowerCase();
-        // Insurance write-off adjustments ("Insurance W/O") are posted by the
-        // insurance payment flow and are NOT patient courtesy — excluding them
-        // here mirrors the Ledger mapping so remaining balances agree.
-        if (
-          notes.includes("insurance w/o") ||
-          notes.includes("insurance writeoff") ||
-          notes.includes("insurance write-off")
-        ) {
-          return false;
-        }
-        return Boolean(
-          notes.includes("courtesy") ||
-          notes.includes("curtsey") ||
-          notes.includes("un-collected") ||
-          notes.includes("uncollected") ||
-          notes.includes("pre payment") ||
-          notes.includes("prepayment") ||
-          notes.includes("wellness") ||
-          notes.includes("small balance") ||
-          notes.includes("non payment") ||
-          adj.type === "Write-off" ||
-          type === "write-off" ||
-          type === "writeoff" ||
-          notes.includes("write-off") ||
-          notes.includes("writeoff") ||
-          !adj.type,
-        );
-      };
-
-      const enrichedInvoices = rawInvoices.filter(Boolean).map((fullInv) => {
-        // ── Courtesy write-offs for this invoice (same matching as Ledger) ──
-        // Invoice linkage lives in the adjustment notes:
-        // "<type> applied to Invoice #<invoiceId>".
-        const invoiceAdjs = adjustments.filter((adj) => {
-          if (!adj?.notes) return false;
-          return (
-            adj.notes.includes(`Invoice #${fullInv._id}`) ||
-            (fullInv.id && adj.notes.includes(`Invoice #${fullInv.id}`))
+      const result = invoices
+        .map((fullInv) => {
+          const invoiceId = fullInv.id || fullInv._id;
+          const invoiceClaims = claims.filter(
+            (claim) =>
+              String(claim.invoiceRefId || "") === String(invoiceId) ||
+              String(claim.invoice?._id || claim.invoice?.id || "") ===
+                String(invoiceId) ||
+              (claim.selectedItems || []).some(
+                (item) => String(item.invoiceId) === String(invoiceId),
+              ) ||
+              (claim.procedures || []).some(
+                (proc) =>
+                  String(proc.invoiceId || "") === String(invoiceId) ||
+                  (fullInv.lineItems || []).some(
+                    (line) =>
+                      String(line.id || line._id) ===
+                      String(proc.id || proc._id || proc.ProcNum),
+                  ),
+              ),
           );
-        });
-
-        // Invoice-level courtesy (no procedureId) is distributed greedily
-        // across procedures in order, exactly like LedgerList does.
-        let unallocatedCourtesy = 0;
-        invoiceAdjs.forEach((adj) => {
-          if (adjIsCourtesy(adj) && !adjIsVoided(adj) && !adj.procedureId) {
-            unallocatedCourtesy += Math.abs(Number(adj.amount || 0));
-          }
-        });
-
-        const invoiceItems = fullInv.lineItems || [];
-        const courtesyByItem = invoiceItems.map((item) => {
-          const itemKey = item.ProcNum || item._id || item.id;
-          let totalCourtesy = 0;
-          invoiceAdjs.forEach((adj) => {
-            if (
-              adjIsCourtesy(adj) &&
-              !adjIsVoided(adj) &&
-              adj.procedureId &&
-              String(adj.procedureId) === String(itemKey)
-            ) {
-              totalCourtesy += Math.abs(Number(adj.amount || 0));
-            }
+          const hasLiveClaim = invoiceClaims.some((claim) => {
+            const status = String(claim.status || "").toLowerCase();
+            return !claim.isVoided && status !== "void" && status !== "voided";
           });
 
-          const grossPtPortion = Number(item.patientPortion || 0);
-          if (unallocatedCourtesy > 0 && grossPtPortion > 0) {
-            const applied = Math.min(unallocatedCourtesy, grossPtPortion);
-            totalCourtesy += applied;
-            unallocatedCourtesy -= applied;
-          }
-          return totalCourtesy;
-        });
-        const patientCreditProcedureIds = new Set(
-          invoiceAdjs
-            .filter((adj) => adjIsCourtesy(adj) && !adjIsVoided(adj))
-            .map((adj) => adj.procedureId)
-            .filter(Boolean)
-            .map(String),
-        );
+          const lineItems = (fullInv.lineItems || [])
+            .filter((item) => !item.isVoided)
+            .map((item) => {
+              const itemId = item.id || item._id;
+              const adjusted = ledgerProcedures.procedureAfterAdjustments(item);
+              const patientBalance =
+                ledgerProcedures.remainingPatientBalance(item);
+              const insuranceBalance =
+                ledgerProcedures.remainingInsuranceBalance(item);
+              const writeoff =
+                ledgerProcedures.writeoffForProcedure(item);
+              const adjustmentAmount =
+                ledgerProcedures.adjustmentForProcedure(item);
+              const totalAmount = moneyNumber(
+                adjusted.fee ||
+                  item.totalPrice ||
+                  item.total ||
+                  item.ProcFee ||
+                  item.charge ||
+                  item.amount,
+              );
 
-        // Compute total patient and insurance payments for this invoice.
-        const invoicePayments = fullInv._payments || [];
-        let totalPatientPaid = 0;
-        let totalInsurancePaid = 0;
-
-        invoicePayments.forEach((pmt) => {
-          const method = (pmt.method || pmt.paymentMethod || "").toLowerCase();
-          const source = (pmt.paymentSource || "").toLowerCase();
-          const isVoided = (pmt.status || "").toLowerCase().includes("void");
-          if (isVoided) return;
-
-          if (method === "insurance" || source === "insurance_company") {
-            totalInsurancePaid += Number(pmt.amount) || 0;
-          } else {
-            totalPatientPaid += Number(pmt.amount) || 0;
-          }
-        });
-
-        // Compute total gross patient portion across all items (for proportional distribution).
-        const items = fullInv.lineItems || [];
-        const totalGrossPatient = items.reduce((sum, item) => {
-          const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
-          const total = Number(
-            item.total || item.totalPrice || item.amount || 0,
-          );
-          const owed = Math.max(0, total - writeoff);
-          const pt = Number(
-            item.ptPortion || item.patientPortion || item.ptAmt || 0,
-          );
-          const ins =
-            Number(item.insPortion || item.insurancePortion || 0) +
-            Number(item.secondaryInsPortion || 0);
-          let patientBal;
-          if (item.dbi === true) patientBal = owed;
-          else if (item.dbi === false) patientBal = pt;
-          else if (ins > 0 && pt > 0) patientBal = pt;
-          else if (ins > 0 && pt === 0) patientBal = 0;
-          else if (pt > 0 && ins === 0) patientBal = pt;
-          else patientBal = owed;
-          return sum + patientBal;
-        }, 0);
-
-        return {
-          ...fullInv,
-          id: fullInv.id || fullInv._id,
-          checked: false,
-          lineItems: items.map((item, itemIndex) => {
-            const itemId = item.id || item._id;
-            const writeoff = Number(item.writeoff || item.writeoffAmount || 0);
-            const ins =
-              Number(
-                item.insPortion ||
-                  item.insurancePortion ||
-                  item.insAmt ||
-                  item.insurance ||
-                  0,
-              ) + Number(item.secondaryInsPortion || 0);
-            const pt = Number(
-              item.ptPortion || item.patientPortion || item.ptAmt || 0,
-            );
-            const total = Number(
-              item.total || item.totalPrice || item.amount || 0,
-            );
-            const owed = Math.max(0, total - writeoff);
-
-            let patientBal, insBal;
-            if (item.dbi === true) {
-              patientBal = owed;
-              insBal = 0;
-            } else if (item.dbi === false) {
-              patientBal = pt;
-              insBal = Math.max(0, owed - pt);
-            } else if (ins > 0 && pt > 0) {
-              patientBal = pt;
-              insBal = ins;
-            } else if (ins > 0 && pt === 0) {
-              patientBal = 0;
-              insBal = owed;
-            } else if (pt > 0 && ins === 0) {
-              patientBal = pt;
-              insBal = 0;
-            } else {
-              patientBal = owed;
-              insBal = 0;
-            }
-            if (patientCreditProcedureIds.has(String(itemId))) {
-              patientBal = owed;
-              insBal = 0;
-            }
-
-            const alreadyPaid = Number(item.paidAmount || 0);
-
-            // What the PATIENT has already paid on this line. payment.service
-            // maintains `patientPaidAmount` per procedure every time a payment is
-            // allocated, so prefer it: `paidAmount` is the WHOLE line total paid
-            // (patient + insurance), and subtracting that would wipe out a
-            // patient portion the insurance alone never covered — the exact
-            // deductible case, where the line is insurance-paid in full and the
-            // deductible still belongs to the patient.
-            const patientPaidOnItem =
-              item.patientPaidAmount !== undefined &&
-              item.patientPaidAmount !== null
-                ? Number(item.patientPaidAmount) || 0
-                : null;
-
-            // Calculate sum of all items' alreadyPaid to detect backend void bugs
-            const sumAlreadyPaid = items.reduce(
-              (sum, i) => sum + Number(i.paidAmount || 0),
-              0,
-            );
-            const hasVoidedBug =
-              sumAlreadyPaid > totalPatientPaid + totalInsurancePaid + 0.01;
-
-            let netPatientBal;
-            if (patientPaidOnItem !== null) {
-              // Authoritative per-procedure split — insurance money never
-              // reduces what the patient owes.
-              netPatientBal = Math.max(0, patientBal - patientPaidOnItem);
-            } else if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
-              // If there are NO active payments, the patient owes the full balance regardless of buggy item.paidAmount
-              netPatientBal = patientBal;
-            } else if (totalInsurancePaid === 0 && !hasVoidedBug) {
-              // If insurance has never paid anything on this invoice, AND there are no void bugs,
-              // ALL payments are from the patient. This perfectly respects manual per-item allocations.
-              netPatientBal = Math.max(0, patientBal - alreadyPaid);
-            } else {
-              // Distribute PATIENT payments proportionally across items by their
-              // gross patient balance. Insurance payments are deliberately not
-              // part of this: they settle the insurance portion, never the
-              // patient's deductible/coinsurance.
-              const itemShare =
-                totalGrossPatient > 0 ? patientBal / totalGrossPatient : 0;
-              const itemTotalPaid = itemShare * totalPatientPaid;
-              netPatientBal = Math.max(0, patientBal - itemTotalPaid);
-            }
-
-            // ALWAYS cap by remainingBal (unless there's a void bug, then we must recalculate remainingBal safely)
-            const safeRemainingBal = hasVoidedBug
-              ? Math.max(0, owed - (totalInsurancePaid > 0 ? insBal || 0 : 0))
-              : Math.max(0, owed - alreadyPaid);
-
-            // Patient balance is simply the remaining net patient balance, capped by total remaining owed
-            let effectivePatientBal = Math.min(
-              Math.max(0, netPatientBal),
-              safeRemainingBal,
-            );
-
-            // One final sanity check: if no active payments exist, the patient must owe exactly their ptPortion.
-            if (totalPatientPaid === 0 && totalInsurancePaid === 0) {
-              effectivePatientBal = patientBal;
-            }
-
-            // Courtesy write-offs have already satisfied part (or all) of the
-            // patient portion. Subtract them so Add Payment shows the SAME
-            // remaining patient balance as LedgerList (e.g. $45 portion with a
-            // $45 courtesy W/O -> $0.00 remaining -> hidden, not payable).
-            const totalCourtesyApplied = courtesyByItem[itemIndex] || 0;
-            effectivePatientBal = Math.max(
-              0,
-              effectivePatientBal - totalCourtesyApplied,
-            );
-
-            console.debug("[AddPayment] item:", {
-              itemId,
-              total,
-              writeoff,
-              owed,
-              pt,
-              ins,
-              patientBal,
-              insBal,
-              totalPatientPaid,
-              totalInsurancePaid,
-              netPatientBal,
-              totalCourtesyApplied,
-              effectivePatientBal,
-              safeRemainingBal,
-              alreadyPaid,
+              return {
+                ...item,
+                id: itemId,
+                checked: false,
+                payAmount: patientBalance.toFixed(2),
+                patientBalance,
+                writeoffAmount: writeoff,
+                adjustmentAmount,
+                insuranceAmount: insuranceBalance,
+                totalAmount,
+                remainingBal: Number(
+                  Math.max(0, totalAmount - writeoff).toFixed(2),
+                ),
+              };
             });
 
-            return {
-              ...item,
-              id: itemId,
-              checked: false,
-              payAmount: effectivePatientBal.toFixed(2),
-              patientBalance: effectivePatientBal,
-              writeoffAmount: writeoff,
-              insuranceAmount: insBal,
-              totalAmount: total,
-              remainingBal: safeRemainingBal,
-            };
-          }),
-        };
-      });
-
-      // AddPaymentDialog is strictly for collecting patient payments.
-      // Only keep line items where the EFFECTIVE remaining patient balance
-      // (after courtesy write-offs) is still greater than $0.00.
-      const result = enrichedInvoices
-        .map((inv) => {
-          const patientItems = (inv.lineItems || []).filter(
-            (item) => Number(Number(item.patientBalance || 0).toFixed(2)) > 0,
+          let payableItems = lineItems.filter(
+            (item) => Number(item.patientBalance.toFixed(2)) > 0,
           );
-          return {
-            ...inv,
-            lineItems: patientItems,
-          };
-        })
-        .filter((inv) => {
-          const totalPatientBalance = (inv.lineItems || []).reduce(
-            (sum, item) => sum + Number(item.patientBalance || 0),
+
+          const invoicePatientPaid = lineItems.reduce(
+            (sum, item) =>
+              sum +
+              moneyNumber(
+                item.patientPaidAmount ?? item.patientPaid ?? item.ptPaid,
+              ),
             0,
           );
-          return Number(totalPatientBalance.toFixed(2)) > 0;
-        });
+          const rawPatientPortion = moneyNumber(fullInv.patientPortion);
+          const rawInsurancePortion =
+            moneyNumber(fullInv.insurancePortion) +
+            moneyNumber(fullInv.secondaryInsPortion);
+          const patientOnlyFallback =
+            rawPatientPortion <= 0 && rawInsurancePortion <= 0 && !hasLiveClaim
+              ? Math.max(
+                  0,
+                  moneyNumber(fullInv.totalAmount) -
+                    moneyNumber(fullInv.writeoffAmount) -
+                    moneyNumber(fullInv.paidAmount),
+                )
+              : 0;
+          const invoicePatientBalance = roundMoney(
+            moneyNumber(fullInv.patientBalance) ||
+              Math.max(0, rawPatientPortion - invoicePatientPaid) ||
+              patientOnlyFallback,
+          );
+
+          if (payableItems.length === 0 && invoicePatientBalance > 0) {
+            const sourceItems = lineItems.length > 0
+              ? lineItems
+              : [
+                  {
+                    id: fullInv.id || fullInv._id,
+                    description: fullInv.invoiceNumber || "Invoice balance",
+                    totalAmount: moneyNumber(fullInv.totalAmount),
+                    writeoffAmount: moneyNumber(fullInv.writeoffAmount),
+                    insuranceAmount: moneyNumber(fullInv.insurancePortion),
+                    adjustmentAmount: moneyNumber(fullInv.adjustmentAmount),
+                  },
+                ];
+            const weights = sourceItems.map((item) =>
+              Math.max(
+                0,
+                moneyNumber(item.ptPortion) ||
+                  moneyNumber(item.patientPortion) ||
+                  moneyNumber(item.patientAmount) ||
+                  moneyNumber(item.totalAmount) ||
+                  moneyNumber(item.totalPrice) ||
+                  moneyNumber(item.charge) ||
+                  moneyNumber(item.amount),
+              ),
+            );
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            let remaining = invoicePatientBalance;
+
+            payableItems = sourceItems.map((item, index) => {
+              const isLast = index === sourceItems.length - 1;
+              const share = isLast
+                ? remaining
+                : roundMoney(
+                    invoicePatientBalance *
+                      ((totalWeight > 0 ? weights[index] : 1) /
+                        (totalWeight > 0 ? totalWeight : sourceItems.length)),
+                  );
+              remaining = roundMoney(remaining - share);
+              return {
+                ...item,
+                id: item.id || item._id || `${fullInv.id || fullInv._id}-${index}`,
+                checked: false,
+                patientBalance: share,
+                payAmount: share.toFixed(2),
+              };
+            }).filter((item) => item.patientBalance > 0);
+          }
+
+          if (payableItems.length === 0) return null;
+
+          const totalPatientBalance = payableItems.reduce(
+            (sum, item) => sum + item.patientBalance,
+            0,
+          );
+
+          return {
+            ...fullInv,
+            id: fullInv.id || fullInv._id,
+            checked: false,
+            patientBalance: Number(totalPatientBalance.toFixed(2)),
+            lineItems: payableItems,
+          };
+        })
+        .filter(Boolean);
 
       return { patientId, invoices: result };
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.error?.message ||
+          err.message ||
           "Failed to fetch payment invoices",
       );
     }
@@ -2079,7 +1627,6 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
      */
     condition: (patientId, { getState }) => {
       const { billing } = getState();
-      // Only block if a fetch is already in-flight for this patient
       if (billing.paymentInvoicesFetchingSet?.includes(patientId)) return false;
       return true;
     },
@@ -2755,6 +2302,15 @@ const billingSlice = createSlice({
       });
     },
 
+    /** Seed Add Payment invoices from already-rendered ledger rows. */
+    setPaymentInvoicesForPatient: (state, action) => {
+      const { patientId, invoices } = action.payload;
+      if (!patientId) return;
+      state.paymentInvoicesCache[patientId] = Array.isArray(invoices)
+        ? invoices
+        : [];
+    },
+
     /** Toggle a single payment line-item's checked state. */
     togglePaymentLineItemChecked: (state, action) => {
       const { patientId, invoiceId, itemId } = action.payload;
@@ -3168,6 +2724,7 @@ export const {
   togglePaymentInvoiceChecked,
   toggleAllPaymentInvoices,
   togglePaymentLineItemChecked,
+  setPaymentInvoicesForPatient,
   invalidatePaymentInvoices,
   setAdjustmentTypeForItem,
   invalidateLedger,
@@ -3221,7 +2778,7 @@ export const selectAdjustmentTypeMap = (state) =>
   state.billing.adjustmentTypeMap;
 /** Returns cached ledger items for the given patient (or empty array). */
 export const selectLedgerItemsForPatient = (patientId) => (state) =>
-  state.billing.ledgerCache?.[patientId] || [];
+  state.billing.ledgerCache?.[patientId] || EMPTY_ARRAY;
 
 // Payment invoice selectors
 export const selectPaymentInvoicesLoading = (state) =>
@@ -3230,7 +2787,7 @@ export const selectPaymentInvoicesError = (state) =>
   state.billing.paymentInvoicesError;
 /** Returns cached payment draft invoices for the given patient (or empty array). */
 export const selectPaymentInvoicesForPatient = (patientId) => (state) =>
-  state.billing.paymentInvoicesCache?.[patientId] || [];
+  state.billing.paymentInvoicesCache?.[patientId] || EMPTY_ARRAY;
 
 export const selectModificationsData = (state) =>
   state.billing.modificationsData;
