@@ -64,6 +64,7 @@ import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveD
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
 import RxDrawer from '../../components/clinical/new-treatment-plan/RxDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
+import { useClinicalExamQuery } from '../../hooks/queries/useClinicalExam';
 import { useSelector, useDispatch } from 'react-redux';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 // AFTER
@@ -347,10 +348,30 @@ const NewTreatmentPlanPage = () => {
   const [appointmentProcedures, setAppointmentProcedures] = useState([]);
   const [patientAppointments, setPatientAppointments] = useState([]);
 
-  const currentPatient = useSelector(selectCurrentPatient);
-  const currentAppointment = useSelector(selectCurrentAppointment);
-  const currentPatientId = currentPatient?._id || currentPatient?.id;
-  const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
+  const storedPatient = useSelector(selectCurrentPatient);
+  const storedAppointment = useSelector(selectCurrentAppointment);
+  const appointmentDetailError = useSelector(state => state.appointment.detailError);
+  const patientDetailError = useSelector(state => state.patient.detailError);
+  const routeAppointmentId = searchParams.get('appointmentId');
+  const routePatientId = searchParams.get('patientId');
+  const storedAppointmentId = storedAppointment?._id || storedAppointment?.id || storedAppointment?.AptNum;
+  const activeAppointmentId = routeAppointmentId || storedAppointmentId;
+  const currentAppointment = storedAppointment && String(storedAppointmentId) === String(activeAppointmentId)
+    ? storedAppointment : null;
+  const appointmentPatient = currentAppointment?.patientId;
+  const appointmentPatientId = (typeof appointmentPatient === 'object'
+    ? appointmentPatient?._id || appointmentPatient?.id : appointmentPatient) || currentAppointment?.PatNum;
+  const currentPatientId = routePatientId || appointmentPatientId || (!activeAppointmentId && (storedPatient?._id || storedPatient?.id));
+  const currentPatient = storedPatient && String(storedPatient._id || storedPatient.id) === String(currentPatientId)
+    ? storedPatient : null;
+  const appointmentPatientMismatch = !!(currentAppointment && routePatientId && appointmentPatientId &&
+    String(routePatientId) !== String(appointmentPatientId));
+  const perioContextReady = !!(currentAppointment && currentPatient && appointmentPatientId && !appointmentPatientMismatch);
+
+  // Appointment-only links must resolve their patient from that appointment.
+  useEffect(() => {
+    if (!routePatientId && appointmentPatientId) dispatch(fetchPatientById(String(appointmentPatientId)));
+  }, [routePatientId, appointmentPatientId, dispatch]);
 
   // Filter out procedures that belong to OTHER appointments
   const filteredAppointmentProcedures = activeAppointmentId 
@@ -418,7 +439,11 @@ const NewTreatmentPlanPage = () => {
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(1); // 0: Charts, 1: Treatment Plan, 2: Perio Charts
-  const [showPerioChart, setShowPerioChart] = useState(false);
+  const perioContextKey = `${currentPatientId}:${activeAppointmentId}`;
+  const [openedPerioContext, setOpenedPerioContext] = useState(null);
+  const { data: existingPerioExam, isLoading: perioExamLoading, isError: perioExamError, refetch: reloadPerioExam } =
+    useClinicalExamQuery('periodontal', perioContextReady ? activeAppointmentId : null);
+  const showPerioChart = openedPerioContext === perioContextKey || !!existingPerioExam?.examData;
 
   const [shareMenuAnchorEl, setShareMenuAnchorEl] = useState(null);
   const handleShareMenuClose = () => setShareMenuAnchorEl(null);
@@ -2156,9 +2181,34 @@ const NewTreatmentPlanPage = () => {
         )}
         {activeTab === 2 && (
           <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden', '@media print': { height: 'auto', overflow: 'visible' } }}>
-            {showPerioChart ? (
+            {!perioContextReady ? (
+              <Box sx={{ p: 3 }}>
+                {appointmentPatientMismatch || appointmentDetailError || patientDetailError || !activeAppointmentId ? (
+                  <Alert severity="error" action={activeAppointmentId && !appointmentPatientMismatch ? (
+                    <Button color="inherit" onClick={() => {
+                      dispatch(fetchAppointmentById(activeAppointmentId));
+                      if (currentPatientId) dispatch(fetchPatientById(String(currentPatientId)));
+                    }}>Retry</Button>
+                  ) : undefined}>
+                    {appointmentPatientMismatch ? 'This appointment belongs to a different patient. Open the appointment again.'
+                      : !activeAppointmentId ? 'Select an appointment to create a periodontal chart.'
+                        : 'Unable to load the appointment and patient details. Please retry.'}
+                  </Alert>
+                ) : <CircularProgress aria-label="Loading appointment details" />}
+              </Box>
+            ) : perioExamLoading ? (
+              <Box sx={{ p: 3 }}><CircularProgress aria-label="Loading periodontal exam" /></Box>
+            ) : perioExamError ? (
+              <Alert severity="error" action={<Button color="inherit" onClick={() => reloadPerioExam()}>Retry</Button>}>
+                Unable to load this appointment's periodontal exam.
+              </Alert>
+            ) : showPerioChart ? (
               <PeriodontalExamPage
+                key={perioContextKey}
                 embedded={true}
+                patientId={currentPatientId}
+                appointmentId={activeAppointmentId}
+                appointment={currentAppointment}
                 selectedTeethFromParent={selectedTeeth}
                 onToothClickFromParent={handleToothClick}
               />
@@ -2166,7 +2216,7 @@ const NewTreatmentPlanPage = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                 <Button
                   variant="contained"
-                  onClick={() => setShowPerioChart(true)}
+                  onClick={() => setOpenedPerioContext(perioContextKey)}
                   sx={{
                     textTransform: 'none',
                     fontFamily: 'Inter, sans-serif',
