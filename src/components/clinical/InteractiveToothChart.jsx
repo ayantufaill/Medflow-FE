@@ -6,6 +6,15 @@ import { fontSize } from "../../constants/styles";
 const UPPER_TEETH = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 const LOWER_TEETH = [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
 
+// Region tooth groups
+const UR_TEETH = [1, 2, 3, 4, 5];
+const UA_TEETH = [6, 7, 8, 9, 10, 11];
+const UL_TEETH = [12, 13, 14, 15, 16];
+
+const LR_TEETH = [28, 29, 30, 31, 32];
+const LA_TEETH = [22, 23, 24, 25, 26, 27];
+const LL_TEETH = [17, 18, 19, 20, 21];
+
 const InteractiveToothChart = ({
   selectedTeeth = [],
   missingTeeth = [],
@@ -17,9 +26,59 @@ const InteractiveToothChart = ({
   onSidebarSurfaceClick,
   onMaxToggle,
   onManToggle,
+  onToggleTeethGroup,
   isTreatmentPlan = false,
   selectedSidebarSurfaces = []
 }) => {
+
+  const handleGroupClick = (groupTeeth, fallbackCallback) => {
+    if (onToggleTeethGroup) {
+      onToggleTeethGroup(groupTeeth);
+    } else if (fallbackCallback) {
+      fallbackCallback();
+    }
+  };
+
+  const getGroupLabelStyle = (teethGroup) => {
+    const active = teethGroup.length > 0 && teethGroup.every(t => selectedTeeth.includes(t));
+    return {
+      fontSize: '0.75rem',
+      fontWeight: 'bold',
+      color: active ? '#1d4ed8' : '#3b82f6',
+      cursor: 'pointer',
+      userSelect: 'none',
+      px: 0.5,
+      py: 0.1,
+      borderRadius: '3px',
+      backgroundColor: active ? '#dbeafe' : 'transparent',
+      transition: 'all 0.15s ease',
+      '&:hover': {
+        backgroundColor: active ? '#bfdbfe' : '#eff6ff',
+        color: '#1d4ed8'
+      }
+    };
+  };
+
+  const getMaxManStyle = (teethGroup) => {
+    const active = teethGroup.length > 0 && teethGroup.every(t => selectedTeeth.includes(t));
+    const partial = teethGroup.length > 0 && teethGroup.some(t => selectedTeeth.includes(t));
+    return {
+      fontSize: '0.75rem',
+      fontWeight: 'bold',
+      color: active ? '#1d4ed8' : partial ? '#3b82f6' : '#666',
+      cursor: 'pointer',
+      userSelect: 'none',
+      px: 0.5,
+      py: 0.1,
+      borderRadius: '3px',
+      backgroundColor: active ? '#dbeafe' : 'transparent',
+      transition: 'all 0.15s ease',
+      '&:hover': {
+        backgroundColor: active ? '#bfdbfe' : '#eff6ff',
+        color: '#1d4ed8'
+      }
+    };
+  };
 
   const renderTooth = (n) => {
     // Evaluate conditions based on where the component is used
@@ -103,17 +162,27 @@ const InteractiveToothChart = ({
               </Stack>
               
               {/* Upper Label */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, alignItems: 'center' }}>
                 <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q1</Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UR</Typography>
+                <Typography 
+                  onClick={() => handleGroupClick(UR_TEETH)}
+                  sx={getGroupLabelStyle(UR_TEETH)}
+                >
+                  UR
+                </Typography>
               </Box>
             </Box>
             
             <Box sx={{ width: 'fit-content' }}>
               {/* Lower Label */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, alignItems: 'center' }}>
                 <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q4</Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LR</Typography>
+                <Typography 
+                  onClick={() => handleGroupClick(LR_TEETH)}
+                  sx={getGroupLabelStyle(LR_TEETH)}
+                >
+                  LR
+                </Typography>
               </Box>
               
               {/* Lower Row */}
@@ -135,15 +204,25 @@ const InteractiveToothChart = ({
               </Stack>
               
               {/* Upper Label */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UA</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, alignItems: 'center' }}>
+                <Typography 
+                  onClick={() => handleGroupClick(UA_TEETH)}
+                  sx={getGroupLabelStyle(UA_TEETH)}
+                >
+                  UA
+                </Typography>
               </Box>
             </Box>
             
             <Box sx={{ width: 'fit-content' }}>
               {/* Lower Label */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5 }}>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LA</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1.5, alignItems: 'center' }}>
+                <Typography 
+                  onClick={() => handleGroupClick(LA_TEETH)}
+                  sx={getGroupLabelStyle(LA_TEETH)}
+                >
+                  LA
+                </Typography>
               </Box>
               
               {/* Lower Row */}
@@ -166,19 +245,17 @@ const InteractiveToothChart = ({
               
               {/* Upper Label */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 2, alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>UL</Typography>
+                <Typography 
+                  onClick={() => handleGroupClick(UL_TEETH)}
+                  sx={getGroupLabelStyle(UL_TEETH)}
+                >
+                  UL
+                </Typography>
                 <Stack direction="row" spacing={1.5} alignItems="center">
                   <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q2</Typography>
                   <Typography 
-                    onClick={onMaxToggle}
-                    sx={{ 
-                      fontSize: '0.75rem', 
-                      color: selectedTeeth.some(t => UPPER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer',
-                      transition: 'color 0.2s',
-                      '&:hover': { color: '#3b82f6' }
-                    }}
+                    onClick={() => handleGroupClick(UPPER_TEETH, onMaxToggle)}
+                    sx={getMaxManStyle(UPPER_TEETH)}
                   >
                     Max
                   </Typography>
@@ -189,19 +266,17 @@ const InteractiveToothChart = ({
             <Box sx={{ width: 'fit-content' }}>
               {/* Lower Label */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: 2, mb: 1.5, alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>LL</Typography>
+                <Typography 
+                  onClick={() => handleGroupClick(LL_TEETH)}
+                  sx={getGroupLabelStyle(LL_TEETH)}
+                >
+                  LL
+                </Typography>
                 <Stack direction="row" spacing={1.5} alignItems="center">
                   <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>Q3</Typography>
                   <Typography 
-                    onClick={onManToggle}
-                    sx={{ 
-                      fontSize: '0.75rem', 
-                      color: selectedTeeth.some(t => LOWER_TEETH.includes(t)) ? '#3b82f6' : '#666', 
-                      fontWeight: 'bold', 
-                      cursor: 'pointer',
-                      transition: 'color 0.2s',
-                      '&:hover': { color: '#3b82f6' }
-                    }}
+                    onClick={() => handleGroupClick(LOWER_TEETH, onManToggle)}
+                    sx={getMaxManStyle(LOWER_TEETH)}
                   >
                     Man
                   </Typography>

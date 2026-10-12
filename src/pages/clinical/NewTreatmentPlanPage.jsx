@@ -764,6 +764,15 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const handleToggleTeethGroup = (teethArray) => {
+    const allSelected = teethArray.every(t => selectedTeeth.includes(t));
+    if (allSelected) {
+      setSelectedTeeth(selectedTeeth.filter(t => !teethArray.includes(t)));
+    } else {
+      setSelectedTeeth([...new Set([...selectedTeeth, ...teethArray])]);
+    }
+  };
+
   const handleSidebarSurfaceClick = (lbl) => {
     if (selectedSurfaces.includes(lbl)) {
       setSelectedSurfaces(selectedSurfaces.filter(s => s !== lbl));
@@ -1885,6 +1894,7 @@ const NewTreatmentPlanPage = () => {
               onToothClick={handleToothClick}
               selectedSurfaces={selectedSurfaces}
               onSidebarSurfaceClick={handleSidebarSurfaceClick}
+              onToggleTeethGroup={handleToggleTeethGroup}
             />
           </Box>
         )}
