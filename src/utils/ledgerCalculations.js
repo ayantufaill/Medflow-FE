@@ -71,6 +71,11 @@ const adjustmentIsInsuranceWriteOff = (adj) => {
   );
 };
 
+const adjustmentIsDebitAddition = (adj) => {
+  const text = `${adj?.type || ""} ${adj?.notes || ""}`.toLowerCase();
+  return moneyNumber(adj?.amount) > 0 || text.includes("debit adjustment");
+};
+
 const isLiveClaim = (claim) => {
   if (!claim) return false;
   if (claim.isVoided || claim.isVoid) return false;
@@ -91,6 +96,7 @@ export const buildLedgerProcedureContext = ({
   invoices = [],
   claims = [],
   adjustments = [],
+  keepUnclaimedInsuranceEstimates = false,
 } = {}) => {
   // Every procedure of every invoice, indexed by ProcNum, plus the total
   // procedure-level write-off each one is carrying. An adjustment stores the
@@ -130,12 +136,10 @@ export const buildLedgerProcedureContext = ({
     claimProcedureKeys.has(String(proc.ProcNum || "")) ||
     claimProcedureKeys.has(String(proc.procedureId || "")) ||
     claimProcedureKeys.has(String(proc.procId || "")) ||
-    claimProcedureKeys.has(String(proc.itemId || "")) ||
-    claimProcedureKeys.has(
-      `code:${proc.code || proc.cptCode || proc.ProcCode || ""}`,
-    );
+    claimProcedureKeys.has(String(proc.itemId || ""));
 
   const appliedWriteOffByProc = new Map();
+  const debitAdjustmentByProc = new Map();
   (adjustments || []).forEach((adj) => {
     // Income transfers move liability between insurance and patient, they
     // are not a write-off of the charge. Voided rows no longer affect it.
@@ -149,6 +153,15 @@ export const buildLedgerProcedureContext = ({
     }
     const amount = Math.abs(moneyNumber(adj.amount));
     if (!(amount > 0)) return;
+    if (adjustmentIsDebitAddition(adj)) {
+      procedureTargetsOf(adj).forEach((procNum) => {
+        debitAdjustmentByProc.set(
+          procNum,
+          (debitAdjustmentByProc.get(procNum) || 0) + amount,
+        );
+      });
+      return;
+    }
     procedureTargetsOf(adj).forEach((procNum) => {
       appliedWriteOffByProc.set(
         procNum,
@@ -159,7 +172,7 @@ export const buildLedgerProcedureContext = ({
 
   const procedureBaseAmounts = (proc) => {
     const key = String(proc._id || proc.id);
-    const fee = moneyNumber(
+    const baseFee = moneyNumber(
       proc.totalPrice || proc.total || proc.ProcFee || proc.charge || proc.amount,
     );
     let ptPortion = moneyNumber(
@@ -175,7 +188,23 @@ export const buildLedgerProcedureContext = ({
     const pricingWriteOff = moneyNumber(
       proc.writeoff || proc.writeoffAmount || proc.estimatedWriteOff,
     );
-    if (!procedureIsClaimed(proc)) {
+    if (baseFee > 0 && insPortion > 0 && ptPortion + insPortion + pricingWriteOff > baseFee) {
+      ptPortion = Math.max(0, baseFee - insPortion - pricingWriteOff);
+    }
+
+    const debitAdjustment = debitAdjustmentByProc.get(key) || 0;
+    const coveredBase = Math.max(0, baseFee - pricingWriteOff);
+    const insuranceRatio =
+      coveredBase > 0 && insPortion > 0
+        ? Math.min(1, Math.max(0, insPortion / coveredBase))
+        : 0;
+    if (debitAdjustment > 0) {
+      const debitInsPortion = round2(debitAdjustment * insuranceRatio);
+      insPortion += debitInsPortion;
+      ptPortion += round2(debitAdjustment - debitInsPortion);
+    }
+    const fee = baseFee + debitAdjustment;
+    if (!keepUnclaimedInsuranceEstimates && !procedureIsClaimed(proc)) {
       ptPortion += insPortion;
       insPortion = 0;
     }
@@ -234,14 +263,17 @@ export const buildLedgerProcedureContext = ({
       .map((proc) => {
         const { fee, ptPortion, insPortion, pricingWriteOff } =
           procedureBaseAmounts(proc);
+        const isDebitAdjustment = adjustmentIsDebitAddition(adj);
         const patientCreditBase = Math.max(0, fee - pricingWriteOff);
         return {
           ...proc,
           fee,
-          ptPortion: isPatientCreditAdjustment
+          ptPortion: isDebitAdjustment
+            ? ptPortion
+            : isPatientCreditAdjustment
             ? Math.max(0, patientCreditBase - adjustmentAmount)
             : ptPortion,
-          insPortion: isPatientCreditAdjustment ? 0 : insPortion,
+          insPortion: isPatientCreditAdjustment && !isDebitAdjustment ? 0 : insPortion,
           writeoff: pricingWriteOff,
           estimatedWriteOff: pricingWriteOff,
           appliedAdjustment: adjustmentAmount,

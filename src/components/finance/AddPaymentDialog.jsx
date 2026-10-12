@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box, Typography, Select, MenuItem, Checkbox, Button, TextField, IconButton, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
@@ -33,6 +33,23 @@ const moneyNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const paymentLineAmount = (item = {}) => {
+  return moneyNumber(item.payAmount ?? item.patientBalance);
+};
+
+const roundMoney = (value) => Number(Math.max(0, moneyNumber(value)).toFixed(2));
+
+const procedureKey = (proc = {}) => {
+  const key =
+    proc.id ||
+    proc._id ||
+    proc.ProcNum ||
+    proc.procedureId ||
+    proc.itemId ||
+    proc.procId;
+  return key ? String(key) : "";
+};
+
 const toLedgerPaymentInvoices = (ledgerItems = []) => {
   return ledgerItems
     .filter((item) => item?.method === "Invoice" && !item.isVoided)
@@ -49,76 +66,129 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         const status = String(detail.status || "").toLowerCase();
         return status !== "void" && status !== "voided";
       });
-      const claimedProcedureIds = new Set(
-        liveClaims
-          .flatMap((claim) => claim.procedures || [])
-          .flatMap((proc) => [
-            proc.id,
-            proc._id,
-            proc.ProcNum,
-            proc.procedureId,
-            proc.itemId,
-          ])
-          .filter(Boolean)
-          .map(String),
-      );
-      const hasLiveClaim = liveClaims.length > 0;
-      const sourceProcedures = procedures.length > 0 ? procedures : [item];
-      const allocationProcedures = hasLiveClaim
-        ? sourceProcedures.filter(
-            (proc) =>
-              !claimedProcedureIds.has(
-                String(proc.id || proc._id || proc.ProcNum || proc.procedureId),
-              ),
-          )
-        : sourceProcedures;
-      const patientProcedures =
-        allocationProcedures.length > 0 ? allocationProcedures : sourceProcedures;
-      const weights = patientProcedures.map((proc) =>
-        Math.max(
-          0,
-          moneyNumber(proc.ptPortion) ||
-            moneyNumber(proc.patientPortion) ||
-            moneyNumber(proc.patientAmount) ||
-            moneyNumber(proc.fee) ||
-            moneyNumber(proc.totalPrice) ||
-            moneyNumber(proc.total) ||
-            moneyNumber(proc.charge) ||
-            moneyNumber(item.amount),
-        ),
-      );
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-      let remaining = patientBalance;
 
-      const lineItems = patientProcedures.map(
-        (proc, index, arr) => {
-          const isLast = index === arr.length - 1;
-          const share = isLast
-            ? remaining
-            : Math.round(
-                patientBalance *
-                  ((totalWeight > 0 ? weights[index] : 1) /
-                    (totalWeight > 0 ? totalWeight : arr.length)) *
-                  100,
-              ) / 100;
-          remaining = Math.round((remaining - share) * 100) / 100;
+      const paidByProcedure = new Map();
+      (item.details || []).forEach((detail) => {
+        if (!detail.isPayment || detail.isAdjustment || detail.isVoided) return;
+        (detail.procedures || []).forEach((proc) => {
+          const key = procedureKey(proc);
+          if (!key) return;
+          const paid = Math.max(
+            moneyNumber(proc.appliedPayment),
+            moneyNumber(proc.paymentAmount),
+            moneyNumber(proc.paidAmount),
+            moneyNumber(proc.payAmount),
+          );
+          if (paid > 0) {
+            paidByProcedure.set(key, (paidByProcedure.get(key) || 0) + paid);
+          }
+        });
+      });
+
+      const claimProcedures = liveClaims.flatMap((claim) =>
+        (claim.procedures || []).map((proc) => ({ ...proc, __fromClaim: true })),
+      );
+      const claimedProcedureIds = new Set(
+        claimProcedures.map(procedureKey).filter(Boolean),
+      );
+      const invoiceProcedures = procedures
+        .filter((proc) => !claimedProcedureIds.has(procedureKey(proc)))
+        .map((proc) => ({ ...proc, __fromInvoice: true }));
+      const patientProcedures =
+        claimProcedures.length > 0 || invoiceProcedures.length > 0
+          ? [...claimProcedures, ...invoiceProcedures]
+          : [item];
+
+      let lineItems = patientProcedures
+        .map((proc, index) => {
+          const key = procedureKey(proc);
+          const totalAmount = moneyNumber(
+            proc.fee ||
+              proc.totalPrice ||
+              proc.total ||
+              proc.ProcFee ||
+              proc.charge ||
+              proc.amount ||
+              item.amount,
+          );
+          const insuranceAmount = moneyNumber(
+            proc.insuranceAmount ??
+              proc.insPortion ??
+              proc.totalInsPortion ??
+              proc.primaryInsPortion ??
+              proc.insPayEst ??
+              0,
+          );
+          const writeoffAmount = moneyNumber(
+            proc.writeoffAmount ??
+              proc.writeOffAmount ??
+              proc.estimatedWriteOff ??
+              proc.writeoff ??
+              0,
+          );
+          let procPatientBalance =
+            moneyNumber(proc.patientBalance) ||
+            moneyNumber(proc.ptPortion) ||
+            moneyNumber(proc.patientPortion) ||
+            moneyNumber(proc.patientAmount);
+          if (
+            proc.__fromClaim &&
+            totalAmount > 0 &&
+            insuranceAmount > 0 &&
+            procPatientBalance + insuranceAmount + writeoffAmount > totalAmount
+          ) {
+            procPatientBalance = Math.max(
+              0,
+              totalAmount - insuranceAmount - writeoffAmount,
+            );
+          }
+          const paidAmount = Math.max(
+            paidByProcedure.get(key) || 0,
+            moneyNumber(proc.patientPaidAmount),
+            moneyNumber(proc.patientPaid),
+            moneyNumber(proc.ptPaid),
+          );
+          const remainingPatient = roundMoney(procPatientBalance - paidAmount);
           return {
             ...proc,
-            id: proc.id || proc._id || proc.ProcNum || `${item.id}-${index}`,
+            id: key || `${item.id}-${index}`,
             checked: false,
-            payAmount: share.toFixed(2),
-            patientBalance: share,
-            totalAmount: moneyNumber(
-              proc.fee || proc.totalPrice || proc.total || proc.charge || item.amount,
-            ),
-            writeoffAmount: 0,
+            payAmount: remainingPatient.toFixed(2),
+            patientBalance: remainingPatient,
+            totalAmount,
+            writeoffAmount,
             adjustmentAmount: 0,
-            insuranceAmount: 0,
+            insuranceAmount,
           };
-        },
-      ).filter((proc) => proc.patientBalance > 0);
+        })
+        .filter((proc) => proc.patientBalance > 0);
 
       if (lineItems.length === 0) return null;
+      const linePatientTotal = lineItems.reduce(
+        (sum, proc) => sum + moneyNumber(proc.patientBalance),
+        0,
+      );
+      if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
+        let remaining = roundMoney(patientBalance);
+        lineItems = lineItems.map((proc, index) => {
+          const isLast = index === lineItems.length - 1;
+          const nextBalance = isLast
+            ? remaining
+            : roundMoney(
+                patientBalance *
+                  (linePatientTotal > 0
+                    ? moneyNumber(proc.patientBalance) / linePatientTotal
+                    : 1 / lineItems.length),
+              );
+          remaining = roundMoney(remaining - nextBalance);
+          return {
+            ...proc,
+            patientBalance: nextBalance,
+            payAmount: nextBalance.toFixed(2),
+          };
+        }).filter((proc) => proc.patientBalance > 0);
+      }
+
       return {
         id: item.id,
         invoiceNumber: item.invoiceNumber || item.id,
@@ -156,6 +226,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const invoices = useSelector(selectPaymentInvoicesForPatient(patientId));
   const ledgerItems = useSelector(selectLedgerItemsForPatient(patientId));
   const loading  = useSelector(selectPaymentInvoicesLoading);
+  const ledgerOverrideAppliedRef = useRef(false);
 
   // ── Local form state ─────────────────────────────────────────────────────
   const [selectedPatient, setSelectedPatient] = useState(
@@ -172,6 +243,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
     if (patientId) {
+      ledgerOverrideAppliedRef.current = false;
       dispatch(invalidatePaymentInvoices(patientId));
       dispatch(fetchPaymentDraftInvoices(patientId));
       
@@ -182,21 +254,27 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   }, [dispatch, patientId]);
 
   useEffect(() => {
-    if (!patientId || loading || invoices.length > 0 || ledgerItems.length === 0) {
+    if (
+      !patientId ||
+      loading ||
+      ledgerOverrideAppliedRef.current ||
+      ledgerItems.length === 0
+    ) {
       return;
     }
     const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
     if (ledgerInvoices.length > 0) {
       dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
+      ledgerOverrideAppliedRef.current = true;
     }
-  }, [dispatch, patientId, loading, invoices.length, ledgerItems]);
+  }, [dispatch, patientId, loading, ledgerItems]);
 
   // ── Derived totals ───────────────────────────────────────────────────────
   const { totalChecked } = useMemo(() => {
     let sum = 0;
     invoices.forEach((inv) => {
       (inv.lineItems || []).forEach((item) => {
-        if (item.checked) sum += Number(item.payAmount || 0);
+        if (item.checked) sum += paymentLineAmount(item);
       });
     });
     return { totalChecked: sum };
@@ -215,7 +293,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       if (invToToggle && !invToToggle.checked) {
         let sumToAdd = 0;
         invToToggle.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+          if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
         if (totalChecked + sumToAdd > accountCredit) {
           showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
@@ -251,7 +329,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       let sumToAdd = 0;
       invoices.forEach((inv) => {
         inv.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+          if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
       });
       if (totalChecked + sumToAdd > accountCredit) {
@@ -294,7 +372,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     const selectedItems = [];
     invoices.forEach((inv) => {
       (inv.lineItems || []).forEach((item) => {
-        if (item.checked) selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: item.payAmount });
+        if (item.checked) selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: paymentLineAmount(item).toFixed(2) });
       });
     });
 

@@ -506,6 +506,10 @@ const LedgerItemCard = ({
                   detail.createdByName || displayItem.createdByName
                 }
                 createdAt={detail.createdAt || displayItem.rawDate}
+                updatedByName={
+                  detail.updatedByName || displayItem.updatedByName
+                }
+                updatedAt={detail.updatedAt || displayItem.updatedAt}
                 isPayment={detail.isPayment}
                 isClaim={detail.isClaim}
                 insuranceType={detail.insuranceType}

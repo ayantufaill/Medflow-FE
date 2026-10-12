@@ -50,10 +50,18 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     ? `${currentPatient.firstName} ${currentPatient.lastName}` 
     : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
 
+  const groupedDetailProcedures = editTarget?.details?.find(d => d.isGrouped)?.procedures;
   const procedures = editTarget?.lineItems || 
                      editTarget?.procedures || 
-                     (editTarget?.details?.find(d => d.isGrouped)?.procedures) || 
+                     groupedDetailProcedures || 
                      [];
+  // The grouped detail's procedures are already restated by the ledger (debit
+  // adjustments folded in and the patient/insurance portions finalised), so
+  // they are used as-is rather than being restated a second time from the raw
+  // line-item balances.
+  const proceduresAreRestated =
+    procedures === groupedDetailProcedures &&
+    (groupedDetailProcedures?.length || 0) > 0;
   const liveClaims = (editTarget?.details || []).filter((detail) => {
     if (!detail?.isClaim) return false;
     if (detail.isVoided || detail.isVoid) return false;
@@ -91,7 +99,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
           : ""),
     );
 
-  const totalCharges = procedures.reduce((sum, p) => sum + Number(p.totalPrice || p.charge || p.ProcFee || 0), 0);
+  const chargeOf = (p) =>
+    proceduresAreRestated
+      ? Number(p.fee || p.totalPrice || p.charge || p.ProcFee || 0)
+      : Number(p.totalPrice || p.charge || p.ProcFee || 0);
+  const totalCharges = procedures.reduce((sum, p) => sum + chargeOf(p), 0);
   
   let totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
   let hasSummary = false;
@@ -112,7 +124,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   };
 
   const dynamicLineItems = procedures.map(p => {
-    const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
+    const charge = chargeOf(p);
     const weight = totalCharges > 0 ? charge / totalCharges : 0;
     
     let writeoff = Number(p.writeoff || p.estimatedWriteOff || 0);
@@ -123,17 +135,24 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       } catch (e) {}
     }
 
-    let ptBalance = Number(p.patientBalance || p.ptBalance || parseFloat(String(p.ptPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
-    let insBalance = Number(p.insuranceBalance || p.insBalance || parseFloat(String(p.insPortion || '').replace(/[^0-9.-]+/g, "")) || 0);
-    const rawInsBalance = insBalance;
-    const procedureIsClaimed = claimedProcedureIds.has(procedureKey(p));
-    if (!procedureIsClaimed) {
-      ptBalance += insBalance;
-      insBalance = 0;
-    } else if (!hasLiveClaims) {
-      ptBalance += insBalance;
-      insBalance = 0;
+    let ptBalance;
+    let insBalance;
+    if (proceduresAreRestated) {
+      // Restated by the ledger: the patient portion of an unclaimed line
+      // already carries its insurance estimate, so adding the raw insurance
+      // balance again would double-count it (e.g. $50 patient + $45 estimate).
+      ptBalance = parseAmount(p.ptPortion);
+      insBalance = parseAmount(p.insPortion);
+    } else {
+      ptBalance = Number(p.patientBalance || p.ptBalance || parseAmount(p.ptPortion));
+      insBalance = Number(p.insuranceBalance || p.insBalance || parseAmount(p.insPortion));
+      const procedureIsClaimed = claimedProcedureIds.has(procedureKey(p));
+      if (!procedureIsClaimed || !hasLiveClaims) {
+        ptBalance += insBalance;
+        insBalance = 0;
+      }
     }
+    const rawInsBalance = insBalance;
     let insurancePaidAmt = Number(p.insurancePaid || 0);
     let patientPaidAmt = Number(p.patientPaid || 0);
     let pay = Number(p.paidAmount || p.payAmount || 0);

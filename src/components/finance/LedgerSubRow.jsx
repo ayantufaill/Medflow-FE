@@ -67,6 +67,8 @@ const LedgerSubRow = ({
   initials,
   createdByName,
   createdAt,
+  updatedByName,
+  updatedAt,
   isAdjustment,
   isPayment,
   isClaim,
@@ -161,12 +163,47 @@ const LedgerSubRow = ({
   }, [descriptionDraft, editingDescription, onDescriptionSave]);
 
   const hasProcedures = procedures && procedures.length > 0;
+  const moneyValue = (value) => Number(value || 0);
+  const claimPatientPortion = (proc) =>
+    insuranceType?.toLowerCase() === "secondary" ? 0 : moneyValue(proc.ptPortion);
+  const claimInsurancePortion = (proc) => {
+    const status = claimStatus?.toLowerCase();
+    if (status === "rejected" || status === "denied") return 0;
+    if (insuranceType?.toLowerCase() === "secondary") {
+      return moneyValue(
+        proc.secondaryInsPortion !== undefined &&
+          proc.secondaryInsPortion !== null &&
+          Number(proc.secondaryInsPortion) > 0
+          ? proc.secondaryInsPortion
+          : (proc.insPayEst ?? proc.amount ?? proc.secondaryInsPortion ?? 0),
+      );
+    }
+    // Prefer the restated insurance portion (debit adjustments folded in) so a
+    // pending claim reflects the current estimate rather than the stale amount
+    // it was originally submitted for. Fall back to the claim's own estimate.
+    return moneyValue(
+      proc.insPortion !== undefined &&
+        proc.insPortion !== null &&
+        Number(proc.insPortion) > 0
+        ? proc.insPortion
+        : proc.primaryInsPortion !== undefined &&
+            proc.primaryInsPortion !== null &&
+            Number(proc.primaryInsPortion) > 0
+          ? proc.primaryInsPortion
+          : (proc.insPayEst ?? proc.amount ?? 0),
+    );
+  };
 
   const patientTotal = hasProcedures
     ? procedures.reduce((sum, proc) => sum + Number(proc.ptPortion || 0), 0)
     : 0;
   const insTotal = hasProcedures
-    ? procedures.reduce((sum, proc) => sum + Number(proc.insPortion || 0), 0)
+    ? procedures.reduce(
+        (sum, proc) =>
+          sum +
+          (isClaim ? claimInsurancePortion(proc) : Number(proc.insPortion || 0)),
+        0,
+      )
     : 0;
   const writeoffTotal = hasProcedures
     ? procedures.reduce(
@@ -186,7 +223,9 @@ const LedgerSubRow = ({
     : 0;
   const displayPatientTotal = showPaymentColumn
     ? Math.max(0, patientTotal - paymentTotal)
-    : patientTotal;
+    : isClaim
+      ? procedures.reduce((sum, proc) => sum + claimPatientPortion(proc), 0)
+      : patientTotal;
 
   const statusIsClosed = ["paid", "cancelled"].includes(
     claimStatus?.toLowerCase(),
@@ -291,16 +330,30 @@ const LedgerSubRow = ({
     "&:hover": { bgcolor: "#DBEAFE", color: "#2362EF" },
   };
 
-  // Hover text for the initials: "Created by [name] on [date] at [time]".
-  const createdByTooltip = (() => {
-    const name = createdByName || initials || "Staff";
-    const parsed = createdAt ? dayjs(createdAt) : null;
-    if (!parsed?.isValid()) return `Created by ${name}`;
-    if (isDateOnlyValue(createdAt)) {
-      return `Created by ${name} on ${formatDate(createdAt)}`;
+  const formatAuditLine = (label, name, value) => {
+    const parsed = value ? dayjs(value) : null;
+    const displayName = name || "Staff";
+    if (!parsed?.isValid()) return `${label} by ${displayName}`;
+    if (isDateOnlyValue(value)) {
+      return `${label} by ${displayName} on ${formatDate(value)}`;
     }
-    return `Created by ${name} on ${formatDate(parsed.toDate())} at ${parsed.format("h:mm A")}`;
-  })();
+    return `${label} by ${displayName} on ${formatDate(parsed.toDate())} at ${parsed.format("h:mm A")}`;
+  };
+
+  const createdByTooltip = formatAuditLine(
+    "Created",
+    createdByName || initials,
+    createdAt,
+  );
+  const updatedByTooltip =
+    isClaim && (updatedByName || updatedAt)
+      ? formatAuditLine("Updated", updatedByName, updatedAt)
+      : null;
+  const auditTooltip = updatedByTooltip || createdByTooltip;
+  const auditDisplayName =
+    isClaim && (updatedByName || updatedAt)
+      ? updatedByName || "STAFF"
+      : initials || "STAFF";
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -491,7 +544,7 @@ const LedgerSubRow = ({
           </Typography>
         )}
 
-        <Tooltip title={createdByTooltip} placement="top">
+        <Tooltip title={auditTooltip} placement="top">
           <Typography
             variant="caption"
             sx={{
@@ -506,7 +559,7 @@ const LedgerSubRow = ({
               display: hasProcedures && expanded ? "none" : "block",
             }}
           >
-            {initials || "STAFF"}
+            {auditDisplayName}
           </Typography>
         </Tooltip>
 
@@ -1136,9 +1189,7 @@ const LedgerSubRow = ({
                 >
                   $
                   {(isClaim
-                    ? insuranceType?.toLowerCase() === "secondary"
-                      ? 0 // Secondary claim patient portion is typically 0 (remaining is primary's responsibility at generation)
-                      : Number(proc.ptPortion || 0) // Primary claim patient portion
+                    ? claimPatientPortion(proc)
                     : Number(proc.ptPortion || 0)
                   ).toFixed(2)}
                 </Typography>
@@ -1154,30 +1205,7 @@ const LedgerSubRow = ({
                 >
                   $
                   {(isClaim
-                    ? claimStatus?.toLowerCase() === "rejected" ||
-                      claimStatus?.toLowerCase() === "denied"
-                      ? 0
-                      : insuranceType?.toLowerCase() === "secondary"
-                        ? Number(
-                            proc.secondaryInsPortion !== undefined &&
-                              proc.secondaryInsPortion !== null &&
-                              Number(proc.secondaryInsPortion) > 0
-                              ? proc.secondaryInsPortion
-                              : (proc.insPayEst ??
-                                  proc.amount ??
-                                  proc.secondaryInsPortion ??
-                                  0),
-                          )
-                        : Number(
-                            proc.primaryInsPortion !== undefined &&
-                              proc.primaryInsPortion !== null &&
-                              Number(proc.primaryInsPortion) > 0
-                              ? proc.primaryInsPortion
-                              : (proc.insPayEst ??
-                                  proc.insPortion ??
-                                  proc.amount ??
-                                  0),
-                          ) // Show primary expected insurance portion
+                    ? claimInsurancePortion(proc)
                     : Number(proc.insPortion || 0)
                   ).toFixed(2)}
                 </Typography>

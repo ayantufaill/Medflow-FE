@@ -36,7 +36,6 @@ import {
   IconCalendar,
 } from "./FinanceActionIcons";
 import FinanceDialogManager from "./FinanceDialogManager";
-import LateFeeAcceptanceDialog from "./LateFeeAcceptanceDialog";
 import apiClient from "../../config/api";
 import { claimService } from "../../services/claim.service";
 import { useSelector } from 'react-redux';
@@ -77,7 +76,6 @@ const PatientFinanceInfo = forwardRef(
     const [showInsurancePayment, setShowInsurancePayment] = useState(false);
     const [showAddPayment, setShowAddPayment] = useState(false);
     const [showAccountNotes, setShowAccountNotes] = useState(false);
-    const [showLateFeeTerms, setShowLateFeeTerms] = useState(false);
     const [showNewInvoice, setShowNewInvoice] = useState(false);
     // Persisted so leaving the finance page mid-invoice doesn't lose the rows
     // the user added. Re-opened by LedgerList when they come back — see
@@ -672,23 +670,6 @@ const PatientFinanceInfo = forwardRef(
               </Button>
               <Button
                 variant="text"
-                onClick={() => setShowLateFeeTerms(true)}
-                sx={{
-                  textTransform: "none",
-                  color: "#2362EF",
-                  fontSize: "14px",
-                  p: 0,
-                  minWidth: 0,
-                  "&:hover": {
-                    bgcolor: "transparent",
-                    textDecoration: "underline",
-                  },
-                }}
-              >
-                late fee policy
-              </Button>
-              <Button
-                variant="text"
                 startIcon={
                   <Box
                     component="img"
@@ -800,13 +781,6 @@ const PatientFinanceInfo = forwardRef(
           setShowSimpleStatement={setShowSimpleStatement}
           showDetailedStatement={showDetailedStatement}
           setShowDetailedStatement={setShowDetailedStatement}
-        />
-
-        <LateFeeAcceptanceDialog
-          open={showLateFeeTerms}
-          onClose={() => setShowLateFeeTerms(false)}
-          patientId={patient?._id || patient?.id}
-          clinicId={currentBranchId}
         />
       </>
     );

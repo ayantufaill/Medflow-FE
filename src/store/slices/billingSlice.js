@@ -18,7 +18,7 @@
  * @author Senior Software Engineer
  */
 
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import apiClient from "../../config/api";
 import { invoiceService } from "../../services/invoice.service";
 import { claimService } from "../../services/claim.service";
@@ -43,6 +43,19 @@ const roundMoney = (value) => Math.round(moneyNumber(value) * 100) / 100;
 // into `createdByName`; older rows may not have one, in which case we fall back to
 // a generic label rather than inventing a name.
 const creatorDisplay = (entity) => entity?.createdByName || "STAFF";
+const claimUpdatedByName = (claim) =>
+  claim?.updatedByName ||
+  claim?.modifiedByName ||
+  claim?.lastUpdatedByName ||
+  claim?.updatedByDisplayName ||
+  null;
+const claimUpdatedAt = (claim) =>
+  claim?.updatedAt ||
+  claim?.modifiedAt ||
+  claim?.lastUpdatedAt ||
+  claim?.statusUpdatedAt ||
+  claim?.attachmentUpdatedAt ||
+  null;
 
 const adjustmentDisplayType = (adjustment = {}) => {
   const note = String(adjustment.notes || "");
@@ -139,6 +152,12 @@ export const fetchLedgerItems = createAsyncThunk(
         invoices,
         claims,
         adjustments,
+        keepUnclaimedInsuranceEstimates: true,
+      });
+      const currentLiabilityProcedures = buildLedgerProcedureContext({
+        invoices,
+        claims,
+        adjustments,
       });
       const {
         proceduresForAdjustment,
@@ -156,7 +175,14 @@ export const fetchLedgerItems = createAsyncThunk(
         const rawIns =
           Number(invoice.insurancePortion || 0) +
           Number(invoice.secondaryInsPortion || 0);
-        const originalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
+        const baseOriginalTotal = rawTotal > 0 ? rawTotal : rawPt + rawIns;
+        const adjustedProcedureTotal = (invoice.lineItems || []).reduce(
+          (sum, line) =>
+            sum +
+            moneyNumber(ledgerProcedures.procedureAfterAdjustments(line).fee),
+          0,
+        );
+        const originalTotal = Math.max(baseOriginalTotal, adjustedProcedureTotal);
         const penaltyItems = (invoice.lineItems || []).filter(
           isPatientPenaltyItem,
         );
@@ -200,12 +226,13 @@ export const fetchLedgerItems = createAsyncThunk(
 
         let totalInsPaidAmt = 0;
         let totalAdjAmt = 0;
+        let totalDebitAdjAmt = 0;
         // Only insurance write-offs posted by the insurance payment flow
         // ("Invoice #x - Insurance W/O: $y"). Everything else that reduces the
         // invoice — courtesy write-offs, un-collected, small balance, etc. —
         // is an adjustment and must NOT be reported as an Applied W/O.
         let totalInsWoAmt = 0;
-        let runningBalance = originalTotal;
+        let runningBalance = baseOriginalTotal;
 
         // Combine payments and adjustments to calculate a single unified running balance chronologically
         const combinedDetails = [
@@ -252,6 +279,13 @@ export const fetchLedgerItems = createAsyncThunk(
                   ? "(Voided)"
                   : `$${Math.max(0, runningBalance).toFixed(2)}`,
                 isPayment: true,
+                // Insurance money and patient money are different ledgers.
+                // Consumers (the credit adjustment dialog) split what has been
+                // paid per procedure by payer, so insurance payments must not
+                // be counted against the patient's balance.
+                isInsurancePayment:
+                  payment.paymentSource === "insurance_company" ||
+                  payment.method === "insurance",
                 isVoided,
                 initials: creatorDisplay(payment),
                 createdByName: payment.createdByName || null,
@@ -278,24 +312,41 @@ export const fetchLedgerItems = createAsyncThunk(
                   adj.notes.toLowerCase().includes("insurance writeoff") ||
                   adj.notes.toLowerCase().includes("insurance write-off"))
               );
-              const isCourtesy = !!(
-                (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
-                (adj.notes &&
-                  adj.notes.toLowerCase().includes("small balance")) ||
-                adj.type === "Write-off" ||
-                (adj.type || "").toLowerCase() === "write-off" ||
-                (adj.type || "").toLowerCase() === "writeoff" ||
-                (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
-                (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
-                !adj.type // Defaulting to Write-off if empty, even if notes have the invoice link
-              );
-              const adjAmt = isVoided ? 0 : Math.abs(Number(adj.amount || 0));
+              // A debit adjustment (positive amount / "debit adjustment" note)
+              // increases the balance — it is the opposite of a courtesy and
+              // must never be subtracted from a procedure's patient portion.
+              const isDebitAdjustment =
+                Number(adj.amount || 0) > 0 ||
+                !!(
+                  adj.notes &&
+                  adj.notes.toLowerCase().includes("debit adjustment")
+                );
+              const isCourtesy =
+                !isDebitAdjustment &&
+                !!(
+                  (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
+                  (adj.notes &&
+                    adj.notes.toLowerCase().includes("small balance")) ||
+                  adj.type === "Write-off" ||
+                  (adj.type || "").toLowerCase() === "write-off" ||
+                  (adj.type || "").toLowerCase() === "writeoff" ||
+                  (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
+                  (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
+                  !adj.type // Defaulting to Write-off if empty, even if notes have the invoice link
+                );
+              const signedAdjAmt = isVoided ? 0 : Number(adj.amount || 0);
+              const adjAmt = Math.abs(signedAdjAmt);
 
-              totalAdjAmt += adjAmt;
+              totalAdjAmt += signedAdjAmt;
+              if (signedAdjAmt > 0) totalDebitAdjAmt += signedAdjAmt;
               if (isInsWriteOff) totalInsWoAmt += adjAmt;
-              if ((isCourtesy || isTransfer) && !isInsWriteOff)
+              if (
+                (isCourtesy || isTransfer) &&
+                !isInsWriteOff &&
+                signedAdjAmt < 0
+              )
                 totalPtAdjAmt += adjAmt;
-              runningBalance -= adjAmt;
+              runningBalance += signedAdjAmt;
 
               return {
                 id: adj._id || adj.id,
@@ -413,6 +464,9 @@ export const fetchLedgerItems = createAsyncThunk(
               (l) => !isDbiProcedure(l),
             );
           }
+          specificProcedures = specificProcedures.map((line) =>
+            currentLiabilityProcedures.procedureAfterAdjustments(line),
+          );
           const specificAmount = specificProcedures.reduce(
             (sum, line) =>
               sum +
@@ -423,6 +477,25 @@ export const fetchLedgerItems = createAsyncThunk(
                   line.totalPrice ||
                   line.ProcFee ||
                   0,
+              ),
+            0,
+          );
+
+          // Restated insurance portion first (debit adjustments folded in),
+          // then the claim's own primary estimate, then whatever it carried.
+          const specificPrimaryAmount = specificProcedures.reduce(
+            (sum, line) =>
+              sum +
+              Number(
+                line.insPortion !== undefined &&
+                  line.insPortion !== null &&
+                  Number(line.insPortion) > 0
+                  ? line.insPortion
+                  : line.primaryInsPortion !== undefined &&
+                      line.primaryInsPortion !== null &&
+                      Number(line.primaryInsPortion) > 0
+                    ? line.primaryInsPortion
+                    : (line.insPayEst ?? line.amount ?? 0),
               ),
             0,
           );
@@ -449,9 +522,11 @@ export const fetchLedgerItems = createAsyncThunk(
               : specificSecondaryAmount > 0
                 ? specificSecondaryAmount
                 : rawClaimAmount
-            : rawClaimAmount > 0
-              ? rawClaimAmount
-              : specificAmount;
+            : specificPrimaryAmount > 0
+              ? specificPrimaryAmount
+              : rawClaimAmount > 0
+                ? rawClaimAmount
+                : specificAmount;
 
           return {
             id: claim.id || claim._id,
@@ -482,13 +557,17 @@ export const fetchLedgerItems = createAsyncThunk(
             initials: creatorDisplay(claim),
             createdByName: claim.createdByName || null,
             createdAt: claim.createdAt || null,
+            updatedByName: claimUpdatedByName(claim),
+            updatedAt: claimUpdatedAt(claim),
             description: claim.notes || claim.description || "",
           };
         });
 
         let detailsMapped = [];
         if (invoice.lineItems?.length > 0) {
-          const invoiceProcedures = invoice.lineItems;
+          const invoiceProcedures = invoice.lineItems.map((line) =>
+            currentLiabilityProcedures.procedureAfterAdjustments(line),
+          );
 
           const combinedTitle = invoiceProcedures
             .map((l) => l.description || "Procedure")
@@ -496,7 +575,15 @@ export const fetchLedgerItems = createAsyncThunk(
 
           const totalAmount = invoiceProcedures.reduce(
             (sum, line) =>
-              sum + Number(line.total || line.totalPrice || line.charge || 0),
+              sum +
+              Number(
+                line.fee ||
+                  line.total ||
+                  line.totalPrice ||
+                  line.charge ||
+                  line.amount ||
+                  0,
+              ),
             0,
           );
 
@@ -575,7 +662,7 @@ export const fetchLedgerItems = createAsyncThunk(
                   line.primaryInsPortion !== null &&
                   Number(line.primaryInsPortion) > 0
                   ? line.primaryInsPortion
-                  : (line.insPayEst ?? line.insPortion ?? line.amount ?? 0),
+                  : (line.insPayEst ?? line.amount ?? line.insPortion ?? 0),
               )
             );
           }, 0);
@@ -681,19 +768,24 @@ export const fetchLedgerItems = createAsyncThunk(
           // Insurance pending: patient owes their portion, insurance owes their portion
           const penaltyInIns = Math.min(rawIns, penaltyTotal);
           const hasLiveClaim = hasPrimaryClaim || hasSecondaryClaim;
+          const expectedRemainingIns =
+            totalPendingClaimAmount + unbilledInsurance;
           let calcInsBal = hasLiveClaim
             ? Math.max(
                 0,
-                rawIns - penaltyInIns - totalInsPaidAmt - ptOverpayment,
+                (rawIns > 0 ? rawIns : expectedRemainingIns) -
+                  penaltyInIns -
+                  totalInsPaidAmt -
+                  ptOverpayment,
               )
-            : 0;
+            : hasInsurancePayment || hasApprovedClaim
+              ? Math.max(0, rawIns - penaltyInIns - totalInsPaidAmt)
+              : 0;
 
           // Once a claim exists, only the procedures actually on that claim
           // remain with insurance. Any unclaimed procedure's estimate moves to
           // the patient balance, even while the claim is still pending.
           if (hasLiveClaim || hasInsurancePayment || hasApprovedClaim) {
-            const expectedRemainingIns =
-              totalPendingClaimAmount + unbilledInsurance;
             calcInsBal = Math.min(calcInsBal, expectedRemainingIns);
           }
 
@@ -715,8 +807,98 @@ export const fetchLedgerItems = createAsyncThunk(
         // $120 insurance + $29 pending Ins WO).
         const adjustedInvBal = Math.max(
           0,
-          originalTotal - totalPtPaidAmt - totalInsPaidAmt - totalAdjAmt,
+          baseOriginalTotal - totalPtPaidAmt - totalInsPaidAmt + totalAdjAmt,
         );
+        if (totalDebitAdjAmt > 0 && invoice.lineItems?.length > 0) {
+          const currentProcedureLiability = invoice.lineItems.map((line) =>
+            currentLiabilityProcedures.procedureAfterAdjustments(line),
+          );
+          const currentProcedurePt = currentProcedureLiability.reduce(
+            (sum, proc) => sum + moneyNumber(proc.ptPortion),
+            0,
+          );
+          const currentProcedureIns = currentProcedureLiability.reduce(
+            (sum, proc) => sum + moneyNumber(proc.insPortion),
+            0,
+          );
+          adjustedInsBal = Math.max(
+            0,
+            roundMoney(currentProcedureIns - totalInsPaidAmt),
+          );
+          adjustedPtBal = Math.max(
+            0,
+            roundMoney(currentProcedurePt - totalPtPaidAmt),
+          );
+        }
+        adjustedPtBal = Math.min(
+          adjustedPtBal,
+          Math.max(0, adjustedInvBal - adjustedInsBal),
+        );
+
+        if (detailsMapped[0]?.isGrouped && detailsMapped[0]?.procedures?.length) {
+          const groupedProcedures = detailsMapped[0].procedures;
+          const groupedTotal = groupedProcedures.reduce(
+            (sum, proc) =>
+              sum +
+              moneyNumber(
+                proc.fee ||
+                  proc.totalPrice ||
+                  proc.total ||
+                  proc.ProcFee ||
+                  proc.charge ||
+                  proc.amount,
+              ),
+            0,
+          );
+          const currentPtTotal = groupedProcedures.reduce(
+            (sum, proc) => sum + moneyNumber(proc.ptPortion),
+            0,
+          );
+          const currentInsTotal = groupedProcedures.reduce(
+            (sum, proc) => sum + moneyNumber(proc.insPortion),
+            0,
+          );
+
+          if (
+            groupedTotal > 0 &&
+            totalDebitAdjAmt <= 0 &&
+            (Math.abs(currentPtTotal - adjustedPtBal) > 0.01 ||
+              Math.abs(currentInsTotal - adjustedInsBal) > 0.01)
+          ) {
+            let remainingPt = adjustedPtBal;
+            let remainingIns = adjustedInsBal;
+            detailsMapped = detailsMapped.map((detail) => {
+              if (!detail.isGrouped) return detail;
+              const procedures = detail.procedures.map((proc, index) => {
+                const charge = moneyNumber(
+                  proc.fee ||
+                    proc.totalPrice ||
+                    proc.total ||
+                    proc.ProcFee ||
+                    proc.charge ||
+                    proc.amount,
+                );
+                const isLast = index === detail.procedures.length - 1;
+                const nextPt = isLast
+                  ? remainingPt
+                  : roundMoney(adjustedPtBal * (charge / groupedTotal));
+                const nextIns = isLast
+                  ? remainingIns
+                  : roundMoney(adjustedInsBal * (charge / groupedTotal));
+                remainingPt = roundMoney(remainingPt - nextPt);
+                remainingIns = roundMoney(remainingIns - nextIns);
+                return {
+                  ...proc,
+                  ptPortion: Math.max(0, nextPt),
+                  patientPortion: Math.max(0, nextPt),
+                  insPortion: Math.max(0, nextIns),
+                  insurancePortion: Math.max(0, nextIns),
+                };
+              });
+              return { ...detail, procedures };
+            });
+          }
+        }
 
         const ptPaidDisplay = totalPtPaidAmt;
 
@@ -775,15 +957,22 @@ export const fetchLedgerItems = createAsyncThunk(
           const isTransfer = !!(
             adj.notes && adj.notes.toLowerCase().includes("income transfer")
           );
-          const isCourtesy = !!(
-            (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
-            adj.type === "Write-off" ||
-            (adj.type || "").toLowerCase() === "write-off" ||
-            (adj.type || "").toLowerCase() === "writeoff" ||
-            (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
-            (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
-            !adj.type
-          );
+          const isDebitAdjustment =
+            Number(adj.amount || 0) > 0 ||
+            !!(
+              adj.notes && adj.notes.toLowerCase().includes("debit adjustment")
+            );
+          const isCourtesy =
+            !isDebitAdjustment &&
+            !!(
+              (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
+              adj.type === "Write-off" ||
+              (adj.type || "").toLowerCase() === "write-off" ||
+              (adj.type || "").toLowerCase() === "writeoff" ||
+              (adj.notes && adj.notes.toLowerCase().includes("write-off")) ||
+              (adj.notes && adj.notes.toLowerCase().includes("writeoff")) ||
+              !adj.type
+            );
 
           // The line items this adjustment was posted against, restated with the
           // write-off folded in. An adjustment with no procedure link keeps its
@@ -1066,6 +1255,9 @@ export const fetchInvoiceDetails = createAsyncThunk(
             isPayment: false,
             procedures: specificProcedures,
             createdAt: claim.createdAt || null,
+            createdByName: claim.createdByName || null,
+            updatedByName: claimUpdatedByName(claim),
+            updatedAt: claimUpdatedAt(claim),
             description: claim.notes || claim.description || "",
           };
         });
@@ -1388,6 +1580,70 @@ export const createInvoiceAdjustment = createAsyncThunk(
 );
 
 /**
+ * Apply a debit adjustment to an invoice. Debit adjustments increase the
+ * procedure fee/balance instead of writing it off.
+ */
+export const createInvoiceDebitAdjustment = createAsyncThunk(
+  "billing/createInvoiceDebitAdjustment",
+  async (
+    {
+      patientId,
+      invoiceId,
+      adjustmentAmount,
+      reason,
+      typeId,
+      lineItems,
+    },
+    { dispatch, rejectWithValue },
+  ) => {
+    try {
+      const procedureAdjustments = (lineItems || [])
+        .map((line) => ({
+          ...line,
+          amount: Number(line.amount || 0),
+        }))
+        .filter((line) => line.procedureId && line.amount > 0);
+
+      if (procedureAdjustments.length > 0) {
+        for (const line of procedureAdjustments) {
+          await apiClient.post("/adjustments", {
+            patientId,
+            invoiceId,
+            procedureId: line.procedureId,
+            amount: Math.abs(line.amount),
+            date: new Date(),
+            type: typeId || undefined,
+            notes: `Debit Adjustment applied to Invoice #${invoiceId} Procedure #${line.procedureId}${line.code ? ` (${line.code})` : ""}${reason ? ` - ${reason}` : ""}`,
+          });
+        }
+      } else {
+        await apiClient.post("/adjustments", {
+          patientId,
+          invoiceId,
+          amount: Math.abs(adjustmentAmount),
+          date: new Date(),
+          type: typeId || undefined,
+          notes: `Debit Adjustment applied to Invoice #${invoiceId}${reason ? ` - ${reason}` : ""}`,
+        });
+      }
+      if (invoiceId) {
+        await apiClient.post(`/invoices/${invoiceId}/recalculate`);
+      }
+      await dispatch(fetchLedgerItems(patientId));
+      if (invoiceId) {
+        await dispatch(fetchInvoiceDetails({ patientId, invoiceId }));
+      }
+      return { invoiceId, adjustmentType: "Debit Adjustment" };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.error?.message ||
+          "Failed to create debit adjustment",
+      );
+    }
+  },
+);
+
+/**
  * Undo a courtesy credit by finding and deleting the matching adjustment.
  */
 export const undoCourtesyCredit = createAsyncThunk(
@@ -1444,6 +1700,7 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
       const {
         invoices = [],
         adjustments = [],
+        payments = [],
         claims = [],
       } = composite || {};
       const ledgerProcedures = buildLedgerProcedureContext({
@@ -1455,6 +1712,80 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
       const result = invoices
         .map((fullInv) => {
           const invoiceId = fullInv.id || fullInv._id;
+          const invoiceNumber = fullInv.invoiceNumber || fullInv.InvoiceNum;
+          const invoiceMatches = (value) =>
+            value !== undefined &&
+            value !== null &&
+            (String(value) === String(invoiceId) ||
+              (invoiceNumber && String(value) === String(invoiceNumber)));
+          const invoicePayments = payments.filter((payment) =>
+            [
+              payment.invoiceId,
+              payment.invoiceRefId,
+              payment.invoice?._id,
+              payment.invoice?.id,
+              payment.invoiceNumber,
+            ].some(invoiceMatches),
+          );
+          const liveInvoicePayments = invoicePayments.filter((payment) => {
+            const status = String(payment.status || "").toLowerCase();
+            return status !== "void" && status !== "voided";
+          });
+          const invoiceInsurancePaid = invoicePayments.reduce((sum, payment) => {
+            const status = String(payment.status || "").toLowerCase();
+            if (status === "void" || status === "voided") return sum;
+            const isInsurancePayment =
+              payment.paymentSource === "insurance_company" ||
+              payment.method === "insurance";
+            return isInsurancePayment ? sum + moneyNumber(payment.amount) : sum;
+          }, 0);
+          const patientPaidByProcedure = new Map();
+          liveInvoicePayments.forEach((payment) => {
+            const isInsurancePayment =
+              payment.paymentSource === "insurance_company" ||
+              payment.method === "insurance";
+            if (isInsurancePayment) return;
+            (payment.splits || payment.paysplits || []).forEach((split) => {
+              const procedureId =
+                split.procedureId || split.procNum || split.ProcNum;
+              if (!procedureId) return;
+              const key = String(procedureId);
+              patientPaidByProcedure.set(
+                key,
+                (patientPaidByProcedure.get(key) || 0) +
+                  Math.abs(moneyNumber(split.amount || split.SplitAmt)),
+              );
+            });
+          });
+          const invoiceTotalPaid = liveInvoicePayments.reduce(
+            (sum, payment) => sum + moneyNumber(payment.amount),
+            0,
+          );
+          const invoicePostedAdjustments = adjustments
+            .filter((adjustment) => {
+              const status = String(adjustment.status || "").toLowerCase();
+              if (status === "void" || status === "voided") return false;
+              return (
+                [
+                  adjustment.invoiceId,
+                  adjustment.invoiceRefId,
+                  adjustment.invoice?._id,
+                  adjustment.invoice?.id,
+                  adjustment.invoiceNumber,
+                ].some(invoiceMatches) ||
+                String(adjustment.notes || "").includes(
+                  `Invoice #${invoiceId}`,
+                ) ||
+                (invoiceNumber &&
+                  String(adjustment.notes || "").includes(
+                    `Invoice #${invoiceNumber}`,
+                  ))
+              );
+            })
+            .reduce(
+              (sum, adjustment) => sum + moneyNumber(adjustment.amount),
+              0,
+            );
           const invoiceClaims = claims.filter(
             (claim) =>
               String(claim.invoiceRefId || "") === String(invoiceId) ||
@@ -1478,6 +1809,18 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
             return !claim.isVoided && status !== "void" && status !== "voided";
           });
 
+          const invoiceEstimatedInsurance = (fullInv.lineItems || [])
+            .filter((item) => !item.isVoided)
+            .reduce(
+              (sum, item) =>
+                sum + ledgerProcedures.remainingInsuranceBalance(item),
+              0,
+            );
+          const invoiceOpenInsurance = Math.max(
+            0,
+            roundMoney(invoiceEstimatedInsurance - invoiceInsurancePaid),
+          );
+
           const lineItems = (fullInv.lineItems || [])
             .filter((item) => !item.isVoided)
             .map((item) => {
@@ -1486,11 +1829,21 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               const patientBalance =
                 ledgerProcedures.remainingPatientBalance(item);
               const insuranceBalance =
-                ledgerProcedures.remainingInsuranceBalance(item);
-              const writeoff =
-                ledgerProcedures.writeoffForProcedure(item);
+                invoiceEstimatedInsurance > 0
+                  ? roundMoney(
+                      invoiceOpenInsurance *
+                        (ledgerProcedures.remainingInsuranceBalance(item) /
+                          invoiceEstimatedInsurance),
+                    )
+                  : 0;
+              const { pricingWriteOff } =
+                ledgerProcedures.procedureBaseAmounts(item);
               const adjustmentAmount =
                 ledgerProcedures.adjustmentForProcedure(item);
+              const writeoff = Math.max(
+                0,
+                roundMoney(pricingWriteOff - adjustmentAmount),
+              );
               const totalAmount = moneyNumber(
                 adjusted.fee ||
                   item.totalPrice ||
@@ -1499,20 +1852,36 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
                   item.charge ||
                   item.amount,
               );
+              const remainingBal = Number(
+                Math.max(0, totalAmount - writeoff).toFixed(2),
+              );
+              const patientPaidForLine = Math.max(
+                moneyNumber(
+                  item.patientPaidAmount ?? item.patientPaid ?? item.ptPaid,
+                ),
+                patientPaidByProcedure.get(String(itemId)) || 0,
+              );
+              const collectablePatientBalance = Number(
+                Math.max(
+                  0,
+                  Math.min(
+                    patientBalance,
+                    Math.max(0, remainingBal - insuranceBalance),
+                  ) - patientPaidForLine,
+                ).toFixed(2),
+              );
 
               return {
                 ...item,
                 id: itemId,
                 checked: false,
-                payAmount: patientBalance.toFixed(2),
-                patientBalance,
+                payAmount: collectablePatientBalance.toFixed(2),
+                patientBalance: collectablePatientBalance,
                 writeoffAmount: writeoff,
                 adjustmentAmount,
                 insuranceAmount: insuranceBalance,
                 totalAmount,
-                remainingBal: Number(
-                  Math.max(0, totalAmount - writeoff).toFixed(2),
-                ),
+                remainingBal,
               };
             });
 
@@ -1532,19 +1901,101 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
           const rawInsurancePortion =
             moneyNumber(fullInv.insurancePortion) +
             moneyNumber(fullInv.secondaryInsPortion);
+          const lineItemTotal = (fullInv.lineItems || [])
+            .filter((item) => !item.isVoided)
+            .reduce(
+              (sum, item) =>
+                sum +
+                moneyNumber(
+                  item.totalPrice ||
+                    item.total ||
+                    item.ProcFee ||
+                    item.charge ||
+                    item.amount,
+                ),
+              0,
+            );
+          const invoiceOriginalTotal =
+            lineItemTotal || moneyNumber(fullInv.totalAmount);
           const patientOnlyFallback =
             rawPatientPortion <= 0 && rawInsurancePortion <= 0 && !hasLiveClaim
               ? Math.max(
                   0,
-                  moneyNumber(fullInv.totalAmount) -
+                  invoiceOriginalTotal -
                     moneyNumber(fullInv.writeoffAmount) -
                     moneyNumber(fullInv.paidAmount),
                 )
               : 0;
-          const invoicePatientBalance = roundMoney(
-            moneyNumber(fullInv.patientBalance) ||
-              Math.max(0, rawPatientPortion - invoicePatientPaid) ||
-              patientOnlyFallback,
+          const invoicePaidForBalance =
+            invoiceTotalPaid > 0
+              ? invoiceTotalPaid
+              : hasLiveClaim
+                ? 0
+                : moneyNumber(fullInv.paidAmount);
+          const invoiceAdjustmentForBalance =
+            Math.abs(invoicePostedAdjustments) > 0.01
+              ? invoicePostedAdjustments
+              : hasLiveClaim
+                ? 0
+                : -moneyNumber(fullInv.writeoffAmount);
+          const derivedInvoiceBalance = Math.max(
+            0,
+            invoiceOriginalTotal -
+              invoicePaidForBalance -
+              Math.max(0, -invoiceAdjustmentForBalance) +
+              Math.max(0, invoiceAdjustmentForBalance),
+          );
+          const hasDerivedInvoiceBalance = invoiceOriginalTotal > 0;
+          const currentInvoiceBalance = hasDerivedInvoiceBalance
+            ? derivedInvoiceBalance
+            : moneyNumber(fullInv.balanceDue);
+          const settledPatientBalance =
+            invoiceOpenInsurance <= 0.01 && currentInvoiceBalance > 0
+              ? currentInvoiceBalance
+              : 0;
+          const invoicePatientBalance = hasDerivedInvoiceBalance
+            ? roundMoney(
+                currentInvoiceBalance > 0
+                  ? Math.max(
+                      settledPatientBalance,
+                      currentInvoiceBalance - invoiceOpenInsurance,
+                    )
+                  : 0,
+              )
+            : roundMoney(
+                settledPatientBalance ||
+                  (currentInvoiceBalance > 0
+                    ? Math.max(0, currentInvoiceBalance - invoiceOpenInsurance)
+                    : 0) ||
+                  moneyNumber(fullInv.patientBalance) ||
+                  Math.max(0, rawPatientPortion - invoicePatientPaid) ||
+                  patientOnlyFallback,
+              );
+          const linePatientBalance = lineItems.reduce(
+            (sum, item) => sum + moneyNumber(item.patientBalance),
+            0,
+          );
+          if (
+            invoicePatientBalance > 0 &&
+            linePatientBalance > 0 &&
+            Math.abs(linePatientBalance - invoicePatientBalance) > 0.01
+          ) {
+            let remainingPatient = invoicePatientBalance;
+            lineItems.forEach((item, index) => {
+              const isLast = index === lineItems.length - 1;
+              const nextPatient = isLast
+                ? remainingPatient
+                : roundMoney(
+                    invoicePatientBalance *
+                      (moneyNumber(item.patientBalance) / linePatientBalance),
+                  );
+              remainingPatient = roundMoney(remainingPatient - nextPatient);
+              item.patientBalance = nextPatient;
+              item.payAmount = nextPatient.toFixed(2);
+            });
+          }
+          payableItems = lineItems.filter(
+            (item) => Number(item.patientBalance.toFixed(2)) > 0,
           );
 
           if (payableItems.length === 0 && invoicePatientBalance > 0) {
@@ -2785,9 +3236,13 @@ export const selectPaymentInvoicesLoading = (state) =>
   state.billing.paymentInvoicesLoading;
 export const selectPaymentInvoicesError = (state) =>
   state.billing.paymentInvoicesError;
-/** Returns cached payment draft invoices for the given patient (or empty array). */
-export const selectPaymentInvoicesForPatient = (patientId) => (state) =>
-  state.billing.paymentInvoicesCache?.[patientId] || EMPTY_ARRAY;
+
+// Memoized selector for payment invoices - returns same reference if data hasn't changed
+export const selectPaymentInvoicesForPatient = (patientId) =>
+  createSelector(
+    (state) => state.billing.paymentInvoicesCache?.[patientId],
+    (invoices) => invoices || EMPTY_ARRAY
+  );
 
 export const selectModificationsData = (state) =>
   state.billing.modificationsData;

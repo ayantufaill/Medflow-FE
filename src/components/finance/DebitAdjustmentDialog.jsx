@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -16,9 +17,10 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import dayjs from 'dayjs';
-import apiClient from '../../config/api';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
+import { usePatient } from '../../hooks/redux/usePatient';
+import { createInvoiceDebitAdjustment } from '../../store/slices/billingSlice';
 
 // Helper for the colored financial column headers
 const HeaderLabel = ({ label, color }) => (
@@ -35,7 +37,53 @@ const parseNum = (v) => {
   return isNaN(n) ? 0 : n;
 };
 
+const formatPatientName = (patient) => {
+  if (!patient) return "";
+  if (typeof patient === "string") return patient;
+  return (
+    patient.fullName ||
+    patient.name ||
+    `${patient.firstName || patient.FName || ""} ${patient.lastName || patient.LName || ""}`.trim()
+  );
+};
+
+const procedureDescription = (proc = {}) =>
+  proc.description ||
+  proc.name ||
+  proc.Descript ||
+  proc.procedureDescription ||
+  proc.serviceDescription ||
+  proc.BillingNote ||
+  "";
+
+const procedureMergeKey = (proc = {}) =>
+  proc.id ||
+  proc._id ||
+  proc.ProcNum ||
+  proc.procedureId ||
+  proc.procId ||
+  proc.itemId ||
+  proc.code ||
+  proc.cptCode ||
+  proc.ProcCode ||
+  procedureDescription(proc);
+
+const mergeProcedures = (...sources) => {
+  const merged = new Map();
+  sources
+    .flat()
+    .filter(Boolean)
+    .forEach((proc) => {
+      const key = String(procedureMergeKey(proc) || "");
+      if (!key) return;
+      merged.set(key, { ...(merged.get(key) || {}), ...proc });
+    });
+  return Array.from(merged.values());
+};
+
 const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
+  const dispatch = useDispatch();
+  const { currentPatient } = usePatient();
   // ── Header, derived from the ledger row that opened the dialog ────────────
   const invoiceNum = editTarget?.invoiceNumber || editTarget?.id || 'N/A';
   const rawDate =
@@ -46,20 +94,34 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   const invoiceDate = rawDate ? dayjs(rawDate).format('MM/DD/YYYY') : 'N/A';
   const adjustmentDate = dayjs().format('MM/DD/YYYY');
   const patientName =
-    editTarget?.patient && typeof editTarget.patient === 'object'
-      ? `${editTarget.patient.firstName || ''} ${editTarget.patient.lastName || ''}`.trim()
-      : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
+    formatPatientName(currentPatient) ||
+    editTarget?.patientName ||
+    editTarget?.patientFullName ||
+    formatPatientName(editTarget?.patient) ||
+    formatPatientName(editTarget?.invoice?.patient) ||
+    formatPatientName(editTarget?.patientId) ||
+    "Unknown";
+  const patientId =
+    currentPatient?._id ||
+    currentPatient?.id ||
+    editTarget?.patientId?._id ||
+    editTarget?.patientId?.id ||
+    editTarget?.patientId ||
+    editTarget?.patient?._id ||
+    editTarget?.patient?.id;
 
   // Procedures come from whichever shape the ledger row carries: the full
   // invoice detail (lineItems), a claim's procedures, or the grouped invoice
   // row inside an expanded ledger item.
-  const procedures =
-    editTarget?.lineItems ||
-    editTarget?.procedures ||
-    (editTarget?.details?.find((d) => d.isGrouped)?.procedures) ||
-    [];
+  const detailProcedures = (editTarget?.details || [])
+    .flatMap((detail) => detail?.procedures || []);
+  const procedures = mergeProcedures(
+    editTarget?.lineItems || [],
+    editTarget?.procedures || [],
+    editTarget?.details?.find((d) => d.isGrouped)?.procedures || [],
+    detailProcedures,
+  );
 
-  const [adjustType, setAdjustType] = useState("");
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Percentage");
   const [calcValue, setCalcValue] = useState("0");
@@ -71,54 +133,63 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   const [lineAdjustments, setLineAdjustments] = useState({});
   const adjustmentsForLine = lineAdjustments[invoiceNum] || {};
 
-  // Adjustment type options, same source the credit / account dialogs use.
-  const [adjustmentTypeOptions, setAdjustmentTypeOptions] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    apiClient
-      .get('/admin-finance/definitions/1')
-      .then((res) => {
-        const data = res.data?.data || res.data || [];
-        if (alive && Array.isArray(data) && data.length > 0) {
-          setAdjustmentTypeOptions(data);
-          setAdjustType((prev) => prev || data[0]?.type || "");
-        }
-      })
-      .catch((err) => console.error('Failed to fetch adjustment definitions:', err));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // Ledger-sourced rows are already restated (existing debit adjustments folded
+  // in) and carry `fee`; raw line items only carry totalPrice/charge.
+  const chargeOf = (p) => {
+    const restated = p.fee !== undefined && p.fee !== null;
+    return Number(restated ? p.fee : p.totalPrice || p.charge || p.ProcFee || 0);
+  };
+  const totalCharges = procedures.reduce((sum, p) => sum + chargeOf(p), 0);
+  // The invoice summary is the reliable source of what has actually been paid;
+  // the per-line paid fields can be stale when no payment record backs them.
+  const hasSummary = Boolean(editTarget?.summary);
+  const summaryPayment =
+    parseNum(editTarget?.summary?.ptPaid) + parseNum(editTarget?.summary?.insPaid);
 
   const lineItems =
     procedures.length > 0
       ? procedures.map((p) => {
-          const charge = Number(p.totalPrice || p.charge || p.ProcFee || 0);
+          const restated = p.fee !== undefined && p.fee !== null;
+          const charge = chargeOf(p);
           const writeoff = Number(p.writeoff || p.estimatedWriteOff || 0);
-          const ptPortion = Number(p.ptPortion || p.patientPortion || p.ptAmt || 0);
-          const insPortion = Number(
-            p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
+          const rawPtPortion = Number(p.ptPortion ?? p.patientPortion ?? p.ptAmt ?? 0);
+          const rawInsPortion = Number(
+            restated
+              ? p.insPortion ?? 0
+              : p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
           );
-          const patientPaid = Number(p.patientPaidAmount ?? p.patientPaid ?? 0);
-          const insurancePaid = Number(p.insurancePaidAmount ?? p.insurancePaid ?? 0);
+          const insPortion = Math.max(0, Math.min(rawInsPortion, charge - writeoff));
+          const ptPortion = Math.max(
+            0,
+            Math.min(rawPtPortion, charge - writeoff - insPortion),
+          );
+          const weight = totalCharges > 0 ? charge / totalCharges : 0;
+          const paid = hasSummary
+            ? summaryPayment * weight
+            : Number(p.patientPaidAmount ?? p.patientPaid ?? 0) +
+              Number(p.insurancePaidAmount ?? p.insurancePaid ?? 0);
           return {
             code: p.code || p.cptCode || p.ProcCode || 'Item',
-            patient: patientName,
+            description: procedureDescription(p) || patientName,
             values: [
               { val: `$${writeoff.toFixed(2)}`, flex: 80 },
               { val: `$${ptPortion.toFixed(2)}`, flex: 80 },
               { val: `$${insPortion.toFixed(2)}`, flex: 80 },
               { val: `$${charge.toFixed(2)}`, flex: 100, bold: true },
-              { val: `$${(patientPaid + insurancePaid).toFixed(2)}`, flex: 80, bold: true, color: '#22c55e' },
+              { val: `$${paid.toFixed(2)}`, flex: 80, bold: true, color: '#22c55e' },
             ],
             percent: "0%",
             procId: p.id || p._id || p.ProcNum,
+            insuranceRatio:
+              charge - writeoff > 0 && insPortion > 0
+                ? Math.min(1, Math.max(0, insPortion / (charge - writeoff)))
+                : 0,
           };
         })
       : [
           {
             code: "No items found",
-            patient: patientName,
+            description: patientName,
             values: [
               { val: "$0.00", flex: 80 },
               { val: "$0.00", flex: 80 },
@@ -139,7 +210,6 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
         ? Math.round(parseNum(item.values[3].val) * (parseNum(calcValue) / 100) * 100) / 100
         : 0;
 
-  const totalCharges = lineItems.reduce((s, i) => s + parseNum(i.values[3]?.val), 0);
   const totalPayment = lineItems.reduce((s, i) => s + parseNum(i.values[4]?.val), 0);
   const totalAdjust = lineItems.reduce((s, i, idx) => s + lineAdjustValue(i, idx), 0);
 
@@ -205,44 +275,6 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
             <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontWeight: "bold", fontSize: '13px' }}>
               Debit Adjustment #{invoiceNum}
             </Typography>
-            <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: '13px' }}>type</Typography>
-            <Select
-              variant="outlined"
-              size="small"
-              value={adjustType}
-              onChange={(e) => setAdjustType(e.target.value)}
-              displayEmpty
-              sx={{
-                width: 150,
-                height: '36px',
-                borderRadius: radius.sm,
-                fontSize: "13px",
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-                bgcolor: COLORS.SURFACE_TINT
-              }}
-              MenuProps={{
-                sx: { zIndex: 150000 },
-                PaperProps: {
-                  sx: {
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    border: `1px solid ${COLORS.BORDER_LIGHT}`,
-                    borderRadius: radius.sm,
-                    mt: 0.5,
-                    '& .MuiMenuItem-root': { fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, py: 1 }
-                  }
-                }
-              }}
-            >
-              {adjustmentTypeOptions.length > 0 ? (
-                adjustmentTypeOptions.map((opt) => (
-                  <MenuItem key={opt.id || opt.type} value={opt.type} sx={{ fontFamily: "Inter", fontSize: "13px" }}>
-                    {opt.type}
-                  </MenuItem>
-                ))
-              ) : (
-                <MenuItem value=""><em>None</em></MenuItem>
-              )}
-            </Select>
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
@@ -339,7 +371,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
                 {item.code}
               </Typography>
               <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: "11px" }}>
-                {item.patient}
+                {item.description}
               </Typography>
             </Box>
 
@@ -412,13 +444,12 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
           </Button>
           <Button
             variant="contained"
-            onClick={() => {
-              onAdjust?.({
+            onClick={async () => {
+              const payload = {
                 invoiceId: editTarget?.id,
                 invoiceNumber: invoiceNum,
                 invoiceDate: rawDate ?? null,
                 patientName,
-                adjustmentType: adjustType,
                 reason,
                 calcMode,
                 calcValue,
@@ -426,10 +457,31 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
                 lineItems: lineItems.map((item, idx) => ({
                   code: item.code,
                   procId: item.procId,
+                  procedureId: item.procId,
                   amount: lineAdjustValue(item, idx),
+                  insuranceRatio: item.insuranceRatio,
                 })),
-              });
-              onClose?.();
+              };
+              if (onAdjust) {
+                onAdjust(payload);
+                onClose?.();
+                return;
+              }
+              try {
+                await dispatch(
+                  createInvoiceDebitAdjustment({
+                    patientId,
+                    invoiceId: editTarget?.id,
+                    adjustmentAmount: totalAdjust,
+                    reason,
+                    lineItems: payload.lineItems,
+                  }),
+                ).unwrap();
+                onClose?.();
+              } catch (err) {
+                console.error("Debit adjustment failed", err);
+                alert(`Failed to create debit adjustment: ${err}`);
+              }
             }}
             sx={{
               bgcolor: COLORS.ACCENT,

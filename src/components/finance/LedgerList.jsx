@@ -620,15 +620,23 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
     // How much is actually available to move in the chosen direction.
     const getTransferableAmount = (row) => {
-      const raw = toInsurance
-        ? (row.ptPortion ?? row.patientAmount ?? row.patient ?? row.ptAmt ?? 0)
-        : (row.insuranceAmount ??
-          row.insPortion ??
-          row.insurancePortion ??
-          row.insAmt ??
-          row.insurance ??
-          0);
-      return Number(String(raw).replace(/[^0-9.-]+/g, "")) || 0;
+      const candidates = toInsurance
+        ? [row.ptPortion, row.patientAmount, row.patient, row.ptAmt]
+        : [
+            row.insuranceAmount,
+            row.insPortion,
+            row.totalInsPortion,
+            row.primaryInsPortion,
+            row.insurancePortion,
+            row.insAmt,
+            row.insurance,
+          ];
+      return candidates.reduce((amount, raw) => {
+        if (amount > 0) return amount;
+        const parsed =
+          Number(String(raw ?? "").replace(/[^0-9.-]+/g, "")) || 0;
+        return parsed > 0 ? parsed : amount;
+      }, 0);
     };
 
     try {

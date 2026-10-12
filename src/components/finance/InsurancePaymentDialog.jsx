@@ -22,6 +22,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useDispatch } from 'react-redux';
 import { claimService } from '../../services/claim.service';
 import { paymentService } from '../../services/payment.service';
+import { invoiceService } from '../../services/invoice.service';
 import {
   invalidatePatientBalance,
   invalidateInsuranceUsage,
@@ -30,6 +31,7 @@ import {
 } from '../../store/slices/patientSlice';
 import { COLORS } from '../../constants/colors';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import { buildLedgerProcedureContext } from '../../utils/ledgerCalculations';
 
 import InsurancePaymentTopRow from './insurance-payment/InsurancePaymentTopRow';
 import InsurancePaymentTable from './insurance-payment/InsurancePaymentTable';
@@ -53,6 +55,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [createdPaymentInfo, setCreatedPaymentInfo] = useState(null);
   const [chequeNo, setChequeNo] = useState('');
   const [branchNo, setBranchNo] = useState('');
+  const [ledgerCtx, setLedgerCtx] = useState(null);
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
@@ -150,6 +153,26 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         if (claimsList.length > 0) {
           setSelectedClaim(claimsList[0].id);
         }
+
+        // The claim API reports the amount each procedure was originally
+        // submitted for, which goes stale once a debit adjustment is posted
+        // against the invoice. Build the same ledger context the patient ledger
+        // uses so each procedure can be restated with its current fee/estimate.
+        try {
+          const composite =
+            await invoiceService.getPatientCompositeLedger(patientId);
+          setLedgerCtx(
+            buildLedgerProcedureContext({
+              invoices: composite.invoices || [],
+              claims: claimsList,
+              adjustments: composite.adjustments || [],
+              keepUnclaimedInsuranceEstimates: true,
+            }),
+          );
+        } catch (ledgerErr) {
+          console.error("Error building ledger context:", ledgerErr);
+          setLedgerCtx(null);
+        }
       } catch (err) {
         console.error('Error fetching claims:', err);
       }
@@ -168,6 +191,23 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       return;
     }
     
+    // Restate a procedure with its current (debit-adjusted) numbers from the
+    // shared ledger context. The claim API only carries the original submitted
+    // estimate, so without this a debit posted against the invoice stays
+    // invisible here while the ledger already reflects it.
+    const restatedFor = (procId) => {
+      if (!ledgerCtx || procId === undefined || procId === null) return null;
+      const line = ledgerCtx.proceduresByProcNum.get(String(procId));
+      if (!line) return null;
+      const restated = ledgerCtx.procedureAfterAdjustments(line);
+      const fee = Number(restated.fee);
+      const ins = Number(restated.insPortion);
+      return {
+        fee: Number.isFinite(fee) && fee > 0 ? fee : null,
+        ins: Number.isFinite(ins) && ins > 0 ? ins : null,
+      };
+    };
+
     // Determine overall claim-level payments and insurance balance
     const claimPaidAmount = Number(claim.paidAmount || claim.insPaid || claim.invoice?.insurancePaid || claim.invoice?.insPaid || 0);
     const claimInsBalance = (claim.insuranceBalance !== undefined && claim.insuranceBalance !== null)
@@ -204,9 +244,19 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         return sum + (p.insPayEst !== undefined && p.insPayEst !== null ? Number(p.insPayEst) : Math.max(0, sub - eWo));
       }, 0);
 
-      claimProcs = eligibleProcs.map(p => {
-        const submittedNum = Number(p.insPayEst !== undefined && p.insPayEst !== null && Number(p.insPayEst) > 0 ? Number(p.insPayEst) : (p.insPortion !== undefined && p.insPortion !== null && Number(p.insPortion) > 0 ? Number(p.insPortion) : 0));
-        const billedNum = Number(p.fee || p.ProcFee || p.charge || 0);
+      claimProcs = eligibleProcs.map((p) => {
+        const restated = restatedFor(p.id || p._id || p.ProcNum || p.procedureId);
+        // "Submitted" is the procedure's current charge, restated so a debit
+        // adjustment posted against the invoice is reflected.
+        const billedNum = restated?.fee ?? Number(p.fee || p.ProcFee || p.charge || 0);
+        const submittedNum = Math.max(
+          restated?.ins ?? 0,
+          Number(p.insuranceBalance || 0),
+          Number(p.insBalance || 0),
+          Number(p.insPortion || 0),
+          Number(p.primaryInsPortion || 0),
+          Number(p.insPayEst || 0),
+        );
         const existingWo = Number(p.writeOffEst ?? p.writeoff ?? p.writeOff ?? 0);
         const dedNum = Number(p.deductibleApplied ?? p.dedApplied ?? p.deductible ?? 0) || 0;
         const explicitAllowed = (p.allowedOverride !== undefined && p.allowedOverride !== null && Number(p.allowedOverride) > 0)
@@ -223,7 +273,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const allowedNum = explicitAllowed
           ?? procAllowed
           ?? (submittedNum > 0 ? submittedNum : Math.max(0, billedNum - existingWo));
-        const woNum = existingWo;
+        // Anything charged above the allowed fee is an insurance write-off, so a
+        // debit that pushes the charge past the fee-guide allowed shows up here.
+        const woNum = Math.max(existingWo, Math.max(0, billedNum - allowedNum));
         const coverage = Number(p.coveragePct || 0) > 0 ? Number(p.coveragePct) : 100;
         const backendEst = p.insPayEst !== undefined && p.insPayEst !== null
           ? Number(p.insPayEst)
@@ -269,8 +321,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
-          insPortionEst: (remainingPay + existingWo).toFixed(2),
-          coveragePct: resolveCoveragePct(p.coveragePct, billedNum, existingWo, dedNum, initialEst),
+          insPortionEst: (remainingPay + woNum).toFixed(2),
+          coveragePct: resolveCoveragePct(p.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
           moveToNewClaim: false
@@ -302,14 +354,23 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             ? Number(item.secondaryInsPortion)
             : ((item.insPortion !== undefined && item.insPortion !== null && Number(item.insPortion) > 0) ? Number(item.insPortion) : 0);
         }
-        return (item.insPortion !== undefined && item.insPortion !== null && Number(item.insPortion) > 0)
-          ? Number(item.insPortion)
-          : ((item.insPayEst !== undefined && item.insPayEst !== null && Number(item.insPayEst) > 0) ? Number(item.insPayEst) : 0);
+        return Math.max(
+          0,
+          Number(item.insuranceBalance || 0),
+          Number(item.insBalance || 0),
+          Number(item.insPortion || 0),
+          Number(item.primaryInsPortion || 0),
+          Number(item.insPayEst || 0),
+        );
       };
 
-      claimProcs = eligibleItems.map(l => {
-        const submittedNum = secondaryExpectedInsurance(l);
-        const billedNum = Number(l.charge || l.totalPrice || l.fee || 0);
+      claimProcs = eligibleItems.map((l) => {
+        const restated = restatedFor(l.id || l._id || l.procedureId || l.procId);
+        const billedNum = restated?.fee ?? Number(l.totalAmount || l.charge || l.totalPrice || l.fee || 0);
+        const submittedNum = Math.max(
+          restated?.ins ?? 0,
+          secondaryExpectedInsurance(l),
+        );
         const existingWo = Number(l.writeoff ?? l.estimatedWriteOff ?? 0);
         const dedNum = Number(l.deductibleApplied ?? l.dedApplied ?? l.deductible ?? 0) || 0;
         const explicitAllowed = (l.allowedFee !== undefined && l.allowedFee !== null && Number(l.allowedFee) > 0)
@@ -320,7 +381,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         // Allowed column shows the fee-guide allowed fee before the insurance estimate.
         const allowedNum = explicitAllowed
           ?? (submittedNum > 0 ? submittedNum : Math.max(0, billedNum - existingWo));
-        const woNum = existingWo;
+        const woNum = Math.max(existingWo, Math.max(0, billedNum - allowedNum));
         const coverage = Number(l.coveragePct || 0) > 0 ? Number(l.coveragePct) : 100;
         const backendEst = isSecondary
           ? (l.secondaryInsPortion !== undefined && l.secondaryInsPortion !== null ? Number(l.secondaryInsPortion) : null)
@@ -359,8 +420,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
-          insPortionEst: (remainingPay + existingWo).toFixed(2),
-          coveragePct: resolveCoveragePct(l.coveragePct, billedNum, existingWo, dedNum, initialEst),
+          insPortionEst: (remainingPay + woNum).toFixed(2),
+          coveragePct: resolveCoveragePct(l.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
           moveToNewClaim: false
@@ -373,8 +434,17 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       const totalClaimEst = eligibleItems.reduce((sum, item) => sum + Number(item.amount || item.fee || 0), 0);
 
       claimProcs = eligibleItems.map(item => {
-        const submittedNum = Number(item.amount !== undefined && item.amount !== null && Number(item.amount) > 0 ? Number(item.amount) : (item.insAmount !== undefined && item.insAmount !== null && Number(String(item.insAmount).replace(/[^0-9.-]/g,'')) > 0 ? Number(String(item.insAmount).replace(/[^0-9.-]/g,'')) : 0));
-        const billedNum = Number(item.fee || 0);
+        const restated = restatedFor(item.id || item._id || item.itemId || item.procedureId);
+        const billedNum = restated?.fee ?? Number(item.fee || item.amount || 0);
+        const submittedNum = Math.max(
+          restated?.ins ?? 0,
+          Number(item.insuranceBalance || 0),
+          Number(item.insBalance || 0),
+          Number(item.insPortion || 0),
+          Number(item.insPayEst || 0),
+          Number(item.amount || 0),
+          Number(String(item.insAmount || 0).replace(/[^0-9.-]/g, "")) || 0,
+        );
         const existingWo = Number(item.writeoff ?? item.writeOff ?? 0);
         const dedNum = Number(item.deductibleApplied ?? item.dedApplied ?? 0) || 0;
         const itemAllowed = (item.allowedFee !== undefined && item.allowedFee !== null && Number(item.allowedFee) > 0)
@@ -383,6 +453,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         // Allowed column shows the fee-guide allowed fee before the insurance estimate.
         const allowedNum = itemAllowed
           ?? (submittedNum > 0 ? submittedNum : Math.max(0, billedNum - existingWo));
+        const woNum = Math.max(existingWo, Math.max(0, billedNum - allowedNum));
         const itemCode = item.code ? (item.description ? `${item.code} - ${item.description}` : item.code) : `Item ID: ${item.itemId}`;
         const procInvoiceId = item.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
         const coverage = Number(item.coveragePct || 0) > 0 ? Number(item.coveragePct) : 100;
@@ -390,9 +461,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           ? Number(item.amount)
           : null;
         // If deductible is applied but backend estimate doesn't account for it, recalculate
-        const initialEst = (dedNum > 0 && backendEst !== null && backendEst > Math.max(0, allowedNum - existingWo - dedNum))
-          ? Math.max(0, Math.round(((allowedNum - existingWo - dedNum) * (coverage / 100)) * 100) / 100)
-          : (backendEst !== null ? backendEst : Math.max(0, Math.round(((allowedNum - existingWo - dedNum) * (coverage / 100)) * 100) / 100));
+        const initialEst = (dedNum > 0 && backendEst !== null && backendEst > Math.max(0, allowedNum - woNum - dedNum))
+          ? Math.max(0, Math.round(((allowedNum - woNum - dedNum) * (coverage / 100)) * 100) / 100)
+          : (backendEst !== null ? backendEst : Math.max(0, Math.round(((allowedNum - woNum - dedNum) * (coverage / 100)) * 100) / 100));
 
         let procAlreadyPaid = Number(item.insPayAmt || item.insPaid || 0);
         if (procAlreadyPaid === 0 && unallocatedClaimPaid > 0) {
@@ -419,10 +490,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           bal: `$${billedNum.toFixed(2)}`,
           ded: dedNum.toFixed(2),
           allowed: allowedNum.toFixed(2),
-          wo: existingWo.toFixed(2),
+          wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
-          insPortionEst: (remainingPay + existingWo).toFixed(2),
-          coveragePct: resolveCoveragePct(item.coveragePct, billedNum, existingWo, dedNum, initialEst),
+          insPortionEst: (remainingPay + woNum).toFixed(2),
+          coveragePct: resolveCoveragePct(item.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
           moveToNewClaim: false
@@ -430,7 +501,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       });
     }
     setProcedures(claimProcs);
-  }, [selectedClaim, claims]);
+  }, [selectedClaim, claims, ledgerCtx]);
   
   const checkboxOptions = [
     { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
