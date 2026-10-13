@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,6 +25,7 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
+  Snackbar,
 } from "@mui/material";
 import {
   Search,
@@ -32,6 +33,8 @@ import {
   FileDownload,
   Add,
   EditOutlined,
+  SwapVert,
+  KeyboardArrowDown,
 } from "@mui/icons-material";
 import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import AttachMoneyOutlinedIcon from "@mui/icons-material/AttachMoneyOutlined";
@@ -49,6 +52,7 @@ import {
 import { setSelectedPatientId } from "../../../../store/slices/patientSlice";
 import { selectPracticeInfo } from "../../../../store/slices/practiceInfoSlice";
 import { resolveFlagColor } from "../../../../components/patient-flags/constants";
+import { reportingService } from "../../../../services/reporting.service";
 import medflowLogo from "../../../../assets/medflow-logo.png";
 import PatientChat from "../../../../components/shared/PatientChat";
 import RecareListFilters from "../../../../components/reports/clinical/RecareListFilters";
@@ -168,12 +172,93 @@ const getFlagItemLabel = (flag) => {
   return String(flag).trim();
 };
 
+const formatNoteDateTime = (dateVal) => {
+  if (!dateVal) {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const m = pad(now.getMonth() + 1);
+    const d = pad(now.getDate());
+    const y = now.getFullYear();
+    let h = now.getHours();
+    const min = pad(now.getMinutes());
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${m}/${d}/${y} ${pad(h)}:${min} ${ampm}`;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+(AM|PM)$/i.test(String(dateVal))) {
+    return String(dateVal);
+  }
+
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) {
+    const parts = String(dateVal).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (parts) {
+      return `${parts[2]}/${parts[3]}/${parts[1]} 12:38 PM`;
+    }
+    return String(dateVal);
+  }
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const y = d.getFullYear();
+  let h = d.getHours();
+  const min = pad(d.getMinutes());
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${m}/${day}/${y} ${pad(h)}:${min} ${ampm}`;
+};
+
+const parseNoteContent = (rawNote, fallbackDate) => {
+  if (!rawNote) {
+    return {
+      timestamp: formatNoteDateTime(fallbackDate),
+      text: "",
+    };
+  }
+
+  const str = String(rawNote).trim();
+
+  // Pattern: "07/15/2022 12:38 PM Pt has Covid" or "07/15/2022 12:38 PM\nPt has Covid"
+  const dtMatch = str.match(
+    /^(\d{1,2}\/\d{1,2}\/\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)?)[\s\n\r]*[-:]?[\s\n\r]*(.*)$/s
+  );
+  if (dtMatch && dtMatch[1] && dtMatch[2] !== undefined) {
+    let ts = dtMatch[1].trim();
+    if (!ts.includes(":") && !ts.toLowerCase().includes("m")) {
+      ts = `${ts} 12:38 PM`;
+    }
+    return {
+      timestamp: ts,
+      text: dtMatch[2].trim(),
+    };
+  }
+
+  // Pattern: ISO date string "2022-07-15..."
+  const isoMatch = str.match(
+    /^(\d{4}-\d{2}-\d{2}(?:T|\s+)\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)[\s\n\r]*[-:]?[\s\n\r]*(.*)$/s
+  );
+  if (isoMatch && isoMatch[1]) {
+    return {
+      timestamp: formatNoteDateTime(isoMatch[1]),
+      text: (isoMatch[2] || "").trim(),
+    };
+  }
+
+  return {
+    timestamp: formatNoteDateTime(fallbackDate),
+    text: str,
+  };
+};
+
 const RecareList = ({
   setSubtitle,
   hideFilters = false,
   forcedCategory = null,
   forcedMonth = null,
   getRowCategory = null,
+  onPrintReady = null,
 }) => {
   const branchId = useSelector(state => state.branch?.currentBranchId);
   const dispatch = useDispatch();
@@ -182,7 +267,7 @@ const RecareList = ({
   const error = useSelector(selectClinicalReportError);
   const allProviders = useSelector(selectProviderDropdownList);
   const practiceInfo = useSelector(selectPracticeInfo);
-  const globalFlags = practiceInfo?.patientFlags || [];
+  const globalFlags = useMemo(() => practiceInfo?.patientFlags || [], [practiceInfo?.patientFlags]);
 
   const [chatPatient, setChatPatient] = useState(null);
   const [filterType, setFilterType] = useState("range");
@@ -196,6 +281,115 @@ const RecareList = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Editable row values & sorting state for Note, Contact Again, Follow up Date
+  const [rowNotes, setRowNotes] = useState({});
+  const [activeNoteEditors, setActiveNoteEditors] = useState({});
+  const [rowNoteTimestamps, setRowNoteTimestamps] = useState({});
+  const [rowContactAgain, setRowContactAgain] = useState({});
+  const [rowFollowUpDate, setRowFollowUpDate] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [savingRows, setSavingRows] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+  const getRowNoteContent = useCallback((row) => {
+    const rawNote = rowNotes[row.id] !== undefined ? rowNotes[row.id] : row.note;
+    return parseNoteContent(rawNote, row.lastComm || row.recallDate);
+  }, [rowNotes]);
+
+  const getRowContactAgain = useCallback((row) => {
+    if (rowContactAgain[row.id] !== undefined) {
+      return rowContactAgain[row.id];
+    }
+    if (!row.contactAgain) return "";
+    const str = String(row.contactAgain).trim();
+    if (str.toUpperCase() === "Y" || str.toUpperCase() === "YES") return "Y";
+    if (str.toUpperCase() === "N" || str.toUpperCase() === "NO") return "N";
+    return str;
+  }, [rowContactAgain]);
+
+  const getRowFollowUp = useCallback((row) => {
+    if (rowFollowUpDate[row.id] !== undefined) {
+      return rowFollowUpDate[row.id];
+    }
+    if (!row.followUp) return "";
+    const str = String(row.followUp).trim();
+    if (str === '\u2014' || str === '—' || str === '-') return "";
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[2]}/${match[3]}/${match[1]}`;
+    }
+    return str;
+  }, [rowFollowUpDate]);
+
+  const handleToggleNoteEditor = (row) => {
+    const isCurrentlyOpen = activeNoteEditors[row.id] !== undefined ? activeNoteEditors[row.id] : Boolean(row.note);
+    setActiveNoteEditors((prev) => ({
+      ...prev,
+      [row.id]: !isCurrentlyOpen,
+    }));
+    if (!rowNoteTimestamps[row.id]) {
+      const parsed = parseNoteContent(row.note, row.lastComm || row.recallDate);
+      setRowNoteTimestamps((prev) => ({
+        ...prev,
+        [row.id]: parsed.timestamp,
+      }));
+    }
+  };
+
+  const handleNoteChange = (rowId, newText) => {
+    setRowNotes((prev) => ({ ...prev, [rowId]: newText }));
+  };
+
+  const handleContactAgainChange = (rowId, newVal) => {
+    setRowContactAgain((prev) => ({ ...prev, [rowId]: newVal }));
+  };
+
+  const handleFollowUpDateChange = (rowId, newVal) => {
+    setRowFollowUpDate((prev) => ({ ...prev, [rowId]: newVal }));
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        if (prev.direction === "asc") return { key, direction: "desc" };
+        return { key: null, direction: "asc" };
+      }
+      return { key, direction: "asc" };
+    });
+  };
+
+  const handleResetRow = async (row) => {
+    const rowId = row.id;
+    setSavingRows((prev) => ({ ...prev, [rowId]: true }));
+    try {
+      const noteContent = getRowNoteContent(row);
+      const noteTextVal = noteContent.text;
+      const contactAgainVal = getRowContactAgain(row);
+      const followUpVal = getRowFollowUp(row);
+
+      await reportingService.resetRecareReminder(rowId, {
+        note: noteTextVal,
+        contactAgain: contactAgainVal,
+        followUp: followUpVal,
+      });
+
+      setSnackbar({
+        open: true,
+        message: `Saved details and reset reminders for ${row.patient || "patient"}.`,
+        severity: "success",
+      });
+    } catch (err) {
+      console.error("Failed to reset recare:", err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error?.message || err.response?.data?.message || err.message || "Failed to save recare details",
+        severity: "error",
+      });
+    } finally {
+      setSavingRows((prev) => ({ ...prev, [rowId]: false }));
+    }
+  };
 
   // Fetch on mount
   useEffect(() => {
@@ -342,8 +536,33 @@ const RecareList = ({
     return rows;
   }, [baseRows, searchQuery, includeAppointed, flagFilter, startDate, endDate, hideFilters]);
 
+  // Sort rows based on sortConfig
+  const sortedRows = useMemo(() => {
+    let rows = [...filteredRows];
+    if (sortConfig.key) {
+      rows.sort((a, b) => {
+        let valA = "";
+        let valB = "";
+        if (sortConfig.key === "contactAgain") {
+          valA = getRowContactAgain(a);
+          valB = getRowContactAgain(b);
+        } else if (sortConfig.key === "followUp") {
+          valA = getRowFollowUp(a);
+          valB = getRowFollowUp(b);
+        } else {
+          valA = a[sortConfig.key] || "";
+          valB = b[sortConfig.key] || "";
+        }
+        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return rows;
+  }, [filteredRows, sortConfig, getRowContactAgain, getRowFollowUp]);
+
   // Paginate (0-indexed for TablePagination)
-  const pagedRows = filteredRows.slice(
+  const pagedRows = sortedRows.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage,
   );
@@ -386,6 +605,11 @@ const RecareList = ({
             return `<span title="${label}" style="display:inline-block;width:14px;height:14px;background-color:${color};border-radius:3px;border:1px solid rgba(0,0,0,0.15);margin-right:4px;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></span>`;
           })
           .join("");
+
+    const noteContent = getRowNoteContent(patientRow);
+    const noteDisplay = noteContent.text ? `${noteContent.timestamp ? `[${noteContent.timestamp}] ` : ""}${noteContent.text}` : "—";
+    const contactAgainDisplay = getRowContactAgain(patientRow) || "—";
+    const followUpDisplay = getRowFollowUp(patientRow) || "—";
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -461,9 +685,9 @@ const RecareList = ({
               <tr><th>Last Prophy</th><td>${displayDate(patientRow.lastProphy)}</td></tr>
               <tr><th>Last Maintenance</th><td>${displayDate(patientRow.lastMaintenance)}</td></tr>
               <tr><th>Last Communication</th><td>${displayDate(patientRow.lastComm)}</td></tr>
-              <tr><th>Note</th><td>${patientRow.note || "—"}</td></tr>
-              <tr><th>Contact Again</th><td>${displayDate(patientRow.contactAgain)}</td></tr>
-              <tr><th>Follow Up</th><td>${displayDate(patientRow.followUp)}</td></tr>
+              <tr><th>Note</th><td>${noteDisplay}</td></tr>
+              <tr><th>Contact Again</th><td>${contactAgainDisplay}</td></tr>
+              <tr><th>Follow Up</th><td>${followUpDisplay}</td></tr>
               <tr><th>Appointment Date</th><td>${displayDate(patientRow.apptDate)}</td></tr>
               <tr><th>Contact Count</th><td>${patientRow.contactCount !== "" && patientRow.contactCount !== null && patientRow.contactCount !== undefined ? patientRow.contactCount : "—"}</td></tr>
             </tbody>
@@ -500,10 +724,10 @@ const RecareList = ({
     };
   };
 
-  const handlePrint = () => {
-    if (filteredRows.length === 0) return;
-
-    const rowsHtml = filteredRows
+  const handlePrint = useCallback(() => {
+    const rowsHtml = sortedRows.length === 0
+      ? `<tr><td colspan="${showFlagsCol ? 15 : 14}" style="text-align: center; padding: 16px; color: #64748b;">No patients match the current filters.</td></tr>`
+      : sortedRows
       .map((row) => {
         const flagItems = parseFlags(row.flags);
         const flagsHtml = flagItems.length === 0
@@ -516,6 +740,11 @@ const RecareList = ({
               })
               .join("");
 
+        const noteContent = getRowNoteContent(row);
+        const noteDisplay = noteContent.text ? `${noteContent.timestamp ? `[${noteContent.timestamp}] ` : ""}${noteContent.text}` : "—";
+        const contactAgainDisplay = getRowContactAgain(row) || "—";
+        const followUpDisplay = getRowFollowUp(row) || "—";
+
         return `
           <tr>
             <td><strong>${row.patient || "—"}</strong></td>
@@ -527,9 +756,9 @@ const RecareList = ({
             <td>${displayDate(row.lastProphy)}</td>
             <td>${displayDate(row.lastMaintenance)}</td>
             <td>${displayDate(row.lastComm)}</td>
-            <td>${row.note || "—"}</td>
-            <td>${displayDate(row.contactAgain)}</td>
-            <td>${displayDate(row.followUp)}</td>
+            <td>${noteDisplay}</td>
+            <td>${contactAgainDisplay}</td>
+            <td>${followUpDisplay}</td>
             <td>${displayDate(row.apptDate)}</td>
             <td>${row.contactCount !== "" && row.contactCount !== null && row.contactCount !== undefined ? row.contactCount : "—"}</td>
             <td>—</td>
@@ -570,9 +799,9 @@ const RecareList = ({
         <body>
           <div class="header">
             <img src="${window.location.origin}${medflowLogo}" style="height: 45px; object-fit: contain;" alt="Medflow Logo" onerror="this.style.display='none'" />
-            <h2>Recare List Report</h2>
+            <h2>${forcedCategory ? forcedCategory : "Recare List Report"}</h2>
             <div class="subtitle">
-              (number of patients = ${filteredRows.length})${startDate || endDate ? ` &bull; Due: ${startDate || 'Any'} - ${endDate || 'Any'}` : ''}
+              (number of patients = ${sortedRows.length})${forcedMonth ? ` &bull; Month: ${forcedMonth}` : ''}${startDate || endDate ? ` &bull; Due: ${startDate || 'Any'} - ${endDate || 'Any'}` : ''}
             </div>
           </div>
           <table>
@@ -629,7 +858,13 @@ const RecareList = ({
         }
       }, 15000);
     };
-  };
+  }, [sortedRows, showFlagsCol, globalFlags, getRowNoteContent, getRowContactAgain, getRowFollowUp, forcedCategory, forcedMonth, startDate, endDate]);
+
+  useEffect(() => {
+    if (onPrintReady) {
+      onPrintReady(handlePrint);
+    }
+  }, [onPrintReady, handlePrint]);
 
   const handleExportCSV = () => {
     const headers = [
@@ -642,14 +877,20 @@ const RecareList = ({
       "Last Prophy",
       "Last Main.",
       "Last Comm.",
+      "Note",
       "Contact Again",
+      "Follow up Date",
       "Appt Date",
       "Count",
     ];
     const csvRows = [
       headers.join(","),
-      ...filteredRows.map((r) =>
-        [
+      ...sortedRows.map((r) => {
+        const noteContent = getRowNoteContent(r);
+        const noteText = noteContent.text ? `${noteContent.timestamp ? `[${noteContent.timestamp}] ` : ""}${noteContent.text}` : "";
+        const contactAgainVal = getRowContactAgain(r);
+        const followUpVal = getRowFollowUp(r);
+        return [
           `"${r.patient}"`,
           `"${r.flags}"`,
           r.age,
@@ -659,11 +900,13 @@ const RecareList = ({
           r.lastProphy,
           r.lastMaintenance,
           r.lastComm,
-          r.contactAgain,
+          `"${noteText.replace(/"/g, '""')}"`,
+          `"${contactAgainVal}"`,
+          `"${followUpVal}"`,
           r.apptDate,
           r.contactCount,
-        ].join(","),
-      ),
+        ].join(",");
+      }),
     ].join("\n");
     const blob = new Blob([csvRows], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -779,11 +1022,47 @@ const RecareList = ({
                   <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Note
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
-                    Contact Again
+                  <TableCell
+                    onClick={() => handleSort('contactAgain')}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      color: "#5C646F",
+                      fontFamily: "'Inter', sans-serif",
+                      cursor: "pointer",
+                      userSelect: "none",
+                      verticalAlign: "bottom",
+                      pb: 1,
+                      '&:hover': { color: '#1a3a6b' },
+                    }}
+                  >
+                    <Box sx={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.2 }}>
+                      <Box component="span">Contact</Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+                        <Box component="span">Again</Box>
+                        <SwapVert sx={{ fontSize: 16, color: sortConfig.key === 'contactAgain' ? '#1a3a6b' : '#64748b' }} />
+                      </Box>
+                    </Box>
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
-                    Follow up
+                  <TableCell
+                    onClick={() => handleSort('followUp')}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      color: "#5C646F",
+                      fontFamily: "'Inter', sans-serif",
+                      cursor: "pointer",
+                      userSelect: "none",
+                      verticalAlign: "bottom",
+                      pb: 1,
+                      whiteSpace: "nowrap",
+                      '&:hover': { color: '#1a3a6b' },
+                    }}
+                  >
+                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.25 }}>
+                      <Box component="span">Follow up Date</Box>
+                      <SwapVert sx={{ fontSize: 16, color: sortConfig.key === 'followUp' ? '#1a3a6b' : '#64748b' }} />
+                    </Box>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Appt Date
@@ -791,8 +1070,8 @@ const RecareList = ({
                   <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
                     Count
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif" }}>
-                    Reset
+                  <TableCell sx={{ fontWeight: 600, fontSize: "13px", color: "#5C646F", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>
+                    Reminders
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -819,7 +1098,8 @@ const RecareList = ({
                           fontSize: "0.85rem",
                           color: "#1a3a6b",
                           fontWeight: 600,
-                          verticalAlign: "middle"
+                          verticalAlign: "top",
+                          pt: 1.5,
                         }}
                       >
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -832,7 +1112,7 @@ const RecareList = ({
                         </Box>
                       </TableCell>
                       {showFlagsCol && (
-                        <TableCell sx={{ verticalAlign: "middle" }}>
+                        <TableCell sx={{ verticalAlign: "top", pt: 1.5 }}>
                           {(() => {
                             const flagItems = parseFlags(row.flags);
                             if (flagItems.length === 0) {
@@ -843,7 +1123,7 @@ const RecareList = ({
                               );
                             }
                             return (
-                              <Box sx={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
+                              <Box sx={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap", pt: 0.5 }}>
                                 {flagItems.map((flag, idx) => {
                                   const flagColor = getFlagItemColor(flag, globalFlags);
                                   const flagLabel = getFlagItemLabel(flag);
@@ -872,37 +1152,203 @@ const RecareList = ({
                           })()}
                         </TableCell>
                       )}
-                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
                         {row.age}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.85rem", color: "#4a90e2", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", color: "#4a90e2", verticalAlign: "top", pt: 1.5 }}>
                         {row.contact}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
                         {displayDate(row.recallDate)}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
                         {displayDate(row.lastExam)}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
                         {displayDate(row.lastProphy)}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "middle" }}>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
                         {displayDate(row.lastMaintenance)}
                       </TableCell>
+                      <TableCell sx={{ fontSize: "0.85rem", verticalAlign: "top", pt: 1.5 }}>
+                        {displayDate(row.lastComm)}
+                      </TableCell>
 
-                      {['lastComm', 'note', 'contactAgain', 'followUp'].map(field => (
-                        <TableCell key={field} sx={{ fontSize: '0.85rem', verticalAlign: 'middle' }}>
-                          <Tooltip title={field === 'contactAgain' ? 'Saved contact-again date. A dash means none is recorded.' : ''}>
-                            <span>{field === 'note' ? row[field] || '\u2014' : displayDate(row[field])}</span>
-                          </Tooltip>
-                        </TableCell>
-                      ))}
+                      {/* Note Column */}
+                      <TableCell sx={{ fontSize: '0.85rem', verticalAlign: 'top', pt: 1.5, minWidth: 200, maxWidth: 280 }}>
+                        {(() => {
+                          const isEditorOpen = activeNoteEditors[row.id] !== undefined ? activeNoteEditors[row.id] : Boolean(row.note);
+                          const noteContent = getRowNoteContent(row);
+                          const currentTimestamp = rowNoteTimestamps[row.id] || noteContent.timestamp;
+                          const currentNoteText = noteContent.text;
+
+                          return (
+                            <Box>
+                              <Box
+                                onClick={() => handleToggleNoteEditor(row)}
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  cursor: 'pointer',
+                                  color: '#334155',
+                                  userSelect: 'none',
+                                  '&:hover': { color: '#0f172a' },
+                                }}
+                              >
+                                <EditOutlined sx={{ fontSize: 16, color: 'inherit' }} />
+                                <Typography sx={{ fontSize: '13px', fontWeight: 500, color: 'inherit', fontFamily: "'Inter', sans-serif" }}>
+                                  Add note
+                                </Typography>
+                              </Box>
+
+                              {isEditorOpen && (
+                                <Box sx={{ mt: 0.5 }}>
+                                  <Typography
+                                    sx={{
+                                      fontSize: '12px',
+                                      color: '#1e293b',
+                                      fontWeight: 500,
+                                      mb: 0.5,
+                                      fontFamily: "'Inter', sans-serif",
+                                    }}
+                                  >
+                                    {currentTimestamp}
+                                  </Typography>
+                                  <Box
+                                    component="textarea"
+                                    value={currentNoteText}
+                                    onChange={(e) => handleNoteChange(row.id, e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    sx={{
+                                      width: '100%',
+                                      minHeight: 65,
+                                      p: '6px 8px',
+                                      fontSize: '13px',
+                                      fontFamily: "'Inter', sans-serif",
+                                      color: '#1e293b',
+                                      backgroundColor: '#ffffff',
+                                      border: '1px solid #71717a',
+                                      borderRadius: '2px',
+                                      outline: 'none',
+                                      resize: 'both',
+                                      display: 'block',
+                                      boxSizing: 'border-box',
+                                      '&:focus': {
+                                        borderColor: '#1a3a6b',
+                                        boxShadow: '0 0 0 1px #1a3a6b',
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </TableCell>
+
+                      {/* Contact Again Column */}
+                      <TableCell sx={{ fontSize: '0.85rem', verticalAlign: 'top', pt: 1.5, minWidth: 75, width: 85 }}>
+                        {(() => {
+                          const contactAgainVal = getRowContactAgain(row);
+                          return (
+                            <Select
+                              variant="standard"
+                              value={contactAgainVal}
+                              onChange={(e) => handleContactAgainChange(row.id, e.target.value)}
+                              displayEmpty
+                              IconComponent={KeyboardArrowDown}
+                              sx={{
+                                width: 65,
+                                fontSize: '0.85rem',
+                                color: '#1e293b',
+                                fontFamily: "'Inter', sans-serif",
+                                '&:before': {
+                                  borderBottom: '1px solid #cbd5e1 !important',
+                                },
+                                '&:hover:not(.Mui-disabled):before': {
+                                  borderBottom: '1px solid #94a3b8 !important',
+                                },
+                                '&:after': {
+                                  borderBottom: '2px solid #1a3a6b !important',
+                                },
+                                '& .MuiSelect-select': {
+                                  py: 0.25,
+                                  pr: '22px !important',
+                                  pl: 0.5,
+                                  textAlign: 'left',
+                                  fontSize: '0.85rem',
+                                  minHeight: 'auto',
+                                },
+                                '& .MuiSelect-icon': {
+                                  fontSize: 20,
+                                  color: '#64748b',
+                                  right: 0,
+                                  top: 'calc(50% - 10px)',
+                                },
+                              }}
+                            >
+                              <MenuItem value="" sx={{ minHeight: '32px' }}>
+                                <span style={{ color: '#94a3b8' }}>&nbsp;</span>
+                              </MenuItem>
+                              <MenuItem value="Y" sx={{ minHeight: '32px', fontSize: '0.85rem' }}>
+                                Y
+                              </MenuItem>
+                              <MenuItem value="N" sx={{ minHeight: '32px', fontSize: '0.85rem' }}>
+                                N
+                              </MenuItem>
+                              {contactAgainVal && !["", "Y", "N"].includes(contactAgainVal) && (
+                                <MenuItem value={contactAgainVal} sx={{ minHeight: '32px', fontSize: '0.85rem' }}>
+                                  {contactAgainVal}
+                                </MenuItem>
+                              )}
+                            </Select>
+                          );
+                        })()}
+                      </TableCell>
+
+                      {/* Follow up Date Column */}
+                      <TableCell sx={{ fontSize: '0.85rem', verticalAlign: 'top', pt: 1.5, minWidth: 120, width: 140 }}>
+                        {(() => {
+                          const followUpVal = getRowFollowUp(row);
+                          return (
+                            <TextField
+                              variant="standard"
+                              placeholder="Enter Date"
+                              value={followUpVal}
+                              onChange={(e) => handleFollowUpDateChange(row.id, e.target.value)}
+                              sx={{
+                                width: 120,
+                                '& .MuiInputBase-input': {
+                                  fontSize: '0.85rem',
+                                  color: '#1e293b',
+                                  py: 0.25,
+                                  fontFamily: "'Inter', sans-serif",
+                                  '&::placeholder': {
+                                    color: '#94a3b8',
+                                    opacity: 1,
+                                  },
+                                },
+                                '& .MuiInput-underline:before': {
+                                  borderBottom: '1px solid #cbd5e1 !important',
+                                },
+                                '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                                  borderBottom: '1px solid #94a3b8 !important',
+                                },
+                                '& .MuiInput-underline:after': {
+                                  borderBottom: '2px solid #1a3a6b !important',
+                                },
+                              }}
+                            />
+                          );
+                        })()}
+                      </TableCell>
 
                       <TableCell
                         sx={{
                           fontSize: "0.85rem",
-                          verticalAlign: "middle",
+                          verticalAlign: "top",
+                          pt: 1.5,
                         }}
                       >
                         {displayDate(row.apptDate)}
@@ -910,14 +1356,50 @@ const RecareList = ({
                       <TableCell
                         sx={{
                           fontSize: "0.85rem",
-                          verticalAlign: "middle",
+                          verticalAlign: "top",
+                          pt: 1.5,
                         }}
                       >
                         <Tooltip title="Number of recorded patient communications">
                           <span>{row.contactCount === '' ? '\u2014' : row.contactCount}</span>
                         </Tooltip>
                       </TableCell>
-                      <TableCell><Tooltip title="Contact history is read-only in this report"><span>{'\u2014'}</span></Tooltip></TableCell>
+                      <TableCell sx={{ verticalAlign: "top", pt: 1.5, textAlign: "center", minWidth: 75 }}>
+                        <Button
+                          size="small"
+                          disabled={Boolean(savingRows[row.id])}
+                          onClick={() => handleResetRow(row)}
+                          sx={{
+                            backgroundColor: '#2362EF',
+                            color: '#ffffff',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            fontSize: '12px',
+                            fontFamily: "'Inter', sans-serif",
+                            borderRadius: '6px',
+                            px: 1.5,
+                            py: 0.25,
+                            minWidth: '58px',
+                            height: '26px',
+                            boxShadow: 'none',
+                            transition: 'all 0.15s ease-in-out',
+                            '&:hover': {
+                              backgroundColor: '#1D53CC',
+                              boxShadow: 'none',
+                            },
+                            '&:disabled': {
+                              backgroundColor: '#bfdbfe',
+                              color: '#ffffff',
+                            },
+                          }}
+                        >
+                          {savingRows[row.id] ? (
+                            <CircularProgress size={14} sx={{ color: '#ffffff' }} />
+                          ) : (
+                            "Reset"
+                          )}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -927,7 +1409,7 @@ const RecareList = ({
 
           <TablePagination
             component="div"
-            count={filteredRows.length}
+            count={sortedRows.length}
             page={page}
             onPageChange={(_, newPage) => setPage(newPage)}
             rowsPerPage={rowsPerPage}
@@ -959,6 +1441,21 @@ const RecareList = ({
         onClose={() => setChatPatient(null)}
         patientName={chatPatient?.patient}
       />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: "100%", boxShadow: 3 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
