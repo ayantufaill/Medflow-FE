@@ -94,7 +94,7 @@ const InsurancePaymentTopRow = ({
         onChange={(e) => setChequeNo?.(e.target.value)}
         placeholder=""
         sx={{
-          minWidth: 120,
+          minWidth: 160,
           '& .MuiOutlinedInput-root': {
             height: '28px',
             fontSize: '0.8125rem',
@@ -114,7 +114,7 @@ const InsurancePaymentTopRow = ({
         onChange={(e) => setBranchNo?.(e.target.value)}
         placeholder=""
         sx={{
-          minWidth: 120,
+          minWidth: 160,
           '& .MuiOutlinedInput-root': {
             height: '28px',
             fontSize: '0.8125rem',

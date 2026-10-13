@@ -65,7 +65,7 @@ const AddPaymentTopRow = ({
               sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#60a5fa' } }}
             />
           }
-          label={<Typography sx={{ fontSize: '0.8125rem', color: greenText }}>Add family credit</Typography>}
+          label={<Typography sx={{ fontSize: '0.8125rem', color: greenText }}>Use family credit</Typography>}
           sx={{ ml: 1, mr: 0 }}
         />
       )}
@@ -77,7 +77,7 @@ const AddPaymentTopRow = ({
             variant="outlined" 
             size="small" 
             sx={{ 
-              width: 80, mx: 1,
+              width: 160, mx: 1,
               '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
               '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
@@ -89,7 +89,7 @@ const AddPaymentTopRow = ({
             variant="outlined" 
             size="small" 
             sx={{ 
-              width: 100, mx: 1,
+              width: 160, mx: 1,
               '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
               '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },

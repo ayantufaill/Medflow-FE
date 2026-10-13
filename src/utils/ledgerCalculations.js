@@ -308,6 +308,7 @@ export const buildLedgerProcedureContext = ({
   const proceduresForAdjustment = (adj) => {
     const adjustmentAmount = Math.abs(moneyNumber(adj.amount));
     const isPatientCreditAdjustment = adjustmentIsPatientCredit(adj);
+    const isDebitAdjustment = adjustmentIsDebitAddition(adj);
     const targets = procedureTargetsOf(adj)
       .map((procNum) => proceduresByProcNum.get(procNum))
       .filter(Boolean);
@@ -322,21 +323,40 @@ export const buildLedgerProcedureContext = ({
         return true;
       })
       .map((proc) => {
-        const { fee, ptPortion, insPortion, pricingWriteOff } =
+        if (isDebitAdjustment) {
+          // For debit adjustments, use the restated amounts (after all prior
+          // adjustments folded in) and distribute the new debit proportionally
+          // to the current patient/insurance split.
+          const restated = procedureAfterAdjustments(proc);
+          const { fee, ptPortion, insPortion, pricingWriteOff } = restated;
+          const totalPortion = ptPortion + insPortion;
+          const ptShare = totalPortion > 0 ? ptPortion / totalPortion : 0;
+          const insShare = totalPortion > 0 ? insPortion / totalPortion : 0;
+          return {
+            ...proc,
+            fee: restated.fee,
+            ptPortion: ptPortion + round2(adjustmentAmount * ptShare),
+            insPortion: insPortion + round2(adjustmentAmount * insShare),
+            writeoff: pricingWriteOff,
+            estimatedWriteOff: pricingWriteOff,
+            appliedAdjustment: adjustmentAmount,
+          };
+        }
+        // Patient credit adjustments (courtesy, un-collected, etc.) reduce
+        // the patient portion only; insurance estimate is zeroed for display
+        // since the credit applies to patient liability.
+        const { fee: baseFee, ptPortion: basePt, insPortion: baseIns, pricingWriteOff: baseWo } =
           procedureBaseAmounts(proc);
-        const isDebitAdjustment = adjustmentIsDebitAddition(adj);
-        const patientCreditBase = Math.max(0, fee - pricingWriteOff);
+        const patientCreditBase = Math.max(0, baseFee - baseWo);
         return {
           ...proc,
-          fee,
-          ptPortion: isDebitAdjustment
-            ? ptPortion
-            : isPatientCreditAdjustment
+          fee: baseFee,
+          ptPortion: isPatientCreditAdjustment
             ? Math.max(0, patientCreditBase - adjustmentAmount)
-            : ptPortion,
-          insPortion: isPatientCreditAdjustment && !isDebitAdjustment ? 0 : insPortion,
-          writeoff: pricingWriteOff,
-          estimatedWriteOff: pricingWriteOff,
+            : basePt,
+          insPortion: isPatientCreditAdjustment ? 0 : baseIns,
+          writeoff: baseWo,
+          estimatedWriteOff: baseWo,
           appliedAdjustment: adjustmentAmount,
         };
       });

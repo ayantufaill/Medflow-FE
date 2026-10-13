@@ -338,6 +338,8 @@ const PatientFinanceInfo = forwardRef(
               status: "completed",
               notes: paymentData.description || "Patient payment",
               isAccountCredit: paymentData.paymentMethod === "Account Credit",
+              addFamilyCredit: Boolean(paymentData.addFamilyCredit),
+              useFamilyCredit: Boolean(paymentData.addFamilyCredit),
             };
             await paymentService.recordPayment(payload);
           }

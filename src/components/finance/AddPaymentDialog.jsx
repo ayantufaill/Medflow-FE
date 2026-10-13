@@ -24,6 +24,7 @@ import {
   selectPaymentInvoicesLoading,
   invalidatePaymentInvoices,
   toggleAllPaymentInvoices,
+  selectBillingConfiguration,
 } from '../../store/slices/billingSlice';
 
 const moneyNumber = (value) => {
@@ -221,6 +222,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const ledgerOverrideAppliedRef = useRef(false);
 
   // ── Local form state ─────────────────────────────────────────────────────
+  const billingConfig = useSelector(selectBillingConfiguration);
   const [selectedPatient, setSelectedPatient] = useState(
     patient ? `${patient.firstName} ${patient.lastName}` : 'test test'
   );
@@ -230,12 +232,20 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [patientAmountChecked, setPatientAmountChecked] = useState(false);
   const [manualAmount,         setManualAmount]         = useState('');
   const [amountType,           setAmountType]           = useState('patient amount');
-  const [accountCredit,        setAccountCredit]        = useState(0);
+  const [patientCredit,        setPatientCredit]        = useState(0);
+  const [familyCredit,         setFamilyCredit]         = useState(0);
   const [addFamilyCredit,      setAddFamilyCredit]      = useState(false);
+
+  const availableCredit = (paymentMethod === 'Account Credit' && addFamilyCredit)
+    ? familyCredit
+    : patientCredit;
 
   const handlePaymentMethodChange = (method) => {
     setPaymentMethod(method);
-    if (method !== 'Account Credit') {
+    if (method === 'Account Credit') {
+      const defaultUseFamily = billingConfig?.useFamilyCredit ?? false;
+      setAddFamilyCredit(defaultUseFamily);
+    } else {
       setAddFamilyCredit(false);
     }
   };
@@ -248,10 +258,38 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       dispatch(fetchPaymentDraftInvoices(patientId));
       
       apiClient.get(`/finance-dashboard/aging/${patientId}`)
-        .then(res => setAccountCredit(res.data?.data?.patientAccountCredit || 0))
+        .then(res => {
+          const data = res.data?.data;
+          const pCredit = Number(data?.patientCredit ?? data?.patientAccountCredit ?? 0);
+          const fCredit = Number(data?.familyCredit ?? pCredit);
+          setPatientCredit(pCredit);
+          setFamilyCredit(fCredit);
+        })
         .catch(err => console.warn("Failed to fetch account credit", err));
     }
   }, [dispatch, patientId]);
+  
+  // ── Derived totals ───────────────────────────────────────────────────────
+  const { totalChecked } = useMemo(() => {
+    let sum = 0;
+    invoices.forEach((inv) => {
+      (inv.lineItems || []).forEach((item) => {
+        if (item.checked) sum += paymentLineAmount(item);
+      });
+    });
+    return { totalChecked: sum };
+  }, [invoices]);
+
+  // If available credit changes and totalChecked exceeds it, uncheck to stay within limit
+  useEffect(() => {
+    if (paymentMethod === 'Account Credit' && totalChecked > availableCredit) {
+      dispatch(toggleAllPaymentInvoices({ patientId, checked: false }));
+      showSnackbar("Selections reset because total exceeds available credit.", "info");
+      const timeoutId = window.setTimeout(() => setPatientAmountChecked(false), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [availableCredit, dispatch, patientId, paymentMethod, showSnackbar, totalChecked]);
 
   // The draft-invoice fetch and the patient ledger are two independent async
   // sources. Whichever resolves last used to win the cache, so the dialog
@@ -268,22 +306,9 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       return;
     }
     const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
-    if (ledgerInvoices.length > 0) {
-      dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
-      ledgerOverrideAppliedRef.current = true;
-    }
+    dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
+    ledgerOverrideAppliedRef.current = true;
   }, [dispatch, patientId, loading, ledgerItems]);
-
-  // ── Derived totals ───────────────────────────────────────────────────────
-  const { totalChecked } = useMemo(() => {
-    let sum = 0;
-    invoices.forEach((inv) => {
-      (inv.lineItems || []).forEach((item) => {
-        if (item.checked) sum += paymentLineAmount(item);
-      });
-    });
-    return { totalChecked: sum };
-  }, [invoices]);
 
   const displayAmount   = amountType === 'specific amount'
     ? manualAmount
@@ -300,7 +325,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         invToToggle.lineItems?.forEach((i) => {
           if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
-        if (totalChecked + sumToAdd > accountCredit) {
+        if (totalChecked + sumToAdd > availableCredit) {
           showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
           return;
         }
@@ -320,7 +345,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         }
       });
       if (itemToToggle && !itemToToggle.checked) {
-        if (totalChecked + Number(itemToToggle.payAmount || 0) > accountCredit) {
+        if (totalChecked + Number(itemToToggle.payAmount || 0) > availableCredit) {
           showSnackbar("Cannot select procedure. Total exceeds available deposit balance.", "error");
           return;
         }
@@ -337,7 +362,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
       });
-      if (totalChecked + sumToAdd > accountCredit) {
+      if (totalChecked + sumToAdd > availableCredit) {
         showSnackbar("Cannot select all. Total exceeds available deposit balance.", "error");
         return;
       }
@@ -358,7 +383,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       });
       if (itemToEdit && itemToEdit.checked) {
         let diff = Number(amount || 0) - Number(itemToEdit.payAmount || 0);
-        if (totalChecked + diff > accountCredit) {
+        if (totalChecked + diff > availableCredit) {
           showSnackbar("Amount exceeds available deposit balance.", "error");
           return;
         }
@@ -431,7 +456,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           displayAmount={displayAmount}
           setManualAmount={setManualAmount}
           paymentMethod={paymentMethod}
-          accountCredit={accountCredit}
+          accountCredit={availableCredit}
           MENU_PROPS={MENU_PROPS}
         />
 
