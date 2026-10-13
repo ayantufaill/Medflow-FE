@@ -1,28 +1,37 @@
-import { Box, Typography, Divider, Grid, Card, CardContent } from '@mui/material';
-import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { Box, Typography } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FindingsListContent from './FindingsListContent';
 import { COLORS } from '../../constants/colors';
 import { headingPrimarySx, headingSecondarySx, bodySx, captionSx, radius } from '../../constants/styles';
 
-const mockClinicalImages = [
-  { id: 1, url: '/Damaged_teeth.png', type: 'Bitewing X-ray', date: '2024-01-15' },
-  { id: 2, url: '/repaired_teeth.png', type: 'Panoramic X-ray', date: '2024-01-10' },
-];
+const diagnosisLabels = {
+  healthy: 'Healthy', gingivitis: 'Gingivitis', periodontitis: 'Periodontitis',
+  stage1: 'Stage I', stage2: 'Stage II', stage3: 'Stage III', stage4: 'Stage IV',
+  gradeA: 'Grade A', gradeB: 'Grade B', gradeC: 'Grade C',
+  localized: 'Localized', generalized: 'Generalized', 'molar-incisor': 'Molar-incisor',
+};
+const formatDate = value => {
+  if (!value) return 'Not recorded';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString();
+};
 
 /**
  * CategoryTabContent Component
  * Displays complete content for a category tab including:
  * - Section header with title and description
  * - Findings list (using FindingsListContent component)
- * - Optional clinical images (only for Periodontal Health)
+ * - Saved periodontal source, diagnosis and statistics
  */
 const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
   if (!category) return null;
 
+  const isPeriodontal = category.isPeriodontal || category.title === 'Periodontal Health' || category.title === 'Gum & Bone Health';
+
   return (
     <Box>
       {/* Initial Findings Header - Only for Periodontal Health */}
-      {category.title === 'Periodontal Health' && (
+      {isPeriodontal && (
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ ...headingPrimarySx, color: COLORS.PRIMARY }}>
             Initial Findings
@@ -65,8 +74,40 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
         )}
       </Box>
 
+      {isPeriodontal && category.source && (
+        <Box sx={{ mb: 2 }}>
+          <Typography sx={captionSx}>Chart appointment: {formatDate(category.source.examDate)}</Typography>
+          <Typography sx={captionSx}>Last saved: {formatDate(category.source.savedAt)}</Typography>
+        </Box>
+      )}
+      {isPeriodontal && category.diagnosis && (
+        <Box sx={{ mb: 2 }}>
+          <Typography sx={headingSecondarySx}>Recorded diagnosis</Typography>
+          <Typography sx={bodySx}>
+            {[category.diagnosis.type, ...(category.diagnosis.type === 'periodontitis'
+              ? [category.diagnosis.stage, category.diagnosis.distribution, category.diagnosis.grading] : [])]
+              .filter(Boolean).map(v => diagnosisLabels[v] || v).join(' · ')}
+          </Typography>
+        </Box>
+      )}
+      {isPeriodontal && category.assessed && category.summary && (
+        <Box sx={{ mb: 3 }}>
+          <Typography sx={headingSecondarySx}>Recorded chart summary</Typography>
+          <Typography sx={bodySx}>Probing sites recorded: {category.summary.measuredSites} / {category.summary.totalSites}</Typography>
+          <Typography sx={bodySx}>Maximum probing depth: {category.summary.maxProbingDepth == null ? 'Not recorded' : `${category.summary.maxProbingDepth} mm`}</Typography>
+          <Typography sx={bodySx}>Marked bleeding sites: {category.summary.bleedingSites}</Typography>
+          <Typography sx={bodySx}>Recorded sites with recession: {category.summary.recessionSites}</Typography>
+          <Typography sx={bodySx}>Recorded pockets ≥5 mm: {category.summary.deepPocketSites}</Typography>
+        </Box>
+      )}
+
       {/* Findings List Content */}
-      {category.issues && category.issues.length > 0 ? (
+      {isPeriodontal && category.assessed === false ? (
+        <Box sx={{ p: 3, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.md }}>
+          <Typography sx={headingSecondarySx}>Not assessed</Typography>
+          <Typography sx={bodySx}>Save periodontal measurements or a diagnosis in Perio Charts to populate this section.</Typography>
+        </Box>
+      ) : category.issues && category.issues.length > 0 ? (
         <FindingsListContent
           issues={category.issues}
           secondaryIssues={category.secondaryIssues}
@@ -75,59 +116,14 @@ const CategoryTabContent = ({ category, sectionNumber = 1 }) => {
         />
       ) : (
         <Box sx={{ textAlign: 'center', py: 4, bgcolor: COLORS.SURFACE_TINT, borderRadius: radius.md, border: `1px dashed ${COLORS.BORDER}` }}>
-          <CheckCircleIcon sx={{ fontSize: 48, color: COLORS.STATUS_SUCCESS, mb: 1 }} />
+          {!isPeriodontal && <CheckCircleIcon sx={{ fontSize: 48, color: COLORS.STATUS_SUCCESS, mb: 1 }} />}
           <Typography sx={{ ...headingSecondarySx, color: COLORS.STATUS_SUCCESS }}>
-            No issues detected in this category
+            {isPeriodontal ? 'No flagged measurements in the recorded chart' : 'No issues detected in this category'}
           </Typography>
         </Box>
       )}
 
-      {/* Clinical Images - Show for Periodontal Health OR when footerTitle exists */}
-      {(category.title === 'Periodontal Health' || category.footerTitle) && (
-        <>
-          <Divider sx={{ my: 3, borderColor: COLORS.BORDER }} />
 
-          <Typography sx={{ ...headingSecondarySx, mb: 2 }}>
-            {category.footerTitle || 'Your Teeth'} 
-          </Typography>
-          <Grid container spacing={2}>
-            {mockClinicalImages.map((image) => (
-              <Grid item xs={6} key={image.id}>
-                <Card 
-                  elevation={0}
-                  sx={{ 
-                    cursor: 'pointer', 
-                    borderRadius: radius.md,
-                    border: `1px solid ${COLORS.BORDER}`,
-                    '&:hover': { borderColor: COLORS.PRIMARY, bgcolor: COLORS.SURFACE_HOVER, transition: '0.2s' } 
-                  }}
-                >
-                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                    <Box 
-                      component="img"
-                      src={image.url}
-                      alt={image.type}
-                      sx={{ 
-                        width: '100%',
-                        height: 120,
-                        objectFit: 'cover',
-                        borderRadius: radius.sm,
-                        mb: 1
-                      }}
-                    />
-                    <Typography sx={{ ...bodySx, fontWeight: 600 }}>
-                      {image.type}
-                    </Typography>
-                    <Typography sx={{ ...captionSx, color: COLORS.TEXT_MUTED }}>
-                      {image.date}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
     </Box>
   );
 };

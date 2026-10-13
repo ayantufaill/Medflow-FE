@@ -49,6 +49,7 @@ import {
 } from "./form-components/formatters";
 import { COLORS } from "../../constants/colors";
 import { radius, fontSize, fontWeight } from "../../constants/styles";
+import { patientValidations } from "../../validations/patientValidations";
 
 import { patientService } from "../../services/patient.service";
 import { useSelector, useDispatch } from "react-redux";
@@ -217,6 +218,7 @@ const PATIENT_SSN_FIELD = [
     placeholder: "XXX-XX-XXXX",
     formatter: formatSSNInput,
     gridSize: { xs: 12, sm: 4 },
+    validate: patientValidations.ssn.validate,
   },
 ];
 

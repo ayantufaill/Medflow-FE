@@ -176,9 +176,9 @@ const AddCoveragePage = () => {
         ...prev,
         subscriber: {
           ...prev.subscriber,
-          name: fullName || prev.subscriber.name,
-          dateOfBirth: dateOfBirth ? dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
-          ssn: ssn || prev.subscriber.ssn
+          name: prev.subscriber.name || fullName,
+          dateOfBirth: prev.subscriber.dateOfBirth || (dateOfBirth ? dateOfBirth.split('T')[0] : ''),
+          ssn: prev.subscriber.ssn || ssn || ''
         }
       }));
     }

@@ -8,10 +8,11 @@ import PerioGraphOverlay from './periodontal/PerioGraphOverlay';
 const LABEL_WIDTH = 96;
 const ROW_HEIGHT = 32;
 
-const SmallSelect = ({ value = 'none', onChange }) => (
+const SmallSelect = ({ value = '', onChange }) => (
   <Select
     size="small"
     value={value}
+    displayEmpty
     onChange={(e) => onChange(e.target.value)}
     sx={{
       height: 22,
@@ -24,6 +25,7 @@ const SmallSelect = ({ value = 'none', onChange }) => (
       '& .MuiSelect-select': { py: 0, px: 1, display: 'flex', alignItems: 'center' }
     }}
   >
+    <MenuItem value="" sx={{ fontSize: '11px' }}>—</MenuItem>
     <MenuItem value="none" sx={{ fontSize: '11px' }}>none</MenuItem>
     <MenuItem value="1" sx={{ fontSize: '11px' }}>1</MenuItem>
     <MenuItem value="2" sx={{ fontSize: '11px' }}>2</MenuItem>
@@ -450,8 +452,8 @@ const PerioChartGrid = forwardRef(({ chartData = {}, setChartData, missingTeeth 
         const recArr = type === 'recession' ? arr : (updated[tooth][side].recession || ['', '', '']);
         
         updated[tooth][side].attachment = probeArr.map((pVal, idx) => {
-          const rVal = recArr[idx] || '0';
-          if (!pVal) return '';
+          const rVal = recArr[idx];
+          if (pVal === '' || pVal == null || rVal === '' || rVal == null) return '';
           return String(parseInt(pVal) + parseInt(rVal));
         });
       }

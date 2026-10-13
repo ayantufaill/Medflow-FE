@@ -139,7 +139,15 @@ export const standardFieldSx = {
     '&.Mui-error:hover fieldset': { borderColor: COLORS.STATUS_ERROR },
     '&.Mui-error.Mui-focused fieldset': { borderColor: COLORS.STATUS_ERROR },
   },
+  '& .MuiOutlinedInput-root.MuiInputBase-multiline': {
+    height: 'auto',
+    minHeight: '40px',
+    padding: '8px 12px',
+  },
   '& .MuiOutlinedInput-input': { padding: '8px 12px', fontSize: fontSize.base, minWidth: 0 },
+  '& .MuiOutlinedInput-root.MuiInputBase-multiline .MuiOutlinedInput-input': {
+    padding: 0,
+  },
   '& .MuiOutlinedInput-input::placeholder': { opacity: 0.6, color: COLORS.TEXT_MUTED },
 };
 

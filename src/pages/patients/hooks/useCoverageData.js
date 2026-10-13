@@ -190,7 +190,14 @@ export const useCoverageData = (
                     editTarget.relationshipToPatient?.slice(1) || "Self",
                 name: editTarget.subscriberName || "",
                 subscriberId: editTarget.policyNumber || "",
-                ssn: editTarget.subscriberSsn || "",
+                ssn: editTarget.subscriberSsn 
+                  ? (() => {
+                      let nums = editTarget.subscriberSsn.replace(/\D/g, '');
+                      if (nums.length > 5) return `${nums.slice(0, 3)}-${nums.slice(3, 5)}-${nums.slice(5, 9)}`;
+                      if (nums.length > 3) return `${nums.slice(0, 3)}-${nums.slice(3)}`;
+                      return nums;
+                    })()
+                  : "",
                 dateOfBirth: editTarget.subscriberDateOfBirth
                   ? new Date(editTarget.subscriberDateOfBirth)
                       .toISOString()

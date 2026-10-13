@@ -39,48 +39,61 @@ import PeriographTab from "../../components/clinical/periodontal/PeriographTab";
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
 
 
-const initialToothData = (missingTeeth = []) => {
+const defaultDiagnosis = {
+  type: '', // 'healthy', 'gingivitis', 'periodontitis'
+  stage: '',
+  distribution: '',
+  grading: '',
+};
+
+const defaultSettings = {
+  probing: ['', '', ''],
+  recession: ['', '', ''],
+  recessionPresent: false,
+  attachedGingiva: ['', '', ''],
+  mobility: 'none',
+  bleeding: [], // indices of bleeding sites
+  bleedingPresent: false,
+  pcs: []
+};
+
+const initialToothData = () => {
   const data = {};
   for (let i = 1; i <= 32; i++) {
-    const isMissing = missingTeeth.includes(i);
     data[i] = {
       facial: {
-        mobility: 'none',
-        furcation: 'none',
-        bleeding: [0, 2],
-        pcs: ['P', 'C', 'S'],
-        recession: ['', '1', ''],
-        probe: ['3', '2', '3'],
-        attachment: ['3', '3', '3']
+        mobility: '',
+        furcation: '',
+        bleeding: [],
+        pcs: [],
+        recession: ['', '', ''],
+        probe: ['', '', ''],
+        attachment: ['', '', '']
       },
       lingual: {
-        mobility: 'none',
-        furcation: 'none',
-        bleeding: [0, 2],
-        pcs: ['P', 'C', 'S'],
-        recession: ['', '1', ''],
-        probe: ['3', '2', '3'],
-        attachment: ['3', '3', '3']
+        mobility: '',
+        furcation: '',
+        bleeding: [],
+        pcs: [],
+        recession: ['', '', ''],
+        probe: ['', '', ''],
+        attachment: ['', '', '']
       }
     };
     
-    // Calculate attachment loss
-    for (const side of ['facial', 'lingual']) {
-      const sideData = data[i][side];
-      sideData.attachment = sideData.probe.map((pVal, idx) => {
-        const rVal = sideData.recession[idx] || '0';
-        if (!pVal) return '';
-        return String(parseInt(pVal) + parseInt(rVal));
-      });
-    }
   }
   return data;
 };
 
-const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], onToothClickFromParent }) => {
+const PeriodontalExamEditor = ({
+  embedded = false, 
+  selectedTeethFromParent = [], 
+  onToothClickFromParent,
+  patientId,
+  appointmentId,
+  appointment: appointmentProp,
+}) => {
   const { showSnackbar } = useSnackbar();
-  const patientId = useSelector(selectSelectedPatientId);
-  const appointmentId = useSelector(selectSelectedAppointmentId);
   const authProviderId = useSelector(state => state.auth.user?.providerId);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -90,13 +103,14 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     ? String(viewingAppointmentId) 
     : (appointmentId && String(appointmentId) !== 'undefined' ? String(appointmentId) : null);
 
-  const { data: examRecord, isLoading: examLoading } = useClinicalExamQuery('periodontal', activeAppointmentId);
+  const { data: examRecord, isLoading: examLoading, isError: examError } = useClinicalExamQuery('periodontal', activeAppointmentId);
   const upsertMutation = useUpsertClinicalExam('periodontal', activeAppointmentId);
-  const radiographicUpsertMutation = useUpsertClinicalExam('radiographic', activeAppointmentId);
   const signMutation = useSignClinicalExam('periodontal', activeAppointmentId);
   const deleteMutation = useDeleteClinicalExam('periodontal', activeAppointmentId);
 
   const isSigned = !!examRecord?.isSigned;
+  const viewingHistory = !!appointmentId && activeAppointmentId !== String(appointmentId);
+  const newExamDisabled = !appointmentId || examLoading || (isSigned && !viewingHistory);
 
   // --- Interactive Tooth Chart State ---
   const [localSelectedTooth, setLocalSelectedTooth] = useState(null);
@@ -122,13 +136,27 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     }
   }, [selectedToothNumber]);
 
-  const sessionState = useSelector(state => state.clinicalExamSession.exam.periodontal);
+  const sessionKey = `${patientId}:${activeAppointmentId}`;
+  const storedSession = useSelector(state => state.clinicalExamSession.exam.periodontal);
+  const sessionState = storedSession?.sessionKey === sessionKey ? storedSession : null;
+  const pendingSessionRef = useRef(sessionState);
+  useEffect(() => { pendingSessionRef.current = sessionState; }, [sessionState]);
+  const dirtyRef = useRef(false);
+  const hydratedKeyRef = useRef(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const dispatch = useDispatch();
 
-  const { data: radiographicRecord } = useClinicalExamQuery('radiographic', activeAppointmentId);
-  const missingTeeth = (radiographicRecord?.examData?.missingTeeth || []).map(Number);
+  const { data: radiographicRecord, isLoading: radioLoading, isError: radioError } = useClinicalExamQuery('radiographic', activeAppointmentId);
+  const missingTeeth = useMemo(() => (radiographicRecord?.examData?.missingTeeth ?? examRecord?.examData?.missingTeeth ?? []).map(Number), [radiographicRecord, examRecord]);
 
-  const { currentAppointment } = useAppointmentDetail();
+  const { currentAppointment: storedAppointment } = useAppointmentDetail();
+  const appointmentCandidate = appointmentProp || storedAppointment;
+  const candidateId = appointmentCandidate?._id || appointmentCandidate?.id || appointmentCandidate?.AptNum;
+  const currentAppointment = String(candidateId) === String(appointmentId) ? appointmentCandidate : null;
   // currentAppointment.providerId is a full provider object { _id, providerCode, ... }, not a string
   const appointmentProvId = (() => {
     const provObj = currentAppointment?.providerId;
@@ -172,7 +200,7 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
       const dateValue = typeof item === 'object' ? item.date : item;
       return {
         label: formatDate(dateValue) || 'Invalid Date',
-        appointmentId: typeof item === 'object' ? item.appointmentId : null
+        appointmentId: typeof item === 'object' && item.appointmentId != null ? String(item.appointmentId) : null
       };
     });
 
@@ -180,13 +208,17 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
       const rawDate = currentAppointment.appointmentDate || currentAppointment.date || currentAppointment.AptDateTime;
       const formattedCurrent = formatDate(rawDate);
       if (formattedCurrent) {
-        const currentApptId = currentAppointment.id || currentAppointment.AptNum || appointmentId;
+        const currentApptId = appointmentId;
         if (currentApptId && String(currentApptId) !== 'undefined') {
-          const exists = formattedHistory.find(h => h.appointmentId === String(currentApptId));
-          if (!exists) {
+          const existing = formattedHistory.find(h => h.appointmentId === String(currentApptId));
+          if (existing) {
+            // History dates are save timestamps; the current visit uses its scheduled date.
+            existing.label = formattedCurrent;
+          } else {
             formattedHistory.push({
               label: formattedCurrent,
-              appointmentId: String(currentApptId)
+              appointmentId: String(currentApptId),
+              description: `${formattedCurrent} — current appointment`,
             });
           }
         }
@@ -194,19 +226,14 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     }
 
     return formattedHistory;
-  }, [historicalDates, currentAppointment]);
+  }, [historicalDates, currentAppointment, appointmentId]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [talkBackEnabled, setTalkBackEnabled] = useState(false);
   const [perioTab, setPerioTab] = useState(0);
 
   // --- Diagnosis State (persisted to backend) ---
-  const defaultDiagnosis = {
-    type: '',            // 'healthy', 'gingivitis', 'periodontitis'
-    stage: 'stage2',
-    distribution: 'generalized',
-    grading: 'gradeB',
-  };
+
   const [diagnosis, setDiagnosis] = useState(sessionState?.diagnosis || defaultDiagnosis);
   const diagnosisRef = useRef(diagnosis);
   useEffect(() => {
@@ -214,9 +241,11 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
   }, [diagnosis]);
 
   const handleDiagnosisChange = useCallback((newDiagnosis) => {
+    dirtyRef.current = true;
+    diagnosisRef.current = newDiagnosis;
     setDiagnosis(newDiagnosis);
-    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { diagnosis: newDiagnosis } } });
-  }, [dispatch]);
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { diagnosis: newDiagnosis, sessionKey, dirty: true } } });
+  }, [dispatch, sessionKey]);
 
   // --- Compare Mode State ---
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -238,16 +267,7 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     setAnchorEl(null);
   };
   
-  const defaultSettings = {
-    probing: ['3', '2', '3'],
-    recession: ['', '1', ''],
-    recessionPresent: false,
-    attachedGingiva: ['', '', ''],
-    mobility: 'none',
-    bleeding: [0, 2], // indices of bleeding sites
-    bleedingPresent: false,
-    pcs: ['P', 'C', 'S']
-  };
+
   
   const settings = sessionState?.settings || defaultSettings;
   const settingsRef = useRef(settings);
@@ -255,11 +275,12 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     settingsRef.current = settings;
   }, [settings]);
 
-  const setSettings = (val) => {
+  const setSettings = useCallback((val, userEdit = true) => {
+    if (userEdit) dirtyRef.current = true;
     const newVal = typeof val === 'function' ? val(settingsRef.current) : val;
     settingsRef.current = newVal;
-    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { settings: newVal } } });
-  };
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { settings: newVal, sessionKey, dirty: dirtyRef.current } } });
+  }, [dispatch, sessionKey]);
 
   const defaultChartData = useMemo(() => initialToothData(missingTeeth), [missingTeeth]);
   const chartData = sessionState?.chartData || defaultChartData;
@@ -268,61 +289,63 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     chartDataRef.current = chartData;
   }, [chartData]);
 
-  const setChartData = (val) => {
+  const setChartData = useCallback((val, userEdit = true) => {
+    if (userEdit) dirtyRef.current = true;
     const newVal = typeof val === 'function' ? val(chartDataRef.current) : val;
     chartDataRef.current = newVal;
-    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { chartData: newVal } } });
-  };
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'periodontal', data: { chartData: newVal, sessionKey, dirty: dirtyRef.current } } });
+  }, [dispatch, sessionKey]);
 
-  // Sync data from database to form state when loaded
+  // Loading or refetching a chart must not create a save or overwrite new edits.
   useEffect(() => {
-    // Only load from DB if we haven't already populated Redux (or if we want DB to take precedence on initial load)
-    // For now, we update Redux with DB data if it arrives
-    if (examRecord?.examData && examRecord.examData.chartData) {
-      setChartData(examRecord.examData.chartData);
-    } else if (!examLoading && !sessionState?.chartData) {
-      setChartData(initialToothData(missingTeeth));
-    }
-    
-    if (examRecord?.examData && examRecord.examData.settings) {
-      setSettings(examRecord.examData.settings);
-    } else if (!examLoading && !sessionState?.settings) {
-      setSettings(defaultSettings);
-    }
+    if (examLoading || examError) return;
+    const changedContext = hydratedKeyRef.current !== sessionKey;
+    if (!changedContext && dirtyRef.current) return;
+    const pendingSession = changedContext && pendingSessionRef.current?.dirty ? pendingSessionRef.current : null;
+    dirtyRef.current = !!pendingSession;
+    hydratedKeyRef.current = sessionKey;
+    const saved = pendingSession || examRecord?.examData;
+    setChartData(saved?.chartData || initialToothData(), false);
+    setSettings(saved?.settings || defaultSettings, false);
+    const nextDiagnosis = saved?.diagnosis || defaultDiagnosis;
+    diagnosisRef.current = nextDiagnosis;
+    setDiagnosis(nextDiagnosis);
+    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: {
+      subTab: 'periodontal', data: { diagnosis: nextDiagnosis, sessionKey, dirty: dirtyRef.current }
+    } });
+  }, [examRecord?.examData, examLoading, examError, sessionKey, dispatch, setChartData, setSettings]);
 
-    // Load diagnosis from DB
-    if (examRecord?.examData && examRecord.examData.diagnosis) {
-      setDiagnosis(examRecord.examData.diagnosis);
-    } else if (!examLoading && !sessionState?.diagnosis) {
-      setDiagnosis(defaultDiagnosis);
+  const currentExamData = useCallback(() => ({
+    chartData: chartDataRef.current, settings: settingsRef.current,
+    diagnosis: diagnosisRef.current, missingTeeth,
+  }), [missingTeeth]);
+  const { mutateAsync: saveExam, isPending: isSaving } = upsertMutation;
+  const saveCurrentExam = useCallback(async () => {
+    const examData = currentExamData();
+    const snapshot = JSON.stringify(examData);
+    await saveExam({
+      patientId: String(patientId), providerId: String(providerId), examData,
+    });
+    if (mountedRef.current && hydratedKeyRef.current === sessionKey && snapshot === JSON.stringify(currentExamData())) {
+      dirtyRef.current = false;
+      dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: {
+        subTab: 'periodontal', data: { dirty: false, sessionKey }
+      } });
     }
-  }, [examRecord?.examData, examLoading]);
+  }, [currentExamData, saveExam, patientId, providerId, sessionKey, dispatch]);
 
-  // --- Auto-save with debounce (3 seconds after last change) ---
+  // Autosave only user edits after loading the correct patient/appointment.
   const autoSaveTimerRef = useRef(null);
-  const isFirstLoadRef = useRef(true);
-
   useEffect(() => {
-    // Skip auto-save on initial load
-    if (isFirstLoadRef.current) {
-      isFirstLoadRef.current = false;
-      return;
-    }
-    if (isSigned || !activeAppointmentId || activeAppointmentId === 'undefined' || !providerId) return;
-
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (!dirtyRef.current || hydratedKeyRef.current !== sessionKey || examLoading || radioLoading || examError || radioError ||
+        isSigned || !activeAppointmentId || !patientId || !providerId || isSaving) return;
     autoSaveTimerRef.current = setTimeout(() => {
-      upsertMutation.mutate({
-        patientId: patientId ? String(patientId) : undefined,
-        providerId: providerId ? String(providerId) : undefined,
-        examData: { chartData: chartDataRef.current, settings: settingsRef.current, diagnosis: diagnosisRef.current }
+      saveCurrentExam().catch(err => {
+        showSnackbar(err.response?.data?.error?.message || 'Periodontal autosave failed. Please save again.', 'error');
       });
     }, 3000);
-
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
-  }, [chartData, settings, diagnosis]);
+    return () => clearTimeout(autoSaveTimerRef.current);
+  }, [chartData, settings, diagnosis, sessionKey, examLoading, radioLoading, examError, radioError, isSigned, providerId, activeAppointmentId, patientId, saveCurrentExam, showSnackbar, isSaving]);
 
   const handleSaveExam = async () => {
     if (!activeAppointmentId || activeAppointmentId === 'undefined') {
@@ -333,14 +356,15 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
       showSnackbar('Provider ID is required. Please wait for the appointment to fully load.', 'error');
       return;
     }
+    if (examLoading || radioLoading || isSigned || upsertMutation.isPending || hydratedKeyRef.current !== sessionKey) return;
+    if (examError || radioError) {
+      showSnackbar('The chart could not be loaded. Reload before saving.', 'error');
+      return;
+    }
     // Cancel any pending auto-save
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     try {
-      await upsertMutation.mutateAsync({
-        patientId: patientId ? String(patientId) : undefined,
-        providerId: providerId ? String(providerId) : undefined,
-        examData: { chartData, settings, diagnosis }
-      });
+      await saveCurrentExam();
       showSnackbar('Periodontal exam saved successfully', 'success');
     } catch (err) {
       showSnackbar(err.response?.data?.error?.message || 'Failed to save exam', 'error');
@@ -362,6 +386,14 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
   const handleConfirmSign = async () => {
     setSignDialogOpen(false);
     try {
+      if (examLoading || radioLoading || examError || radioError || isSigned ||
+          !activeAppointmentId || !patientId || !providerId || hydratedKeyRef.current !== sessionKey) return;
+      if (upsertMutation.isPending) {
+        showSnackbar('Please wait for the chart to finish saving before signing.', 'info');
+        return;
+      }
+      clearTimeout(autoSaveTimerRef.current);
+      await saveCurrentExam();
       await signMutation.mutateAsync();
       showSnackbar('Periodontal exam signed and locked', 'success');
     } catch (err) {
@@ -376,10 +408,17 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
   const handleConfirmDelete = async () => {
     setDeleteDialogOpen(false);
     try {
+      if (upsertMutation.isPending) {
+        showSnackbar('Please wait for the chart to finish saving before deleting.', 'info');
+        return;
+      }
+      clearTimeout(autoSaveTimerRef.current);
       await deleteMutation.mutateAsync();
-      // Reset local state to initial
-      setChartData(initialToothData(missingTeeth));
-      setSettings(defaultSettings);
+      // Reset without recreating the deleted exam through autosave.
+      clearTimeout(autoSaveTimerRef.current);
+      dirtyRef.current = false;
+      setChartData(initialToothData(), false);
+      setSettings(defaultSettings, false);
       setDiagnosis(defaultDiagnosis);
       showSnackbar('Periodontal exam deleted', 'success');
     } catch (err) {
@@ -387,32 +426,9 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     }
   };
 
-  const handleRemoveDate = (indexToRemove) => {
-    // setVisitDates(visitDates.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleNewExam = async () => {
-    if (isSigned) {
-      showSnackbar('Cannot create a new exam on a signed record', 'error');
-      return;
-    }
+  const handleNewExam = () => {
+    // Return to the current appointment; its saved chart (if any) is preserved.
     setViewingAppointmentId(null);
-    handleClearAll();
-    if (appointmentId) {
-      try {
-        await upsertMutation.mutateAsync({
-          patientId: patientId ? String(patientId) : undefined,
-          providerId: providerId ? String(providerId) : undefined,
-          examData: {
-            chartData: initialToothData(missingTeeth),
-            settings: defaultSettings
-          }
-        });
-        showSnackbar('New Periodontal exam initialized', 'success');
-      } catch (err) {
-        showSnackbar(err.response?.data?.error?.message || 'Failed to initialize new exam', 'error');
-      }
-    }
   };
 
   const handleApplyAll = () => {
@@ -433,8 +449,8 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
           // Calculate attachment based on new probe and recession
           if (settings.probing.some(p => p !== '') || settings.recession.some(r => r !== '')) {
             sideData.attachment = sideData.probe.map((p, idx) => {
-              const r = sideData.recession[idx] || '0';
-              if (!p) return '';
+              const r = sideData.recession[idx];
+              if (p === '' || p == null || r === '' || r == null) return '';
               return String(parseInt(p) + parseInt(r));
             });
           }
@@ -450,40 +466,10 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
     setShowSettings(false);
   };
 
-  const handleResetToDefault = async () => {
+  const handleResetToDefault = () => {
     setSettings(defaultSettings);
-    dispatch({ type: 'clinicalExamSession/setExamSubTabSession', payload: { subTab: 'radiographic', data: { missingTeeth: [] } } });
-    if (radiographicRecord) {
-      await radiographicUpsertMutation.mutateAsync({
-        examData: {
-          ...radiographicRecord.examData,
-          missingTeeth: []
-        }
-      });
-    }
-
-    setChartData(prev => {
-      const updated = { ...prev };
-      for (let i = 1; i <= 32; i++) {
-        updated[i] = { 
-          facial: { ...(prev[i]?.facial || {}) }, 
-          lingual: { ...(prev[i]?.lingual || {}) } 
-        };
-        for (const side of ['facial', 'lingual']) {
-          updated[i][side] = {
-            ...updated[i][side],
-            probe: ['3', '2', '3'],
-            recession: ['', '1', ''],
-            attachment: ['3', '3', '3'], // (probe + recession)
-            mobility: 'none',
-            furcation: 'none',
-            bleeding: [0, 2],
-            pcs: ['P', 'C', 'S']
-          };
-        }
-      }
-      return updated;
-    });
+    setChartData(initialToothData());
+    handleDiagnosisChange(defaultDiagnosis);
   };
 
   const handleClearAll = () => {
@@ -511,8 +497,8 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
             probe: ['', '', ''],
             recession: ['', '', ''],
             attachment: ['', '', ''],
-            mobility: 'none',
-            furcation: 'none',
+            mobility: '',
+            furcation: '',
             bleeding: [],
             pcs: []
           };
@@ -626,7 +612,7 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
         recession: `${calcPercent(recessionTeeth, validTeethCount)}%` 
       },
     ];
-  }, [chartData]);
+  }, [chartData, missingTeeth]);
 
   if (examLoading) {
     return (
@@ -714,6 +700,9 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
             This exam has been signed and locked. It is now read-only.
           </Alert>
         )}
+        {(examError || radioError) && (
+          <Alert severity="error" sx={{ mb: 3 }}>The chart could not be loaded. Reload before editing.</Alert>
+        )}
         
         {/* 1. TIMELINE HEADER */}
         <Box className="print-hide" sx={{ 
@@ -736,21 +725,21 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
               startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
               sx={{ 
                 textTransform: 'none', 
-                color: isSigned ? '#9ca3af' : '#2563eb', 
+                color: newExamDisabled ? '#9ca3af' : '#2563eb',
                 fontWeight: 600, 
                 fontSize: '0.8rem', 
                 whiteSpace: 'nowrap', 
                 flexShrink: 0,
-                border: isSigned ? '1.5px dashed #e5e7eb' : '1.5px dashed #d1d5db',
+                border: newExamDisabled ? '1.5px dashed #e5e7eb' : '1.5px dashed #d1d5db',
                 borderRadius: '20px',
                 px: 2,
                 py: 0.5,
                 bgcolor: '#fff',
-                '&:hover': { bgcolor: '#f9fafb', borderColor: isSigned ? '#e5e7eb' : '#9ca3af' },
+                '&:hover': { bgcolor: '#f9fafb', borderColor: newExamDisabled ? '#e5e7eb' : '#9ca3af' },
                 ml: 2
               }}
               onClick={handleNewExam}
-              disabled={isSigned}
+              disabled={newExamDisabled}
             >
               New Exam
             </Button>
@@ -877,7 +866,7 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
           </Box>
         </Box>
 
-        <fieldset disabled={isSigned} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
+        <fieldset disabled={isSigned || examLoading || radioLoading || examError || radioError} style={{ border: 'none', padding: 0, margin: 0, width: '100%', minWidth: 0 }}>
 
         {/* 2. DIAGNOSTIC SECTION */}
         <Grid container spacing={3} sx={{ mt: 1, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
@@ -1368,6 +1357,17 @@ const PeriodontalExamPage = ({ embedded = false, selectedTeethFromParent = [], o
       />
     </Box>
   );
+};
+
+// A new appointment/patient starts a new editor, including its history selection,
+// dialogs and autosave timer. Saved/unsaved chart data remains scoped by sessionKey.
+const PeriodontalExamPage = (props) => {
+  const selectedPatientId = useSelector(selectSelectedPatientId);
+  const selectedAppointmentId = useSelector(selectSelectedAppointmentId);
+  const patientId = props.patientId || selectedPatientId;
+  const appointmentId = props.appointmentId || selectedAppointmentId;
+  return <PeriodontalExamEditor {...props} key={`${patientId}:${appointmentId}`}
+    patientId={patientId} appointmentId={appointmentId} />;
 };
 
 export default PeriodontalExamPage;
