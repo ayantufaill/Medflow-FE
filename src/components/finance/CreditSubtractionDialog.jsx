@@ -513,7 +513,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
               />
             )}
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
-            = ${adjustmentAmount.toFixed(2)}
+            = ${adjustmentTotal.toFixed(2)}
           </Typography>
         </Stack>
 

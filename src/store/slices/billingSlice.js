@@ -160,9 +160,9 @@ export const fetchLedgerItems = createAsyncThunk(
         adjustments,
       });
       const {
-        proceduresForAdjustment,
         proceduresForPayment,
       } = ledgerProcedures;
+      const { proceduresForAdjustment } = currentLiabilityProcedures;
 
       const mappedInvoices = invoices.map((invoice) => {
         // Reconstruct the original total charge. The backend may update totalAmount to

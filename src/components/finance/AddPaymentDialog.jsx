@@ -71,6 +71,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
       const paidByProcedure = new Map();
       (item.details || []).forEach((detail) => {
         if (!detail.isPayment || detail.isAdjustment || detail.isVoided) return;
+        if (detail.isInsurancePayment) return;
         (detail.procedures || []).forEach((proc) => {
           const key = procedureKey(proc);
           if (!key) return;
@@ -230,6 +231,14 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [manualAmount,         setManualAmount]         = useState('');
   const [amountType,           setAmountType]           = useState('patient amount');
   const [accountCredit,        setAccountCredit]        = useState(0);
+  const [addFamilyCredit,      setAddFamilyCredit]      = useState(false);
+
+  const handlePaymentMethodChange = (method) => {
+    setPaymentMethod(method);
+    if (method !== 'Account Credit') {
+      setAddFamilyCredit(false);
+    }
+  };
 
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
@@ -380,6 +389,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       description,
       paymentAmount,
       overpayment: parseFloat(overpayment),
+      addFamilyCredit: paymentMethod === 'Account Credit' ? addFamilyCredit : false,
       selectedInvoices,
       selectedItems,
     });
@@ -405,7 +415,9 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           selectedPatient={selectedPatient}
           setSelectedPatient={setSelectedPatient}
           paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
+          setPaymentMethod={handlePaymentMethodChange}
+          addFamilyCredit={addFamilyCredit}
+          setAddFamilyCredit={setAddFamilyCredit}
           MENU_PROPS={MENU_PROPS}
         />
 

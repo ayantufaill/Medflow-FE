@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, MenuItem, TextField } from '@mui/material';
+import { Box, Typography, MenuItem, TextField, Checkbox, FormControlLabel } from '@mui/material';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
 import { PAYMENT_METHODS } from '../../../constants/financeConstants';
@@ -10,9 +10,12 @@ const AddPaymentTopRow = ({
   setSelectedPatient,
   paymentMethod,
   setPaymentMethod,
+  addFamilyCredit,
+  setAddFamilyCredit,
   MENU_PROPS,
 }) => {
   const greenText = COLORS.TEXT_PRIMARY;
+  const paymentMethods = PAYMENT_METHODS.filter((method) => method !== 'Insurance Check');
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -47,10 +50,25 @@ const AddPaymentTopRow = ({
         }}
         SelectProps={{ MenuProps: MENU_PROPS }}
       >
-        {PAYMENT_METHODS.map((m) => (
+        {paymentMethods.map((m) => (
           <MenuItem key={m} value={m}>{m}</MenuItem>
         ))}
       </OutlinedSelect>
+
+      {paymentMethod === 'Account Credit' && (
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={addFamilyCredit}
+              onChange={(e) => setAddFamilyCredit(e.target.checked)}
+              sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#60a5fa' } }}
+            />
+          }
+          label={<Typography sx={{ fontSize: '0.8125rem', color: greenText }}>Add family credit</Typography>}
+          sx={{ ml: 1, mr: 0 }}
+        />
+      )}
 
       {paymentMethod === 'Patient Check' && (
         <>
