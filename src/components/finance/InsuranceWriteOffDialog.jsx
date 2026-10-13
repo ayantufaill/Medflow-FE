@@ -380,20 +380,31 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     if (!selectedClaim) return;
     
     let overpaymentAmount = 0;
+    let patientAdjustAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
       const excess = row.insuranceBalance <= 0.005 ? Math.max(0, adjustedWO) : 0;
+      const patientAdjust = Math.min(excess, Math.max(0, row.patientBalance));
       overpaymentAmount += excess;
+      patientAdjustAmount += patientAdjust;
       
       return {
         id: row.id,
         code: row.code,
-        excess: excess
+        excess,
+        patientBalance: row.patientBalance,
+        patientAdjust,
+        creditAmount: Math.max(0, excess - patientAdjust),
       };
     });
 
     if (overpaymentAmount > 0.005) {
-      setOverpaymentData({ amount: overpaymentAmount, procs: procs.filter(p => p.excess > 0.005) });
+      setOverpaymentData({
+        amount: overpaymentAmount,
+        patientAdjustAmount,
+        creditAmount: Math.max(0, overpaymentAmount - patientAdjustAmount),
+        procs: procs.filter(p => p.excess > 0.005),
+      });
       setShowOverpaymentAlert(true);
     } else {
       handleProceedAdjust();
@@ -569,10 +580,10 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                 ["Insurance Balance", totals.insurance],
                 ["Total Balance", totals.total],
                 ["Applied Write-Off", totals.applied],
-                ["Insurance Write-Off", totals.writeOff],
+                ["$ Insurance Write-Off", totals.writeOff],
               ].map(([label, value]) => (
                 <Box key={label} sx={{ width: 130, textAlign: "right" }}>
-                  <Typography sx={{ fontSize: "12px", fontWeight: 700, color: label === "Insurance Write-Off" ? COLORS.ACCENT : COLORS.TEXT_PRIMARY }}>
+                  <Typography sx={{ fontSize: "12px", fontWeight: 700, color: label === "$ Insurance Write-Off" ? COLORS.ACCENT : COLORS.TEXT_PRIMARY }}>
                     {label}: {money(value)}
                   </Typography>
                 </Box>
@@ -592,23 +603,54 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                   </Box>
                 ))}
                 <Box sx={{ width: 130, display: "flex", justifyContent: "flex-end" }}>
-                  <TextField
-                    value={writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff.toFixed(2)}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setWriteOffInputs(prev => ({ ...prev, [row.id]: val }));
-                    }}
-                    onBlur={(e) => {
-                       const num = parseAmount(e.target.value);
-                       setWriteOffInputs(prev => ({ ...prev, [row.id]: num.toFixed(2) }));
-                    }}
-                    size="small"
-                    sx={{
-                      width: 88,
-                      "& .MuiInputBase-root": { height: 30, fontSize: "12px" },
-                      "& input": { textAlign: "right", fontWeight: 700, color: COLORS.ACCENT },
-                    }}
-                  />
+                  <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px', width: '88px' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: COLORS.ACCENT }}>$</Typography>
+                    <TextField
+                      value={writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff.toFixed(2)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setWriteOffInputs(prev => ({ ...prev, [row.id]: val }));
+                      }}
+                      onBlur={(e) => {
+                         const num = parseAmount(e.target.value);
+                         setWriteOffInputs(prev => ({ ...prev, [row.id]: num.toFixed(2) }));
+                      }}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": { 
+                          height: 30, 
+                          fontSize: "12px", 
+                          border: 'none', 
+                          bgcolor: 'transparent',
+                          background: 'transparent',
+                          px: 0,
+                        },
+                        "& .MuiOutlinedInput-root": {
+                          border: 'none',
+                          background: 'transparent',
+                        },
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          border: 'none',
+                        },
+                        "& input": { 
+                          textAlign: "right", 
+                          fontWeight: 700, 
+                          color: COLORS.ACCENT, 
+                          padding: 0, 
+                          width: '55px',
+                          background: 'transparent',
+                        },
+                      }}
+                      InputProps={{
+                        disableUnderline: true,
+                        classes: {
+                          root: 'transparent-input',
+                          notchedOutline: 'transparent-input',
+                        },
+                      }}
+                      variant="standard"
+                    />
+                  </Box>
                 </Box>
               </Box>
             ))}
@@ -692,8 +734,11 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
 
         <DialogContent sx={{ pt: '24px !important', px: '25px', pb: 2 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 2, lineHeight: 1.6 }}>
-            The following procedures have write-off amounts that exceed the remaining insurance portion. If the
-            insurance portion has already been fully resolved, the excess will be deducted from the patient's portion automatically, and any remaining excess will be saved as Patient Credit. Otherwise the write-off is recorded against the insurance balance.
+            {overpaymentData.patientAdjustAmount > 0.005 && overpaymentData.creditAmount <= 0.005
+              ? "The write-off exceeds the remaining insurance portion, but this procedure still has patient balance available. The excess will reduce the patient portion."
+              : overpaymentData.patientAdjustAmount > 0.005
+                ? "The write-off exceeds the remaining insurance portion. The available patient balance will be adjusted first, and only the remaining excess will be saved as Patient Credit."
+                : "The following procedures have write-off amounts that exceed the remaining insurance portion. Since no patient balance is available on those procedures, the excess will be saved as Patient Credit."}
           </Typography>
           <Box sx={{ bgcolor: '#f0f7ff', border: '1px solid #b8d5f8', borderRadius: '8px', px: 2, py: 1.5, mb: 1 }}>
             {overpaymentData.procs.map((proc, idx) => (
@@ -701,15 +746,39 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                 <Typography sx={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: 500 }}>
                   {proc.code}
                 </Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 700 }}>
-                  over by ${proc.excess.toFixed(2)}
-                </Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 700 }}>
+                    over by ${proc.excess.toFixed(2)}
+                  </Typography>
+                  {proc.patientAdjust > 0.005 && (
+                    <Typography sx={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>
+                      adjusts patient ${proc.patientAdjust.toFixed(2)}
+                    </Typography>
+                  )}
+                  {proc.creditAmount > 0.005 && (
+                    <Typography sx={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                      credit ${proc.creditAmount.toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             ))}
             <Box sx={{ borderTop: '1px solid #b8d5f8', mt: 1, pt: 1, display: 'flex', justifyContent: 'space-between' }}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e3a8a' }}>Total Excess</Typography>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentData.amount.toFixed(2)}</Typography>
             </Box>
+            {overpaymentData.patientAdjustAmount > 0.005 && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>Adjust Patient Portion</Typography>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentData.patientAdjustAmount.toFixed(2)}</Typography>
+              </Box>
+            )}
+            {overpaymentData.creditAmount > 0.005 && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>Save as Patient Credit</Typography>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>${overpaymentData.creditAmount.toFixed(2)}</Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
 
@@ -732,7 +801,11 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
               '&:hover': { bgcolor: '#1565c0' }
             }}
           >
-            Continue and save excess as credit
+            {overpaymentData.patientAdjustAmount > 0.005 && overpaymentData.creditAmount <= 0.005
+              ? "Adjust patient portion"
+              : overpaymentData.patientAdjustAmount > 0.005
+                ? "Adjust patient portion and save remaining as credit"
+                : "Continue and save excess as credit"}
           </Button>
           <Button
             onClick={() => setShowOverpaymentAlert(false)}

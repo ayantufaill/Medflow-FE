@@ -259,10 +259,6 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   const totalPayment = lineItems.reduce((s, i) => s + parseNum(i.values[4]?.val), 0);
   const totalAdjust = lineItems.reduce((s, i, idx) => s + lineAdjustValue(i, idx), 0);
 
-  const previewAdjustment = calcMode === "Percentage"
-    ? Math.round(totalCharges * (parseNum(calcValue) / 100) * 100) / 100
-    : parseNum(calcValue);
-
   const handleLineAdjustChange = (idx, raw) => {
     const cleaned = String(raw).replace(/[^0-9.]/g, '');
     setLineAdjustments((prev) => ({
@@ -388,7 +384,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
             }}
           />
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
-            = ${previewAdjustment.toFixed(2)}
+            = ${totalAdjust.toFixed(2)}
           </Typography>
         </Stack>
 

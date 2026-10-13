@@ -120,8 +120,20 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       ).toFixed(2);
     } else if (field === 'wo') {
       const woNum = Number(value || 0);
-      const allowedNum = Math.max(0, submittedNum - woNum);
+      const chargeNum =
+        Number(String(proc.charge || '').replace(/[^0-9.-]+/g, '')) || 0;
+      const allowedNum = Math.max(0, chargeNum - woNum);
       proc.allowed = allowedNum.toFixed(2);
+      const dedNum = Number(proc.ded || 0);
+      const coverage =
+        Number(proc.coveragePct || 0) > 0 ? Number(proc.coveragePct) : 100;
+      proc.pay = Math.max(
+        0,
+        Math.round(((allowedNum - dedNum) * (coverage / 100)) * 100) / 100,
+      ).toFixed(2);
+      proc.insPortionEst = (
+        Math.round((Number(proc.wo) + Number(proc.pay)) * 100) / 100
+      ).toFixed(2);
     } else if (field === 'ded') {
       // ded is updated directly
     } else if (field === 'pay') {
