@@ -13,7 +13,7 @@ const InsurancePaymentTable = ({
   const rawDate = selectedClaimObj?.invoice?.invoiceDate || selectedClaimObj?.createdAt || selectedClaimObj?.dateService || selectedClaimObj?.DateService || selectedClaimObj?.submissionDate;
   const invoiceDate = rawDate ? dayjs(rawDate).format('MM/DD/YYYY') : 'N/A';
 
-  const totalSubmitted = procedures.reduce((acc, proc) => acc + Number((proc.submitted || '').toString().replace(/[^0-9.-]+/g, "")), 0);
+  const totalCharge = procedures.reduce((acc, proc) => acc + Number(proc.charge || 0), 0);
   const totalDeductible = procedures.reduce((acc, proc) => acc + Number(proc.ded || 0), 0);
   const totalAllowed = procedures.reduce((acc, proc) => acc + Number(proc.allowed || 0), 0);
   const totalWo = procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0);
@@ -100,7 +100,7 @@ const InsurancePaymentTable = ({
                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>RSL</Typography>
                 </Box>
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{proc.submitted}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{Number(proc.charge) > 0 ? `$${Number(proc.charge).toFixed(2)}` : proc.submitted}</Typography>
                 </Box>
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
                   <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
@@ -189,7 +189,7 @@ const InsurancePaymentTable = ({
         <Box sx={{ width: '40px', display: 'flex', alignItems: 'center', borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 }}>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Total</Typography>
         </Box>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalSubmitted.toFixed(2)}</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalCharge.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalDeductible.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalAllowed.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalWo.toFixed(2)}</Typography>

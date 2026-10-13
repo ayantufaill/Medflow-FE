@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box, Typography, Select, MenuItem, Checkbox, Button, TextField, IconButton, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
-import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 
 import AddPaymentTopRow from './add-payment/AddPaymentTopRow';
@@ -19,11 +18,192 @@ import {
   fetchPaymentDraftInvoices,
   togglePaymentInvoiceChecked,
   togglePaymentLineItemChecked,
+  setPaymentInvoicesForPatient,
+  selectLedgerItemsForPatient,
   selectPaymentInvoicesForPatient,
   selectPaymentInvoicesLoading,
   invalidatePaymentInvoices,
   toggleAllPaymentInvoices,
 } from '../../store/slices/billingSlice';
+
+const moneyNumber = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Number(String(value).replace(/[^0-9.-]+/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const paymentLineAmount = (item = {}) => {
+  return moneyNumber(item.payAmount ?? item.patientBalance);
+};
+
+const roundMoney = (value) => Number(Math.max(0, moneyNumber(value)).toFixed(2));
+
+const procedureKey = (proc = {}) => {
+  const key =
+    proc.id ||
+    proc._id ||
+    proc.ProcNum ||
+    proc.procedureId ||
+    proc.itemId ||
+    proc.procId;
+  return key ? String(key) : "";
+};
+
+const toLedgerPaymentInvoices = (ledgerItems = []) => {
+  return ledgerItems
+    .filter((item) => item?.method === "Invoice" && !item.isVoided)
+    .map((item) => {
+      const patientBalance = moneyNumber(item.summary?.ptBal);
+      if (!(patientBalance > 0)) return null;
+
+      const grouped = (item.details || []).find(
+        (detail) => detail.isGrouped && Array.isArray(detail.procedures),
+      );
+      const procedures = grouped?.procedures || [];
+      const liveClaims = (item.details || []).filter((detail) => {
+        if (!detail.isClaim || detail.isVoided) return false;
+        const status = String(detail.status || "").toLowerCase();
+        return status !== "void" && status !== "voided";
+      });
+
+      const paidByProcedure = new Map();
+      (item.details || []).forEach((detail) => {
+        if (!detail.isPayment || detail.isAdjustment || detail.isVoided) return;
+        (detail.procedures || []).forEach((proc) => {
+          const key = procedureKey(proc);
+          if (!key) return;
+          const paid = Math.max(
+            moneyNumber(proc.appliedPayment),
+            moneyNumber(proc.paymentAmount),
+            moneyNumber(proc.paidAmount),
+            moneyNumber(proc.payAmount),
+          );
+          if (paid > 0) {
+            paidByProcedure.set(key, (paidByProcedure.get(key) || 0) + paid);
+          }
+        });
+      });
+
+      const claimProcedures = liveClaims.flatMap((claim) =>
+        (claim.procedures || []).map((proc) => ({ ...proc, __fromClaim: true })),
+      );
+      const claimedProcedureIds = new Set(
+        claimProcedures.map(procedureKey).filter(Boolean),
+      );
+      const invoiceProcedures = procedures
+        .filter((proc) => !claimedProcedureIds.has(procedureKey(proc)))
+        .map((proc) => ({ ...proc, __fromInvoice: true }));
+      const patientProcedures =
+        claimProcedures.length > 0 || invoiceProcedures.length > 0
+          ? [...claimProcedures, ...invoiceProcedures]
+          : [item];
+
+      let lineItems = patientProcedures
+        .map((proc, index) => {
+          const key = procedureKey(proc);
+          const totalAmount = moneyNumber(
+            proc.fee ||
+              proc.totalPrice ||
+              proc.total ||
+              proc.ProcFee ||
+              proc.charge ||
+              proc.amount ||
+              item.amount,
+          );
+          const insuranceAmount = moneyNumber(
+            proc.insuranceAmount ??
+              proc.insPortion ??
+              proc.totalInsPortion ??
+              proc.primaryInsPortion ??
+              proc.insPayEst ??
+              0,
+          );
+          const writeoffAmount = moneyNumber(
+            proc.writeoffAmount ??
+              proc.writeOffAmount ??
+              proc.estimatedWriteOff ??
+              proc.writeoff ??
+              0,
+          );
+          let procPatientBalance =
+            moneyNumber(proc.patientBalance) ||
+            moneyNumber(proc.ptPortion) ||
+            moneyNumber(proc.patientPortion) ||
+            moneyNumber(proc.patientAmount);
+          if (
+            proc.__fromClaim &&
+            totalAmount > 0 &&
+            insuranceAmount > 0 &&
+            procPatientBalance + insuranceAmount + writeoffAmount > totalAmount
+          ) {
+            procPatientBalance = Math.max(
+              0,
+              totalAmount - insuranceAmount - writeoffAmount,
+            );
+          }
+          const paidAmount = Math.max(
+            paidByProcedure.get(key) || 0,
+            moneyNumber(proc.patientPaidAmount),
+            moneyNumber(proc.patientPaid),
+            moneyNumber(proc.ptPaid),
+          );
+          const remainingPatient = roundMoney(procPatientBalance - paidAmount);
+          return {
+            ...proc,
+            id: key || `${item.id}-${index}`,
+            checked: false,
+            payAmount: remainingPatient.toFixed(2),
+            patientBalance: remainingPatient,
+            totalAmount,
+            writeoffAmount,
+            adjustmentAmount: 0,
+            insuranceAmount,
+          };
+        })
+        .filter((proc) => proc.patientBalance > 0);
+
+      if (lineItems.length === 0) return null;
+      const linePatientTotal = lineItems.reduce(
+        (sum, proc) => sum + moneyNumber(proc.patientBalance),
+        0,
+      );
+      if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
+        let remaining = roundMoney(patientBalance);
+        lineItems = lineItems.map((proc, index) => {
+          const isLast = index === lineItems.length - 1;
+          const nextBalance = isLast
+            ? remaining
+            : roundMoney(
+                patientBalance *
+                  (linePatientTotal > 0
+                    ? moneyNumber(proc.patientBalance) / linePatientTotal
+                    : 1 / lineItems.length),
+              );
+          remaining = roundMoney(remaining - nextBalance);
+          return {
+            ...proc,
+            patientBalance: nextBalance,
+            payAmount: nextBalance.toFixed(2),
+          };
+        }).filter((proc) => proc.patientBalance > 0);
+      }
+
+      return {
+        id: item.id,
+        invoiceNumber: item.invoiceNumber || item.id,
+        invoiceDate: item.rawDate || item.date,
+        checked: false,
+        patientBalance,
+        totalBalance: moneyNumber(item.amount || item.totalAmount),
+        insuranceBalance: moneyNumber(item.summary?.insBal),
+        insWriteoffAmount: moneyNumber(item.summary?.insWo),
+        adjustmentAmount: moneyNumber(item.summary?.appliedWo),
+        lineItems,
+      };
+    })
+    .filter(Boolean);
+};
 
 const MENU_PROPS = {
   disablePortal: true,
@@ -44,7 +224,9 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
 
   // ── Redux state ──────────────────────────────────────────────────────────
   const invoices = useSelector(selectPaymentInvoicesForPatient(patientId));
+  const ledgerItems = useSelector(selectLedgerItemsForPatient(patientId));
   const loading  = useSelector(selectPaymentInvoicesLoading);
+  const ledgerOverrideAppliedRef = useRef(false);
 
   // ── Local form state ─────────────────────────────────────────────────────
   const [selectedPatient, setSelectedPatient] = useState(
@@ -61,6 +243,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
     if (patientId) {
+      ledgerOverrideAppliedRef.current = false;
       dispatch(invalidatePaymentInvoices(patientId));
       dispatch(fetchPaymentDraftInvoices(patientId));
       
@@ -70,12 +253,28 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     }
   }, [dispatch, patientId]);
 
+  useEffect(() => {
+    if (
+      !patientId ||
+      loading ||
+      ledgerOverrideAppliedRef.current ||
+      ledgerItems.length === 0
+    ) {
+      return;
+    }
+    const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
+    if (ledgerInvoices.length > 0) {
+      dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
+      ledgerOverrideAppliedRef.current = true;
+    }
+  }, [dispatch, patientId, loading, ledgerItems]);
+
   // ── Derived totals ───────────────────────────────────────────────────────
   const { totalChecked } = useMemo(() => {
     let sum = 0;
     invoices.forEach((inv) => {
       (inv.lineItems || []).forEach((item) => {
-        if (item.checked) sum += Number(item.payAmount || 0);
+        if (item.checked) sum += paymentLineAmount(item);
       });
     });
     return { totalChecked: sum };
@@ -94,7 +293,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       if (invToToggle && !invToToggle.checked) {
         let sumToAdd = 0;
         invToToggle.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+          if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
         if (totalChecked + sumToAdd > accountCredit) {
           showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
@@ -130,7 +329,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       let sumToAdd = 0;
       invoices.forEach((inv) => {
         inv.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += Number(i.payAmount || 0);
+          if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
       });
       if (totalChecked + sumToAdd > accountCredit) {
@@ -173,7 +372,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     const selectedItems = [];
     invoices.forEach((inv) => {
       (inv.lineItems || []).forEach((item) => {
-        if (item.checked) selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: item.payAmount });
+        if (item.checked) selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: paymentLineAmount(item).toFixed(2) });
       });
     });
 
@@ -190,11 +389,6 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     });
     onClose();
   };
-
-  const headerBackground = COLORS.SURFACE_TINT;
-  const greenHeader      = COLORS.BORDER;
-  const greenText        = COLORS.TEXT_PRIMARY;
-  const linkBlue         = COLORS.ACCENT;
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (

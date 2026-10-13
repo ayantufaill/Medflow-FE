@@ -11,6 +11,7 @@ import InsuranceWriteOffDialog from "./InsuranceWriteOffDialog";
 import CourtesyCreditComponent from "./CourtesyCreditComponent";
 import UndoConfirmationDialog from "./UndoConfirmationDialog";
 import VoidConfirmationDialog from "./VoidConfirmationDialog";
+import VoidInvoiceProceduresDialog from "./VoidInvoiceProceduresDialog";
 import SimpleStatement from "./SimpleStatement";
 import DetailedStatement from "./DetailedStatement";
 import EditDeposit from "./EditDeposit";
@@ -42,6 +43,9 @@ const LedgerDialogManager = ({
   showVoidDialog,
   handleVoidCancel,
   handleVoidConfirm,
+  showVoidProceduresDialog,
+  handleVoidProceduresCancel,
+  handleVoidProceduresConfirm,
   voidTarget,
   showCourtesyCredit,
   handleCourtesyCreditCancel,
@@ -146,6 +150,13 @@ const LedgerDialogManager = ({
       onClose={handleVoidCancel}
       onConfirm={handleVoidConfirm}
       voidTarget={voidTarget}
+    />
+
+    <VoidInvoiceProceduresDialog
+      open={showVoidProceduresDialog}
+      onClose={handleVoidProceduresCancel}
+      onConfirm={handleVoidProceduresConfirm}
+      target={voidTarget}
     />
 
     <Dialog
