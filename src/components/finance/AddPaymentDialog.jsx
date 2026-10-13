@@ -56,6 +56,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
     .map((item) => {
       const patientBalance = moneyNumber(item.summary?.ptBal);
       if (!(patientBalance > 0)) return null;
+      const invoiceInsuranceBalance = moneyNumber(item.summary?.insBal);
 
       const grouped = (item.details || []).find(
         (detail) => detail.isGrouped && Array.isArray(detail.procedures),
@@ -95,9 +96,11 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         .filter((proc) => !claimedProcedureIds.has(procedureKey(proc)))
         .map((proc) => ({ ...proc, __fromInvoice: true }));
       const patientProcedures =
-        claimProcedures.length > 0 || invoiceProcedures.length > 0
-          ? [...claimProcedures, ...invoiceProcedures]
-          : [item];
+        invoiceInsuranceBalance <= 0.01 && procedures.length > 0
+          ? procedures.map((proc) => ({ ...proc, __fromLedger: true }))
+          : claimProcedures.length > 0 || invoiceProcedures.length > 0
+            ? [...claimProcedures, ...invoiceProcedures]
+            : [item];
 
       let lineItems = patientProcedures
         .map((proc, index) => {
@@ -112,12 +115,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
               item.amount,
           );
           const insuranceAmount = moneyNumber(
-            proc.insuranceAmount ??
-              proc.insPortion ??
-              proc.totalInsPortion ??
-              proc.primaryInsPortion ??
-              proc.insPayEst ??
-              0,
+            invoiceInsuranceBalance <= 0.01
+              ? 0
+              : proc.insuranceAmount ??
+                  proc.insPortion ??
+                  proc.totalInsPortion ??
+                  proc.primaryInsPortion ??
+                  proc.insPayEst ??
+                  0,
           );
           const writeoffAmount = moneyNumber(
             proc.writeoffAmount ??
@@ -143,7 +148,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
             );
           }
           const paidAmount = Math.max(
-            paidByProcedure.get(key) || 0,
+            proc.__fromLedger ? 0 : paidByProcedure.get(key) || 0,
             moneyNumber(proc.patientPaidAmount),
             moneyNumber(proc.patientPaid),
             moneyNumber(proc.ptPaid),
@@ -168,7 +173,26 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         (sum, proc) => sum + moneyNumber(proc.patientBalance),
         0,
       );
-      if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
+      if (
+        invoiceInsuranceBalance <= 0.01 &&
+        Math.abs(linePatientTotal - patientBalance) > 0.01
+      ) {
+        let delta = roundMoney(linePatientTotal - patientBalance);
+        lineItems = lineItems.map((proc) => {
+          if (!(delta > 0.01)) return proc;
+          const isClaimed = claimedProcedureIds.has(procedureKey(proc));
+          if (!isClaimed) return proc;
+          const reduction = Math.min(delta, moneyNumber(proc.patientBalance));
+          delta = roundMoney(delta - reduction);
+          const patientBal = roundMoney(moneyNumber(proc.patientBalance) - reduction);
+          return {
+            ...proc,
+            patientBalance: patientBal,
+            payAmount: patientBal.toFixed(2),
+          };
+        });
+        lineItems = lineItems.filter((proc) => proc.patientBalance > 0);
+      } else if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
         let remaining = roundMoney(patientBalance);
         lineItems = lineItems.map((proc, index) => {
           const isLast = index === lineItems.length - 1;
@@ -196,7 +220,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         checked: false,
         patientBalance,
         totalBalance: moneyNumber(item.amount || item.totalAmount),
-        insuranceBalance: moneyNumber(item.summary?.insBal),
+        insuranceBalance: invoiceInsuranceBalance,
         insWriteoffAmount: moneyNumber(item.summary?.insWo),
         adjustmentAmount: moneyNumber(item.summary?.appliedWo),
         lineItems,
@@ -253,10 +277,15 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     }
   }, [dispatch, patientId]);
 
+  // The draft-invoice fetch and the patient ledger are two independent async
+  // sources. Whichever resolves last used to win the cache, so the dialog
+  // could show its own stale arithmetic until a hard refresh. The reducer now
+  // refuses to let the draft fetch overwrite ledger-derived rows once they have
+  // been seeded (see paymentInvoicesOverridden), so this effect only has to
+  // publish those rows — it no longer has to race the fetch to do it.
   useEffect(() => {
     if (
       !patientId ||
-      loading ||
       ledgerOverrideAppliedRef.current ||
       ledgerItems.length === 0
     ) {
