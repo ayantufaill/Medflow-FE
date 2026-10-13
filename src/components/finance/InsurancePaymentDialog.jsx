@@ -321,6 +321,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(p.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
@@ -420,6 +421,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(l.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
@@ -492,6 +494,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(item.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
@@ -523,12 +526,13 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   };
 
   const handleApplyAndPay = () => {
-    // Intercept Apply to check for insurance overpayment before showing payment options
+    // Intercept Apply to check for insurance overpayment before showing payment options.
+    // Only an actual overpayment of the insurance portion (pay above what the
+    // insurer still owes) changes the patient balance — a write-off never does.
     const overpay = procedures.reduce((total, proc) => {
-      const insEst = Number(proc.insPortionEst || 0);
-      const wo = Number(proc.wo || 0);
+      const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
       const pay = Number(proc.pay || 0);
-      return total + Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+      return total + Math.max(0, Math.round((pay - insBal) * 100) / 100);
     }, 0);
 
     if (overpay > 0.005) {
@@ -632,7 +636,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             ded: Number(p.ded || 0),
             excess: Math.max(
               0,
-              Math.round((Number(p.wo || 0) + Number(p.pay || 0) - Number(p.insPortionEst || 0)) * 100) / 100,
+              Math.round((Number(p.pay || 0) - Number(p.insBal ?? Number(p.insPortionEst || 0) - Number(p.wo || 0))) * 100) / 100,
             ),
             claimId: selectedClaimObj.id || selectedClaimObj._id
           }))
@@ -735,27 +739,24 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
   // Derived: real-time overpayment amount (sum of per-procedure excess)
   const overpaymentAmount = procedures.reduce((total, proc) => {
-    const insEst = Number(proc.insPortionEst || 0);
-    const wo = Number(proc.wo || 0);
+    const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
     const pay = Number(proc.pay || 0);
-    return total + Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+    return total + Math.max(0, Math.round((pay - insBal) * 100) / 100);
   }, 0);
 
   // Derived: real-time underpayment amount (insurance estimate not covered by entered pay + write-off)
   const underpaymentAmount = procedures.reduce((total, proc) => {
-    const insEst = Number(proc.insPortionEst || 0);
-    const wo = Number(proc.wo || 0);
+    const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
     const pay = Number(proc.pay || 0);
-    return total + Math.max(0, Math.round((insEst - (wo + pay)) * 100) / 100);
+    return total + Math.max(0, Math.round((insBal - pay) * 100) / 100);
   }, 0);
 
   // Overpaid procedure details for the alert dialog
   const overpaidProcedures = procedures
     .map(proc => {
-      const insEst = Number(proc.insPortionEst || 0);
-      const wo = Number(proc.wo || 0);
+      const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
       const pay = Number(proc.pay || 0);
-      const excess = Math.max(0, Math.round(((wo + pay) - insEst) * 100) / 100);
+      const excess = Math.max(0, Math.round((pay - insBal) * 100) / 100);
       return { ...proc, excess };
     })
     .filter(proc => proc.excess > 0.005);

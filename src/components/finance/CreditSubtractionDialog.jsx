@@ -51,9 +51,9 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     : (typeof editTarget?.patient === 'string' ? editTarget.patient : 'Unknown');
 
   const groupedDetailProcedures = editTarget?.details?.find(d => d.isGrouped)?.procedures;
-  const procedures = editTarget?.lineItems || 
-                     editTarget?.procedures || 
-                     groupedDetailProcedures || 
+  const procedures = groupedDetailProcedures ||
+                     editTarget?.lineItems ||
+                     editTarget?.procedures ||
                      [];
   // The grouped detail's procedures are already restated by the ledger (debit
   // adjustments folded in and the patient/insurance portions finalised), so
@@ -78,9 +78,6 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         proc.procedureId,
         proc.procId,
         proc.itemId,
-        proc.code ? `code:${proc.code}` : null,
-        proc.cptCode ? `code:${proc.cptCode}` : null,
-        proc.ProcCode ? `code:${proc.ProcCode}` : null,
       ])
       .filter(Boolean)
       .map(String),
@@ -94,9 +91,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         proc.procedureId ||
         proc.procId ||
         proc.itemId ||
-        (proc.code || proc.cptCode || proc.ProcCode
-          ? `code:${proc.code || proc.cptCode || proc.ProcCode}`
-          : ""),
+        "",
     );
 
   const chargeOf = (p) =>
@@ -108,14 +103,20 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   let totalPayment = procedures.reduce((sum, p) => sum + Number(p.patientPaid || 0) + Number(p.insurancePaid || 0), 0);
   let hasSummary = false;
   let totalWo = 0;
+  let summaryAppliedWo = 0;
+  let summaryPtBal = 0;
+  let summaryInsBal = 0;
   let summaryPtPaid = 0;
   let summaryInsPaid = 0;
   if (editTarget?.summary) {
     hasSummary = true;
+    summaryPtBal = Number(editTarget.summary.ptBal?.replace(/[^0-9.-]+/g,"")) || 0;
+    summaryInsBal = Number(editTarget.summary.insBal?.replace(/[^0-9.-]+/g,"")) || 0;
     summaryPtPaid = Number(editTarget.summary.ptPaid?.replace(/[^0-9.-]+/g,"")) || 0;
     summaryInsPaid = Number(editTarget.summary.insPaid?.replace(/[^0-9.-]+/g,"")) || 0;
     totalPayment = summaryPtPaid + summaryInsPaid;
     totalWo = Number(editTarget.summary.insWo?.replace(/[^0-9.-]+/g,"")) || 0;
+    summaryAppliedWo = Number(editTarget.summary.appliedWo?.replace(/[^0-9.-]+/g,"")) || 0;
   }
   
   const parseAmount = (v) => {
@@ -132,7 +133,20 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       try {
         const bn = JSON.parse(p.BillingNote);
         if (bn.writeoff) writeoff = Number(bn.writeoff);
-      } catch (e) {}
+      } catch {
+        // Ignore malformed legacy BillingNote values.
+      }
+    }
+    // A restated row already carries its own write-off. Spreading the
+    // invoice-level write-off over the lines by charge would move dollars
+    // between procedures on a mixed invoice (one claimed, one not).
+    const summaryWriteOffTotal = totalWo + summaryAppliedWo;
+    if (
+      !proceduresAreRestated &&
+      hasSummary &&
+      summaryWriteOffTotal > 0
+    ) {
+      writeoff = summaryWriteOffTotal * weight;
     }
 
     let ptBalance;
@@ -183,7 +197,16 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     
     // Always pro-rate pay if it's 0 on line items but exists in summary
     if (hasSummary && pay === 0 && totalPayment > 0) {
-      pay = totalPayment * weight;
+      const procedureIsClaimed = claimedProcedureIds.has(procedureKey(p));
+      const claimedInsTotal = procedures.reduce((sum, proc) => {
+        if (!claimedProcedureIds.has(procedureKey(proc))) return sum;
+        return sum + parseAmount(proc.insPortion);
+      }, 0);
+      pay =
+        procedureIsClaimed && summaryInsPaid > 0
+          ? summaryInsPaid *
+            (claimedInsTotal > 0 ? parseAmount(p.insPortion) / claimedInsTotal : 1)
+          : 0;
     }
 
     // If the procedure doesn't track patientPaid individually but the invoice summary
@@ -195,9 +218,14 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     if (hasSummary && insurancePaidAmt === 0 && summaryInsPaid > 0) {
       insurancePaidAmt = summaryInsPaid * weight;
     }
+    const appliedWriteOffAmt =
+      hasSummary && summaryAppliedWo > 0 ? summaryAppliedWo * weight : 0;
 
     const ptRemaining = Math.max(0, ptBalance - patientPaidAmt);
-    const insRemaining = Math.max(0, insBalance - insurancePaidAmt);
+    const insRemaining = Math.max(
+      0,
+      insBalance - insurancePaidAmt - appliedWriteOffAmt,
+    );
 
     return {
       id: p.id || p._id || p.ProcNum || p.procedureId || p.procId || p.itemId,
@@ -214,6 +242,54 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       ptRemaining,
     };
   });
+
+  if (hasSummary && proceduresAreRestated && dynamicLineItems.length > 0) {
+    let delta = parseAmount(
+      (
+        dynamicLineItems.reduce((sum, item) => sum + (item.ptRemaining || 0), 0) -
+        summaryPtBal
+      ).toFixed(2),
+    );
+    if (delta > 0.01) {
+      dynamicLineItems.forEach((item) => {
+        if (!(delta > 0.01)) return;
+        const isClaimed = claimedProcedureIds.has(String(item.id || ""));
+        if (!isClaimed) return;
+        const reduction = Math.min(delta, item.ptRemaining || 0);
+        delta = parseAmount((delta - reduction).toFixed(2));
+        item.ptRemaining = Math.max(0, parseAmount((item.ptRemaining - reduction).toFixed(2)));
+        item.values[1] = { val: `$${item.ptRemaining.toFixed(2)}` };
+      });
+    }
+  } else if (hasSummary && !proceduresAreRestated && dynamicLineItems.length > 0) {
+    const currentPtTotal = dynamicLineItems.reduce(
+      (sum, item) => sum + (item.ptRemaining || 0),
+      0,
+    );
+    const currentInsTotal = dynamicLineItems.reduce(
+      (sum, item) => sum + parseAmount(item.values?.[2]?.val),
+      0,
+    );
+    if (
+      (Math.abs(currentPtTotal - summaryPtBal) > 0.01 ||
+        Math.abs(currentInsTotal - summaryInsBal) > 0.01) &&
+      summaryPtBal >= 0
+    ) {
+      let remainingPt = summaryPtBal;
+      let remainingIns = summaryInsBal;
+      dynamicLineItems.forEach((item, idx) => {
+        const isLast = idx === dynamicLineItems.length - 1;
+        const weight = totalCharges > 0 ? item.charge / totalCharges : 1 / dynamicLineItems.length;
+        const nextPt = isLast ? remainingPt : parseAmount((summaryPtBal * weight).toFixed(2));
+        const nextIns = isLast ? remainingIns : parseAmount((summaryInsBal * weight).toFixed(2));
+        remainingPt = Math.max(0, parseAmount((remainingPt - nextPt).toFixed(2)));
+        remainingIns = Math.max(0, parseAmount((remainingIns - nextIns).toFixed(2)));
+        item.ptRemaining = Math.max(0, nextPt);
+        item.values[1] = { val: `$${Math.max(0, nextPt).toFixed(2)}` };
+        item.values[2] = { val: `$${Math.max(0, nextIns).toFixed(2)}` };
+      });
+    }
+  }
 
   const totalPtBalance = dynamicLineItems.reduce((sum, item) => sum + (item.ptRemaining || 0), 0);
   const parsedValue = parseFloat(calcValue) || 0;

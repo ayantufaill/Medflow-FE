@@ -110,16 +110,31 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
     editTarget?.patient?._id ||
     editTarget?.patient?.id;
 
-  // Procedures come from whichever shape the ledger row carries: the full
-  // invoice detail (lineItems), a claim's procedures, or the grouped invoice
-  // row inside an expanded ledger item.
-  const detailProcedures = (editTarget?.details || [])
-    .flatMap((detail) => detail?.procedures || []);
-  const procedures = mergeProcedures(
-    editTarget?.lineItems || [],
-    editTarget?.procedures || [],
-    editTarget?.details?.find((d) => d.isGrouped)?.procedures || [],
-    detailProcedures,
+  // Procedures come from whichever shape the ledger row carries: the grouped
+  // invoice row inside an expanded ledger item (already restated by
+  // ledgerCalculations), the full invoice detail, or a claim's procedures.
+  // Payment and adjustment sub-rows are deliberately NOT merged in here — they
+  // describe money already moved, not the line's liability, and merging them
+  // overwrites the restated patient/insurance/write-off columns.
+  const groupedProcedures =
+    editTarget?.details?.find((d) => d.isGrouped)?.procedures || [];
+  const procedures =
+    groupedProcedures.length > 0
+      ? mergeProcedures(groupedProcedures)
+      : mergeProcedures(
+          editTarget?.lineItems || [],
+          editTarget?.procedures || [],
+        );
+  const liveClaims = (editTarget?.details || []).filter((detail) => {
+    if (!detail?.isClaim || detail.isVoided) return false;
+    const status = String(detail.status || "").toLowerCase();
+    return status !== "void" && status !== "voided";
+  });
+  const claimedProcedureIds = new Set(
+    liveClaims
+      .flatMap((claim) => claim.procedures || [])
+      .map((proc) => String(procedureMergeKey(proc) || ""))
+      .filter(Boolean),
   );
 
   const [reason, setReason] = useState("");
@@ -143,31 +158,74 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   // The invoice summary is the reliable source of what has actually been paid;
   // the per-line paid fields can be stale when no payment record backs them.
   const hasSummary = Boolean(editTarget?.summary);
-  const summaryPayment =
-    parseNum(editTarget?.summary?.ptPaid) + parseNum(editTarget?.summary?.insPaid);
+  const summaryInsPaid = parseNum(editTarget?.summary?.insPaid);
+  const summaryWriteOff =
+    parseNum(editTarget?.summary?.insWo) + parseNum(editTarget?.summary?.appliedWo);
+  const claimedInsuranceTotal = procedures.reduce((sum, proc) => {
+    if (!claimedProcedureIds.has(String(procedureMergeKey(proc) || ""))) return sum;
+    return sum + parseNum(proc.insPortion ?? proc.insurancePortion ?? proc.totalInsPortion);
+  }, 0);
 
   const lineItems =
     procedures.length > 0
       ? procedures.map((p) => {
+          // A row that carries `fee` came from the ledger restatement, so its
+          // patient / insurance / write-off columns are already final and
+          // must be used verbatim. Re-deriving them here would prorate an
+          // invoice-level write-off across lines by charge and quietly move
+          // dollars between the patient and the insurance estimate.
           const restated = p.fee !== undefined && p.fee !== null;
           const charge = chargeOf(p);
-          const writeoff = Number(p.writeoff || p.estimatedWriteOff || 0);
-          const rawPtPortion = Number(p.ptPortion ?? p.patientPortion ?? p.ptAmt ?? 0);
-          const rawInsPortion = Number(
-            restated
-              ? p.insPortion ?? 0
-              : p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
+          const writeoff = restated
+            ? parseNum(p.writeoff ?? p.estimatedWriteOff ?? 0)
+            : hasSummary && summaryWriteOff > 0
+              ? summaryWriteOff * (totalCharges > 0 ? charge / totalCharges : 0)
+              : parseNum(p.writeoff ?? p.estimatedWriteOff ?? 0);
+          const ptPortion = restated
+            ? parseNum(p.ptPortion ?? p.patientPortion ?? 0)
+            : Math.max(
+                0,
+                Math.min(
+                  parseNum(p.ptPortion ?? p.patientPortion ?? p.ptAmt ?? 0),
+                  charge - writeoff,
+                ),
+              );
+          const insPortion = restated
+            ? parseNum(p.insPortion ?? 0)
+            : Math.max(
+                0,
+                Math.min(
+                  parseNum(
+                    p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
+                  ),
+                  charge - writeoff,
+                ),
+              );
+          const isClaimedProcedure = claimedProcedureIds.has(
+            String(procedureMergeKey(p) || ""),
           );
-          const insPortion = Math.max(0, Math.min(rawInsPortion, charge - writeoff));
-          const ptPortion = Math.max(
-            0,
-            Math.min(rawPtPortion, charge - writeoff - insPortion),
+          // Per-procedure paid is what the line actually carries. Only fall
+          // back to splitting the invoice total when the line has no figure of
+          // its own, and never spread a payment onto a line that was not on
+          // the claim that received it.
+          const lineInsPaid = parseNum(
+            p.insurancePaidAmount ?? p.insurancePaid ?? p.insPaid,
           );
-          const weight = totalCharges > 0 ? charge / totalCharges : 0;
-          const paid = hasSummary
-            ? summaryPayment * weight
-            : Number(p.patientPaidAmount ?? p.patientPaid ?? 0) +
-              Number(p.insurancePaidAmount ?? p.insurancePaid ?? 0);
+          const linePtPaid = parseNum(
+            p.patientPaidAmount ?? p.patientPaid ?? p.ptPaid,
+          );
+          let paid = lineInsPaid + linePtPaid;
+          if (!(paid > 0)) {
+            paid =
+              isClaimedProcedure && summaryInsPaid > 0
+                ? summaryInsPaid *
+                  (claimedInsuranceTotal > 0
+                    ? insPortion / claimedInsuranceTotal
+                    : 1)
+                : hasSummary
+                  ? 0
+                  : 0;
+          }
           return {
             code: p.code || p.cptCode || p.ProcCode || 'Item',
             description: procedureDescription(p) || patientName,

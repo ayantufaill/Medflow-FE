@@ -86,6 +86,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const summaryInsBalance = parseAmount(editTarget?.summary?.insBal);
   const summaryAppliedWriteOff = parseAmount(editTarget?.summary?.appliedWo);
   const summaryInsWriteOff = parseAmount(editTarget?.summary?.insWo);
+  const summaryInsPaid = parseAmount(editTarget?.summary?.insPaid);
   const invoiceChargeTotal = invoiceProcedures.reduce(
     (sum, proc) =>
       sum +
@@ -110,15 +111,23 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     const paidMap = new Map();
     (editTarget?.details || []).forEach((detail) => {
       if (!detail?.isPayment || detail.isAdjustment || detail.isVoided) return;
+      const isInsurancePayment =
+        detail.isInsurancePayment ||
+        String(detail.title || "").toLowerCase().includes("ins payment") ||
+        String(detail.paymentSource || "").toLowerCase() === "insurance_company" ||
+        String(detail.method || "").toLowerCase() === "insurance";
+      if (!isInsurancePayment) return;
       (detail.procedures || []).forEach((proc) => {
         const aliases = procedureAliases(proc);
         if (aliases.length === 0) return;
-        const paid = Math.max(
-          parseAmount(proc.appliedPayment),
-          parseAmount(proc.paymentAmount),
-          parseAmount(proc.paidAmount),
-          parseAmount(proc.payAmount),
-        );
+        const paid =
+          parseAmount(proc.appliedPayment) ||
+          parseAmount(proc.paymentAmount) ||
+          parseAmount(proc.payAmount) ||
+          parseAmount(proc.insurancePaidAmount) ||
+          parseAmount(proc.insurancePaid) ||
+          parseAmount(proc.insPaid) ||
+          0;
         if (paid > 0) {
           aliases.forEach((alias) => {
             paidMap.set(alias, (paidMap.get(alias) || 0) + paid);
@@ -194,16 +203,19 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
       const claimPatientBalance = parseAmount(
         claimProc.patientBalance ?? claimProc.ptBalance ?? claimProc.ptPortion ?? claimProc.patientPortion,
       );
-      const procedurePaid = Math.max(
-        0,
-        ...procedureAliases(proc).map((alias) => paymentByProcedure.get(alias) || 0),
-      );
+      const procedurePaid =
+        hasLedgerSummary && summaryInsPaid > 0
+          ? summaryInsPaid * weight
+          : Math.max(
+              0,
+              ...procedureAliases(proc).map((alias) => paymentByProcedure.get(alias) || 0),
+            );
       
       // When the row comes from restated ledger data (match), use those portions
       // directly — they already fold in debit adjustments and the
       // unclaimed-insurance move, so the invoice summary must not re-spread onto
       // this line (the summary's patient balance may belong to another procedure).
-      const patientBalance = restatedMatch
+      let patientBalance = restatedMatch
         ? Math.max(0, parseAmount(match.ptPortion))
         : matchPatientBalance > 0
           ? matchPatientBalance
@@ -212,6 +224,17 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
               (claimPatientBalance || (hasLedgerSummary ? summaryPtBalance * weight : 0)) -
                 procedurePaid,
             );
+
+      if (procedurePaid > 0 || appliedWriteOff > 0) {
+        insuranceBalance = Math.max(
+          0,
+          insuranceBalance - procedurePaid - appliedWriteOff,
+        );
+        patientBalance = Math.max(
+          0,
+          charge - appliedWriteOff - procedurePaid - insuranceBalance,
+        );
+      }
 
       // After determining patient balance from adjusted data, if insurance balance is still using fallback,
       // recalculate it to ensure patient + insurance + writeoff = charge
@@ -293,6 +316,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     summaryAppliedWriteOff,
     summaryInsBalance,
     summaryInsWriteOff,
+    summaryInsPaid,
     summaryPtBalance,
     paymentByProcedure,
   ]);
@@ -328,7 +352,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     let overpaymentAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
-      const excess = Math.max(0, adjustedWO - row.insuranceBalance);
+      const excess = row.insuranceBalance <= 0.005 ? Math.max(0, adjustedWO) : 0;
       overpaymentAmount += excess;
       
       return {
@@ -352,13 +376,15 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     let overpaymentAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
-      const totalNewWO = adjustedWO + row.appliedWriteOff;
-      const excess = Math.max(0, adjustedWO - row.insuranceBalance);
+      const finalWriteOff = row.insuranceBalance <= 0.005
+        ? row.appliedWriteOff + adjustedWO
+        : adjustedWO;
+      const excess = row.insuranceBalance <= 0.005 ? Math.max(0, adjustedWO) : 0;
       overpaymentAmount += excess;
 
       return {
         id: row.id,
-        wo: totalNewWO,
+        wo: finalWriteOff,
         pay: 0,
         allowed: 0,
         ded: 0,
@@ -636,8 +662,8 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
 
         <DialogContent sx={{ pt: '24px !important', px: '25px', pb: 2 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 2, lineHeight: 1.6 }}>
-            The following procedures have write-off amounts higher than expected. If the patient has not yet paid
-            their portion, the excess will be deducted from the patient's portion automatically. Any remaining excess will be saved as Patient Credit.
+            The following procedures have write-off amounts that exceed the remaining insurance portion. If the
+            insurance portion has already been fully resolved, the excess will be deducted from the patient's portion automatically, and any remaining excess will be saved as Patient Credit. Otherwise the write-off is recorded against the insurance balance.
           </Typography>
           <Box sx={{ bgcolor: '#f0f7ff', border: '1px solid #b8d5f8', borderRadius: '8px', px: 2, py: 1.5, mb: 1 }}>
             {overpaymentData.procs.map((proc, idx) => (
