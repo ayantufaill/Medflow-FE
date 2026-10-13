@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
 import { 
   selectSelectedPatientId, 
+  setSelectedPatientId,
   selectCurrentPatient, 
   fetchPatientById,
   clearCurrentPatient
@@ -40,6 +41,14 @@ const ClinicalNavbar = () => {
   const selectedAppointmentId = useSelector(selectSelectedAppointmentId);
   const currentPatient = useSelector(selectCurrentPatient);
   const currentAppointment = useSelector(selectCurrentAppointment);
+
+  // Sync patientId from URL search param if present
+  useEffect(() => {
+    const qPatientId = new URLSearchParams(location.search).get('patientId');
+    if (qPatientId && qPatientId !== selectedPatientId) {
+      dispatch(setSelectedPatientId(qPatientId));
+    }
+  }, [location.search, selectedPatientId, dispatch]);
 
   // Fetch missing detail context if IDs are present but data is empty
   useEffect(() => {
