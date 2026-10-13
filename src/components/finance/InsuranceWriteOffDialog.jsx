@@ -31,6 +31,10 @@ const parseAmount = (value) =>
 const procedureId = (proc = {}) =>
   String(proc.id || proc._id || proc.ProcNum || proc.procedureId || proc.procId || proc.itemId || "");
 
+// De-duplicated on purpose. `id` and `_id` hold the same string for an invoice
+// line, and code/cptCode/ProcCode often repeat too. Feeding the raw list into
+// paidMap.set(... + paid) credited every insurance payment twice, which is
+// what produced a $224 "paid" figure against a $112 payment.
 const procedureAliases = (proc = {}) =>
   [
     proc.id,
@@ -44,7 +48,8 @@ const procedureAliases = (proc = {}) =>
     proc.ProcCode ? `code:${proc.ProcCode}` : null,
   ]
     .filter(Boolean)
-    .map(String);
+    .map(String)
+    .filter((alias, idx, all) => all.indexOf(alias) === idx);
 
 const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const { currentPatient } = usePatient();
@@ -166,11 +171,13 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
           proc.amount,
       );
       const weight = invoiceChargeTotal > 0 ? charge / invoiceChargeTotal : 0;
+      // Insurance write-off only. `appliedAdjustment` is deliberately NOT in
+      // this chain: that field carries patient credits (courtesy, un-collected,
+      // small balance). Reading it here mislabelled a $28 Un-Collected credit
+      // as an insurance write-off, and the recomputation below then deducted
+      // it from the patient a second time.
       const rawAppliedWriteOff = parseAmount(
-        proc.appliedWriteOff ||
-          proc.appliedAdjustment ||
-          proc.writeoff ||
-          proc.estimatedWriteOff,
+        proc.appliedWriteOff || proc.writeoff || proc.estimatedWriteOff,
       );
       const appliedWriteOff =
         rawAppliedWriteOff > 0
@@ -189,58 +196,81 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
       const claimInsuranceBalance = parseAmount(
         claimProc.insuranceBalance ?? claimProc.insBalance ?? claimProc.insPortion,
       );
-      let insuranceBalance = restatedMatch
-        ? Math.max(0, parseAmount(match.insPortion))
-        : matchInsuranceBalance > 0
-          ? matchInsuranceBalance
-          : hasLedgerSummary && summaryInsBalance > 0
-            ? summaryInsBalance * weight
-            : Math.max(0, claimInsuranceBalance || insEst - insPaid);
-
       const matchPatientBalance = parseAmount(
         match.patientBalance ?? match.ptBalance ?? match.ptPortion ?? match.patientPortion,
       );
       const claimPatientBalance = parseAmount(
         claimProc.patientBalance ?? claimProc.ptBalance ?? claimProc.ptPortion ?? claimProc.patientPortion,
       );
+      // What insurance actually paid on THIS line. Taking the invoice total
+      // and scaling it by charge weight handed a claimed $150 line only 84 of
+      // its own $112 payment (112 * 150/200), which then left a phantom $18
+      // insurance balance and inflated the patient balance to $38. Prefer the
+      // per-procedure figures; the summary split is only a last resort.
+      const ownPaid = Math.max(
+        parseAmount(match.insurancePaidAmount),
+        parseAmount(match.insurancePaid),
+        parseAmount(match.insPaid),
+        parseAmount(insPaid),
+        0,
+        ...procedureAliases(proc).map((alias) => paymentByProcedure.get(alias) || 0),
+      );
       const procedurePaid =
-        hasLedgerSummary && summaryInsPaid > 0
-          ? summaryInsPaid * weight
-          : Math.max(
-              0,
-              ...procedureAliases(proc).map((alias) => paymentByProcedure.get(alias) || 0),
-            );
-      
-      // When the row comes from restated ledger data (match), use those portions
-      // directly — they already fold in debit adjustments and the
-      // unclaimed-insurance move, so the invoice summary must not re-spread onto
-      // this line (the summary's patient balance may belong to another procedure).
-      let patientBalance = restatedMatch
-        ? Math.max(0, parseAmount(match.ptPortion))
-        : matchPatientBalance > 0
-          ? matchPatientBalance
-          : Math.max(
-              0,
-              (claimPatientBalance || (hasLedgerSummary ? summaryPtBalance * weight : 0)) -
-                procedurePaid,
-            );
+        ownPaid > 0
+          ? ownPaid
+          : hasLedgerSummary && summaryInsPaid > 0
+            ? summaryInsPaid * weight
+            : 0;
 
-      if (procedurePaid > 0 || appliedWriteOff > 0) {
+      let insuranceBalance;
+      let patientBalance;
+      if (restatedMatch) {
+        // A restated row is already final: insPortion is the portion before
+        // payment, and ptPortion is what the patient still owes AFTER every
+        // credit and write-off. Rebuilding them as charge − paid − writeoff
+        // double-counted credits that are already inside ptPortion and left a
+        // phantom patient balance ($10 on a line whose real balance was $0).
         insuranceBalance = Math.max(
           0,
-          insuranceBalance - procedurePaid - appliedWriteOff,
+          parseAmount(match.insPortion) - procedurePaid,
         );
-        patientBalance = Math.max(
-          0,
-          charge - appliedWriteOff - procedurePaid - insuranceBalance,
-        );
-      }
+        patientBalance = Math.max(0, parseAmount(match.ptPortion));
+      } else {
+        insuranceBalance =
+          matchInsuranceBalance > 0
+            ? matchInsuranceBalance
+            : hasLedgerSummary && summaryInsBalance > 0
+              ? summaryInsBalance * weight
+              : Math.max(0, claimInsuranceBalance || insEst - insPaid);
+        patientBalance =
+          matchPatientBalance > 0
+            ? matchPatientBalance
+            : Math.max(
+                0,
+                (claimPatientBalance ||
+                  (hasLedgerSummary ? summaryPtBalance * weight : 0)) -
+                  procedurePaid,
+              );
 
-      // After determining patient balance from adjusted data, if insurance balance is still using fallback,
-      // recalculate it to ensure patient + insurance + writeoff = charge
-      if (!restatedMatch && matchInsuranceBalance <= 0 && matchPatientBalance > 0) {
-        // We have adjusted patient balance but no adjusted insurance balance - calculate it
-        insuranceBalance = Math.max(0, charge - appliedWriteOff - procedurePaid - patientBalance);
+        if (procedurePaid > 0 || appliedWriteOff > 0) {
+          insuranceBalance = Math.max(
+            0,
+            insuranceBalance - procedurePaid - appliedWriteOff,
+          );
+          patientBalance = Math.max(
+            0,
+            charge - appliedWriteOff - procedurePaid - insuranceBalance,
+          );
+        }
+
+        // After determining patient balance from adjusted data, if insurance balance is still using fallback,
+        // recalculate it to ensure patient + insurance + writeoff = charge
+        if (matchInsuranceBalance <= 0 && matchPatientBalance > 0) {
+          insuranceBalance = Math.max(
+            0,
+            charge - appliedWriteOff - procedurePaid - patientBalance,
+          );
+        }
       }
       const totalBalance = Math.max(0, patientBalance + insuranceBalance);
 

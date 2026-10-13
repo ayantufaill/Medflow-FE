@@ -321,8 +321,14 @@ export const fetchLedgerItems = createAsyncThunk(
                   adj.notes &&
                   adj.notes.toLowerCase().includes("debit adjustment")
                 );
+              // An insurance write-off is NOT a courtesy. These carry no
+              // `type`, so the `!adj.type` fallback below used to classify them
+              // as courtesy, and LedgerList then subtracted that amount from
+              // the procedure's patient portion — double-charging the write-off
+              // that ledgerCalculations had already kept off the patient.
               const isCourtesy =
                 !isDebitAdjustment &&
+                !isInsWriteOff &&
                 !!(
                   (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
                   (adj.notes &&
@@ -868,11 +874,20 @@ export const fetchLedgerItems = createAsyncThunk(
             0,
           );
 
+          // Reconcile each side against its own header total, never both at
+          // once. Re-spreading insurance whenever the PATIENT side was off
+          // destroyed a correct per-procedure split: a $124 balance that
+          // belonged entirely to one claimed line was smeared across a second
+          // unclaimed line as $63.62 / $60.38 just because that other line had
+          // a stale patient portion.
+          const ptNeedsReconcile =
+            Math.abs(currentPtTotal - adjustedPtBal) > 0.01;
+          const insNeedsReconcile =
+            Math.abs(currentInsTotal - adjustedInsBal) > 0.01;
           if (
             groupedTotal > 0 &&
             totalDebitAdjAmt <= 0 &&
-            (Math.abs(currentPtTotal - adjustedPtBal) > 0.01 ||
-              Math.abs(currentInsTotal - adjustedInsBal) > 0.01)
+            (ptNeedsReconcile || insNeedsReconcile)
           ) {
             let remainingPt = adjustedPtBal;
             let remainingIns = adjustedInsBal;
@@ -888,12 +903,18 @@ export const fetchLedgerItems = createAsyncThunk(
                     proc.amount,
                 );
                 const isLast = index === detail.procedures.length - 1;
-                const nextPt = isLast
-                  ? remainingPt
-                  : roundMoney(adjustedPtBal * (charge / groupedTotal));
-                const nextIns = isLast
-                  ? remainingIns
-                  : roundMoney(adjustedInsBal * (charge / groupedTotal));
+                // A side that already reconciles keeps its per-procedure
+                // values; only the side that is actually off gets re-spread.
+                const nextPt = !ptNeedsReconcile
+                  ? moneyNumber(proc.ptPortion)
+                  : isLast
+                    ? remainingPt
+                    : roundMoney(adjustedPtBal * (charge / groupedTotal));
+                const nextIns = !insNeedsReconcile
+                  ? moneyNumber(proc.insPortion)
+                  : isLast
+                    ? remainingIns
+                    : roundMoney(adjustedInsBal * (charge / groupedTotal));
                 remainingPt = roundMoney(remainingPt - nextPt);
                 remainingIns = roundMoney(remainingIns - nextIns);
                 return {

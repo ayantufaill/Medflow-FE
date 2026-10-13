@@ -94,6 +94,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
         "",
     );
 
+
   const chargeOf = (p) =>
     proceduresAreRestated
       ? Number(p.fee || p.totalPrice || p.charge || p.ProcFee || 0)
@@ -123,6 +124,37 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     const n = parseFloat(String(v ?? '').replace(/[^0-9.-]+/g, ""));
     return isNaN(n) ? 0 : n;
   };
+
+  // Money actually received per procedure, split by payer, taken only from the
+  // invoice's payment rows.
+  const paidByProcedure = (() => {
+    const map = new Map();
+    (editTarget?.details || []).forEach((detail) => {
+      if (!detail?.isPayment || detail.isAdjustment || detail.isVoided) return;
+      const isInsurance =
+        detail.isInsurancePayment ||
+        String(detail.title || "").toLowerCase().includes("ins payment") ||
+        String(detail.paymentSource || "").toLowerCase() === "insurance_company" ||
+        String(detail.method || "").toLowerCase() === "insurance";
+      (detail.procedures || []).forEach((proc) => {
+        const key = procedureKey(proc);
+        if (!key) return;
+        const paid = Math.max(
+          parseAmount(proc.appliedPayment),
+          parseAmount(proc.paymentAmount),
+          parseAmount(proc.paidAmount),
+          parseAmount(proc.payAmount),
+          0,
+        );
+        if (!(paid > 0)) return;
+        const entry = map.get(key) || { patient: 0, insurance: 0 };
+        if (isInsurance) entry.insurance += paid;
+        else entry.patient += paid;
+        map.set(key, entry);
+      });
+    });
+    return map;
+  })();
 
   const dynamicLineItems = procedures.map(p => {
     const charge = chargeOf(p);
@@ -167,12 +199,15 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       }
     }
     const rawInsBalance = insBalance;
-    let insurancePaidAmt = Number(p.insurancePaid || 0);
-    let patientPaidAmt = Number(p.patientPaid || 0);
-    let pay = Number(p.paidAmount || p.payAmount || 0);
-    if (pay === 0) {
-      pay = patientPaidAmt + insurancePaidAmt;
-    }
+    // Only money backed by a payment row counts. The stored paid fields are not
+    // trustworthy on their own: one procedure carried patientPaidAmount and
+    // paidAmount of 124 — its un-adjudicated insurance estimate — with no
+    // payment behind it, so the dialog reported $224 collected when the
+    // invoice had actually taken $100.
+    const backedPaid = paidByProcedure.get(String(procedureKey(p) || "")) || {};
+    let insurancePaidAmt = backedPaid.insurance || 0;
+    let patientPaidAmt = backedPaid.patient || 0;
+    let pay = insurancePaidAmt + patientPaidAmt;
     if (hasSummary && totalPayment === 0) {
       pay = 0;
       patientPaidAmt = 0;
@@ -185,9 +220,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     }
     if (insurancePaidAmt < 0) insurancePaidAmt = 0;
 
-    // Only override with summary pro-ration if line items don't have their own balances defined
-    // and there is an actual summary
-    if (hasSummary && ptBalance === 0 && insBalance === 0) {
+    // Only for rows that carry no restated data at all. A restated row whose
+    // insurance and patient portions are genuinely $0 is settled, not missing —
+    // re-deriving it here invented an insurance balance of $63.62 on an
+    // unclaimed line that had none, splitting a $124 claim across both lines.
+    if (!proceduresAreRestated && hasSummary && ptBalance === 0 && insBalance === 0) {
       ptBalance = Math.max(0, (Number(editTarget.summary.ptBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
       insBalance = Math.max(0, (Number(editTarget.summary.insBal?.replace(/[^0-9.-]+/g,"")) || 0) * weight);
       if (writeoff === 0 && totalWo > 0) {
