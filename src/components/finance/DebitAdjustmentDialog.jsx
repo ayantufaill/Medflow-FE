@@ -125,18 +125,6 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
           editTarget?.lineItems || [],
           editTarget?.procedures || [],
         );
-  const liveClaims = (editTarget?.details || []).filter((detail) => {
-    if (!detail?.isClaim || detail.isVoided) return false;
-    const status = String(detail.status || "").toLowerCase();
-    return status !== "void" && status !== "voided";
-  });
-  const claimedProcedureIds = new Set(
-    liveClaims
-      .flatMap((claim) => claim.procedures || [])
-      .map((proc) => String(procedureMergeKey(proc) || ""))
-      .filter(Boolean),
-  );
-
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Percentage");
   const [calcValue, setCalcValue] = useState("0");
@@ -158,13 +146,29 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   // The invoice summary is the reliable source of what has actually been paid;
   // the per-line paid fields can be stale when no payment record backs them.
   const hasSummary = Boolean(editTarget?.summary);
-  const summaryInsPaid = parseNum(editTarget?.summary?.insPaid);
   const summaryWriteOff =
     parseNum(editTarget?.summary?.insWo) + parseNum(editTarget?.summary?.appliedWo);
-  const claimedInsuranceTotal = procedures.reduce((sum, proc) => {
-    if (!claimedProcedureIds.has(String(procedureMergeKey(proc) || ""))) return sum;
-    return sum + parseNum(proc.insPortion ?? proc.insurancePortion ?? proc.totalInsPortion);
-  }, 0);
+  // Money actually received per procedure, taken from the invoice's payment
+  // rows only. Stored per-line paid fields are not trustworthy on their own.
+  const paidByProcedure = (() => {
+    const map = new Map();
+    (editTarget?.details || []).forEach((detail) => {
+      if (!detail?.isPayment || detail.isAdjustment || detail.isVoided) return;
+      (detail.procedures || []).forEach((proc) => {
+        const key = String(procedureMergeKey(proc) || "");
+        if (!key) return;
+        const paid = Math.max(
+          parseNum(proc.appliedPayment),
+          parseNum(proc.paymentAmount),
+          parseNum(proc.paidAmount),
+          parseNum(proc.payAmount),
+          0,
+        );
+        if (paid > 0) map.set(key, (map.get(key) || 0) + paid);
+      });
+    });
+    return map;
+  })();
 
   const lineItems =
     procedures.length > 0
@@ -190,7 +194,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
                   charge - writeoff,
                 ),
               );
-          const insPortion = restated
+          const rawInsPortion = restated
             ? parseNum(p.insPortion ?? 0)
             : Math.max(
                 0,
@@ -201,31 +205,15 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
                   charge - writeoff,
                 ),
               );
-          const isClaimedProcedure = claimedProcedureIds.has(
-            String(procedureMergeKey(p) || ""),
-          );
-          // Per-procedure paid is what the line actually carries. Only fall
-          // back to splitting the invoice total when the line has no figure of
-          // its own, and never spread a payment onto a line that was not on
-          // the claim that received it.
-          const lineInsPaid = parseNum(
-            p.insurancePaidAmount ?? p.insurancePaid ?? p.insPaid,
-          );
-          const linePtPaid = parseNum(
-            p.patientPaidAmount ?? p.patientPaid ?? p.ptPaid,
-          );
-          let paid = lineInsPaid + linePtPaid;
-          if (!(paid > 0)) {
-            paid =
-              isClaimedProcedure && summaryInsPaid > 0
-                ? summaryInsPaid *
-                  (claimedInsuranceTotal > 0
-                    ? insPortion / claimedInsuranceTotal
-                    : 1)
-                : hasSummary
-                  ? 0
-                  : 0;
-          }
+          // Insurance column reports the ledger's charge-weighted share of the
+          // invoice balance when one exists, so the total always reconciles to
+          // summary.insBal.
+          const insPortion = rawInsPortion;
+          // Only money backed by an actual payment record counts. A line whose
+          // stored patientPaidAmount held an un-adjudicated insurance estimate
+          // was reporting $124 paid against $0 received, and the dialog total
+          // showed $224 instead of the $100 that was really taken.
+          const paid = paidByProcedure.get(String(procedureMergeKey(p) || "")) || 0;
           return {
             code: p.code || p.cptCode || p.ProcCode || 'Item',
             description: procedureDescription(p) || patientName,

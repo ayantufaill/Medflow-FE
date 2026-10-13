@@ -147,12 +147,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
               totalAmount - insuranceAmount - writeoffAmount,
             );
           }
-          const paidAmount = Math.max(
-            proc.__fromLedger ? 0 : paidByProcedure.get(key) || 0,
-            moneyNumber(proc.patientPaidAmount),
-            moneyNumber(proc.patientPaid),
-            moneyNumber(proc.ptPaid),
-          );
+          // Only money that is actually backed by a payment record reduces a
+          // line. The stored `patientPaidAmount` is not reliable on its own —
+          // one procedure carried 124 there while holding an un-adjudicated
+          // 124 insurance estimate and no patient payment at all, which zeroed
+          // a $25 balance that the invoice's own patientPortion (182) still
+          // counted. The invoice header is computed from payment records too,
+          // so the lines now use the same basis.
+          const paidAmount = paidByProcedure.get(key) || 0;
           const remainingPatient = roundMoney(procPatientBalance - paidAmount);
           return {
             ...proc,
@@ -169,49 +171,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         .filter((proc) => proc.patientBalance > 0);
 
       if (lineItems.length === 0) return null;
-      const linePatientTotal = lineItems.reduce(
-        (sum, proc) => sum + moneyNumber(proc.patientBalance),
-        0,
-      );
-      if (
-        invoiceInsuranceBalance <= 0.01 &&
-        Math.abs(linePatientTotal - patientBalance) > 0.01
-      ) {
-        let delta = roundMoney(linePatientTotal - patientBalance);
-        lineItems = lineItems.map((proc) => {
-          if (!(delta > 0.01)) return proc;
-          const isClaimed = claimedProcedureIds.has(procedureKey(proc));
-          if (!isClaimed) return proc;
-          const reduction = Math.min(delta, moneyNumber(proc.patientBalance));
-          delta = roundMoney(delta - reduction);
-          const patientBal = roundMoney(moneyNumber(proc.patientBalance) - reduction);
-          return {
-            ...proc,
-            patientBalance: patientBal,
-            payAmount: patientBal.toFixed(2),
-          };
-        });
-        lineItems = lineItems.filter((proc) => proc.patientBalance > 0);
-      } else if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
-        let remaining = roundMoney(patientBalance);
-        lineItems = lineItems.map((proc, index) => {
-          const isLast = index === lineItems.length - 1;
-          const nextBalance = isLast
-            ? remaining
-            : roundMoney(
-                patientBalance *
-                  (linePatientTotal > 0
-                    ? moneyNumber(proc.patientBalance) / linePatientTotal
-                    : 1 / lineItems.length),
-              );
-          remaining = roundMoney(remaining - nextBalance);
-          return {
-            ...proc,
-            patientBalance: nextBalance,
-            payAmount: nextBalance.toFixed(2),
-          };
-        }).filter((proc) => proc.patientBalance > 0);
-      }
+      // No reconciliation against `item.summary.ptBal`. These rows come from the
+      // ledger's own restated per-procedure balances, so they are the truth.
+      // Forcing them to add up to the invoice header was inventing money: on an
+      // invoice whose lines owed $157 but whose header still said $182, the
+      // mismatch was "corrected" by handing the whole $182 to the one surviving
+      // line. The header disagrees because that procedure was already settled
+      // (its patientPaidAmount covers its portion) while the invoice-level
+      // total still counts it.
 
       return {
         id: item.id,
