@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   Box,
@@ -24,10 +24,10 @@ import medflowLogo from "../../assets/medflow-logo.png";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useMedicalHistory } from "../../hooks/redux/useMedicalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
-import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
+import { usePatientHistoryTimeline } from "../../hooks/queries/usePatientHistoryTimeline";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
-import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
+import PatientHistoryTimeline from "../../components/patients/PatientHistoryTimeline";
 import MedicalGeneralInfoCard from "../../components/medical-history/MedicalGeneralInfoCard";
 import MedicalSummarySection from "../../components/medical-history/MedicalSummarySection";
 import MedicationListCard from "../../components/patients/MedicationListCard";
@@ -38,22 +38,6 @@ import SectionCard from "../../components/shared/SectionCard";
 import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
-
-const formatVisitDate = (dateStr) => {
-  if (!dateStr) return "";
-  try {
-    const date = new Date(dateStr);
-    // Check if date is valid
-    if (isNaN(date.getTime())) return "";
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
-};
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -124,10 +108,7 @@ const PatientMedicalHistoryPage = () => {
   const { medicalHistory, loading, error, fetch, update, uploadDocument } =
     useMedicalHistory();
   const { currentPatient: patient, fetchById } = usePatient();
-  const { data: patientAppointments = [] } = usePatientAppointments(
-    patientId,
-    20,
-  );
+  const historyTimeline = usePatientHistoryTimeline(patientId, "medical_history");
   const location = useLocation();
   const hasPrinted = useRef(false);
 
@@ -219,17 +200,6 @@ const PatientMedicalHistoryPage = () => {
         );
       });
   }, [patientId, fetchById, fetch, showSnackbar]);
-
-  // History Timeline nodes — the patient's actual appointment history
-  // (oldest to newest; backend returns most-recent-first).
-  const visitDates = useMemo(
-    () =>
-      [...patientAppointments]
-        .reverse()
-        .map((apt) => formatVisitDate(apt.date))
-        .filter(Boolean),
-    [patientAppointments],
-  );
 
   const patientName = (() => {
     if (patient?.firstName || patient?.lastName) {
@@ -363,6 +333,9 @@ const PatientMedicalHistoryPage = () => {
       };
 
       const data = await update(patientId, payload).unwrap();
+      // Refresh independently: a timeline fetch failure must not turn a saved
+      // form into a save error. The timeline provides its own retry state.
+      void historyTimeline.refresh();
       fetchById(patientId);
       setHasUnsavedChanges(false);
       setMedications(Array.isArray(data?.medications) ? data.medications : []);
@@ -778,13 +751,7 @@ const PatientMedicalHistoryPage = () => {
               title="History Timeline"
               sx={{ mb: 0 }}
             >
-              {visitDates.length ? (
-                <VisitDatesTimeline visitDates={visitDates} />
-              ) : (
-                <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                  No appointment history recorded yet.
-                </Typography>
-              )}
+              <PatientHistoryTimeline key={patientId} timeline={historyTimeline} historyLabel="Medical" />
             </SectionCard>
 
             <SectionCard icon={PremedIcon} title="Premedication" sx={{ mb: 0 }}>

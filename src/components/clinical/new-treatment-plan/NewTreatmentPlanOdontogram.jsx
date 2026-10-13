@@ -2,7 +2,13 @@ import React from 'react';
 import { Box, Paper } from '@mui/material';
 import InteractiveToothChart from '../../clinical/InteractiveToothChart';
 
-const NewTreatmentPlanOdontogram = ({ selectedTeeth, onToothClick, selectedSurfaces, onSidebarSurfaceClick }) => {
+const NewTreatmentPlanOdontogram = ({ 
+  selectedTeeth, 
+  onToothClick, 
+  selectedSurfaces, 
+  onSidebarSurfaceClick,
+  onToggleTeethGroup
+}) => {
 
   const toothSurfacesObj = {};
   selectedTeeth.forEach(tooth => {
@@ -17,6 +23,7 @@ const NewTreatmentPlanOdontogram = ({ selectedTeeth, onToothClick, selectedSurfa
           onToothClick={onToothClick}
           selectedSidebarSurfaces={selectedSurfaces}
           onSidebarSurfaceClick={onSidebarSurfaceClick}
+          onToggleTeethGroup={onToggleTeethGroup}
           isTreatmentPlan={true}
           toothSurfaces={toothSurfacesObj}
         />

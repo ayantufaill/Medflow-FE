@@ -215,6 +215,14 @@ const PatientDetailPage = () => {
           validationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
         }
       }
+
+      // Validate SSN
+      if (dataToSave.ssn) {
+        const ssnValidation = patientValidations.ssn.validate(dataToSave.ssn);
+        if (ssnValidation !== true) {
+          validationErrors.push(ssnValidation);
+        }
+      }
       
       // If there are validation errors, show them and stop
       if (validationErrors.length > 0) {

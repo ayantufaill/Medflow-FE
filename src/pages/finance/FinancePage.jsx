@@ -40,8 +40,9 @@ const FinancePage = () => {
 
   useEffect(() => {
     const loadPatientDetails = async () => {
-      // If we passed a patientId from routing state, fetch it
-      const targetPatientId = location.state?.patientId;
+      // If we passed a patientId from routing state or query param, fetch it
+      const queryPatientId = new URLSearchParams(location.search).get("patientId");
+      const targetPatientId = location.state?.patientId || queryPatientId;
       if (
         targetPatientId &&
         targetPatientId !== (currentPatient?._id || currentPatient?.id)
@@ -84,7 +85,7 @@ const FinancePage = () => {
     };
 
     loadPatientDetails();
-  }, [currentPatient, selectedPatientId, fetchById, setPatient]);
+  }, [currentPatient, selectedPatientId, fetchById, setPatient, location.search, location.state]);
 
   const handleViewChange = (event) => {
     setView(event.target.value);

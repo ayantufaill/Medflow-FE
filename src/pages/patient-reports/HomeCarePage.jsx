@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Tabs, Tab, Button } from '@mui/material';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { 
+  Box, 
+  Typography, 
+  Tabs, 
+  Tab, 
+  Button, 
+  IconButton, 
+  Tooltip, 
+  Menu, 
+  MenuItem, 
+  CircularProgress 
+} from '@mui/material';
+import TabletMacOutlinedIcon from '@mui/icons-material/TabletMacOutlined';
+import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined';
 import CategoryTabContent from '../../components/shared/CategoryTabContent';
 import PatientSummaryCard from '../../components/patient-detail/PatientSummaryCard';
 import ClickableReportImage from '../../components/patient-reports/ClickableReportImage';
@@ -8,14 +21,26 @@ import { usePatient } from '../../hooks/redux/usePatient';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 import { usePatientReport } from '../../hooks/queries/usePatientReport';
-import { CircularProgress } from '@mui/material';
+import { useSnackbar } from '../../contexts/SnackbarContext';
+import shareSvg from '../../assets/finance icons/share.svg';
+import printSvg from '../../assets/clinicalicons/print icon.svg';
+import { printPatientHomeCare } from '../../utils/printPatientHomeCare';
 
 const HomeCarePage = () => {
   const { patientId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState(0);
 
   const { currentPatient: patient, fetchById } = usePatient();
+  const { showSnackbar } = useSnackbar();
+  const [shareMenuAnchorEl, setShareMenuAnchorEl] = useState(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const handleShareOption = (channel) => {
+    setShareMenuAnchorEl(null);
+    showSnackbar(`Report shared with patient via ${channel}`, 'success');
+  };
 
   useEffect(() => {
     if (patientId) fetchById(patientId);
@@ -29,7 +54,7 @@ const HomeCarePage = () => {
     { id: 'showcase', label: 'SHOWCASE', path: `/patients/${patientId}/report/showcase` },
   ];
 
-  const { data: reportData, isLoading, isError, error } = usePatientReport(patientId);
+  const { data: reportData, isLoading, isError, error } = usePatientReport(patientId, searchParams.get('appointmentId') || undefined);
 
   const formatIssues = (issuesArr) => {
     if (!issuesArr || !Array.isArray(issuesArr)) return [];
@@ -75,8 +100,34 @@ const HomeCarePage = () => {
     'Products',
   ];
 
+  const canPrint = !isLoading && !isError && !!categories[activeCategory] &&
+    !!patient && String(patient._id || patient.id) === String(patientId);
+
+  const handlePrint = async () => {
+    if (!canPrint || isPrinting) return;
+    setIsPrinting(true);
+    try {
+      await printPatientHomeCare({
+        patient,
+        patientId,
+        category: categories[activeCategory],
+        categoryLabel: homeCareCategories[activeCategory],
+        sectionNumber: activeCategory + 1,
+        primaryConcern: reportData?.concerns?.primaryConcern,
+      });
+    } catch (printError) {
+      showSnackbar(printError.message || 'Unable to print this report.', 'error');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   return (
-    <Box>
+    <Box sx={{
+      '@media print': {
+        '.print-hide': { display: 'none !important' },
+      }
+    }}>
       {/* Patient Header Card */}
       <Box sx={{
         mb: 2,
@@ -92,7 +143,7 @@ const HomeCarePage = () => {
       }}>
         {patient ? <PatientSummaryCard patient={patient} /> : <Box />}
         
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+        <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
           {reportSections.map((section) => (
             <Button
               key={section.id}
@@ -130,7 +181,15 @@ const HomeCarePage = () => {
           border: `1px solid ${COLORS.BORDER}`, 
           p: 3 
         }}>
-          <Box sx={{ mb: 3, textAlign: 'center' }}>
+          {/* Header Row with Share and Print Icons */}
+          <Box sx={{ 
+            mb: 3, 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2 
+          }}>
             <Typography 
               sx={{ 
                 fontWeight: 600, 
@@ -140,6 +199,62 @@ const HomeCarePage = () => {
             >
               Personalized oral hygiene recommendations and care instructions
             </Typography>
+
+            <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Share with Patient">
+                <IconButton 
+                  size="small"
+                  aria-label="Share with patient"
+                  onClick={(e) => setShareMenuAnchorEl(e.currentTarget)}
+                >
+                  <Box component="img" src={shareSvg} alt="share" sx={{ width: 22, height: 22 }} />
+                </IconButton>
+              </Tooltip>
+
+              <Menu
+                anchorEl={shareMenuAnchorEl}
+                open={Boolean(shareMenuAnchorEl)}
+                onClose={() => setShareMenuAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                PaperProps={{
+                  sx: {
+                    mt: 1,
+                    minWidth: 180,
+                    border: `1px solid ${COLORS.BORDER}`,
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    '& .MuiMenuItem-root': {
+                      gap: 1.5,
+                      py: 1.25,
+                      fontSize: '0.875rem',
+                      color: '#0f172a',
+                      fontFamily: 'Inter, sans-serif',
+                    },
+                  },
+                }}
+              >
+                <MenuItem onClick={() => handleShareOption('Kiosk')}>
+                  <TabletMacOutlinedIcon sx={{ fontSize: '1.2rem', color: '#334155' }} />
+                  Send to Kiosk
+                </MenuItem>
+                <MenuItem onClick={() => handleShareOption('SMS')}>
+                  <SmsOutlinedIcon sx={{ fontSize: '1.2rem', color: '#334155' }} />
+                  Send to SMS
+                </MenuItem>
+              </Menu>
+
+              <Tooltip title="Print">
+                <IconButton 
+                  size="small"
+                  aria-label="Print"
+                  onClick={handlePrint}
+                  disabled={!canPrint || isPrinting}
+                >
+                  <Box component="img" src={printSvg} alt="print" sx={{ width: 22, height: 22 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
 
           {isLoading ? (

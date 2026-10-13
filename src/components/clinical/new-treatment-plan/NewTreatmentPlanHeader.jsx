@@ -6,8 +6,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import calenderSvg from '../../../assets/treatmentplan/calender.svg';
 import notesSvg from '../../../assets/treatmentplan/mdi_notes-outline.svg';
+import rxSvg from '../../../assets/clinicalicons/RX icon.svg';
 
-const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram, onNotesClick, pastDates = [], currentDate }) => {
+const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram, onNotesClick, onRxClick, pastDates = [], currentDate }) => {
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -100,6 +101,15 @@ const NewTreatmentPlanHeader = ({ showOdontogram, setShowOdontogram, onNotesClic
 
       {/* Buttons Container */}
       <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+        <Button 
+          variant="outlined" 
+          size="small" 
+          onClick={onRxClick}
+          startIcon={<Box component="img" src={rxSvg} alt="rx" sx={{ width: 16, height: 16 }} />}
+          sx={{ textTransform: 'none', borderColor: '#e2e8f0', color: '#1e293b' }}
+        >
+          Rx
+        </Button>
         <Button 
           variant="outlined" 
           size="small" 

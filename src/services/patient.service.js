@@ -223,14 +223,18 @@ export const patientService = {
     return response.data.data.updateRequests || [];
   },
 
-  async getPatientAuditHistory(patientId) {
+  async getPatientAuditHistory(patientId, { strict = false } = {}) {
     try {
       const response = await apiClient.get(
         `/patients/${patientId}/audit-history`,
       );
-      return response.data.data.auditEvents || [];
+      const events = response.data?.data?.auditEvents;
+      if (strict && !Array.isArray(events)) {
+        throw new Error("Invalid patient history response");
+      }
+      return events || [];
     } catch (error) {
-      if (error.response?.status === 404) return [];
+      if (!strict && error.response?.status === 404) return [];
       throw error;
     }
   },
@@ -532,4 +536,15 @@ export const patientService = {
     const response = await apiClient.get(`/patients/${patientId}/insurance-usage`);
     return response.data?.data ?? response.data;
   },
+  // ---------------- Prescriptions ----------------
+
+  async getPatientPrescriptions(patientId) {
+    const response = await apiClient.get(`/rx?patientId=${patientId}`);
+    return response.data?.data?.prescriptions ?? response.data;
+  },
+
+  async createPatientPrescription(patientId, rxData) {
+    const response = await apiClient.post(`/rx`, { patientId, ...rxData });
+    return response.data?.data ?? response.data;
+  }
 };
