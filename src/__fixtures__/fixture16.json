@@ -1,0 +1,1460 @@
+{
+ "patientId": 16,
+ "invoices": [
+  {
+   "_id": "1791494147119063",
+   "id": "1791494147119063",
+   "invoiceNumber": "INV1791464040",
+   "patientId": "16",
+   "appointmentId": null,
+   "insuranceCompanyId": null,
+   "providerId": null,
+   "invoiceDate": "2026-10-13T00:00:00.000Z",
+   "dueDate": "2026-11-12T00:00:00.000Z",
+   "totalAmount": 950,
+   "insurancePortion": 475,
+   "secondaryInsPortion": 475,
+   "patientPortion": 0,
+   "copayAmount": 0,
+   "paidAmount": 475,
+   "writeoffAmount": 0,
+   "adjustmentAmount": 0,
+   "balanceDue": 0,
+   "taxAmount": 0,
+   "discountAmount": 0,
+   "status": "draft",
+   "claimNumber": null,
+   "claimSubmissionDate": null,
+   "submissionMethod": null,
+   "createdBy": "1",
+   "notes": "Standalone Invoice",
+   "claimId": null,
+   "createdByName": "Admin User",
+   "patient": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "provider": null,
+   "insuranceCompany": null
+  }
+ ],
+ "detail": {
+  "invoice": {
+   "_id": "1791494147119063",
+   "id": "1791494147119063",
+   "invoiceNumber": "INV1791464040",
+   "patientId": "16",
+   "appointmentId": null,
+   "insuranceCompanyId": null,
+   "providerId": null,
+   "invoiceDate": "2026-10-13T00:00:00.000Z",
+   "dueDate": "2026-11-12T00:00:00.000Z",
+   "totalAmount": 950,
+   "insurancePortion": 475,
+   "secondaryInsPortion": 475,
+   "patientPortion": 0,
+   "copayAmount": 0,
+   "paidAmount": 475,
+   "writeoffAmount": 0,
+   "adjustmentAmount": 0,
+   "balanceDue": 0,
+   "taxAmount": 0,
+   "discountAmount": 0,
+   "status": "draft",
+   "claimNumber": null,
+   "claimSubmissionDate": null,
+   "submissionMethod": null,
+   "createdBy": "1",
+   "notes": "Standalone Invoice",
+   "claimId": null,
+   "createdByName": "Admin User",
+   "patient": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "provider": null,
+   "insuranceCompany": null,
+   "secondaryInsuranceCompany": null,
+   "coverages": [
+    {
+     "insuranceType": "primary",
+     "name": "Delta Dental PPO"
+    },
+    {
+     "insuranceType": "secondary",
+     "name": "MetLife Test Dental"
+    }
+   ],
+   "appointment": null,
+   "dateOfService": null
+  },
+  "items": [
+   {
+    "_id": "1791494092552325",
+    "invoiceId": "1791494147119063",
+    "serviceId": "183",
+    "cptCode": "D2740",
+    "description": "Crown \u2013 porcelain/ceramic",
+    "date": "2026-10-13T00:00:00.000Z",
+    "quantity": 1,
+    "unitPrice": 950,
+    "totalPrice": 950,
+    "ptPortion": 0,
+    "insPortion": 950,
+    "primaryInsPortion": 475,
+    "secondaryInsPortion": 475,
+    "totalInsPortion": 950,
+    "writeoff": 0,
+    "estimatedWriteOff": 0,
+    "allowedFee": 950,
+    "coveragePct": 50,
+    "deductibleApplied": 0,
+    "paidAmount": 475,
+    "patientPaidAmount": 0,
+    "insurancePaidAmount": 475,
+    "insuranceExpected": 950,
+    "insuranceBalance": 475,
+    "dbi": false,
+    "isVoided": false,
+    "voidReason": null,
+    "site": null,
+    "provider": null,
+    "completed": true,
+    "isPatientPenalty": false,
+    "patientOnly": false,
+    "isAccountPenalty": false,
+    "noBillIns": null
+   }
+  ]
+ },
+ "adjustments": [],
+ "payments": [
+  {
+   "_id": "1791494146119119",
+   "id": "1791494146119119",
+   "paymentId": "1791494146119119",
+   "depositId": null,
+   "patientId": "16",
+   "invoiceId": "1791494147119063",
+   "receiptNumber": "1791494146119119",
+   "paymentCode": "1791494146119119",
+   "amount": 475,
+   "originalAmount": 475,
+   "method": "ach",
+   "paymentMethod": "ach",
+   "paymentSource": "insurance_company",
+   "referenceNumber": null,
+   "processorFee": 0,
+   "status": "completed",
+   "isVoided": false,
+   "paidAt": "2026-10-13T12:55:09.077Z",
+   "paymentDate": "2026-10-13T12:55:09.077Z",
+   "notes": "Insurance Claim #1791494255269055 Payment. Options: None",
+   "chequeNo": null,
+   "branchNo": null,
+   "isAccountCredit": false,
+   "splits": [
+    {
+     "id": "1791493327670",
+     "procedureId": "1791494092552325",
+     "amount": 475,
+     "date": "2026-10-13T00:00:00.000Z"
+    }
+   ],
+   "isDeposit": false,
+   "isPatientDeposit": false,
+   "depositType": null,
+   "voidReason": null,
+   "voidedAt": null,
+   "isPartialPayment": false,
+   "suppressLedgerPaymentEntry": false,
+   "createdBy": "1",
+   "createdByName": "Admin User",
+   "patient": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "invoice": {
+    "_id": "1791494147119063",
+    "invoiceNumber": "INV1791464040",
+    "invoiceDate": "2026-10-13T00:00:00.000Z",
+    "dueDate": "2026-11-12T00:00:00.000Z",
+    "totalAmount": 0,
+    "balanceDue": 0,
+    "status": "draft"
+   }
+  }
+ ],
+ "claims": [
+  {
+   "_id": "1791494255269055",
+   "id": "1791494255269055",
+   "claimNumber": "CLM1791494255269055",
+   "claimCode": "CLM1791494255269055",
+   "patientRefId": "16",
+   "patientId": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "patient": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "subscriberDetails": null,
+   "billingProvider": null,
+   "treatingProvider": {
+    "_id": "20",
+    "firstName": "Jessica",
+    "lastName": "Wong",
+    "npi": "6555666777",
+    "tin": ""
+   },
+   "invoiceRefId": null,
+   "invoiceId": null,
+   "invoice": null,
+   "insuranceCompanyRefId": "2",
+   "insuranceCompanyId": {
+    "_id": "2",
+    "name": "Delta Dental PPO",
+    "payerId": "2020122",
+    "address": "",
+    "address2": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+   },
+   "insuranceCompany": {
+    "_id": "2",
+    "name": "Delta Dental PPO",
+    "payerId": "2020122",
+    "address": "",
+    "address2": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+   },
+   "insuranceType": "primary",
+   "status": "paid",
+   "dateSent": "2026-10-13T00:00:00.000Z",
+   "submissionDate": "2026-10-13T00:00:00.000Z",
+   "submittedDate": "2026-10-13T00:00:00.000Z",
+   "submittedAmount": 475,
+   "claimAmount": 475,
+   "totalAmount": 950,
+   "paidAmount": 475,
+   "patientResponsibility": 0,
+   "insbalance": 0,
+   "patbalance": 0,
+   "insuranceBalance": 0,
+   "patientBalance": 0,
+   "insurancePortion": 475,
+   "patientPortion": 0,
+   "denialReason": null,
+   "deniedDate": null,
+   "denialDate": null,
+   "paidDate": "2026-10-13T12:55:10.605Z",
+   "policyNumber": null,
+   "notes": null,
+   "createdAt": "2026-10-13T00:00:00.000Z",
+   "updatedAt": "2026-10-13T12:55:10.605Z",
+   "createdBy": "1",
+   "updatedBy": "1",
+   "procedures": [
+    {
+     "id": "1791494092552325",
+     "_id": "1791494092552325",
+     "appointmentId": null,
+     "patientId": "16",
+     "invoiceId": "1791494147119063",
+     "codeNum": "183",
+     "code": "D2740",
+     "name": "Crown \u2013 porcelain/ceramic",
+     "description": "Crown \u2013 porcelain/ceramic",
+     "tooth": null,
+     "surface": null,
+     "status": 2,
+     "quantity": 1,
+     "fee": 950,
+     "insPayEst": 475,
+     "insPayAmt": 475,
+     "insPaid": 475,
+     "insurancePaidAmount": 475,
+     "patientPaidAmount": 0,
+     "insuranceBalance": 0,
+     "writeOffEst": 0,
+     "writeOff": 0,
+     "writeoff": 0,
+     "dedApplied": 0,
+     "deductible": 0,
+     "allowedOverride": 0,
+     "allowedFee": 950,
+     "coveragePct": 50,
+     "deductibleApplied": 0,
+     "effectiveCode": null,
+     "downgraded": false,
+     "downgradedFrom": null,
+     "claimProcStatus": 1,
+     "providerId": null,
+     "providerName": null,
+     "dateOfService": "2026-10-13T00:00:00.000Z",
+     "placeOfService": null,
+     "createdAt": null
+    }
+   ],
+   "procedureIds": [],
+   "selectedItems": [
+    {
+     "invoiceId": "1791494147119063",
+     "invoiceNumber": "INV1791464040",
+     "invoiceDate": "2026-10-13T00:00:00.000Z",
+     "itemId": "1791494092552325",
+     "code": "D2740",
+     "description": "Crown \u2013 porcelain/ceramic",
+     "fee": 950,
+     "ptAmount": 0,
+     "insAmount": 475,
+     "amount": 475,
+     "allowedFee": 950,
+     "coveragePct": 50,
+     "deductibleApplied": 0
+    }
+   ],
+   "claimFormat": "E-claim",
+   "isHidden": false,
+   "isVoided": false,
+   "voidedDate": null,
+   "isLocked": false,
+   "lockedDate": null,
+   "lockedBy": null,
+   "remittanceDate": null,
+   "insurancePaymentAmount": null,
+   "providerSignature": null,
+   "patientSignature": null,
+   "eobs": [],
+   "delayReasonCode": null,
+   "attachmentTransmissionCode": null,
+   "attachmentType": null,
+   "predeterminationNumber": null,
+   "accidentDate": null,
+   "diagnosticCode": null,
+   "clearingHouseMessage": null,
+   "subscriber": null,
+   "planName": null,
+   "treatingProviderName": null,
+   "description": null,
+   "createdByName": "Admin User",
+   "updatedByName": "Admin User",
+   "attachments": [],
+   "hasAttachment": false
+  },
+  {
+   "_id": "0",
+   "id": "0",
+   "claimNumber": "CLM000130",
+   "insuranceType": "primary",
+   "status": "paid",
+   "invoiceId": "1791494147119064",
+   "paidAmount": 100,
+   "totalAmount": 140,
+   "procedures": [
+    {
+     "_id": "1791494092552326",
+     "id": "1791494092552326",
+     "code": "D2140",
+     "fee": 140,
+     "insPaid": 100
+    }
+   ]
+  }
+ ],
+ "coverages": [
+  {
+   "_id": "4",
+   "patientId": "16",
+   "insuranceCompanyId": {
+    "_id": "2",
+    "name": "Delta Dental PPO",
+    "payerId": "2020122"
+   },
+   "policyNumber": "Sub-897",
+   "groupNumber": "GRP-0921",
+   "groupName": "Group insurance",
+   "subscriberName": "Ashley Brown",
+   "subscriberDateOfBirth": "2001-03-25",
+   "relationshipToPatient": "self",
+   "insuranceType": "primary",
+   "effectiveDate": "2026-09-25T00:00:00.000Z",
+   "expirationDate": null,
+   "copayAmount": null,
+   "deductibleAmount": 0,
+   "autoVerify": true,
+   "verificationStatus": "pending",
+   "verificationDate": null,
+   "isActive": true,
+   "notes": null,
+   "isFamilyPlan": false,
+   "members": [
+    "Ashley Brown"
+   ],
+   "patientsCovered": 1,
+   "deductiblesGrid": [
+    {
+     "type": "Standard",
+     "lifetime": false,
+     "standard": false,
+     "individual": "",
+     "family": "",
+     "metAmount": "",
+     "metDate": ""
+    },
+    {
+     "type": "Preventative",
+     "lifetime": false,
+     "standard": false,
+     "individual": "",
+     "family": "",
+     "metAmount": "",
+     "metDate": ""
+    },
+    {
+     "type": "Basic",
+     "lifetime": false,
+     "standard": false,
+     "individual": "",
+     "family": "",
+     "metAmount": "",
+     "metDate": ""
+    },
+    {
+     "type": "Major",
+     "lifetime": false,
+     "standard": false,
+     "individual": "",
+     "family": "",
+     "metAmount": "",
+     "metDate": ""
+    },
+    {
+     "type": "Orthodontics",
+     "lifetime": false,
+     "standard": false,
+     "individual": "",
+     "family": "",
+     "metAmount": "",
+     "metDate": ""
+    }
+   ],
+   "coverageLimits": {
+    "individual": {
+     "unlimited": false,
+     "annualMax": "3000",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "family": {
+     "unlimited": false,
+     "annualMax": "",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "ortho": {
+     "unlimited": false,
+     "annualMax": "",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "diagnostic": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "preventative": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "basic": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "major": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "categories": [
+     "Diagnostic",
+     "Preventative",
+     "Basic",
+     "Major"
+    ]
+   },
+   "coverageCategoryTable": [
+    {
+     "category": "diagnostic",
+     "items": [
+      {
+       "id": 1,
+       "label": "Preventative",
+       "coverage": 100,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 2,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "preventative",
+     "items": [
+      {
+       "id": 3,
+       "label": "Preventative",
+       "coverage": 100,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 5,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "restorative",
+     "items": [
+      {
+       "id": 6,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 7,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "endodontics",
+     "items": [
+      {
+       "id": 9,
+       "label": "Endodontics",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "periodontics",
+     "items": [
+      {
+       "id": 99,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 10,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "implantServices",
+     "items": [
+      {
+       "id": 11,
+       "label": "Implant Services",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "oralSurgery",
+     "items": [
+      {
+       "id": 13,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 14,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "prosthodonticsFixed",
+     "items": [
+      {
+       "id": 15,
+       "label": "Prosthodontics, Fixed",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "prosthodonticsRemovable",
+     "items": [
+      {
+       "id": 16,
+       "label": "Prosthodontics, Removable",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "adjunctGeneral",
+     "items": [
+      {
+       "id": 17,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 18,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 19,
+       "label": "Standard",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "orthodontics",
+     "items": [
+      {
+       "id": 20,
+       "label": "Orthodontics",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "maxillofacialProsthetics",
+     "items": [
+      {
+       "id": 22,
+       "label": "Maxillofacial Prosthetics",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    }
+   ],
+   "coverageBookData": [],
+   "planFeeGuide": "1",
+   "coverageType": "ppo",
+   "subscriberSsn": "908236614",
+   "renewalMonth": 1,
+   "assignmentOfBenefits": "1",
+   "honorWriteOff": false,
+   "providersPlanFeeGuides": [],
+   "policyNotes": null,
+   "eligibilityPolicyNotes": null,
+   "insurancePlanNotes": null,
+   "healthPlan": false,
+   "paymentPlan": null,
+   "insurancePlan": {
+    "_id": "2",
+    "name": "Delta Dental PPO",
+    "payerId": "2020122"
+   }
+  },
+  {
+   "_id": "291",
+   "patientId": "16",
+   "insuranceCompanyId": {
+    "_id": "3",
+    "name": "MetLife Test Dental",
+    "payerId": "2022201"
+   },
+   "policyNumber": "SUB2313",
+   "groupNumber": "grp134",
+   "groupName": "Dental Group",
+   "subscriberName": "Ashley Brown",
+   "subscriberDateOfBirth": "2001-03-25",
+   "relationshipToPatient": "self",
+   "insuranceType": "secondary",
+   "effectiveDate": "2026-10-13T00:00:00.000Z",
+   "expirationDate": null,
+   "copayAmount": null,
+   "deductibleAmount": 0,
+   "autoVerify": true,
+   "verificationStatus": "pending",
+   "verificationDate": null,
+   "isActive": true,
+   "notes": null,
+   "isFamilyPlan": false,
+   "members": [
+    "Ashley Brown"
+   ],
+   "patientsCovered": 1,
+   "deductiblesGrid": [
+    {
+     "type": "Standard",
+     "typeKey": "standard",
+     "lifetime": false,
+     "standard": false,
+     "individual": 0,
+     "family": 0,
+     "metAmount": 0,
+     "metDate": null
+    },
+    {
+     "type": "Preventative",
+     "typeKey": "preventative",
+     "lifetime": false,
+     "standard": false,
+     "individual": 0,
+     "family": 0,
+     "metAmount": 0,
+     "metDate": null
+    },
+    {
+     "type": "Basic",
+     "typeKey": "basic",
+     "lifetime": false,
+     "standard": false,
+     "individual": 0,
+     "family": 0,
+     "metAmount": 0,
+     "metDate": null
+    },
+    {
+     "type": "Major",
+     "typeKey": "major",
+     "lifetime": false,
+     "standard": false,
+     "individual": 0,
+     "family": 0,
+     "metAmount": 0,
+     "metDate": null
+    },
+    {
+     "type": "Orthodontics",
+     "typeKey": "orthodontics",
+     "lifetime": false,
+     "standard": false,
+     "individual": 0,
+     "family": 0,
+     "metAmount": 0,
+     "metDate": null
+    }
+   ],
+   "coverageLimits": {
+    "individual": {
+     "unlimited": false,
+     "annualMax": "2000",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "family": {
+     "unlimited": false,
+     "annualMax": "",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "ortho": {
+     "unlimited": false,
+     "annualMax": "",
+     "usedAmount": "",
+     "usedAmountDate": ""
+    },
+    "diagnostic": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "preventative": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "basic": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "major": {
+     "unlimited": false,
+     "annualMax": ""
+    },
+    "categories": [
+     "Diagnostic",
+     "Preventative",
+     "Basic",
+     "Major"
+    ]
+   },
+   "coverageCategoryTable": [
+    {
+     "category": "diagnostic",
+     "items": [
+      {
+       "id": 1,
+       "label": "Preventative",
+       "coverage": 100,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 2,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "preventative",
+     "items": [
+      {
+       "id": 3,
+       "label": "Preventative",
+       "coverage": 100,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 5,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "restorative",
+     "items": [
+      {
+       "id": 6,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 7,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "endodontics",
+     "items": [
+      {
+       "id": 9,
+       "label": "Endodontics",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "periodontics",
+     "items": [
+      {
+       "id": 99,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 10,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "implantServices",
+     "items": [
+      {
+       "id": 11,
+       "label": "Implant Services",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "oralSurgery",
+     "items": [
+      {
+       "id": 13,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 14,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "prosthodonticsFixed",
+     "items": [
+      {
+       "id": 15,
+       "label": "Prosthodontics, Fixed",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "prosthodonticsRemovable",
+     "items": [
+      {
+       "id": 16,
+       "label": "Prosthodontics, Removable",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "adjunctGeneral",
+     "items": [
+      {
+       "id": 17,
+       "label": "Basic",
+       "coverage": 80,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 18,
+       "label": "Major",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      },
+      {
+       "id": 19,
+       "label": "Standard",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "orthodontics",
+     "items": [
+      {
+       "id": 20,
+       "label": "Orthodontics",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    },
+    {
+     "category": "maxillofacialProsthetics",
+     "items": [
+      {
+       "id": 22,
+       "label": "Maxillofacial Prosthetics",
+       "coverage": 50,
+       "waiting": 0,
+       "notes": ""
+      }
+     ]
+    }
+   ],
+   "coverageBookData": [],
+   "planFeeGuide": "1",
+   "coverageType": "ppo",
+   "subscriberSsn": "808236614",
+   "renewalMonth": 1,
+   "assignmentOfBenefits": "1",
+   "honorWriteOff": false,
+   "providersPlanFeeGuides": [],
+   "policyNotes": null,
+   "eligibilityPolicyNotes": null,
+   "insurancePlanNotes": null,
+   "healthPlan": false,
+   "paymentPlan": null,
+   "insurancePlan": {
+    "_id": "3",
+    "name": "MetLife Test Dental",
+    "payerId": "2022201"
+   }
+  }
+ ],
+ "detail2": {
+  "invoice": {
+   "_id": "1791494147119064",
+   "id": "1791494147119064",
+   "invoiceNumber": "INV1791464041",
+   "patientId": "16",
+   "appointmentId": null,
+   "insuranceCompanyId": null,
+   "providerId": null,
+   "invoiceDate": "2026-10-13T00:00:00.000Z",
+   "dueDate": "2026-11-12T00:00:00.000Z",
+   "totalAmount": 140,
+   "insurancePortion": 100,
+   "secondaryInsPortion": 28,
+   "patientPortion": 12,
+   "copayAmount": 0,
+   "paidAmount": 100,
+   "writeoffAmount": 0,
+   "adjustmentAmount": 0,
+   "balanceDue": 12,
+   "taxAmount": 0,
+   "discountAmount": 0,
+   "status": "draft",
+   "claimNumber": null,
+   "claimSubmissionDate": null,
+   "submissionMethod": null,
+   "createdBy": "1",
+   "notes": "Standalone Invoice",
+   "claimId": null,
+   "createdByName": "Admin User",
+   "patient": {
+    "id": "16",
+    "_id": "16",
+    "patientCode": "PAT015",
+    "title": null,
+    "firstName": "Ashley",
+    "middleName": null,
+    "lastName": "Brown",
+    "preferredName": null,
+    "dateOfBirth": "2001-03-25",
+    "gender": "female",
+    "sexAtBirth": "female",
+    "genderIdentity": "female",
+    "ssn": "908236614",
+    "phonePrimary": "12065559801",
+    "phoneSecondary": null,
+    "email": "ashley.brown@example.com",
+    "address": {
+     "line1": "4321 Aurora Ave N",
+     "line2": null,
+     "city": "Seattle",
+     "state": "WA",
+     "postalCode": "98103",
+     "country": "United States"
+    },
+    "emergencyContact": null,
+    "assignmentAndRelease": null,
+    "isActive": true,
+    "preferredLanguage": "en",
+    "communicationPreference": [
+     "sms"
+    ],
+    "portalAccessEnabled": false,
+    "lastVisitDate": null,
+    "referralSource": null,
+    "notes": null,
+    "customFields": {},
+    "preferredDentistId": null,
+    "preferredHygienistId": null,
+    "headOfCommunication": null,
+    "household": [],
+    "spouseInfo": null,
+    "patientFlags": [],
+    "medicalAlerts": [],
+    "financialResponsibility": null,
+    "maritalStatus": null,
+    "occupation": null,
+    "employer": null,
+    "guardianEmployer": null,
+    "workAddress": null,
+    "patientProfileType": "adult",
+    "medicalHistory": null,
+    "paymentMethod": {
+     "paidBy": "Self Pay"
+    },
+    "displayedBalance": 0,
+    "nextAppointmentDate": null,
+    "status": "New"
+   },
+   "provider": null,
+   "insuranceCompany": null,
+   "secondaryInsuranceCompany": null,
+   "coverages": [
+    {
+     "insuranceType": "primary",
+     "name": "Delta Dental PPO"
+    },
+    {
+     "insuranceType": "secondary",
+     "name": "MetLife Test Dental"
+    }
+   ],
+   "appointment": null,
+   "dateOfService": null
+  },
+  "items": [
+   {
+    "_id": "1791494092552326",
+    "invoiceId": "1791494147119064",
+    "serviceId": "144",
+    "cptCode": "D2140",
+    "description": "Amalgam \u2013 one (1) surface, permanent or primary",
+    "date": "2026-10-13T00:00:00.000Z",
+    "quantity": 1,
+    "unitPrice": 140,
+    "totalPrice": 140,
+    "ptPortion": 12,
+    "insPortion": 128,
+    "primaryInsPortion": 100,
+    "secondaryInsPortion": 28,
+    "totalInsPortion": 128,
+    "writeoff": 0,
+    "estimatedWriteOff": 0,
+    "allowedFee": 140,
+    "coveragePct": 80,
+    "deductibleApplied": 0,
+    "paidAmount": 100,
+    "patientPaidAmount": 0,
+    "insurancePaidAmount": 100,
+    "insuranceExpected": 128,
+    "insuranceBalance": 28,
+    "dbi": false,
+    "isVoided": false,
+    "voidReason": null,
+    "site": null,
+    "provider": null,
+    "completed": true,
+    "isPatientPenalty": false,
+    "patientOnly": false,
+    "isAccountPenalty": false,
+    "noBillIns": null
+   }
+  ]
+ }
+}

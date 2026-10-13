@@ -19,12 +19,14 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { claimService } from '../../services/claim.service';
 import { paymentService } from '../../services/payment.service';
 import { invoiceService } from '../../services/invoice.service';
 import {
   invalidatePatientBalance,
+  selectPatientInsurancesCache,
+  fetchPatientInsurances,
   invalidateInsuranceUsage,
   fetchPatientBalance,
   fetchInsuranceUsage
@@ -37,6 +39,12 @@ import InsurancePaymentTopRow from './insurance-payment/InsurancePaymentTopRow';
 import InsurancePaymentTable from './insurance-payment/InsurancePaymentTable';
 import InsurancePaymentFooter from './insurance-payment/InsurancePaymentFooter';
 import SecondaryClaimPromptDialog from './SecondaryClaimPromptDialog';
+import ManualClaimDialog from './ManualClaimDialog';
+import {
+  findActiveSecondaryInsurance,
+  hasUnclaimedSecondaryLines,
+  hydrateClaimInvoices,
+} from './secondaryClaimEligibility';
 
 const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const dispatch = useDispatch();
@@ -52,10 +60,25 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const [showOverpaymentAlert, setShowOverpaymentAlert] = useState(false);
   const [overpaymentAction, setOverpaymentAction] = useState(null); // 'credit' | 'refund'
   const [showSecondaryPrompt, setShowSecondaryPrompt] = useState(false);
+  // Opened from the secondary-claim prompt: the Manual Claim dialog must come up
+  // already pointed at the secondary plan, not the primary it defaults to.
+  const [secondaryInsuranceId, setSecondaryInsuranceId] = useState(null);
   const [createdPaymentInfo, setCreatedPaymentInfo] = useState(null);
   const [chequeNo, setChequeNo] = useState('');
   const [branchNo, setBranchNo] = useState('');
   const [ledgerCtx, setLedgerCtx] = useState(null);
+  const insurancesCache = useSelector(selectPatientInsurancesCache);
+  const patientCoverages = React.useMemo(() => {
+    const cached = insurancesCache?.[patient?._id || patient?.id];
+    const list = Array.isArray(cached) ? cached : cached?.data || [];
+    return list.filter((ins) => ins?.isActive !== false);
+  }, [insurancesCache, patient]);
+  // Only patients who actually carry an active secondary plan can be prompted
+  // for a secondary claim. The backend's `suggestSecondaryClaim` checks
+  // `patplan.Ordinal = 2`, which is a different store from the coverages the
+  // estimator and claim dialogs read, so it flags patients who have no
+  // secondary coverage at all.
+  const activeSecondaryInsurance = findActiveSecondaryInsurance(patientCoverages);
 
   const handleProcedureChange = (index, field, value) => {
     const newProcedures = [...procedures];
@@ -130,6 +153,10 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     const fetchClaims = async () => {
       const patientId = patient?._id || patient?.id;
       if (!patientId) return;
+      // Secondary-coverage prompt is gated on the patient's coverages, so make
+      // sure they are loaded rather than relying on another screen having
+      // fetched them first.
+      dispatch(fetchPatientInsurances({ patientId }));
       try {
         const data = await claimService.getAllClaims({ patientId, limit: 1000 });
         let claimsList = data.claims || [];
@@ -161,9 +188,19 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         try {
           const composite =
             await invoiceService.getPatientCompositeLedger(patientId);
+          // The invoices list endpoint returns summaries with NO line items
+          // (`includeItems` is ignored), so `proceduresByProcNum` comes back
+          // empty and every procedure restates as "not on the ledger". Hydrate
+          // just the invoices these claims actually touch — one request each,
+          // rather than the patient's whole ledger.
+          const invoices = await hydrateClaimInvoices(
+            composite.invoices || [],
+            claimsList,
+            (id) => invoiceService.getInvoiceById(id),
+          );
           setLedgerCtx(
             buildLedgerProcedureContext({
-              invoices: composite.invoices || [],
+              invoices,
               claims: claimsList,
               adjustments: composite.adjustments || [],
               keepUnclaimedInsuranceEstimates: true,
@@ -506,6 +543,23 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setProcedures(claimProcs);
   }, [selectedClaim, claims, ledgerCtx]);
   
+  // A secondary claim is worth offering only when the patient carries a secondary
+  // plan AND some line still has an unclaimed secondary portion. This replaces
+  // the backend's `suggestSecondaryClaim`, which looks for `patplan.Ordinal = 2`
+  // — a table the coverage UI does not write to, so it was always false and the
+  // prompt never appeared. Per-line "unclaimed" bookkeeping lives in
+  // secondaryClaimEligibility.js.
+  const hasUnclaimedSecondary = React.useMemo(
+    () =>
+      hasUnclaimedSecondaryLines({
+        coverages: patientCoverages,
+        procedures,
+        proceduresByProcNum: ledgerCtx?.proceduresByProcNum,
+        claims,
+      }),
+    [patientCoverages, ledgerCtx, claims, procedures],
+  );
+
   const checkboxOptions = [
     { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
     { label: 'Update Ins. Flat Portion', checked: updateInsFlatPortion, onChange: (e) => setUpdateInsFlatPortion(e.target.checked) },
@@ -599,7 +653,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       });
 
       const invoiceEntries = Object.entries(procsByInvoice);
-      let shouldSuggestSecondary = false;
       for (const [invId, invProcs] of invoiceEntries) {
         if (!invProcs || invProcs.length === 0) continue;
         const invPay = invProcs.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
@@ -643,10 +696,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         };
 
         // Call API to create payment for this invoice
-        const paymentRes = await paymentService.createPayment(paymentData);
-        if (paymentRes?.data?.suggestSecondaryClaim || paymentRes?.suggestSecondaryClaim) {
-          shouldSuggestSecondary = true;
-        }
+        await paymentService.createPayment(paymentData);
       }
 
       // Update claim paidAmount and status:
@@ -691,7 +741,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onSave({ totalPay, procsByInvoice });
       }
 
-      if (shouldSuggestSecondary) {
+      if (hasUnclaimedSecondary) {
         setShowPaymentOptions(false);
         setCreatedPaymentInfo({
           invoiceId: defaultInvoiceId,
@@ -716,25 +766,19 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setShowPaymentOptions(false);
   };
 
-  const handleSecondarySubmit = async ({ claimType, primaryClaimId }) => {
-    setIsSubmitting(true);
-    try {
-      const generatedClaimRes = await claimService.generateSecondaryClaim(primaryClaimId);
-      const generatedClaim = generatedClaimRes?.data || generatedClaimRes;
-      
-      if (claimType === 'electronic') {
-        await claimService.updateClaim(generatedClaim.id || generatedClaim.ClaimNum, { status: 'ready to send' });
-      }
-      
-      showSnackbar(`Secondary claim generated successfully (${claimType}).`, 'success');
-    } catch (err) {
-      console.error('Error generating secondary claim:', err);
-      showSnackbar('Failed to generate secondary claim', 'error');
-    } finally {
-      setIsSubmitting(false);
-      setShowSecondaryPrompt(false);
-      onClose?.();
-    }
+  // "Yes" on the secondary prompt opens Manual Claim with the secondary plan
+  // preselected, rather than silently generating a claim behind the user's
+  // back. "No" simply closes.
+  const handleSecondaryOpenManual = () => {
+    const pid = patient?._id || patient?.id;
+    const cached = insurancesCache?.[pid];
+    const list = Array.isArray(cached) ? cached : cached?.data || [];
+    const secondary = list.find((ins) => {
+      const type = String(ins.insuranceType || ins.type || '').toLowerCase();
+      return type === 'secondary' || Number(ins.ordinal) === 2;
+    });
+    setShowSecondaryPrompt(false);
+    setSecondaryInsuranceId(secondary ? String(secondary._id || secondary.id) : null);
   };
 
   // Derived: real-time overpayment amount (sum of per-procedure excess)
@@ -1116,12 +1160,32 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           setShowSecondaryPrompt(false);
           onClose?.();
         }}
-        onSubmit={handleSecondarySubmit}
+        onConfirm={handleSecondaryOpenManual}
         patientName={`${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient'}
         invoiceId={createdPaymentInfo?.invoiceId}
         primaryClaimId={createdPaymentInfo?.primaryClaimId}
-        secondaryInsuranceName="Secondary Insurance"
+        secondaryInsuranceName={
+          activeSecondaryInsurance?.insuranceCompany?.name ||
+          activeSecondaryInsurance?.insuranceCompanyId?.name ||
+          'Secondary Insurance'
+        }
       />
+
+      {/* "Yes" on that prompt opens Manual Claim here, preselected to the
+          secondary plan, so the secondary claim is built by hand. */}
+      {secondaryInsuranceId !== null && (
+        <Dialog open maxWidth="lg" fullWidth sx={{ zIndex: 145000 }}
+          PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}>
+          <ManualClaimDialog
+            patient={patient}
+            secondaryInsuranceId={secondaryInsuranceId}
+            onClose={() => {
+              setSecondaryInsuranceId(null);
+              onClose?.();
+            }}
+          />
+        </Dialog>
+      )}
     </Box>
   );
 };
