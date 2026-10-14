@@ -62,7 +62,8 @@ const PatientFiltersBar = ({
       })}
     </Select>
 
-    {branchList.length > 0 && (
+    {/* "All Branches" only means something to a user in more than one branch. */}
+    {branchList.length > 1 && (
       <Select value={branchFilter} displayEmpty onChange={(e) => onBranchFilterChange(e.target.value)} sx={{ ...pillSelectSx, minWidth: 160 }} MenuProps={roundedSelectMenuProps}>
         <MenuItem value="">All Branches</MenuItem>
         {branchList.map((b) => (

@@ -417,7 +417,7 @@ const UserManagementView = () => {
         <Typography variant="h6" fontWeight={700}>Users</Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {branches.length > 0 && (
+          {branches.length > 1 && (
             <Select
               size="small"
               displayEmpty
