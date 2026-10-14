@@ -55,6 +55,7 @@ import assignRolesIcon from '../../assets/usermanagement icons/assignroles.svg';
 import CardWrapper from '../../components/admin/AddUserDrawer/CardWrapper';
 import PersonalInformationForm from '../../components/admin/AddUserDrawer/PersonalInformationForm';
 import AssignRoles from '../../components/admin/AddUserDrawer/AssignRoles';
+import { useAssignableRoles } from '../../hooks/queries/useRoles';
 import AssignClinics from '../../components/admin/AssignClinics';
 import ProviderProfileForm from '../../components/admin/AddUserDrawer/ProviderProfileForm';
 import PatientProfileForm from '../../components/admin/AddUserDrawer/PatientProfileForm';
@@ -168,6 +169,13 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
   const isPlatformAdmin = hasRequiredPermission(currentUser, ['security.admin']) || 
     (currentUser?.roles || []).some(r => r === 'Super Admin' || r?.name === 'Super Admin');
 
+  // Only a platform admin picks from every role. Everyone else (group and
+  // branch admins) sees the roles the backend lets them assign; the full list
+  // offered Super Admin, Admin and roles they hold no authority over, and
+  // creating the user then failed.
+  const { data: assignableRoles = [] } = useAssignableRoles({ enabled: open && !isPlatformAdmin });
+  const pickerRoles = isPlatformAdmin ? roles : assignableRoles;
+
   const [defaultClinicId, setDefaultClinicId] = useState('');
   const [restrictedClinicIds, setRestrictedClinicIds] = useState([]);
   const [accessAll, setAccessAll] = useState(false);
@@ -185,8 +193,8 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
   const lastName  = watch('lastName');
 
   const selectedRoleObjects = useMemo(
-    () => roles.filter((r) => selectedRoleIds.includes(r._id || r.id)),
-    [roles, selectedRoleIds]
+    () => pickerRoles.filter((r) => selectedRoleIds.includes(r._id || r.id)),
+    [pickerRoles, selectedRoleIds]
   );
 
   const showProviderSection = useMemo(
@@ -450,7 +458,7 @@ const AddUserDrawer = ({ open, onClose, roles, onCreated }) => {
             {/* ══ SECTION 2 — Role Assignment ══ */}
             <CardWrapper title="Assign Roles" icon={assignRolesIcon}>
               <AssignRoles 
-                roles={roles} 
+                roles={pickerRoles} 
                 selectedRoleIds={selectedRoleIds} 
                 toggleRole={toggleRole} 
                 saving={saving} 
