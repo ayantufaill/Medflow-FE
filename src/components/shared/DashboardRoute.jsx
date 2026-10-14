@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
-import { getRoleNames } from '../../utils/auth-routing';
+import { getRoleNames, getStaffLandingRoute } from '../../utils/auth-routing';
 import Layout from '../layout/Layout';
 import DashboardTab from '../../pages/admin/reports/DashboardTab';
 
@@ -24,6 +24,13 @@ const DashboardRoute = () => {
 
   if (roles.includes('Patient')) {
     return <Navigate to="/portal" replace />;
+  }
+
+  // No reports access (most clinical and lab roles): the dashboard's API would
+  // refuse, so go to the page this user actually works from instead.
+  const landing = getStaffLandingRoute(user);
+  if (landing !== '/dashboard') {
+    return <Navigate to={landing} replace />;
   }
 
   return (
