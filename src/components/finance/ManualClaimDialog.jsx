@@ -98,12 +98,18 @@ const ManualClaimDialog = ({ patient, onClose, secondaryInsuranceId }) => {
         ...inv,
         lineItems: (inv.lineItems || []).filter(item => {
           if (item.dbi) return false;
+          // Keep anything already carried by the primary claim: a secondary
+          // claim must include those procedures even when the primary paid $0
+          // (which moves the whole insurance portion onto the patient and makes
+          // the line look patient-only). They stay hidden from the primary list.
+          if (item.claimedByPrimary) return true;
           const writeoff = Number(item.writeoff || 0);
           const ins = Number(item.insPortion || item.insurance || 0);
+          const secIns = Number(item.secondaryInsPortion || 0);
           const pt = Number(item.ptPortion || 0);
           const total = Number(item.total || item.totalPrice || 0);
           const patientBal = pt > 0 ? pt : ins > 0 ? 0 : Math.max(0, total - writeoff - ins);
-          return !(patientBal > 0 && ins === 0);
+          return !(patientBal > 0 && ins === 0 && secIns === 0);
         })
       }))
       .filter(inv => inv.lineItems.length > 0);

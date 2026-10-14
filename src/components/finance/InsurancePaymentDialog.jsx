@@ -265,9 +265,15 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     };
 
     let claimProcs = [];
+    // A procedure fully covered by the primary has a $0 remaining secondary
+    // balance, but a secondary claim must still list it. Only the primary path
+    // drops zero-estimate lines.
+    const claimIsSecondary =
+      claim.insuranceType === 'secondary' ||
+      String(claim.ClaimType || claim.claimType || '').toLowerCase() === 'secondary';
     if (claim.procedures && claim.procedures.length > 0) {
       const eligibleProcs = claim.procedures.filter(
-        p => !p.dbi && String(p.dbi) !== 'true' && (p.insPayEst === undefined || Number(p.insPayEst) > 0)
+        p => !p.dbi && String(p.dbi) !== 'true' && (claimIsSecondary || p.insPayEst === undefined || Number(p.insPayEst) > 0)
       );
 
       const totalExplicitPaid = eligibleProcs.reduce((sum, p) => sum + Number(p.insPayAmt || p.insPaid || 0), 0);
@@ -371,7 +377,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       const eligibleItems = claim.invoice.lineItems.filter(
         l => !l.dbi && String(l.dbi) !== 'true' && (
           isSecondary 
-            ? (l.secondaryInsPortion !== undefined && Number(l.secondaryInsPortion) > 0)
+            ? true
             : ((l.insPayEst === undefined || Number(l.insPayEst) > 0) && (l.insPortion === undefined || Number(l.insPortion) > 0))
         )
       );
