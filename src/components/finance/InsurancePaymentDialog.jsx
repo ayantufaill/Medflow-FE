@@ -99,8 +99,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     
     proc[field] = value;
 
-    const submittedNum = Number((proc.submitted || '').toString().replace(/[^0-9.-]+/g, "")) || 0;
-    
     if (field === 'allowed') {
       const allowedNum = Number(value || 0);
       const chargeNum =
@@ -227,7 +225,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       }
     };
     fetchClaims();
-  }, [patient]);
+  }, [dispatch, patient]);
 
   useEffect(() => {
     if (selectedClaim === 'select a claim' || !selectedClaim) {
@@ -749,10 +747,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
       showSnackbar('Insurance payment applied successfully', 'success');
 
-      if (onSave) {
-        onSave({ totalPay, procsByInvoice });
-      }
-
       if (hasUnclaimedSecondary) {
         setShowPaymentOptions(false);
         setCreatedPaymentInfo({
@@ -761,6 +755,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         });
         setShowSecondaryPrompt(true);
       } else {
+        if (onSave) {
+          onSave({ totalPay, procsByInvoice });
+        }
         setShowPaymentOptions(false);
         onClose?.();
       }
@@ -835,7 +832,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   };
 
   return (
-    <Box sx={{ width: '100%', minWidth: '1250px', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+    <Box sx={{ display: showSecondaryPrompt || secondaryInsuranceId !== null ? 'none' : 'block', width: '100%', minWidth: '1250px', border: `1px solid ${COLORS.BORDER}`, borderRadius: '14px', overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
       {/* Header */}
       <DialogTitle sx={{
           boxSizing: "border-box",

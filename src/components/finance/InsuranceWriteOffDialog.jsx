@@ -365,6 +365,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
 
   const [writeOffInputs, setWriteOffInputs] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAdjusting, setIsAdjusting] = useState(false);
   const [showOverpaymentAlert, setShowOverpaymentAlert] = useState(false);
   const [overpaymentData, setOverpaymentData] = useState({ amount: 0, procs: [] });
 
@@ -377,7 +378,9 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   }, [rows]);
 
   const handleAdjustClick = () => {
-    if (!selectedClaim) return;
+    if (!selectedClaim || isAdjusting) return;
+    
+    setIsAdjusting(true);
     
     let overpaymentAmount = 0;
     let patientAdjustAmount = 0;
@@ -406,6 +409,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
         procs: procs.filter(p => p.excess > 0.005),
       });
       setShowOverpaymentAlert(true);
+      setIsAdjusting(false);
     } else {
       handleProceedAdjust();
     }
@@ -414,6 +418,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const handleProceedAdjust = async () => {
     if (!selectedClaim) return;
     setIsSubmitting(true);
+    setIsAdjusting(true);
     let overpaymentAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
@@ -474,6 +479,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
       alert("Failed to adjust write-off: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmitting(false);
+      setIsAdjusting(false);
     }
   };
 
@@ -666,7 +672,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
         <Stack direction="row" spacing={1.5}>
           <Button
             variant="contained"
-            disabled={!selectedClaim || isSubmitting}
+            disabled={!selectedClaim || isSubmitting || isAdjusting}
             onClick={handleAdjustClick}
             sx={{
               bgcolor: COLORS.ACCENT,
@@ -681,7 +687,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
               "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
             }}
           >
-            Adjust
+            {isSubmitting || isAdjusting ? 'Adjusting...' : 'Adjust'}
           </Button>
           <Button
             variant="outlined"

@@ -19,13 +19,30 @@ const isSecondaryClaim = (claim) =>
     String(claim?.insuranceType || claim?.claimType || '').toLowerCase(),
   );
 
+const procedureIds = (proc = {}) =>
+  [
+    proc.id,
+    proc._id,
+    proc.itemId,
+    proc.ProcNum,
+    proc.procedureId,
+    proc.procId,
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map((value) => String(value).trim());
+
+const procedureCodes = (proc = {}) => {
+  const raw = proc.code || proc.cptCode || proc.ProcCode || '';
+  const code = String(raw).split(/\s|-/)[0].trim();
+  return code ? [code] : [];
+};
+
 export const secondaryClaimedItemIds = (claims = []) =>
   new Set(
     claims
       .filter(isSecondaryClaim)
       .flatMap((c) => c.procedures || c.items || c.selectedItems || [])
-      .map((p) => String(p.id || p.itemId || p._id || ''))
-      .filter(Boolean),
+      .flatMap(procedureIds),
   );
 
 export const findActiveSecondaryInsurance = (coverages = []) =>
@@ -42,10 +59,30 @@ export const hasUnclaimedSecondaryLines = ({
 } = {}) => {
   if (!findActiveSecondaryInsurance(coverages)) return false;
   const claimed = secondaryClaimedItemIds(claims);
+  const proceduresByCode = new Map();
+  proceduresByProcNum.forEach((proc) => {
+    procedureCodes(proc).forEach((code) => {
+      if (!proceduresByCode.has(code)) proceduresByCode.set(code, proc);
+    });
+  });
+
   return (procedures || []).some((p) => {
-    const itemId = String(p.id || p.itemId || p._id || '');
-    if (claimed.has(itemId)) return false;
-    return Number(proceduresByProcNum.get(itemId)?.secondaryInsPortion ?? 0) > 0;
+    const ids = procedureIds(p);
+    if (ids.some((id) => claimed.has(id))) return false;
+    const codes = procedureCodes(p);
+    const secondaryAmount =
+      Number(p.secondaryInsPortion ?? p.secondaryInsurancePortion ?? 0) ||
+      ids.reduce(
+        (amount, id) =>
+          amount || Number(proceduresByProcNum.get(id)?.secondaryInsPortion ?? 0),
+        0,
+      ) ||
+      codes.reduce(
+        (amount, code) =>
+          amount || Number(proceduresByCode.get(code)?.secondaryInsPortion ?? 0),
+        0,
+      );
+    return secondaryAmount > 0;
   });
 };
 

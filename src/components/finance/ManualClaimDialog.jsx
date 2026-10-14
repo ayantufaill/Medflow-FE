@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import apiClient from '../../config/api';
 
 // Redux — providers & patients
 import {
@@ -76,10 +77,18 @@ const ManualClaimDialog = ({ patient, onClose, secondaryInsuranceId }) => {
   const [selectedTreatingProvider, setSelectedTreatingProvider] = useState('');
   const [selectedBillingEntity, setSelectedBillingEntity] = useState('');
   const [claimType, setClaimType] = useState('Electronic');
+  const [nextClaimNumber, setNextClaimNumber] = useState('CLM000000');
 
 
   // ── Derived values ───────────────────────────────────────────────────────
   const patientId = selectedPatientId || patient?._id || patient?.id;
+
+  // Fetch next claim number on mount
+  useEffect(() => {
+    apiClient.get('/claims/next-claim-number')
+      .then(res => setNextClaimNumber(res.data.data?.nextClaimNumber || 'CLM000000'))
+      .catch(() => setNextClaimNumber('CLM000000'));
+  }, []);
 
   // Memoised selector for the current patient's draft invoices
   const rawInvoices = useSelector(selectDraftInvoicesForPatient(patientId));
@@ -371,7 +380,7 @@ const ManualClaimDialog = ({ patient, onClose, secondaryInsuranceId }) => {
         flexShrink: 0,
       }}>
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1, fontFamily: 'Inter, sans-serif' }}>
-          Manual Claim
+          {nextClaimNumber}
         </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: "18px" }} />

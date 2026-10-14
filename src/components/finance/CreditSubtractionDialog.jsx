@@ -29,6 +29,7 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Flat rate");
   const [calcValue, setCalcValue] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Per-line adjustment overrides, keyed by line index. When a line has an
   // entry here the typed amount wins over the pro-rated default.
   const [lineAdjustments, setLineAdjustments] = useState({});
@@ -388,6 +389,8 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
       const selectedDef = adjustmentTypeOptions.find(o => o.type === adjustmentType);
       await dispatch(createInvoiceAdjustment({
@@ -408,6 +411,8 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     } catch (err) {
       console.error("Adjustment failed", err);
       alert("Failed to create adjustment: " + err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -586,8 +591,8 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
           <Button variant="outlined" onClick={onClose} sx={{ borderColor: COLORS.BORDER, color: COLORS.TEXT_PRIMARY, textTransform: "none", fontSize: "13px", fontWeight: fontWeight.medium, borderRadius: radius.sm, height: '36px', px: 3, "&:hover": { borderColor: COLORS.TEXT_SECONDARY, bgcolor: 'transparent' } }}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={handleAdjust} sx={{ bgcolor: COLORS.ACCENT, color: COLORS.WHITE, textTransform: "none", fontSize: "13px", fontWeight: fontWeight.medium, borderRadius: radius.sm, height: '36px', px: 3, boxShadow: 'none', "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>
-            Adjust
+          <Button variant="contained" onClick={handleAdjust} disabled={isSubmitting} sx={{ bgcolor: COLORS.ACCENT, color: COLORS.WHITE, textTransform: "none", fontSize: "13px", fontWeight: fontWeight.medium, borderRadius: radius.sm, height: '36px', px: 3, boxShadow: 'none', "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>
+            {isSubmitting ? 'Adjusting...' : 'Adjust'}
           </Button>
         </Stack>
       </DialogActions>

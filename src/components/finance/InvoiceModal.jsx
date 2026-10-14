@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
+import apiClient from "../../config/api";
 
 // Shared empty list so the effects below can depend on a value that never
 // changes identity when there are no procedures to render.
@@ -97,6 +98,16 @@ const InvoiceModal = ({
     () => draft?.description || "",
   );
   const [showDescription, setShowDescription] = useState(false);
+  const [nextInvoiceNumber, setNextInvoiceNumber] = useState("INV000000");
+  
+  // Fetch next invoice number on mount (only for new invoices)
+  useEffect(() => {
+    if (!invoiceData?.invoiceId && !invoiceData?._id && !invoiceData?.id) {
+      apiClient.get('/invoices/next-invoice-number')
+        .then(res => setNextInvoiceNumber(res.data.data?.nextInvoiceNumber || 'INV000000'))
+        .catch(() => setNextInvoiceNumber('INV000000'));
+    }
+  }, [invoiceData]);
   // handleAmountChange fires on every keystroke, and each call re-prices the whole
   // invoice server-side. Debounce so typing a charge is one request, not one per
   // character. The local calculatePortionsForCategory pass below still runs
@@ -755,7 +766,7 @@ const InvoiceModal = ({
         >
           {invoiceData?.invoiceId
             ? `Invoice #${invoiceData.invoiceId}`
-            : "New Invoice"}
+            : nextInvoiceNumber}
         </Typography>
         <IconButton
           onClick={onClose || onCancel}

@@ -429,7 +429,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         bgcolor: COLORS.SURFACE_TINT, py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', 
         alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}`, m: 0 
       }}>
-        <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '15px', fontWeight: 600 }}>Add Payment</Typography>
+        <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '15px', fontWeight: 600 }}>Patient Payment</Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>

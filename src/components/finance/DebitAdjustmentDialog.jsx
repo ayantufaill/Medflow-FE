@@ -128,6 +128,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Percentage");
   const [calcValue, setCalcValue] = useState("0");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Per-line adjustment amounts are the only mutable state, keyed by the target
   // invoice so switching rows is naturally isolated — no reset effect needed,
@@ -487,6 +488,8 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
           <Button
             variant="contained"
             onClick={async () => {
+              if (isSubmitting) return;
+              setIsSubmitting(true);
               const payload = {
                 invoiceId: editTarget?.id,
                 invoiceNumber: invoiceNum,
@@ -507,6 +510,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               if (onAdjust) {
                 onAdjust(payload);
                 onClose?.();
+                setIsSubmitting(false);
                 return;
               }
               try {
@@ -523,8 +527,11 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               } catch (err) {
                 console.error("Debit adjustment failed", err);
                 alert(`Failed to create debit adjustment: ${err}`);
+              } finally {
+                setIsSubmitting(false);
               }
             }}
+            disabled={isSubmitting}
             sx={{
               bgcolor: COLORS.ACCENT,
               color: COLORS.WHITE,
@@ -538,7 +545,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
             }}
           >
-            Adjust
+            {isSubmitting ? 'Adjusting...' : 'Adjust'}
           </Button>
         </Stack>
       </DialogActions>
