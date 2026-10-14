@@ -114,10 +114,12 @@ const AddPaymentInvoiceList = ({
               const procWriteoff = getMoney(proc.writeoffAmount);
               const procInsurance = getMoney(proc.insuranceAmount);
               const procPatient = getPatientBalance(proc);
-              const procPayment = Math.min(
-                procPatient,
-                getMoney(proc.payAmount || proc.amountPaid || proc.paidAmount || 0),
-              );
+              const procPayment = isAccountCredit
+                ? Math.min(procPatient, getMoney(appliedForItem(proc)))
+                : Math.min(
+                    procPatient,
+                    getMoney(proc.payAmount || proc.amountPaid || proc.paidAmount || 0),
+                  );
 
               return (
                 <Box key={proc.id} sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f5f5f5', py: 1 }}>
