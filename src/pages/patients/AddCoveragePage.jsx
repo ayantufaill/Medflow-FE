@@ -31,6 +31,7 @@ import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
+import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -194,9 +195,13 @@ const AddCoveragePage = () => {
 
       const newErrors = {};
 
-      if ((!formData.insuranceCompanyId && !formData.carrierName?.trim()) || !formData.payerId?.trim()) {
-        newErrors.insuranceCompanyId = 'Carrier Name and Payer ID are required';
+      if (!formData.insuranceCompanyId && !formData.carrierName?.trim()) {
+        newErrors.insuranceCompanyId = 'Carrier Name is required';
       }
+
+      const payerId = normalizePayerId(formData.payerId);
+      const payerIdError = getPayerIdError(payerId);
+      if (payerIdError) newErrors.payerId = payerIdError;
 
       if (!formData.insurancePlan?.trim()) {
         newErrors.insurancePlan = 'Insurance Plan is required';
@@ -361,7 +366,7 @@ const AddCoveragePage = () => {
 
       const payload = {
         insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
-        payerId: formData.payerId || undefined,
+        payerId,
         policyNumber: formData.subscriber.subscriberId,
         groupNumber: formData.groupNumber || undefined,
         groupName: formData.groupName || undefined,
@@ -444,6 +449,9 @@ const AddCoveragePage = () => {
       const backendErrors = err?.data?.error?.errors;
       if (backendErrors && typeof backendErrors === 'object') {
         const mappedErrors = {};
+        if (backendErrors.payerId) {
+          mappedErrors.payerId = Array.isArray(backendErrors.payerId) ? backendErrors.payerId[0] : backendErrors.payerId;
+        }
         if (backendErrors.policyNumber) {
           mappedErrors.subscriberId = Array.isArray(backendErrors.policyNumber) ? backendErrors.policyNumber[0] : backendErrors.policyNumber;
         }
@@ -703,7 +711,19 @@ const AddCoveragePage = () => {
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field, value, { rejectInvalid = false } = {}) => {
+    if (field === 'payerId') {
+      const payerId = normalizePayerId(value);
+      const payerIdError = getPayerIdError(payerId, { allowIncomplete: rejectInvalid });
+      setErrors(prev => ({ ...prev, payerId: payerIdError }));
+      // Reject invalid typing/pastes in full, without stripping or truncating IDs.
+      // Selected carrier IDs stay visible and must pass validation before saving.
+      if (!rejectInvalid || !payerIdError) {
+        setFormData(prev => ({ ...prev, payerId }));
+      }
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -713,7 +733,9 @@ const AddCoveragePage = () => {
       showSnackbar("Save as template", 'info');
     }
 
-    if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
+    if (field === 'carrierName') {
+      setErrors(prev => ({ ...prev, insuranceCompanyId: null }));
+    } else if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
       setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
     } else if (field === 'groupName') {
       setErrors(prev => ({ ...prev, groupName: null }));

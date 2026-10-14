@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   Box, Typography, TextField, Checkbox, FormControlLabel, IconButton, Stack, InputAdornment, MenuItem, Tooltip, Divider, Autocomplete, CircularProgress
 } from "@mui/material";
@@ -37,6 +37,69 @@ const SubscriberInformation = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchedPatients, setSearchedPatients] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const ssnInputRef = useRef(null);
+  const pendingSsnCaret = useRef(null);
+
+  // Formatting changes character offsets. Restore the same digit position only
+  // after a local edit, leaving focus and externally loaded values alone.
+  useLayoutEffect(() => {
+    const pending = pendingSsnCaret.current;
+    if (!pending) return;
+    pendingSsnCaret.current = null;
+    const input = ssnInputRef.current;
+    if (!input || document.activeElement !== input) return;
+    let position = 0;
+    let digits = 0;
+    while (position < input.value.length && digits < pending.digits) {
+      if (/\d/.test(input.value[position])) digits++;
+      position++;
+    }
+    if (pending.afterSeparator && input.value[position] === '-') position++;
+    input.setSelectionRange(position, position);
+  });
+
+  const updateSsn = (value, position) => {
+    pendingSsnCaret.current = {
+      digits: value.slice(0, position).replace(/\D/g, '').length,
+      afterSeparator: value[position - 1] === '-',
+    };
+    handleSubscriberChange('ssn', value);
+  };
+
+  const deleteSsnDigit = (value, position, backwards) => {
+    let index = backwards ? position - 1 : position;
+    while (index >= 0 && index < value.length && !/\d/.test(value[index])) {
+      index += backwards ? -1 : 1;
+    }
+    if (index < 0 || index >= value.length) return;
+    updateSsn(value.slice(0, index) + value.slice(index + 1), backwards ? index : position);
+  };
+
+  const handleSsnChange = (event) => {
+    const { value, selectionStart } = event.target;
+    const previous = formData.subscriber?.ssn || '';
+    const inputType = event.nativeEvent.inputType;
+    // Mobile keyboards may delete a separator without firing keydown.
+    if ((inputType === 'deleteContentBackward' || inputType === 'deleteContentForward') &&
+        previous.length === value.length + 1 &&
+        previous.replace(/\D/g, '') === value.replace(/\D/g, '')) {
+      deleteSsnDigit(value, selectionStart, inputType === 'deleteContentBackward');
+      return;
+    }
+    updateSsn(value, selectionStart ?? value.length);
+  };
+
+  const handleSsnKeyDown = (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    const { value, selectionStart, selectionEnd } = event.target;
+    if (selectionStart == null || selectionStart !== selectionEnd) return;
+    const backwards = event.key === 'Backspace';
+    if ((backwards && value[selectionStart - 1] === '-') ||
+        (event.key === 'Delete' && value[selectionStart] === '-')) {
+      event.preventDefault();
+      deleteSsnDigit(value, selectionStart, backwards);
+    }
+  };
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -215,6 +278,7 @@ const SubscriberInformation = ({
           <Box sx={{ flex: 1 }}>
             <FormInput
               label="Subscriber ID"
+              placeholder="4 to 17 characters"
               required
               value={formData.subscriber?.subscriberId || ''}
               onChange={(e) => {
@@ -233,7 +297,9 @@ const SubscriberInformation = ({
           type={showSsn ? 'text' : 'password'}
           placeholder="•••-••-••••"
           value={formData.subscriber?.ssn || ''}
-          onChange={(e) => handleSubscriberChange('ssn', e.target.value)}
+          inputRef={ssnInputRef}
+          onChange={handleSsnChange}
+          onKeyDown={handleSsnKeyDown}
           error={!!errors.ssn}
           helperText={errors.ssn}
           InputProps={{
