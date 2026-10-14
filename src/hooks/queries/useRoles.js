@@ -30,6 +30,7 @@ export const roleKeys = {
   details: () => [...roleKeys.all, 'detail'],
   detail: (id) => [...roleKeys.details(), id],
   catalog: () => [...roleKeys.all, 'catalog'],
+  assignable: () => [...roleKeys.all, 'assignable'],
 };
 
 /**
@@ -49,6 +50,22 @@ export const useRoles = () => {
     },
     staleTime: 10 * 60 * 1000, // 10 minutes (roles don't change often)
     gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+};
+
+/**
+ * Roles the signed-in admin may hand out (GET /roles?scope=assignable): the
+ * new-model roles their level allows — never Super Admin, Admin, group_admin
+ * or another admin's role. Used by pickers so they only offer what the
+ * backend will accept.
+ */
+export const useAssignableRoles = ({ enabled = true } = {}) => {
+  return useQuery({
+    queryKey: roleKeys.assignable(),
+    queryFn: () => roleService.getAssignableRoles(),
+    enabled,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
