@@ -9,8 +9,17 @@ const AddPaymentInvoiceList = ({
   selectedPatient,
   handleInvoiceToggle,
   handleProcedureToggle,
-  handleLineItemAmountChange
+  handleLineItemAmountChange,
+  isAccountCredit = false,
+  accountCreditAppliedByItem = null,
 }) => {
+  // Account credit may only cover part of a line, so the Payment columns show
+  // the capped credit applied rather than the full balance that was selected.
+  const appliedForItem = (item) => {
+    if (!isAccountCredit) return null;
+    const value = accountCreditAppliedByItem?.[item.id];
+    return Number.isFinite(Number(value)) ? Number(value) : 0;
+  };
   if (loading) {
     return <Typography sx={{ p: 2, textAlign: 'center', color: '#666' }}>Loading pending invoices...</Typography>;
   }
@@ -68,10 +77,15 @@ const AddPaymentInvoiceList = ({
         const totalIns      = inv.insuranceBalance !== undefined ? getMoney(inv.insuranceBalance) : itemTotalIns;
         const totalWriteoff = inv.insWriteoffAmount !== undefined ? getMoney(inv.insWriteoffAmount) : itemTotalWriteoff;
         const totalPatient = itemTotalPatient || getMoney(inv.patientBalance);
-        const totalPayment = Math.min(
-          totalPatient,
-          items.reduce((s, i) => s + getMoney(i.payAmount || i.amountPaid || i.paidAmount || 0), 0),
-        );
+        const totalPayment = isAccountCredit
+          ? Math.min(
+              totalPatient,
+              items.reduce((s, i) => s + getMoney(appliedForItem(i)), 0),
+            )
+          : Math.min(
+              totalPatient,
+              items.reduce((s, i) => s + getMoney(i.payAmount || i.amountPaid || i.paidAmount || 0), 0),
+            );
 
         return (
           <Box key={inv.id} sx={{ mb: 2 }}>

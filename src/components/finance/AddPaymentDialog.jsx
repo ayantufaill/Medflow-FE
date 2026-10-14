@@ -11,7 +11,7 @@ import AddPaymentAmountRow from './add-payment/AddPaymentAmountRow';
 import AddPaymentInvoiceList from './add-payment/AddPaymentInvoiceList';
 import AddPaymentFooter from './add-payment/AddPaymentFooter';
 import apiClient from '../../config/api';
-import { useSnackbar } from '../../contexts/SnackbarContext';
+import { toLedgerPaymentInvoices } from '../../utils/paymentDraftFromLedger';
 
 // Redux
 import {
@@ -38,166 +38,6 @@ const paymentLineAmount = (item = {}) => {
   return moneyNumber(item.payAmount ?? item.patientBalance);
 };
 
-const roundMoney = (value) => Number(Math.max(0, moneyNumber(value)).toFixed(2));
-
-const procedureKey = (proc = {}) => {
-  const key =
-    proc.id ||
-    proc._id ||
-    proc.ProcNum ||
-    proc.procedureId ||
-    proc.itemId ||
-    proc.procId;
-  return key ? String(key) : "";
-};
-
-const toLedgerPaymentInvoices = (ledgerItems = []) => {
-  return ledgerItems
-    .filter((item) => item?.method === "Invoice" && !item.isVoided)
-    .map((item) => {
-      const patientBalance = moneyNumber(item.summary?.ptBal);
-      if (!(patientBalance > 0)) return null;
-      const invoiceInsuranceBalance = moneyNumber(item.summary?.insBal);
-
-      const grouped = (item.details || []).find(
-        (detail) => detail.isGrouped && Array.isArray(detail.procedures),
-      );
-      const procedures = grouped?.procedures || [];
-      const liveClaims = (item.details || []).filter((detail) => {
-        if (!detail.isClaim || detail.isVoided) return false;
-        const status = String(detail.status || "").toLowerCase();
-        return status !== "void" && status !== "voided";
-      });
-
-      const paidByProcedure = new Map();
-      (item.details || []).forEach((detail) => {
-        if (!detail.isPayment || detail.isAdjustment || detail.isVoided) return;
-        if (detail.isInsurancePayment) return;
-        (detail.procedures || []).forEach((proc) => {
-          const key = procedureKey(proc);
-          if (!key) return;
-          const paid = Math.max(
-            moneyNumber(proc.appliedPayment),
-            moneyNumber(proc.paymentAmount),
-            moneyNumber(proc.paidAmount),
-            moneyNumber(proc.payAmount),
-          );
-          if (paid > 0) {
-            paidByProcedure.set(key, (paidByProcedure.get(key) || 0) + paid);
-          }
-        });
-      });
-
-      const claimProcedures = liveClaims.flatMap((claim) =>
-        (claim.procedures || []).map((proc) => ({ ...proc, __fromClaim: true })),
-      );
-      const claimedProcedureIds = new Set(
-        claimProcedures.map(procedureKey).filter(Boolean),
-      );
-      const invoiceProcedures = procedures
-        .filter((proc) => !claimedProcedureIds.has(procedureKey(proc)))
-        .map((proc) => ({ ...proc, __fromInvoice: true }));
-      const patientProcedures =
-        invoiceInsuranceBalance <= 0.01 && procedures.length > 0
-          ? procedures.map((proc) => ({ ...proc, __fromLedger: true }))
-          : claimProcedures.length > 0 || invoiceProcedures.length > 0
-            ? [...claimProcedures, ...invoiceProcedures]
-            : [item];
-
-      let lineItems = patientProcedures
-        .map((proc, index) => {
-          const key = procedureKey(proc);
-          const totalAmount = moneyNumber(
-            proc.fee ||
-              proc.totalPrice ||
-              proc.total ||
-              proc.ProcFee ||
-              proc.charge ||
-              proc.amount ||
-              item.amount,
-          );
-          const insuranceAmount = moneyNumber(
-            invoiceInsuranceBalance <= 0.01
-              ? 0
-              : proc.insuranceAmount ??
-                  proc.insPortion ??
-                  proc.totalInsPortion ??
-                  proc.primaryInsPortion ??
-                  proc.insPayEst ??
-                  0,
-          );
-          const writeoffAmount = moneyNumber(
-            proc.writeoffAmount ??
-              proc.writeOffAmount ??
-              proc.estimatedWriteOff ??
-              proc.writeoff ??
-              0,
-          );
-          let procPatientBalance =
-            moneyNumber(proc.patientBalance) ||
-            moneyNumber(proc.ptPortion) ||
-            moneyNumber(proc.patientPortion) ||
-            moneyNumber(proc.patientAmount);
-          if (
-            proc.__fromClaim &&
-            totalAmount > 0 &&
-            insuranceAmount > 0 &&
-            procPatientBalance + insuranceAmount + writeoffAmount > totalAmount
-          ) {
-            procPatientBalance = Math.max(
-              0,
-              totalAmount - insuranceAmount - writeoffAmount,
-            );
-          }
-          // Only money that is actually backed by a payment record reduces a
-          // line. The stored `patientPaidAmount` is not reliable on its own —
-          // one procedure carried 124 there while holding an un-adjudicated
-          // 124 insurance estimate and no patient payment at all, which zeroed
-          // a $25 balance that the invoice's own patientPortion (182) still
-          // counted. The invoice header is computed from payment records too,
-          // so the lines now use the same basis.
-          const paidAmount = paidByProcedure.get(key) || 0;
-          const remainingPatient = roundMoney(procPatientBalance - paidAmount);
-          return {
-            ...proc,
-            id: key || `${item.id}-${index}`,
-            checked: false,
-            payAmount: remainingPatient.toFixed(2),
-            patientBalance: remainingPatient,
-            totalAmount,
-            writeoffAmount,
-            adjustmentAmount: 0,
-            insuranceAmount,
-          };
-        })
-        .filter((proc) => proc.patientBalance > 0);
-
-      if (lineItems.length === 0) return null;
-      // No reconciliation against `item.summary.ptBal`. These rows come from the
-      // ledger's own restated per-procedure balances, so they are the truth.
-      // Forcing them to add up to the invoice header was inventing money: on an
-      // invoice whose lines owed $157 but whose header still said $182, the
-      // mismatch was "corrected" by handing the whole $182 to the one surviving
-      // line. The header disagrees because that procedure was already settled
-      // (its patientPaidAmount covers its portion) while the invoice-level
-      // total still counts it.
-
-      return {
-        id: item.id,
-        invoiceNumber: item.invoiceNumber || item.id,
-        invoiceDate: item.rawDate || item.date,
-        checked: false,
-        patientBalance,
-        totalBalance: moneyNumber(item.amount || item.totalAmount),
-        insuranceBalance: invoiceInsuranceBalance,
-        insWriteoffAmount: moneyNumber(item.summary?.insWo),
-        adjustmentAmount: moneyNumber(item.summary?.appliedWo),
-        lineItems,
-      };
-    })
-    .filter(Boolean);
-};
-
 const MENU_PROPS = {
   disablePortal: true,
   anchorOrigin: { vertical: "bottom", horizontal: "left" },
@@ -213,7 +53,6 @@ const MENU_PROPS = {
 const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const dispatch  = useDispatch();
   const patientId = patient?._id || patient?.id;
-  const { showSnackbar } = useSnackbar();
 
   // ── Redux state ──────────────────────────────────────────────────────────
   const invoices = useSelector(selectPaymentInvoicesForPatient(patientId));
@@ -236,9 +75,14 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [familyCredit,         setFamilyCredit]         = useState(0);
   const [addFamilyCredit,      setAddFamilyCredit]      = useState(false);
 
-  const availableCredit = (paymentMethod === 'Account Credit' && addFamilyCredit)
-    ? familyCredit
-    : patientCredit;
+  // Family credit total already includes the patient's own credit. When the
+  // patient's own credit is spent first, the family pool only has to cover the
+  // remainder, so the spendable amount is unchanged but the source order is
+  // patient → family.
+  const familyOnlyCredit = Math.max(0, moneyNumber(familyCredit) - moneyNumber(patientCredit));
+  const availableCredit = paymentMethod === 'Account Credit'
+    ? moneyNumber(patientCredit) + (addFamilyCredit ? familyOnlyCredit : 0)
+    : 0;
 
   const handlePaymentMethodChange = (method) => {
     setPaymentMethod(method);
@@ -280,16 +124,30 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     return { totalChecked: sum };
   }, [invoices]);
 
-  // If available credit changes and totalChecked exceeds it, uncheck to stay within limit
-  useEffect(() => {
-    if (paymentMethod === 'Account Credit' && totalChecked > availableCredit) {
-      dispatch(toggleAllPaymentInvoices({ patientId, checked: false }));
-      showSnackbar("Selections reset because total exceeds available credit.", "info");
-      const timeoutId = window.setTimeout(() => setPatientAmountChecked(false), 0);
-      return () => window.clearTimeout(timeoutId);
-    }
-    return undefined;
-  }, [availableCredit, dispatch, patientId, paymentMethod, showSnackbar, totalChecked]);
+  // Account credit is spent procedure-by-procedure until it runs out. Selecting
+  // a line whose balance exceeds the remaining credit is allowed — the excess
+  // simply stays on the patient balance (e.g. $50 procedure with $10 credit
+  // applies $10 and leaves $40 owed). The patient's own credit is applied before
+  // any family credit, which is why the cap here is the full available pool.
+  const creditAppliedByItem = useMemo(() => {
+    if (paymentMethod !== 'Account Credit') return null;
+    const applied = {};
+    let remaining = availableCredit;
+    invoices.forEach((inv) => {
+      (inv.lineItems || []).forEach((item) => {
+        if (!item.checked) return;
+        const wanted = paymentLineAmount(item);
+        const use = remaining > 0 ? Math.min(wanted, remaining) : 0;
+        applied[item.id] = Number(use.toFixed(2));
+        remaining = Number((remaining - use).toFixed(2));
+      });
+    });
+    return applied;
+  }, [invoices, paymentMethod, availableCredit]);
+
+  const accountCreditApplied = creditAppliedByItem
+    ? Object.values(creditAppliedByItem).reduce((sum, v) => sum + v, 0)
+    : 0;
 
   // The draft-invoice fetch and the patient ledger are two independent async
   // sources. Whichever resolves last used to win the cache, so the dialog
@@ -310,85 +168,29 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     ledgerOverrideAppliedRef.current = true;
   }, [dispatch, patientId, loading, ledgerItems]);
 
-  const displayAmount   = amountType === 'specific amount'
-    ? manualAmount
-    : (manualAmount !== '' ? manualAmount : totalChecked.toFixed(2));
+  const displayAmount   = paymentMethod === 'Account Credit'
+    ? accountCreditApplied.toFixed(2)
+    : amountType === 'specific amount'
+      ? manualAmount
+      : (manualAmount !== '' ? manualAmount : totalChecked.toFixed(2));
   const paymentAmount   = parseFloat(displayAmount) || 0;
   const overpayment     = '0.00';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleInvoiceToggle = (invoiceId) => {
-    if (paymentMethod === 'Account Credit') {
-      let invToToggle = invoices.find((inv) => inv.id === invoiceId);
-      if (invToToggle && !invToToggle.checked) {
-        let sumToAdd = 0;
-        invToToggle.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += paymentLineAmount(i);
-        });
-        if (totalChecked + sumToAdd > availableCredit) {
-          showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
-          return;
-        }
-      }
-    }
     dispatch(togglePaymentInvoiceChecked({ patientId, invoiceId }));
   };
 
   const handleProcedureToggle = (invoiceId, itemId) => {
-    if (paymentMethod === 'Account Credit') {
-      let itemToToggle = null;
-      invoices.forEach((inv) => {
-        if (inv.id === invoiceId) {
-          inv.lineItems?.forEach((i) => {
-            if (i.id === itemId) itemToToggle = i;
-          });
-        }
-      });
-      if (itemToToggle && !itemToToggle.checked) {
-        if (totalChecked + Number(itemToToggle.payAmount || 0) > availableCredit) {
-          showSnackbar("Cannot select procedure. Total exceeds available deposit balance.", "error");
-          return;
-        }
-      }
-    }
     dispatch(togglePaymentLineItemChecked({ patientId, invoiceId, itemId }));
   };
 
   const handleToggleAll = (checked) => {
-    if (checked && paymentMethod === 'Account Credit') {
-      let sumToAdd = 0;
-      invoices.forEach((inv) => {
-        inv.lineItems?.forEach((i) => {
-          if (!i.checked) sumToAdd += paymentLineAmount(i);
-        });
-      });
-      if (totalChecked + sumToAdd > availableCredit) {
-        showSnackbar("Cannot select all. Total exceeds available deposit balance.", "error");
-        return;
-      }
-    }
     setPatientAmountChecked(checked);
     dispatch(toggleAllPaymentInvoices({ patientId, checked }));
   };
 
   const handleLineItemAmountChange = (invoiceId, procId, amount) => {
-    if (paymentMethod === 'Account Credit') {
-      let itemToEdit = null;
-      invoices.forEach((inv) => {
-        if (inv.id === invoiceId) {
-          inv.lineItems?.forEach((i) => {
-            if (i.id === procId) itemToEdit = i;
-          });
-        }
-      });
-      if (itemToEdit && itemToEdit.checked) {
-        let diff = Number(amount || 0) - Number(itemToEdit.payAmount || 0);
-        if (totalChecked + diff > availableCredit) {
-          showSnackbar("Amount exceeds available deposit balance.", "error");
-          return;
-        }
-      }
-    }
     dispatch({
       type: 'billing/updatePaymentLineItemAmount',
       payload: { patientId, invoiceId, procId, amount }
@@ -396,13 +198,21 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   };
 
   const handleApplyAndPay = () => {
+    const isAccountCredit = paymentMethod === 'Account Credit';
     const selectedInvoices = invoices.filter(
       (inv) => inv.checked || inv.lineItems?.some((i) => i.checked)
     );
     const selectedItems = [];
     invoices.forEach((inv) => {
       (inv.lineItems || []).forEach((item) => {
-        if (item.checked) selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: paymentLineAmount(item).toFixed(2) });
+        if (!item.checked) return;
+        // Account credit may only cover part of a line, so the amount sent is
+        // the capped credit applied — the rest stays on the patient balance.
+        const itemAmount = isAccountCredit
+          ? Number(creditAppliedByItem?.[item.id] ?? 0)
+          : paymentLineAmount(item);
+        if (itemAmount <= 0) return;
+        selectedItems.push({ invoiceId: inv.id, itemId: item.id, amount: itemAmount.toFixed(2) });
       });
     });
 
@@ -414,7 +224,8 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       description,
       paymentAmount,
       overpayment: parseFloat(overpayment),
-      addFamilyCredit: paymentMethod === 'Account Credit' ? addFamilyCredit : false,
+      addFamilyCredit: isAccountCredit ? addFamilyCredit : false,
+      isPartialPayment: isAccountCredit && accountCreditApplied < totalChecked,
       selectedInvoices,
       selectedItems,
     });
@@ -471,6 +282,8 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           handleInvoiceToggle={handleInvoiceToggle}
           handleProcedureToggle={handleProcedureToggle}
           handleLineItemAmountChange={handleLineItemAmountChange}
+          isAccountCredit={paymentMethod === 'Account Credit'}
+          accountCreditAppliedByItem={creditAppliedByItem}
         />
       </DialogContent>
 
