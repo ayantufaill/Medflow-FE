@@ -103,16 +103,9 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       const allowedNum = Number(value || 0);
       const chargeNum =
         Number(String(proc.charge || '').replace(/[^0-9.-]+/g, '')) || 0;
-      const dedNum = Number(proc.ded || 0);
-      const coverage =
-        Number(proc.coveragePct || 0) > 0 ? Number(proc.coveragePct) : 100;
       // Ins WO = billed charge minus the newly applied fee.
       proc.wo = Math.max(0, Math.round((chargeNum - allowedNum) * 100) / 100).toFixed(2);
-      // Ins Pay = (applied fee - deductible) x coverage %.
-      proc.pay = Math.max(
-        0,
-        Math.round(((allowedNum - dedNum) * (coverage / 100)) * 100) / 100,
-      ).toFixed(2);
+      // Do NOT auto-calculate ins pay - pay only changes on manual edit
       proc.insPortionEst = (
         Math.round((Number(proc.wo) + Number(proc.pay)) * 100) / 100
       ).toFixed(2);
@@ -122,13 +115,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         Number(String(proc.charge || '').replace(/[^0-9.-]+/g, '')) || 0;
       const allowedNum = Math.max(0, chargeNum - woNum);
       proc.allowed = allowedNum.toFixed(2);
-      const dedNum = Number(proc.ded || 0);
-      const coverage =
-        Number(proc.coveragePct || 0) > 0 ? Number(proc.coveragePct) : 100;
-      proc.pay = Math.max(
-        0,
-        Math.round(((allowedNum - dedNum) * (coverage / 100)) * 100) / 100,
-      ).toFixed(2);
+      // Do NOT auto-calculate ins pay - pay only changes on manual edit
       proc.insPortionEst = (
         Math.round((Number(proc.wo) + Number(proc.pay)) * 100) / 100
       ).toFixed(2);
@@ -355,6 +342,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           procInvoiceId = claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
         }
 
+        const initialPayValue = remainingPay;
+
         return {
           id: p.id || p._id || p.ProcNum || p.procedureId,
           invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
@@ -368,6 +357,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(p.coveragePct, billedNum, woNum, dedNum, initialEst),
@@ -455,6 +445,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
 
         const procInvoiceId = l.invoiceId || claim.invoiceId || (claim.invoice?._id || claim.invoice?.id);
 
+        const initialPayValue = remainingPay;
+
         return {
           id: l.id || l._id || l.procedureId || l.procId,
           invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
@@ -468,6 +460,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(l.coveragePct, billedNum, woNum, dedNum, initialEst),
@@ -528,6 +521,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           remainingPay = Math.max(0, Math.round(claimInsBalance * 100) / 100);
         }
 
+        const initialPayValue = remainingPay;
+
         return {
           id: item.id || item._id || item.itemId || item.procedureId,
           invoiceId: procInvoiceId ? String(procInvoiceId) : undefined,
@@ -541,6 +536,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowed: allowedNum.toFixed(2),
           wo: woNum.toFixed(2),
           pay: remainingPay.toFixed(2),
+          initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
           coveragePct: resolveCoveragePct(item.coveragePct, billedNum, woNum, dedNum, initialEst),
@@ -689,8 +685,20 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           notes: `Insurance Claim #${selectedClaimObj.id} Payment. Options: ${checkboxOptions.filter(opt => opt.checked).map(opt => opt.label).join(', ') || 'None'}`,
           chequeNo: chequeNo || undefined,
           branchNo: branchNo || undefined,
-          overpaymentAmount: overpaymentAmount > 0.005 ? Math.round(overpaymentAmount * 100) / 100 : undefined,
-          overpaymentAction: overpaymentAmount > 0.005 ? (overpaymentAction || 'credit') : undefined,
+          overpaymentAmount: procedures.reduce((acc, proc) => {
+              const initialPay = Number(proc.initialPay || 0);
+              const currentPay = Number(proc.pay || 0);
+              return acc + Math.max(0, currentPay - initialPay);
+            }, 0) > 0.005 ? Math.round(procedures.reduce((acc, proc) => {
+              const initialPay = Number(proc.initialPay || 0);
+              const currentPay = Number(proc.pay || 0);
+              return acc + Math.max(0, currentPay - initialPay);
+            }, 0) * 100) / 100 : undefined,
+          overpaymentAction: procedures.reduce((acc, proc) => {
+              const initialPay = Number(proc.initialPay || 0);
+              const currentPay = Number(proc.pay || 0);
+              return acc + Math.max(0, currentPay - initialPay);
+            }, 0) > 0.005 ? (overpaymentAction || 'credit') : undefined,
           procedures: invProcs.map(p => ({
             ...p,
             allowed: Number(p.allowed || 0),
@@ -790,21 +798,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     setSecondaryInsuranceId(secondary ? String(secondary._id || secondary.id) : null);
   };
 
-  // Derived: real-time overpayment amount (sum of per-procedure excess)
-  const overpaymentAmount = procedures.reduce((total, proc) => {
-    const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
-    const pay = Number(proc.pay || 0);
-    return total + Math.max(0, Math.round((pay - insBal) * 100) / 100);
-  }, 0);
-
-  // Derived: real-time underpayment amount (insurance estimate not covered by entered pay + write-off)
-  const underpaymentAmount = procedures.reduce((total, proc) => {
-    const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
-    const pay = Number(proc.pay || 0);
-    return total + Math.max(0, Math.round((insBal - pay) * 100) / 100);
-  }, 0);
-
-  // Overpaid procedure details for the alert dialog
+  // Overpaid procedure details for the alert dialog (pay > insurance balance)
   const overpaidProcedures = procedures
     .map(proc => {
       const insBal = Number(proc.insBal ?? Number(proc.insPortionEst || 0) - Number(proc.wo || 0));
@@ -885,8 +879,16 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         onClose={onClose}
         totalWo={procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0)}
         totalPay={procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0)}
-        overpaymentAmount={overpaymentAmount}
-        underpaymentAmount={underpaymentAmount}
+        overpaymentAmount={procedures.reduce((acc, proc) => {
+          const initialPay = Number(proc.initialPay || 0);
+          const currentPay = Number(proc.pay || 0);
+          return acc + Math.max(0, currentPay - initialPay);
+        }, 0)}
+        underpaymentAmount={procedures.reduce((acc, proc) => {
+          const initialPay = Number(proc.initialPay || 0);
+          const currentPay = Number(proc.pay || 0);
+          return acc + Math.max(0, initialPay - currentPay);
+        }, 0)}
       />
 
       {/* Simple Billing Alert Dialog */}
@@ -1101,7 +1103,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             ))}
             <Box sx={{ borderTop: '1px solid #b8d5f8', mt: 1, pt: 1, display: 'flex', justifyContent: 'space-between' }}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e3a8a' }}>Total Overpayment</Typography>
-              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentAmount.toFixed(2)}</Typography>
+              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1976d2' }}>${overpaidProcedures.reduce((sum, p) => sum + p.excess, 0).toFixed(2)}</Typography>
             </Box>
           </Box>
         </DialogContent>

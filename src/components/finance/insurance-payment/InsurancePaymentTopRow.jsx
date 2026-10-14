@@ -31,6 +31,8 @@ const InsurancePaymentTopRow = ({
   branchNo = '',
   setBranchNo,
 }) => {
+  const paymentMethods = PAYMENT_METHODS.filter((method) => method !== 'Patient Check' && method !== 'Account Credit' && method !== 'Courtesy Credit');
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -79,11 +81,9 @@ const InsurancePaymentTopRow = ({
         }}
         MenuProps={MENU_PROPS}
       >
-        {PAYMENT_METHODS.map((m) => (
+        {paymentMethods.map((m) => (
           <MenuItem key={m} value={m}>{m}</MenuItem>
         ))}
-        {/* Preserve any extra ones like 'Test Jen' that were there */}
-        <MenuItem value="Test Jen">Test Jen</MenuItem>
       </Select>
 
       <Typography sx={{ fontSize: '0.8125rem', ml: 1.5, whiteSpace: 'nowrap' }}>Cheque #:</Typography>

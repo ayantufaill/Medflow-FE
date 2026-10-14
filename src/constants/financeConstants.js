@@ -13,6 +13,5 @@ export const PAYMENT_METHODS = [
   'INP Special',
   'Insurance Refund/Back to Office',
   'HSA',
-  'Testing Credit',
   'Collection Agency Payment'
 ];
