@@ -297,6 +297,9 @@ const FinancePage = () => {
           onRefreshCoinClick={() => setShowCourtesyRefund(true)}
           onAddFlagsClick={() => setShowEditFlags(true)}
           onOpenDepositMenu={(e) => setDepositMenuAnchor(e.currentTarget)}
+          // Family tab click loads that member as the current patient, so every
+          // panel (aging, ledgers, invoices) re-renders for them via currentPatient
+          onSelectFamilyMember={(memberId) => fetchById(memberId)}
         />
         <AgingTable view={view} patientId={currentPatient?._id || currentPatient?.id || currentPatient?.PatNum} patient={currentPatient} />
       </Box>

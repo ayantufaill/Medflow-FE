@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from "react";
 import { useDispatch } from "react-redux";
 import { appointmentService } from "../../services/appointment.service";
 import { paymentService } from "../../services/payment.service";
@@ -63,6 +63,7 @@ const PatientFinanceInfo = forwardRef(
       onRefreshCoinClick,
       onAddFlagsClick,
       onOpenDepositMenu,
+      onSelectFamilyMember,
     },
     ref,
   ) => {
@@ -478,6 +479,38 @@ const PatientFinanceInfo = forwardRef(
       }
     };
 
+    // Family tabs: the BE's `household` lists every family member EXCEPT the
+    // patient being viewed, so merge the current patient back in. Guarantor
+    // goes first and the rest are name-sorted so the tab order stays the same
+    // no matter which member is selected (otherwise tabs would jump around on
+    // every switch, since each member's household excludes themselves).
+    const currentPatientId = patient?._id || patient?.id;
+    const familyTabs = useMemo(() => {
+      if (!patient) return [];
+      const household = Array.isArray(patient.household) ? patient.household : [];
+      // The current patient is the guarantor when no household member is tagged as one
+      const someoneElseIsGuarantor = household.some(
+        (m) => m.relationship === "Guarantor",
+      );
+      const members = [
+        { ...patient, id: currentPatientId, isGuarantor: !someoneElseIsGuarantor },
+        ...household.map((m) => ({
+          ...m,
+          id: m._id || m.id,
+          isGuarantor: m.relationship === "Guarantor",
+        })),
+      ].map((m) => ({
+        id: String(m.id),
+        name: `${m.firstName || ""} ${m.lastName || ""}`.trim() || "Unknown",
+        isGuarantor: m.isGuarantor,
+      }));
+      return members.sort(
+        (a, b) =>
+          Number(b.isGuarantor) - Number(a.isGuarantor) ||
+          a.name.localeCompare(b.name),
+      );
+    }, [patient, currentPatientId]);
+
     const pixelIcons = [
       { Icon: IconBill, onClick: openNewInvoice },
       { Icon: IconUserWallet, onClick: handleUserWalletClick },
@@ -577,35 +610,63 @@ const PatientFinanceInfo = forwardRef(
             />
           </RadioGroup>
 
+          {/* One tab per family member; clicking a tab switches the whole
+              finance page to that member (same as the header patient switch). */}
           <Box
-            sx={{ mb: 3, borderBottom: "1px solid #DFE5EC", display: "flex" }}
+            sx={{
+              mb: 3,
+              borderBottom: "1px solid #DFE5EC",
+              display: "flex",
+              // Large families shouldn't push the card wider — scroll the tabs instead
+              overflowX: "auto",
+              overflowY: "hidden",
+            }}
           >
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "146px",
-                height: "37px",
-                border: "1px solid #DFE5EC",
-                borderBottom: "4px solid #2362EF",
-                borderTopLeftRadius: "6px",
-                borderTopRightRadius: "6px",
-                bgcolor: "#FFFFFF",
-                cursor: "pointer",
-                position: "relative",
-                top: "1px",
-              }}
-            >
-              <Typography
-                fontWeight="bold"
-                sx={{ fontSize: "14px", color: "#1A1A1A" }}
-              >
-                {patient
-                  ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim()
-                  : "Amanda Wilson"}
-              </Typography>
-            </Box>
+            {familyTabs.map((member) => {
+              const isActive = member.id === String(currentPatientId);
+              return (
+                <Box
+                  key={member.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => {
+                    // Re-fetching the already-selected patient would just flash the page
+                    if (!isActive) onSelectFamilyMember?.(member.id);
+                  }}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    minWidth: "146px",
+                    px: 2,
+                    height: "37px",
+                    border: isActive ? "1px solid #DFE5EC" : "1px solid transparent",
+                    borderBottom: isActive
+                      ? "4px solid #2362EF"
+                      : "4px solid transparent",
+                    borderTopLeftRadius: "6px",
+                    borderTopRightRadius: "6px",
+                    bgcolor: "#FFFFFF",
+                    cursor: isActive ? "default" : "pointer",
+                    position: "relative",
+                    top: "1px",
+                    "&:hover": isActive ? {} : { bgcolor: "#F5F8FF" },
+                  }}
+                >
+                  <Typography
+                    fontWeight={isActive ? "bold" : 500}
+                    sx={{
+                      fontSize: "14px",
+                      color: isActive ? "#1A1A1A" : "#6B7280",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {member.name}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
