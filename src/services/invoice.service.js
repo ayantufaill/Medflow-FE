@@ -343,6 +343,15 @@ export const invoiceService = {
             lineItems: detail.lineItems,
           };
         } catch (e) {
+          // Swallowing this used to make an invoice render with no line items,
+          // which showed up later as a dialog listing only part of an invoice.
+          // Keep the summary row, but say so instead of failing silently.
+          console.warn(
+            `Composite ledger: could not load line items for invoice ` +
+              `${inv._id || inv.id} — it will render without procedures.`,
+            e?.response?.status,
+            e?.response?.data?.error?.message || e?.message,
+          );
           return inv;
         }
       }),

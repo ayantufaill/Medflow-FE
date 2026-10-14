@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { COLORS } from '../../constants/colors';
 import { radius } from '../../constants/styles';
 import { useSnackbar } from '../../contexts/SnackbarContext';
+import apiClient from '../../config/api';
 
 // Redux — providers & patients
 import {
@@ -55,7 +56,7 @@ const getProviderName = (p) => {
   return `${p?.firstName || ''} ${p?.lastName || ''}`.trim() || p?.name || 'Provider';
 };
 
-const ManualClaimDialog = ({ patient, onClose }) => {
+const ManualClaimDialog = ({ patient, onClose, secondaryInsuranceId }) => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
 
@@ -76,9 +77,18 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   const [selectedTreatingProvider, setSelectedTreatingProvider] = useState('');
   const [selectedBillingEntity, setSelectedBillingEntity] = useState('');
   const [claimType, setClaimType] = useState('Electronic');
+  const [nextClaimNumber, setNextClaimNumber] = useState('CLM000000');
+
 
   // ── Derived values ───────────────────────────────────────────────────────
   const patientId = selectedPatientId || patient?._id || patient?.id;
+
+  // Fetch next claim number on mount
+  useEffect(() => {
+    apiClient.get('/claims/next-claim-number')
+      .then(res => setNextClaimNumber(res.data.data?.nextClaimNumber || 'CLM000000'))
+      .catch(() => setNextClaimNumber('CLM000000'));
+  }, []);
 
   // Memoised selector for the current patient's draft invoices
   const rawInvoices = useSelector(selectDraftInvoicesForPatient(patientId));
@@ -106,11 +116,16 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   // active, non-secondary one) whenever nothing is selected yet. Keeping this
   // as a derived value lets the default survive patient switches without a
   // setState-in-effect.
-  const defaultInsurance = (activeInsurances || []).find((ins) => {
-    const type = String(ins.insuranceType || ins.type || '').toLowerCase();
-    const isSecondary = type === 'secondary' || Number(ins.ordinal) === 2;
-    return !isSecondary;
-  });
+  const isSecondaryInsurance = (ins) => {
+    const type = String(ins?.insuranceType || ins?.type || '').toLowerCase();
+    return type === 'secondary' || Number(ins?.ordinal) === 2;
+  };
+  const secondaryInsurance = (activeInsurances || []).find(isSecondaryInsurance);
+  const defaultInsurance = (secondaryInsuranceId && secondaryInsurance)
+    // Opened from the "create a secondary claim?" prompt: preselect the
+    // secondary plan rather than defaulting to the primary.
+    ? secondaryInsurance
+    : (activeInsurances || []).find((ins) => !isSecondaryInsurance(ins));
   const effectiveInsuranceId = String(
     selectedInsuranceId ||
     (defaultInsurance && (defaultInsurance._id || defaultInsurance.id)) ||
@@ -225,7 +240,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     };
 
     const isProcClaimedForSelectedIns = (proc) => {
-      return isSecondary ? Boolean(proc.claimedBySecondary) : Boolean(proc.claimedByPrimary);
+      return isProcedureClaimedForCoverage(proc, isSecondary ? 'secondary' : 'primary');
     };
 
     const selectedItems = [];
@@ -240,7 +255,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
             invoiceId: inv.id,
             invoiceNumber: inv.invoiceNumber || inv.id,
             invoiceDate: inv.invoiceDate || '',
-            itemId: item.id,
+            itemId: item._id || item.id,
             code: item.cptCode || item.code || '',
             description: item.description || item.name || item.notes || '',
             fee: Number(item.total || item.totalPrice || item.charge || 0),
@@ -302,6 +317,12 @@ const ManualClaimDialog = ({ patient, onClose }) => {
     selectedInsurance?.insuranceType?.toLowerCase() === 'secondary' ||
     selectedInsurance?.ordinal === 2;
 
+  const isProcedureClaimedForCoverage = React.useCallback((proc, coverage) => {
+    return coverage === 'secondary'
+      ? Boolean(proc.claimedBySecondary)
+      : Boolean(proc.claimedByPrimary);
+  }, []);
+
   const getProcedureInsAmount = (proc) => {
     if (isSecondary) {
       if (proc.secondaryInsPortion !== undefined && proc.secondaryInsPortion !== null && Number(proc.secondaryInsPortion) > 0) {
@@ -337,7 +358,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
   };
 
   const isProcClaimedForSelectedIns = (proc) => {
-    return isSecondary ? Boolean(proc.claimedBySecondary) : Boolean(proc.claimedByPrimary);
+    return isProcedureClaimedForCoverage(proc, isSecondary ? 'secondary' : 'primary');
   };
 
   const linkBlue = COLORS.ACCENT;
@@ -359,7 +380,7 @@ const ManualClaimDialog = ({ patient, onClose }) => {
         flexShrink: 0,
       }}>
         <Typography sx={{ fontSize: "15px", fontWeight: 600, color: COLORS.TEXT_PRIMARY, flex: 1, fontFamily: 'Inter, sans-serif' }}>
-          Manual Claim
+          {nextClaimNumber}
         </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: "18px" }} />

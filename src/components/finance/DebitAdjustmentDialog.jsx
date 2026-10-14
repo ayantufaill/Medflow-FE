@@ -110,21 +110,25 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
     editTarget?.patient?._id ||
     editTarget?.patient?.id;
 
-  // Procedures come from whichever shape the ledger row carries: the full
-  // invoice detail (lineItems), a claim's procedures, or the grouped invoice
-  // row inside an expanded ledger item.
-  const detailProcedures = (editTarget?.details || [])
-    .flatMap((detail) => detail?.procedures || []);
-  const procedures = mergeProcedures(
-    editTarget?.lineItems || [],
-    editTarget?.procedures || [],
-    editTarget?.details?.find((d) => d.isGrouped)?.procedures || [],
-    detailProcedures,
-  );
-
+  // Procedures come from whichever shape the ledger row carries: the grouped
+  // invoice row inside an expanded ledger item (already restated by
+  // ledgerCalculations), the full invoice detail, or a claim's procedures.
+  // Payment and adjustment sub-rows are deliberately NOT merged in here — they
+  // describe money already moved, not the line's liability, and merging them
+  // overwrites the restated patient/insurance/write-off columns.
+  const groupedProcedures =
+    editTarget?.details?.find((d) => d.isGrouped)?.procedures || [];
+  const procedures =
+    groupedProcedures.length > 0
+      ? mergeProcedures(groupedProcedures)
+      : mergeProcedures(
+          editTarget?.lineItems || [],
+          editTarget?.procedures || [],
+        );
   const [reason, setReason] = useState("");
   const [calcMode, setCalcMode] = useState("Percentage");
   const [calcValue, setCalcValue] = useState("0");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Per-line adjustment amounts are the only mutable state, keyed by the target
   // invoice so switching rows is naturally isolated — no reset effect needed,
@@ -143,31 +147,74 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
   // The invoice summary is the reliable source of what has actually been paid;
   // the per-line paid fields can be stale when no payment record backs them.
   const hasSummary = Boolean(editTarget?.summary);
-  const summaryPayment =
-    parseNum(editTarget?.summary?.ptPaid) + parseNum(editTarget?.summary?.insPaid);
+  const summaryWriteOff =
+    parseNum(editTarget?.summary?.insWo) + parseNum(editTarget?.summary?.appliedWo);
+  // Money actually received per procedure, taken from the invoice's payment
+  // rows only. Stored per-line paid fields are not trustworthy on their own.
+  const paidByProcedure = (() => {
+    const map = new Map();
+    (editTarget?.details || []).forEach((detail) => {
+      if (!detail?.isPayment || detail.isAdjustment || detail.isVoided) return;
+      (detail.procedures || []).forEach((proc) => {
+        const key = String(procedureMergeKey(proc) || "");
+        if (!key) return;
+        const paid = Math.max(
+          parseNum(proc.appliedPayment),
+          parseNum(proc.paymentAmount),
+          parseNum(proc.paidAmount),
+          parseNum(proc.payAmount),
+          0,
+        );
+        if (paid > 0) map.set(key, (map.get(key) || 0) + paid);
+      });
+    });
+    return map;
+  })();
 
   const lineItems =
     procedures.length > 0
       ? procedures.map((p) => {
+          // A row that carries `fee` came from the ledger restatement, so its
+          // patient / insurance / write-off columns are already final and
+          // must be used verbatim. Re-deriving them here would prorate an
+          // invoice-level write-off across lines by charge and quietly move
+          // dollars between the patient and the insurance estimate.
           const restated = p.fee !== undefined && p.fee !== null;
           const charge = chargeOf(p);
-          const writeoff = Number(p.writeoff || p.estimatedWriteOff || 0);
-          const rawPtPortion = Number(p.ptPortion ?? p.patientPortion ?? p.ptAmt ?? 0);
-          const rawInsPortion = Number(
-            restated
-              ? p.insPortion ?? 0
-              : p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
-          );
-          const insPortion = Math.max(0, Math.min(rawInsPortion, charge - writeoff));
-          const ptPortion = Math.max(
-            0,
-            Math.min(rawPtPortion, charge - writeoff - insPortion),
-          );
-          const weight = totalCharges > 0 ? charge / totalCharges : 0;
-          const paid = hasSummary
-            ? summaryPayment * weight
-            : Number(p.patientPaidAmount ?? p.patientPaid ?? 0) +
-              Number(p.insurancePaidAmount ?? p.insurancePaid ?? 0);
+          const writeoff = restated
+            ? parseNum(p.writeoff ?? p.estimatedWriteOff ?? 0)
+            : hasSummary && summaryWriteOff > 0
+              ? summaryWriteOff * (totalCharges > 0 ? charge / totalCharges : 0)
+              : parseNum(p.writeoff ?? p.estimatedWriteOff ?? 0);
+          const ptPortion = restated
+            ? parseNum(p.ptPortion ?? p.patientPortion ?? 0)
+            : Math.max(
+                0,
+                Math.min(
+                  parseNum(p.ptPortion ?? p.patientPortion ?? p.ptAmt ?? 0),
+                  charge - writeoff,
+                ),
+              );
+          const rawInsPortion = restated
+            ? parseNum(p.insPortion ?? 0)
+            : Math.max(
+                0,
+                Math.min(
+                  parseNum(
+                    p.totalInsPortion || p.insPortion || p.insurancePortion || 0,
+                  ),
+                  charge - writeoff,
+                ),
+              );
+          // Insurance column reports the ledger's charge-weighted share of the
+          // invoice balance when one exists, so the total always reconciles to
+          // summary.insBal.
+          const insPortion = rawInsPortion;
+          // Only money backed by an actual payment record counts. A line whose
+          // stored patientPaidAmount held an un-adjudicated insurance estimate
+          // was reporting $124 paid against $0 received, and the dialog total
+          // showed $224 instead of the $100 that was really taken.
+          const paid = paidByProcedure.get(String(procedureMergeKey(p) || "")) || 0;
           return {
             code: p.code || p.cptCode || p.ProcCode || 'Item',
             description: procedureDescription(p) || patientName,
@@ -212,10 +259,6 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
 
   const totalPayment = lineItems.reduce((s, i) => s + parseNum(i.values[4]?.val), 0);
   const totalAdjust = lineItems.reduce((s, i, idx) => s + lineAdjustValue(i, idx), 0);
-
-  const previewAdjustment = calcMode === "Percentage"
-    ? Math.round(totalCharges * (parseNum(calcValue) / 100) * 100) / 100
-    : parseNum(calcValue);
 
   const handleLineAdjustChange = (idx, raw) => {
     const cleaned = String(raw).replace(/[^0-9.]/g, '');
@@ -342,7 +385,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
             }}
           />
           <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: "bold" }}>
-            = ${previewAdjustment.toFixed(2)}
+            = ${totalAdjust.toFixed(2)}
           </Typography>
         </Stack>
 
@@ -445,6 +488,8 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
           <Button
             variant="contained"
             onClick={async () => {
+              if (isSubmitting) return;
+              setIsSubmitting(true);
               const payload = {
                 invoiceId: editTarget?.id,
                 invoiceNumber: invoiceNum,
@@ -465,6 +510,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               if (onAdjust) {
                 onAdjust(payload);
                 onClose?.();
+                setIsSubmitting(false);
                 return;
               }
               try {
@@ -481,8 +527,11 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               } catch (err) {
                 console.error("Debit adjustment failed", err);
                 alert(`Failed to create debit adjustment: ${err}`);
+              } finally {
+                setIsSubmitting(false);
               }
             }}
+            disabled={isSubmitting}
             sx={{
               bgcolor: COLORS.ACCENT,
               color: COLORS.WHITE,
@@ -496,7 +545,7 @@ const DebitAdjustmentDialog = ({ onClose, onAdjust, editTarget }) => {
               "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' },
             }}
           >
-            Adjust
+            {isSubmitting ? 'Adjusting...' : 'Adjust'}
           </Button>
         </Stack>
       </DialogActions>

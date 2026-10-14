@@ -140,6 +140,11 @@ export const buildLedgerProcedureContext = ({
 
   const appliedWriteOffByProc = new Map();
   const debitAdjustmentByProc = new Map();
+  // Insurance write-off adjustments are the *posted* counterpart of the same
+  // dollars the payment flow records on the line's write-off field. They are
+  // tracked separately so a legacy row that never reached the line can still
+  // seed it, but they are never added on top of it (that would double count).
+  const insuranceWriteOffByProc = new Map();
   (adjustments || []).forEach((adj) => {
     // Income transfers move liability between insurance and patient, they
     // are not a write-off of the charge. Voided rows no longer affect it.
@@ -158,6 +163,15 @@ export const buildLedgerProcedureContext = ({
         debitAdjustmentByProc.set(
           procNum,
           (debitAdjustmentByProc.get(procNum) || 0) + amount,
+        );
+      });
+      return;
+    }
+    if (adjustmentIsInsuranceWriteOff(adj)) {
+      procedureTargetsOf(adj).forEach((procNum) => {
+        insuranceWriteOffByProc.set(
+          procNum,
+          (insuranceWriteOffByProc.get(procNum) || 0) + amount,
         );
       });
       return;
@@ -185,26 +199,64 @@ export const buildLedgerProcedureContext = ({
         proc.insAmt ||
         proc.insuranceAmount,
     );
-    const pricingWriteOff = moneyNumber(
+    const recordedWriteOff = moneyNumber(
       proc.writeoff || proc.writeoffAmount || proc.estimatedWriteOff,
     );
-    if (baseFee > 0 && insPortion > 0 && ptPortion + insPortion + pricingWriteOff > baseFee) {
-      ptPortion = Math.max(0, baseFee - insPortion - pricingWriteOff);
-    }
+    const allowedFee = moneyNumber(proc.allowedFee);
+    const isClaimed = procedureIsClaimed(proc);
 
     const debitAdjustment = debitAdjustmentByProc.get(key) || 0;
-    const coveredBase = Math.max(0, baseFee - pricingWriteOff);
-    const insuranceRatio =
-      coveredBase > 0 && insPortion > 0
-        ? Math.min(1, Math.max(0, insPortion / coveredBase))
-        : 0;
-    if (debitAdjustment > 0) {
-      const debitInsPortion = round2(debitAdjustment * insuranceRatio);
-      insPortion += debitInsPortion;
-      ptPortion += round2(debitAdjustment - debitInsPortion);
-    }
     const fee = baseFee + debitAdjustment;
-    if (!keepUnclaimedInsuranceEstimates && !procedureIsClaimed(proc)) {
+
+    // The write-off is the part of the charge the payer will not cover: the
+    // recorded estimate, and — once a claim exists — anything billed above the
+    // fee-guide allowed fee. A debit that pushes the charge past the allowed
+    // fee lands here instead of being split between patient and insurance.
+    let pricingWriteOff =
+      recordedWriteOff > 0
+        ? recordedWriteOff
+        : insuranceWriteOffByProc.get(key) || 0;
+    if (isClaimed && allowedFee > 0 && fee > allowedFee) {
+      pricingWriteOff = Math.max(pricingWriteOff, fee - allowedFee);
+    }
+    pricingWriteOff = Math.max(0, pricingWriteOff);
+
+    // Fold the charge out into patient / insurance / write-off.
+    //
+    // Two distinct cases, and they are NOT the same rule:
+    //
+    //   over-committed (committed > residual): the stored split sums to more
+    //   than the charge left after the write-off, i.e. the stored numbers are
+    //   internally inconsistent (typically a split recorded before a write-off
+    //   was entered). Something has to give, and the patient absorbs it first
+    //   so the insurance estimate the payer still owes is preserved. This is
+    //   data reconciliation, NOT a write-off being applied to the patient —
+    //   it only fires on contradictory input.
+    //
+    //   residual surplus: a debit that stayed inside the allowed fee is new
+    //   chargeable money, so it extends both sides proportionally.
+    const residual = Math.max(0, fee - pricingWriteOff);
+    const committed = insPortion + ptPortion;
+    if (committed > residual + 0.005) {
+      const excess = committed - residual;
+      const ptCut = Math.min(ptPortion, excess);
+      ptPortion = Math.max(0, ptPortion - ptCut);
+      insPortion = Math.max(0, insPortion - (excess - ptCut));
+    } else if (residual - committed > 0.005) {
+      // A debit that stays within the allowed fee extends the existing split
+      // proportionally, so the two portions keep matching the charge.
+      const gap = residual - committed;
+      const coverage = committed > 0 ? insPortion / committed : 0;
+      const addIns = round2(gap * coverage);
+      insPortion += addIns;
+      ptPortion += round2(gap - addIns);
+    }
+
+    // Guard the insurance estimate so it can never exceed the restated fee:
+    // a stored BillingNote whose insurancePortion already baked in a debit
+    // adjustment would otherwise be inflated a second time by the split above.
+    if (insPortion > fee) insPortion = fee;
+    if (!keepUnclaimedInsuranceEstimates && !isClaimed) {
       ptPortion += insPortion;
       insPortion = 0;
     }
@@ -213,10 +265,13 @@ export const buildLedgerProcedureContext = ({
   };
 
   // Restate a line item the way it reads after every live procedure-level
-  // write-off has been applied: the write-off comes off the patient
-  // portion first and then the insurance estimate, so fee still equals
-  // patient + insurance + write-off, and is reported as the line's total
-  // write-off (the pricing write-off plus the adjustments).
+  // write-off has been applied. The pricing write-off (which already accounts
+  // for any charge above the allowed fee) is left where it is: insurance
+  // write-off adjustments describe those same dollars, so they are excluded
+  // from `appliedWriteOffByProc` and cannot be charged twice. Only genuine
+  // patient credits — courtesy, un-collected, small balance, … — come off the
+  // patient's portion here, so the ledger keeps fee = patient + insurance +
+  // write-off.
   const procedureAfterAdjustments = (proc) => {
     const { key, fee, ptPortion, insPortion, pricingWriteOff } =
       procedureBaseAmounts(proc);
@@ -232,11 +287,17 @@ export const buildLedgerProcedureContext = ({
       fee,
       ptPortion: ptAfter,
       insPortion: insAfter,
-      writeoff: pricingWriteOff + appliedWriteOff,
-      estimatedWriteOff: pricingWriteOff + appliedWriteOff,
-      // Just the adjustment portion, so the ledger can report it in its
-      // own "Adjustment" column instead of hiding it inside the write-off.
+      // Charge the payer will never cover (fee above the allowed fee, plus any
+      // recorded estimate). This is the only figure that belongs under an
+      // "Ins Write-off" heading — `appliedWriteOff` is patient credit money
+      // and would be mislabelled there.
+      writeoff: pricingWriteOff,
+      estimatedWriteOff: pricingWriteOff,
+      // Total relief granted against this line, kept separate so the ledger
+      // can report it in its own "Adjustment" column. fee still equals
+      // patient + insurance + writeoff + appliedAdjustment.
       appliedAdjustment: appliedWriteOff,
+      insuranceWriteOff: pricingWriteOff,
     };
   };
 
@@ -247,6 +308,7 @@ export const buildLedgerProcedureContext = ({
   const proceduresForAdjustment = (adj) => {
     const adjustmentAmount = Math.abs(moneyNumber(adj.amount));
     const isPatientCreditAdjustment = adjustmentIsPatientCredit(adj);
+    const isDebitAdjustment = adjustmentIsDebitAddition(adj);
     const targets = procedureTargetsOf(adj)
       .map((procNum) => proceduresByProcNum.get(procNum))
       .filter(Boolean);
@@ -261,21 +323,40 @@ export const buildLedgerProcedureContext = ({
         return true;
       })
       .map((proc) => {
-        const { fee, ptPortion, insPortion, pricingWriteOff } =
+        if (isDebitAdjustment) {
+          // For debit adjustments, use the restated amounts (after all prior
+          // adjustments folded in) and distribute the new debit proportionally
+          // to the current patient/insurance split.
+          const restated = procedureAfterAdjustments(proc);
+          const { fee, ptPortion, insPortion, pricingWriteOff } = restated;
+          const totalPortion = ptPortion + insPortion;
+          const ptShare = totalPortion > 0 ? ptPortion / totalPortion : 0;
+          const insShare = totalPortion > 0 ? insPortion / totalPortion : 0;
+          return {
+            ...proc,
+            fee: restated.fee,
+            ptPortion: ptPortion + round2(adjustmentAmount * ptShare),
+            insPortion: insPortion + round2(adjustmentAmount * insShare),
+            writeoff: pricingWriteOff,
+            estimatedWriteOff: pricingWriteOff,
+            appliedAdjustment: adjustmentAmount,
+          };
+        }
+        // Patient credit adjustments (courtesy, un-collected, etc.) reduce
+        // the patient portion only; insurance estimate is zeroed for display
+        // since the credit applies to patient liability.
+        const { fee: baseFee, ptPortion: basePt, insPortion: baseIns, pricingWriteOff: baseWo } =
           procedureBaseAmounts(proc);
-        const isDebitAdjustment = adjustmentIsDebitAddition(adj);
-        const patientCreditBase = Math.max(0, fee - pricingWriteOff);
+        const patientCreditBase = Math.max(0, baseFee - baseWo);
         return {
           ...proc,
-          fee,
-          ptPortion: isDebitAdjustment
-            ? ptPortion
-            : isPatientCreditAdjustment
+          fee: baseFee,
+          ptPortion: isPatientCreditAdjustment
             ? Math.max(0, patientCreditBase - adjustmentAmount)
-            : ptPortion,
-          insPortion: isPatientCreditAdjustment && !isDebitAdjustment ? 0 : insPortion,
-          writeoff: pricingWriteOff,
-          estimatedWriteOff: pricingWriteOff,
+            : basePt,
+          insPortion: isPatientCreditAdjustment ? 0 : baseIns,
+          writeoff: baseWo,
+          estimatedWriteOff: baseWo,
           appliedAdjustment: adjustmentAmount,
         };
       });

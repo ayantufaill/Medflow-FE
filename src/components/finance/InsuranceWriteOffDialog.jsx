@@ -31,6 +31,10 @@ const parseAmount = (value) =>
 const procedureId = (proc = {}) =>
   String(proc.id || proc._id || proc.ProcNum || proc.procedureId || proc.procId || proc.itemId || "");
 
+// De-duplicated on purpose. `id` and `_id` hold the same string for an invoice
+// line, and code/cptCode/ProcCode often repeat too. Feeding the raw list into
+// paidMap.set(... + paid) credited every insurance payment twice, which is
+// what produced a $224 "paid" figure against a $112 payment.
 const procedureAliases = (proc = {}) =>
   [
     proc.id,
@@ -44,7 +48,8 @@ const procedureAliases = (proc = {}) =>
     proc.ProcCode ? `code:${proc.ProcCode}` : null,
   ]
     .filter(Boolean)
-    .map(String);
+    .map(String)
+    .filter((alias, idx, all) => all.indexOf(alias) === idx);
 
 const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const { currentPatient } = usePatient();
@@ -86,6 +91,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const summaryInsBalance = parseAmount(editTarget?.summary?.insBal);
   const summaryAppliedWriteOff = parseAmount(editTarget?.summary?.appliedWo);
   const summaryInsWriteOff = parseAmount(editTarget?.summary?.insWo);
+  const summaryInsPaid = parseAmount(editTarget?.summary?.insPaid);
   const invoiceChargeTotal = invoiceProcedures.reduce(
     (sum, proc) =>
       sum +
@@ -110,15 +116,23 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     const paidMap = new Map();
     (editTarget?.details || []).forEach((detail) => {
       if (!detail?.isPayment || detail.isAdjustment || detail.isVoided) return;
+      const isInsurancePayment =
+        detail.isInsurancePayment ||
+        String(detail.title || "").toLowerCase().includes("ins payment") ||
+        String(detail.paymentSource || "").toLowerCase() === "insurance_company" ||
+        String(detail.method || "").toLowerCase() === "insurance";
+      if (!isInsurancePayment) return;
       (detail.procedures || []).forEach((proc) => {
         const aliases = procedureAliases(proc);
         if (aliases.length === 0) return;
-        const paid = Math.max(
-          parseAmount(proc.appliedPayment),
-          parseAmount(proc.paymentAmount),
-          parseAmount(proc.paidAmount),
-          parseAmount(proc.payAmount),
-        );
+        const paid =
+          parseAmount(proc.appliedPayment) ||
+          parseAmount(proc.paymentAmount) ||
+          parseAmount(proc.payAmount) ||
+          parseAmount(proc.insurancePaidAmount) ||
+          parseAmount(proc.insurancePaid) ||
+          parseAmount(proc.insPaid) ||
+          0;
         if (paid > 0) {
           aliases.forEach((alias) => {
             paidMap.set(alias, (paidMap.get(alias) || 0) + paid);
@@ -157,11 +171,13 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
           proc.amount,
       );
       const weight = invoiceChargeTotal > 0 ? charge / invoiceChargeTotal : 0;
+      // Insurance write-off only. `appliedAdjustment` is deliberately NOT in
+      // this chain: that field carries patient credits (courtesy, un-collected,
+      // small balance). Reading it here mislabelled a $28 Un-Collected credit
+      // as an insurance write-off, and the recomputation below then deducted
+      // it from the patient a second time.
       const rawAppliedWriteOff = parseAmount(
-        proc.appliedWriteOff ||
-          proc.appliedAdjustment ||
-          proc.writeoff ||
-          proc.estimatedWriteOff,
+        proc.appliedWriteOff || proc.writeoff || proc.estimatedWriteOff,
       );
       const appliedWriteOff =
         rawAppliedWriteOff > 0
@@ -180,44 +196,81 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
       const claimInsuranceBalance = parseAmount(
         claimProc.insuranceBalance ?? claimProc.insBalance ?? claimProc.insPortion,
       );
-      let insuranceBalance = restatedMatch
-        ? Math.max(0, parseAmount(match.insPortion))
-        : matchInsuranceBalance > 0
-          ? matchInsuranceBalance
-          : hasLedgerSummary && summaryInsBalance > 0
-            ? summaryInsBalance * weight
-            : Math.max(0, claimInsuranceBalance || insEst - insPaid);
-
       const matchPatientBalance = parseAmount(
         match.patientBalance ?? match.ptBalance ?? match.ptPortion ?? match.patientPortion,
       );
       const claimPatientBalance = parseAmount(
         claimProc.patientBalance ?? claimProc.ptBalance ?? claimProc.ptPortion ?? claimProc.patientPortion,
       );
-      const procedurePaid = Math.max(
+      // What insurance actually paid on THIS line. Taking the invoice total
+      // and scaling it by charge weight handed a claimed $150 line only 84 of
+      // its own $112 payment (112 * 150/200), which then left a phantom $18
+      // insurance balance and inflated the patient balance to $38. Prefer the
+      // per-procedure figures; the summary split is only a last resort.
+      const ownPaid = Math.max(
+        parseAmount(match.insurancePaidAmount),
+        parseAmount(match.insurancePaid),
+        parseAmount(match.insPaid),
+        parseAmount(insPaid),
         0,
         ...procedureAliases(proc).map((alias) => paymentByProcedure.get(alias) || 0),
       );
-      
-      // When the row comes from restated ledger data (match), use those portions
-      // directly — they already fold in debit adjustments and the
-      // unclaimed-insurance move, so the invoice summary must not re-spread onto
-      // this line (the summary's patient balance may belong to another procedure).
-      const patientBalance = restatedMatch
-        ? Math.max(0, parseAmount(match.ptPortion))
-        : matchPatientBalance > 0
-          ? matchPatientBalance
-          : Math.max(
-              0,
-              (claimPatientBalance || (hasLedgerSummary ? summaryPtBalance * weight : 0)) -
-                procedurePaid,
-            );
+      const procedurePaid =
+        ownPaid > 0
+          ? ownPaid
+          : hasLedgerSummary && summaryInsPaid > 0
+            ? summaryInsPaid * weight
+            : 0;
 
-      // After determining patient balance from adjusted data, if insurance balance is still using fallback,
-      // recalculate it to ensure patient + insurance + writeoff = charge
-      if (!restatedMatch && matchInsuranceBalance <= 0 && matchPatientBalance > 0) {
-        // We have adjusted patient balance but no adjusted insurance balance - calculate it
-        insuranceBalance = Math.max(0, charge - appliedWriteOff - procedurePaid - patientBalance);
+      let insuranceBalance;
+      let patientBalance;
+      if (restatedMatch) {
+        // A restated row is already final: insPortion is the portion before
+        // payment, and ptPortion is what the patient still owes AFTER every
+        // credit and write-off. Rebuilding them as charge − paid − writeoff
+        // double-counted credits that are already inside ptPortion and left a
+        // phantom patient balance ($10 on a line whose real balance was $0).
+        insuranceBalance = Math.max(
+          0,
+          parseAmount(match.insPortion) - procedurePaid,
+        );
+        patientBalance = Math.max(0, parseAmount(match.ptPortion));
+      } else {
+        insuranceBalance =
+          matchInsuranceBalance > 0
+            ? matchInsuranceBalance
+            : hasLedgerSummary && summaryInsBalance > 0
+              ? summaryInsBalance * weight
+              : Math.max(0, claimInsuranceBalance || insEst - insPaid);
+        patientBalance =
+          matchPatientBalance > 0
+            ? matchPatientBalance
+            : Math.max(
+                0,
+                (claimPatientBalance ||
+                  (hasLedgerSummary ? summaryPtBalance * weight : 0)) -
+                  procedurePaid,
+              );
+
+        if (procedurePaid > 0 || appliedWriteOff > 0) {
+          insuranceBalance = Math.max(
+            0,
+            insuranceBalance - procedurePaid - appliedWriteOff,
+          );
+          patientBalance = Math.max(
+            0,
+            charge - appliedWriteOff - procedurePaid - insuranceBalance,
+          );
+        }
+
+        // After determining patient balance from adjusted data, if insurance balance is still using fallback,
+        // recalculate it to ensure patient + insurance + writeoff = charge
+        if (matchInsuranceBalance <= 0 && matchPatientBalance > 0) {
+          insuranceBalance = Math.max(
+            0,
+            charge - appliedWriteOff - procedurePaid - patientBalance,
+          );
+        }
       }
       const totalBalance = Math.max(0, patientBalance + insuranceBalance);
 
@@ -293,6 +346,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
     summaryAppliedWriteOff,
     summaryInsBalance,
     summaryInsWriteOff,
+    summaryInsPaid,
     summaryPtBalance,
     paymentByProcedure,
   ]);
@@ -311,6 +365,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
 
   const [writeOffInputs, setWriteOffInputs] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAdjusting, setIsAdjusting] = useState(false);
   const [showOverpaymentAlert, setShowOverpaymentAlert] = useState(false);
   const [overpaymentData, setOverpaymentData] = useState({ amount: 0, procs: [] });
 
@@ -323,24 +378,38 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   }, [rows]);
 
   const handleAdjustClick = () => {
-    if (!selectedClaim) return;
+    if (!selectedClaim || isAdjusting) return;
+    
+    setIsAdjusting(true);
     
     let overpaymentAmount = 0;
+    let patientAdjustAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
-      const excess = Math.max(0, adjustedWO - row.insuranceBalance);
+      const excess = row.insuranceBalance <= 0.005 ? Math.max(0, adjustedWO) : 0;
+      const patientAdjust = Math.min(excess, Math.max(0, row.patientBalance));
       overpaymentAmount += excess;
+      patientAdjustAmount += patientAdjust;
       
       return {
         id: row.id,
         code: row.code,
-        excess: excess
+        excess,
+        patientBalance: row.patientBalance,
+        patientAdjust,
+        creditAmount: Math.max(0, excess - patientAdjust),
       };
     });
 
     if (overpaymentAmount > 0.005) {
-      setOverpaymentData({ amount: overpaymentAmount, procs: procs.filter(p => p.excess > 0.005) });
+      setOverpaymentData({
+        amount: overpaymentAmount,
+        patientAdjustAmount,
+        creditAmount: Math.max(0, overpaymentAmount - patientAdjustAmount),
+        procs: procs.filter(p => p.excess > 0.005),
+      });
       setShowOverpaymentAlert(true);
+      setIsAdjusting(false);
     } else {
       handleProceedAdjust();
     }
@@ -349,16 +418,19 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
   const handleProceedAdjust = async () => {
     if (!selectedClaim) return;
     setIsSubmitting(true);
+    setIsAdjusting(true);
     let overpaymentAmount = 0;
     const procs = rows.map(row => {
       const adjustedWO = parseAmount(writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff);
-      const totalNewWO = adjustedWO + row.appliedWriteOff;
-      const excess = Math.max(0, adjustedWO - row.insuranceBalance);
+      const finalWriteOff = row.insuranceBalance <= 0.005
+        ? row.appliedWriteOff + adjustedWO
+        : adjustedWO;
+      const excess = row.insuranceBalance <= 0.005 ? Math.max(0, adjustedWO) : 0;
       overpaymentAmount += excess;
 
       return {
         id: row.id,
-        wo: totalNewWO,
+        wo: finalWriteOff,
         pay: 0,
         allowed: 0,
         ded: 0,
@@ -407,6 +479,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
       alert("Failed to adjust write-off: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmitting(false);
+      setIsAdjusting(false);
     }
   };
 
@@ -513,10 +586,10 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                 ["Insurance Balance", totals.insurance],
                 ["Total Balance", totals.total],
                 ["Applied Write-Off", totals.applied],
-                ["Insurance Write-Off", totals.writeOff],
+                ["$ Insurance Write-Off", totals.writeOff],
               ].map(([label, value]) => (
                 <Box key={label} sx={{ width: 130, textAlign: "right" }}>
-                  <Typography sx={{ fontSize: "12px", fontWeight: 700, color: label === "Insurance Write-Off" ? COLORS.ACCENT : COLORS.TEXT_PRIMARY }}>
+                  <Typography sx={{ fontSize: "12px", fontWeight: 700, color: label === "$ Insurance Write-Off" ? COLORS.ACCENT : COLORS.TEXT_PRIMARY }}>
                     {label}: {money(value)}
                   </Typography>
                 </Box>
@@ -536,23 +609,54 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                   </Box>
                 ))}
                 <Box sx={{ width: 130, display: "flex", justifyContent: "flex-end" }}>
-                  <TextField
-                    value={writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff.toFixed(2)}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setWriteOffInputs(prev => ({ ...prev, [row.id]: val }));
-                    }}
-                    onBlur={(e) => {
-                       const num = parseAmount(e.target.value);
-                       setWriteOffInputs(prev => ({ ...prev, [row.id]: num.toFixed(2) }));
-                    }}
-                    size="small"
-                    sx={{
-                      width: 88,
-                      "& .MuiInputBase-root": { height: 30, fontSize: "12px" },
-                      "& input": { textAlign: "right", fontWeight: 700, color: COLORS.ACCENT },
-                    }}
-                  />
+                  <Box sx={{ border: '1px dashed #ccc', px: 1, py: 0.25, display: 'inline-flex', alignItems: 'center', borderRadius: '4px', width: '88px' }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25, color: COLORS.ACCENT }}>$</Typography>
+                    <TextField
+                      value={writeOffInputs[row.id] !== undefined ? writeOffInputs[row.id] : row.defaultWriteOff.toFixed(2)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setWriteOffInputs(prev => ({ ...prev, [row.id]: val }));
+                      }}
+                      onBlur={(e) => {
+                         const num = parseAmount(e.target.value);
+                         setWriteOffInputs(prev => ({ ...prev, [row.id]: num.toFixed(2) }));
+                      }}
+                      size="small"
+                      sx={{
+                        "& .MuiInputBase-root": { 
+                          height: 30, 
+                          fontSize: "12px", 
+                          border: 'none', 
+                          bgcolor: 'transparent',
+                          background: 'transparent',
+                          px: 0,
+                        },
+                        "& .MuiOutlinedInput-root": {
+                          border: 'none',
+                          background: 'transparent',
+                        },
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          border: 'none',
+                        },
+                        "& input": { 
+                          textAlign: "right", 
+                          fontWeight: 700, 
+                          color: COLORS.ACCENT, 
+                          padding: 0, 
+                          width: '55px',
+                          background: 'transparent',
+                        },
+                      }}
+                      InputProps={{
+                        disableUnderline: true,
+                        classes: {
+                          root: 'transparent-input',
+                          notchedOutline: 'transparent-input',
+                        },
+                      }}
+                      variant="standard"
+                    />
+                  </Box>
                 </Box>
               </Box>
             ))}
@@ -568,7 +672,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
         <Stack direction="row" spacing={1.5}>
           <Button
             variant="contained"
-            disabled={!selectedClaim || isSubmitting}
+            disabled={!selectedClaim || isSubmitting || isAdjusting}
             onClick={handleAdjustClick}
             sx={{
               bgcolor: COLORS.ACCENT,
@@ -583,7 +687,7 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
               "&:hover": { bgcolor: COLORS.ACCENT_HOVER, boxShadow: "none" },
             }}
           >
-            Adjust
+            {isSubmitting || isAdjusting ? 'Adjusting...' : 'Adjust'}
           </Button>
           <Button
             variant="outlined"
@@ -636,8 +740,11 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
 
         <DialogContent sx={{ pt: '24px !important', px: '25px', pb: 2 }}>
           <Typography sx={{ fontSize: '0.85rem', color: '#555', mb: 2, lineHeight: 1.6 }}>
-            The following procedures have write-off amounts higher than expected. If the patient has not yet paid
-            their portion, the excess will be deducted from the patient's portion automatically. Any remaining excess will be saved as Patient Credit.
+            {overpaymentData.patientAdjustAmount > 0.005 && overpaymentData.creditAmount <= 0.005
+              ? "The write-off exceeds the remaining insurance portion, but this procedure still has patient balance available. The excess will reduce the patient portion."
+              : overpaymentData.patientAdjustAmount > 0.005
+                ? "The write-off exceeds the remaining insurance portion. The available patient balance will be adjusted first, and only the remaining excess will be saved as Patient Credit."
+                : "The following procedures have write-off amounts that exceed the remaining insurance portion. Since no patient balance is available on those procedures, the excess will be saved as Patient Credit."}
           </Typography>
           <Box sx={{ bgcolor: '#f0f7ff', border: '1px solid #b8d5f8', borderRadius: '8px', px: 2, py: 1.5, mb: 1 }}>
             {overpaymentData.procs.map((proc, idx) => (
@@ -645,15 +752,39 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
                 <Typography sx={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: 500 }}>
                   {proc.code}
                 </Typography>
-                <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 700 }}>
-                  over by ${proc.excess.toFixed(2)}
-                </Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#1976d2', fontWeight: 700 }}>
+                    over by ${proc.excess.toFixed(2)}
+                  </Typography>
+                  {proc.patientAdjust > 0.005 && (
+                    <Typography sx={{ fontSize: '0.72rem', color: '#1e40af', fontWeight: 600 }}>
+                      adjusts patient ${proc.patientAdjust.toFixed(2)}
+                    </Typography>
+                  )}
+                  {proc.creditAmount > 0.005 && (
+                    <Typography sx={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                      credit ${proc.creditAmount.toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             ))}
             <Box sx={{ borderTop: '1px solid #b8d5f8', mt: 1, pt: 1, display: 'flex', justifyContent: 'space-between' }}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e3a8a' }}>Total Excess</Typography>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentData.amount.toFixed(2)}</Typography>
             </Box>
+            {overpaymentData.patientAdjustAmount > 0.005 && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a8a' }}>Adjust Patient Portion</Typography>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#1976d2' }}>${overpaymentData.patientAdjustAmount.toFixed(2)}</Typography>
+              </Box>
+            )}
+            {overpaymentData.creditAmount > 0.005 && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>Save as Patient Credit</Typography>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>${overpaymentData.creditAmount.toFixed(2)}</Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
 
@@ -676,7 +807,11 @@ const InsuranceWriteOffDialog = ({ onClose, editTarget }) => {
               '&:hover': { bgcolor: '#1565c0' }
             }}
           >
-            Continue and save excess as credit
+            {overpaymentData.patientAdjustAmount > 0.005 && overpaymentData.creditAmount <= 0.005
+              ? "Adjust patient portion"
+              : overpaymentData.patientAdjustAmount > 0.005
+                ? "Adjust patient portion and save remaining as credit"
+                : "Continue and save excess as credit"}
           </Button>
           <Button
             onClick={() => setShowOverpaymentAlert(false)}

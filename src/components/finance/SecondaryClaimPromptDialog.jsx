@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,11 +7,6 @@ import {
   Button,
   Typography,
   Box,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormControl,
-  Alert,
 } from '@mui/material';
 
 const COLORS = {
@@ -32,20 +27,14 @@ const COLORS = {
 export default function SecondaryClaimPromptDialog({
   open,
   onClose,
-  onSubmit,
+  onConfirm,
   patientName = 'Patient',
   invoiceId,
   primaryClaimId,
   secondaryInsuranceName = 'Secondary Insurance',
 }) {
-  const [claimType, setClaimType] = useState('electronic'); // 'electronic' | 'manual'
-
-  const handleSubmit = () => {
-    onSubmit({
-      claimType,
-      invoiceId,
-      primaryClaimId
-    });
+  const handleYes = () => {
+    onConfirm({ invoiceId, primaryClaimId });
   };
 
   return (
@@ -54,6 +43,7 @@ export default function SecondaryClaimPromptDialog({
       onClose={onClose} 
       maxWidth="sm" 
       fullWidth
+      sx={{ zIndex: 150000 }}
       PaperProps={{
         sx: {
           borderRadius: "16px",
@@ -62,82 +52,44 @@ export default function SecondaryClaimPromptDialog({
       }}
     >
       <DialogTitle sx={{ 
+        boxSizing: "border-box",
+        px: "25px",
+        py: "16px",
+        display: "flex",
+        alignItems: "center",
         borderBottom: `1px solid ${COLORS.BORDER}`,
-        p: 3,
         bgcolor: COLORS.SURFACE_TINT,
         color: COLORS.PRIMARY,
-        fontWeight: 700,
-        fontSize: "1.25rem"
+        fontWeight: 600,
+        fontSize: "15px",
+        m: 0,
+        flexShrink: 0,
       }}>
         Secondary Insurance Claim
       </DialogTitle>
       
-      <DialogContent sx={{ p: 3 }}>
-        <Box sx={{ mb: 3, mt: 1 }}>
-          <Typography variant="body1" sx={{ color: COLORS.SECONDARY, mb: 2 }}>
+      <DialogContent sx={{ px: "25px", pt: "24px !important", pb: 3 }}>
+        <Box sx={{ mb: 3, mt: 1, textAlign: 'center' }}>
+          <Typography variant="body1" sx={{ color: COLORS.SECONDARY, mb: 2, textAlign: 'center' }}>
             A primary insurance payment was recorded for <strong>{patientName}</strong>, but there is still an unpaid balance. The patient has secondary insurance coverage with <strong>{secondaryInsuranceName}</strong>.
           </Typography>
-          <Typography variant="body1" sx={{ color: COLORS.SECONDARY }}>
+          <Typography variant="body1" sx={{ color: COLORS.SECONDARY, textAlign: 'center' }}>
             Would you like to generate a secondary claim for the remaining balance?
           </Typography>
         </Box>
 
-        <FormControl component="fieldset" sx={{ width: '100%' }}>
-          <RadioGroup
-            value={claimType}
-            onChange={(e) => setClaimType(e.target.value)}
-            sx={{ gap: 2 }}
-          >
-            <Box sx={{ 
-              border: `1px solid ${claimType === 'electronic' ? COLORS.ACCENT : COLORS.BORDER}`, 
-              borderRadius: '12px', 
-              p: 2,
-              bgcolor: claimType === 'electronic' ? COLORS.PRIMARY_LIGHT : COLORS.WHITE,
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onClick={() => setClaimType('electronic')}
-            >
-              <FormControlLabel 
-                value="electronic" 
-                control={<Radio sx={{ color: claimType === 'electronic' ? COLORS.ACCENT : COLORS.SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
-                label={
-                  <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: COLORS.PRIMARY }}>Electronic Claim</Typography>
-                    <Typography variant="body2" sx={{ color: COLORS.SECONDARY }}>Generate and queue an electronic secondary claim automatically.</Typography>
-                  </Box>
-                } 
-                sx={{ m: 0, width: '100%', alignItems: 'flex-start' }}
-              />
-            </Box>
-
-            <Box sx={{ 
-              border: `1px solid ${claimType === 'manual' ? COLORS.ACCENT : COLORS.BORDER}`, 
-              borderRadius: '12px', 
-              p: 2,
-              bgcolor: claimType === 'manual' ? COLORS.PRIMARY_LIGHT : COLORS.WHITE,
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onClick={() => setClaimType('manual')}
-            >
-              <FormControlLabel 
-                value="manual" 
-                control={<Radio sx={{ color: claimType === 'manual' ? COLORS.ACCENT : COLORS.SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }} />} 
-                label={
-                  <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: COLORS.PRIMARY }}>Manual Claim</Typography>
-                    <Typography variant="body2" sx={{ color: COLORS.SECONDARY }}>Generate a secondary claim but keep it in Draft/Manual status.</Typography>
-                  </Box>
-                } 
-                sx={{ m: 0, width: '100%', alignItems: 'flex-start' }}
-              />
-            </Box>
-          </RadioGroup>
-        </FormControl>
-
       </DialogContent>
-      <DialogActions sx={{ p: 3, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE }}>
+      <DialogActions sx={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        px: 3,
+        pb: 2,
+        pt: 2,
+        borderTop: `1px solid ${COLORS.BORDER}`,
+        bgcolor: '#fff',
+        gap: 1,
+      }}>
         <Button 
           onClick={onClose} 
           variant="outlined" 
@@ -147,6 +99,7 @@ export default function SecondaryClaimPromptDialog({
             borderRadius: "8px",
             textTransform: "none",
             fontWeight: 600,
+            height: "36px",
             px: 3,
             '&:hover': {
               borderColor: COLORS.SECONDARY,
@@ -154,10 +107,10 @@ export default function SecondaryClaimPromptDialog({
             }
           }}
         >
-          Cancel
+          No
         </Button>
         <Button 
-          onClick={handleSubmit} 
+          onClick={handleYes} 
           variant="contained" 
           sx={{ 
             bgcolor: COLORS.ACCENT, 
@@ -165,6 +118,7 @@ export default function SecondaryClaimPromptDialog({
             borderRadius: "8px",
             textTransform: "none",
             fontWeight: 600,
+            height: "36px",
             px: 3,
             boxShadow: 'none',
             '&:hover': {
@@ -173,7 +127,7 @@ export default function SecondaryClaimPromptDialog({
             }
           }}
         >
-          Generate Secondary Claim
+          Yes
         </Button>
       </DialogActions>
     </Dialog>

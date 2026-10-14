@@ -69,6 +69,50 @@ function withConcurrency(concurrency, tasks) {
   });
 }
 
+const getProcedureIdentityValues = (item = {}) => {
+  const values = [
+    item.id,
+    item._id,
+    item.itemId,
+    item.ProcNum,
+    item.procedureId,
+    item.procId,
+  ];
+  return values
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map((value) => String(value).trim());
+};
+
+const getClaimProcedureIdentityValues = (claim = {}) => {
+  const procedureSources = [
+    ...(Array.isArray(claim.procedures) ? claim.procedures : []),
+    ...(Array.isArray(claim.selectedItems) ? claim.selectedItems : []),
+  ];
+  const values = [
+    ...(Array.isArray(claim.procedureIds) ? claim.procedureIds : []),
+    ...procedureSources.flatMap(getProcedureIdentityValues),
+  ];
+  return values
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map((value) => String(value).trim());
+};
+
+const isLiveClaim = (claim = {}) => {
+  const status = String(claim.status || claim.statusDisplay || claim.claimStatus || '').toLowerCase();
+  return !(
+    Boolean(claim.isVoided || claim.isVoid) ||
+    status === 'void' ||
+    status === 'voided' ||
+    status === 'cancelled' ||
+    status === 'canceled'
+  );
+};
+
+const isSecondaryClaim = (claim = {}) => {
+  const type = String(claim.insuranceType || claim.claimType || claim.coverageType || '').toLowerCase();
+  return type === 'secondary' || type.includes('secondary') || Number(claim.ordinal) === 2;
+};
+
 /**
  * Fetch draft invoices for a patient and enrich each one with its full line
  * items. Line items where the patient pays the full amount (DBI flag) are
@@ -86,7 +130,7 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       const fetchedInvoices = res.invoices || [];
 
       // Fetch all claims for the patient to know which items are already claimed
-      const claimsRes = await claimService.getAllClaims({ patientId });
+      const claimsRes = await claimService.getAllClaims({ patientId, limit: 1000 });
       const claims = claimsRes.claims || [];
       const claimedPrimaryItemIds = new Set();
       const claimedSecondaryItemIds = new Set();
@@ -94,12 +138,7 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
       const lockedInvoices = {};
       claims.forEach((c) => {
         const cStatus = String(c.status || '').toLowerCase();
-        if (
-          cStatus === 'void' ||
-          cStatus === 'voided' ||
-          cStatus === 'cancelled' ||
-          Boolean(c.isVoided)
-        ) return;
+        if (!isLiveClaim(c)) return;
         const isLocked = Boolean(c.isLocked);
         const isPaid = cStatus === 'paid' || cStatus === 'acceptedpaid' || Number(c.paidAmount || 0) > 0;
         if (isLocked && !isPaid && c.invoiceId) {
@@ -108,17 +147,9 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
             claimNumber: c.claimNumber || c.id || c._id || '',
           };
         }
-        const isSec = String(c.insuranceType || c.claimType || '').toLowerCase() === 'secondary';
-        const procs = (c.procedures?.length > 0 ? c.procedures : c.selectedItems) || [];
-        procs.forEach((p) => {
-          const id = String(p.itemId || p.ProcNum || p.id || p._id || '');
-          if (id) {
-            if (isSec) {
-              claimedSecondaryItemIds.add(id);
-            } else {
-              claimedPrimaryItemIds.add(id);
-            }
-          }
+        const targetSet = isSecondaryClaim(c) ? claimedSecondaryItemIds : claimedPrimaryItemIds;
+        getClaimProcedureIdentityValues(c).forEach((id) => {
+          targetSet.add(id);
         });
       });
 
@@ -137,10 +168,6 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
         (lineItems || [])
           .filter((item) => {
             if (item.dbi === true) return false;
-            const itemId = String(item.id || item.itemId || item._id);
-            // Hide procedure only if already claimed by BOTH primary and secondary
-            if (claimedPrimaryItemIds.has(itemId) && claimedSecondaryItemIds.has(itemId)) return false;
-            
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
             const secIns = Number(item.secondaryInsPortion || 0);
@@ -150,7 +177,7 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
             return !(patientBal > 0 && ins === 0 && secIns === 0);
           })
           .map((item) => {
-            const itemId = String(item.id || item.itemId || item._id);
+            const itemIds = getProcedureIdentityValues(item);
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
             const secIns = Number(item.secondaryInsPortion || 0);
@@ -162,12 +189,13 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
             const prev = Math.max(0, total - patientBal);
             return {
               ...item,
+              id: item._id || item.id,
               checked: false,
               insPortion: ins,
               secondaryInsPortion: secIns,
               ptPortion: pt,
-              claimedByPrimary: claimedPrimaryItemIds.has(itemId),
-              claimedBySecondary: claimedSecondaryItemIds.has(itemId),
+              claimedByPrimary: itemIds.some((id) => claimedPrimaryItemIds.has(id)),
+              claimedBySecondary: itemIds.some((id) => claimedSecondaryItemIds.has(id)),
               ptAmount: `$${patientBal.toFixed(2)}`,
               insAmount: `$${insuranceBal.toFixed(2)}`,
               secInsAmount: `$${secIns.toFixed(2)}`,

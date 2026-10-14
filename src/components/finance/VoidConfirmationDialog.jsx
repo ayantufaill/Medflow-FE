@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Button, Typography } from '@mui/material';
 import BaseDialog from '../shared/BaseDialog';
 import { COLORS } from '../../constants/colors';
@@ -64,6 +65,24 @@ const VoidConfirmationDialog = ({
   confirmLabel,
 }) => {
   const copy = VOID_COPY[resolveVoidKind(voidTarget)];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const timeoutId = window.setTimeout(() => setIsSubmitting(false), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [open]);
+
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onConfirm?.());
+    } catch (error) {
+      setIsSubmitting(false);
+      throw error;
+    }
+  };
 
   return (
     <BaseDialog
@@ -90,7 +109,8 @@ const VoidConfirmationDialog = ({
             Cancel
           </Button>
           <Button
-            onClick={onConfirm}
+            onClick={handleConfirm}
+            disabled={isSubmitting}
             variant="contained"
             sx={{
               textTransform: 'none',
@@ -103,6 +123,7 @@ const VoidConfirmationDialog = ({
               px: 3,
               boxShadow: 'none',
               '&:hover': { bgcolor: '#dc2626', boxShadow: 'none' }, // Darker Danger Red
+              '&.Mui-disabled': { bgcolor: '#fca5a5', color: '#fff' },
             }}
           >
             {confirmLabel ?? copy.confirmLabel}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Checkbox, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import BaseDialog from '../shared/BaseDialog';
 import { COLORS } from '../../constants/colors';
@@ -13,6 +13,7 @@ const money = (v) => `$${num(v).toFixed(2)}`;
  * Only those get voided; the rest of the invoice is left untouched.
  */
 const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const invoiceNum = target?.invoiceNumber || target?.id || 'N/A';
   const claimedProcedureIds = useMemo(
     () => new Set((target?.claimedProcedureIds || []).map(String)),
@@ -74,6 +75,23 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
   const totalFee = procedures.reduce((s, p) => s + p.fee, 0);
   const totalWriteoff = procedures.reduce((s, p) => s + p.writeoff, 0);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const timeoutId = window.setTimeout(() => setIsSubmitting(false), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [open, invoiceNum]);
+
+  const handleConfirm = async () => {
+    if (isSubmitting || selectedIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onConfirm?.(selectedIds));
+    } catch (error) {
+      setIsSubmitting(false);
+      throw error;
+    }
+  };
+
   return (
     <BaseDialog
       open={open}
@@ -100,8 +118,8 @@ const VoidInvoiceProceduresDialog = ({ open, onClose, onConfirm, target }) => {
             Cancel
           </Button>
           <Button
-            onClick={() => onConfirm?.(selectedIds)}
-            disabled={selectedIds.length === 0}
+            onClick={handleConfirm}
+            disabled={isSubmitting || selectedIds.length === 0}
             variant="contained"
             sx={{
               textTransform: 'none',

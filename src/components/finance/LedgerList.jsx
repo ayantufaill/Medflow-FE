@@ -988,7 +988,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
                   parseFloat(
                     String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
                   ) || 0,
-                dbi: false,
+                dbi: Boolean(row.dbi),
               })),
             });
           } catch (claimErr) {

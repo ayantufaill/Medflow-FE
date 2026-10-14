@@ -160,9 +160,9 @@ export const fetchLedgerItems = createAsyncThunk(
         adjustments,
       });
       const {
-        proceduresForAdjustment,
         proceduresForPayment,
       } = ledgerProcedures;
+      const { proceduresForAdjustment } = currentLiabilityProcedures;
 
       const mappedInvoices = invoices.map((invoice) => {
         // Reconstruct the original total charge. The backend may update totalAmount to
@@ -321,8 +321,14 @@ export const fetchLedgerItems = createAsyncThunk(
                   adj.notes &&
                   adj.notes.toLowerCase().includes("debit adjustment")
                 );
+              // An insurance write-off is NOT a courtesy. These carry no
+              // `type`, so the `!adj.type` fallback below used to classify them
+              // as courtesy, and LedgerList then subtracted that amount from
+              // the procedure's patient portion — double-charging the write-off
+              // that ledgerCalculations had already kept off the patient.
               const isCourtesy =
                 !isDebitAdjustment &&
+                !isInsWriteOff &&
                 !!(
                   (adj.notes && adj.notes.toLowerCase().includes("courtesy")) ||
                   (adj.notes &&
@@ -821,6 +827,11 @@ export const fetchLedgerItems = createAsyncThunk(
             (sum, proc) => sum + moneyNumber(proc.insPortion),
             0,
           );
+          // `currentProcedureIns` is the line's insurance portion as it stands.
+          // The pricing write-off is reported beside it, not deducted from it
+          // (an Insurance W/O adjustment describes those same dollars and must
+          // not be subtracted twice), so the already-applied write-off is
+          // deliberately not subtracted here either.
           adjustedInsBal = Math.max(
             0,
             roundMoney(currentProcedureIns - totalInsPaidAmt),
@@ -829,6 +840,10 @@ export const fetchLedgerItems = createAsyncThunk(
             0,
             roundMoney(currentProcedurePt - totalPtPaidAmt),
           );
+        }
+        if (hasInsurancePayment && !isPartialAdjudication) {
+          adjustedInsBal = Math.max(0, adjustedInsBal);
+          adjustedPtBal = Math.max(0, adjustedInvBal - adjustedInsBal);
         }
         adjustedPtBal = Math.min(
           adjustedPtBal,
@@ -859,11 +874,20 @@ export const fetchLedgerItems = createAsyncThunk(
             0,
           );
 
+          // Reconcile each side against its own header total, never both at
+          // once. Re-spreading insurance whenever the PATIENT side was off
+          // destroyed a correct per-procedure split: a $124 balance that
+          // belonged entirely to one claimed line was smeared across a second
+          // unclaimed line as $63.62 / $60.38 just because that other line had
+          // a stale patient portion.
+          const ptNeedsReconcile =
+            Math.abs(currentPtTotal - adjustedPtBal) > 0.01;
+          const insNeedsReconcile =
+            Math.abs(currentInsTotal - adjustedInsBal) > 0.01;
           if (
             groupedTotal > 0 &&
             totalDebitAdjAmt <= 0 &&
-            (Math.abs(currentPtTotal - adjustedPtBal) > 0.01 ||
-              Math.abs(currentInsTotal - adjustedInsBal) > 0.01)
+            (ptNeedsReconcile || insNeedsReconcile)
           ) {
             let remainingPt = adjustedPtBal;
             let remainingIns = adjustedInsBal;
@@ -879,12 +903,18 @@ export const fetchLedgerItems = createAsyncThunk(
                     proc.amount,
                 );
                 const isLast = index === detail.procedures.length - 1;
-                const nextPt = isLast
-                  ? remainingPt
-                  : roundMoney(adjustedPtBal * (charge / groupedTotal));
-                const nextIns = isLast
-                  ? remainingIns
-                  : roundMoney(adjustedInsBal * (charge / groupedTotal));
+                // A side that already reconciles keeps its per-procedure
+                // values; only the side that is actually off gets re-spread.
+                const nextPt = !ptNeedsReconcile
+                  ? moneyNumber(proc.ptPortion)
+                  : isLast
+                    ? remainingPt
+                    : roundMoney(adjustedPtBal * (charge / groupedTotal));
+                const nextIns = !insNeedsReconcile
+                  ? moneyNumber(proc.insPortion)
+                  : isLast
+                    ? remainingIns
+                    : roundMoney(adjustedInsBal * (charge / groupedTotal));
                 remainingPt = roundMoney(remainingPt - nextPt);
                 remainingIns = roundMoney(remainingIns - nextIns);
                 return {
@@ -1786,6 +1816,37 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
               (sum, adjustment) => sum + moneyNumber(adjustment.amount),
               0,
             );
+          const invoiceAppliedInsuranceWriteOff = adjustments
+            .filter((adjustment) => {
+              const status = String(adjustment.status || "").toLowerCase();
+              if (status === "void" || status === "voided") return false;
+              const note = String(adjustment.notes || "").toLowerCase();
+              if (
+                !(
+                  note.includes("insurance w/o") ||
+                  note.includes("insurance writeoff") ||
+                  note.includes("insurance write-off")
+                )
+              ) {
+                return false;
+              }
+              return (
+                [
+                  adjustment.invoiceId,
+                  adjustment.invoiceRefId,
+                  adjustment.invoice?._id,
+                  adjustment.invoice?.id,
+                  adjustment.invoiceNumber,
+                ].some(invoiceMatches) ||
+                String(adjustment.notes || "").includes(`Invoice #${invoiceId}`) ||
+                (invoiceNumber &&
+                  String(adjustment.notes || "").includes(`Invoice #${invoiceNumber}`))
+              );
+            })
+            .reduce(
+              (sum, adjustment) => sum + Math.abs(moneyNumber(adjustment.amount)),
+              0,
+            );
           const invoiceClaims = claims.filter(
             (claim) =>
               String(claim.invoiceRefId || "") === String(invoiceId) ||
@@ -1818,7 +1879,11 @@ export const fetchPaymentDraftInvoices = createAsyncThunk(
             );
           const invoiceOpenInsurance = Math.max(
             0,
-            roundMoney(invoiceEstimatedInsurance - invoiceInsurancePaid),
+            roundMoney(
+              invoiceEstimatedInsurance -
+                invoiceInsurancePaid -
+                invoiceAppliedInsuranceWriteOff,
+            ),
           );
 
           const lineItems = (fullInv.lineItems || [])
@@ -2595,6 +2660,8 @@ const initialState = {
   paymentInvoicesLoading: false,
   paymentInvoicesError: null,
   paymentInvoicesFetchingSet: [], // patientIds currently being fetched
+  paymentInvoicesFetchSettled: {}, // { [patientId]: true } once the draft fetch resolved, so the ledger override can be re-applied on top of it
+  paymentInvoicesOverridden: {}, // { [patientId]: true } once ledger rows won the cache; keeps the draft fetch from clobbering them
 
   // Per-invoice adjustmentTypes map { [invoiceId-itemId]: string }
   adjustmentTypeMap: {},
@@ -2760,6 +2827,10 @@ const billingSlice = createSlice({
       state.paymentInvoicesCache[patientId] = Array.isArray(invoices)
         ? invoices
         : [];
+      // The ledger rows are authoritative for this patient until explicitly
+      // invalidated, so a late-arriving draft fetch cannot replace them with
+      // its own (stale) arithmetic.
+      state.paymentInvoicesOverridden[patientId] = true;
     },
 
     /** Toggle a single payment line-item's checked state. */
@@ -2777,13 +2848,18 @@ const billingSlice = createSlice({
 
     /** Evict cached payment invoices for a patient. */
     invalidatePaymentInvoices: (state, action) => {
+      // Every caller dispatches a bare patientId string, not an object.
       const patientId = action.payload;
       if (patientId) {
         delete state.paymentInvoicesCache[patientId];
+        delete state.paymentInvoicesFetchSettled[patientId];
+        delete state.paymentInvoicesOverridden[patientId];
         state.paymentInvoicesFetchingSet =
           state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
       } else {
         state.paymentInvoicesCache = {};
+        state.paymentInvoicesFetchSettled = {};
+        state.paymentInvoicesOverridden = {};
         state.paymentInvoicesFetchingSet = [];
       }
     },
@@ -3140,6 +3216,7 @@ const billingSlice = createSlice({
         state.paymentInvoicesLoading = true;
         state.paymentInvoicesError = null;
         const patientId = action.meta.arg;
+        delete state.paymentInvoicesFetchSettled[patientId];
         if (!state.paymentInvoicesFetchingSet.includes(patientId)) {
           state.paymentInvoicesFetchingSet.push(patientId);
         }
@@ -3149,6 +3226,11 @@ const billingSlice = createSlice({
         const patientId = action.payload.patientId;
         state.paymentInvoicesFetchingSet =
           state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
+        state.paymentInvoicesFetchSettled[patientId] = true;
+        // Ledger-derived rows are the ones the user sees everywhere else on
+        // the patient, so they win the cache. Overwriting them here is what
+        // made the dialog show stale amounts until a hard refresh.
+        if (state.paymentInvoicesOverridden?.[patientId]) return;
         state.paymentInvoicesCache[patientId] = action.payload.invoices;
       })
       .addCase(fetchPaymentDraftInvoices.rejected, (state, action) => {
@@ -3156,6 +3238,7 @@ const billingSlice = createSlice({
         const patientId = action.meta.arg;
         state.paymentInvoicesFetchingSet =
           state.paymentInvoicesFetchingSet.filter((id) => id !== patientId);
+        state.paymentInvoicesFetchSettled[patientId] = true;
         state.paymentInvoicesError = action.payload;
       });
   },
@@ -3236,6 +3319,9 @@ export const selectPaymentInvoicesLoading = (state) =>
   state.billing.paymentInvoicesLoading;
 export const selectPaymentInvoicesError = (state) =>
   state.billing.paymentInvoicesError;
+/** True once the draft-invoice fetch for this patient has resolved. */
+export const selectPaymentInvoicesFetchSettled = (patientId) => (state) =>
+  Boolean(state.billing.paymentInvoicesFetchSettled?.[patientId]);
 
 // Memoized selector for payment invoices - returns same reference if data hasn't changed
 export const selectPaymentInvoicesForPatient = (patientId) =>

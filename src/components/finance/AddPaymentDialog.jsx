@@ -24,6 +24,7 @@ import {
   selectPaymentInvoicesLoading,
   invalidatePaymentInvoices,
   toggleAllPaymentInvoices,
+  selectBillingConfiguration,
 } from '../../store/slices/billingSlice';
 
 const moneyNumber = (value) => {
@@ -56,6 +57,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
     .map((item) => {
       const patientBalance = moneyNumber(item.summary?.ptBal);
       if (!(patientBalance > 0)) return null;
+      const invoiceInsuranceBalance = moneyNumber(item.summary?.insBal);
 
       const grouped = (item.details || []).find(
         (detail) => detail.isGrouped && Array.isArray(detail.procedures),
@@ -70,6 +72,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
       const paidByProcedure = new Map();
       (item.details || []).forEach((detail) => {
         if (!detail.isPayment || detail.isAdjustment || detail.isVoided) return;
+        if (detail.isInsurancePayment) return;
         (detail.procedures || []).forEach((proc) => {
           const key = procedureKey(proc);
           if (!key) return;
@@ -95,9 +98,11 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         .filter((proc) => !claimedProcedureIds.has(procedureKey(proc)))
         .map((proc) => ({ ...proc, __fromInvoice: true }));
       const patientProcedures =
-        claimProcedures.length > 0 || invoiceProcedures.length > 0
-          ? [...claimProcedures, ...invoiceProcedures]
-          : [item];
+        invoiceInsuranceBalance <= 0.01 && procedures.length > 0
+          ? procedures.map((proc) => ({ ...proc, __fromLedger: true }))
+          : claimProcedures.length > 0 || invoiceProcedures.length > 0
+            ? [...claimProcedures, ...invoiceProcedures]
+            : [item];
 
       let lineItems = patientProcedures
         .map((proc, index) => {
@@ -112,12 +117,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
               item.amount,
           );
           const insuranceAmount = moneyNumber(
-            proc.insuranceAmount ??
-              proc.insPortion ??
-              proc.totalInsPortion ??
-              proc.primaryInsPortion ??
-              proc.insPayEst ??
-              0,
+            invoiceInsuranceBalance <= 0.01
+              ? 0
+              : proc.insuranceAmount ??
+                  proc.insPortion ??
+                  proc.totalInsPortion ??
+                  proc.primaryInsPortion ??
+                  proc.insPayEst ??
+                  0,
           );
           const writeoffAmount = moneyNumber(
             proc.writeoffAmount ??
@@ -142,12 +149,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
               totalAmount - insuranceAmount - writeoffAmount,
             );
           }
-          const paidAmount = Math.max(
-            paidByProcedure.get(key) || 0,
-            moneyNumber(proc.patientPaidAmount),
-            moneyNumber(proc.patientPaid),
-            moneyNumber(proc.ptPaid),
-          );
+          // Only money that is actually backed by a payment record reduces a
+          // line. The stored `patientPaidAmount` is not reliable on its own —
+          // one procedure carried 124 there while holding an un-adjudicated
+          // 124 insurance estimate and no patient payment at all, which zeroed
+          // a $25 balance that the invoice's own patientPortion (182) still
+          // counted. The invoice header is computed from payment records too,
+          // so the lines now use the same basis.
+          const paidAmount = paidByProcedure.get(key) || 0;
           const remainingPatient = roundMoney(procPatientBalance - paidAmount);
           return {
             ...proc,
@@ -164,30 +173,14 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         .filter((proc) => proc.patientBalance > 0);
 
       if (lineItems.length === 0) return null;
-      const linePatientTotal = lineItems.reduce(
-        (sum, proc) => sum + moneyNumber(proc.patientBalance),
-        0,
-      );
-      if (Math.abs(linePatientTotal - patientBalance) > 0.01) {
-        let remaining = roundMoney(patientBalance);
-        lineItems = lineItems.map((proc, index) => {
-          const isLast = index === lineItems.length - 1;
-          const nextBalance = isLast
-            ? remaining
-            : roundMoney(
-                patientBalance *
-                  (linePatientTotal > 0
-                    ? moneyNumber(proc.patientBalance) / linePatientTotal
-                    : 1 / lineItems.length),
-              );
-          remaining = roundMoney(remaining - nextBalance);
-          return {
-            ...proc,
-            patientBalance: nextBalance,
-            payAmount: nextBalance.toFixed(2),
-          };
-        }).filter((proc) => proc.patientBalance > 0);
-      }
+      // No reconciliation against `item.summary.ptBal`. These rows come from the
+      // ledger's own restated per-procedure balances, so they are the truth.
+      // Forcing them to add up to the invoice header was inventing money: on an
+      // invoice whose lines owed $157 but whose header still said $182, the
+      // mismatch was "corrected" by handing the whole $182 to the one surviving
+      // line. The header disagrees because that procedure was already settled
+      // (its patientPaidAmount covers its portion) while the invoice-level
+      // total still counts it.
 
       return {
         id: item.id,
@@ -196,7 +189,7 @@ const toLedgerPaymentInvoices = (ledgerItems = []) => {
         checked: false,
         patientBalance,
         totalBalance: moneyNumber(item.amount || item.totalAmount),
-        insuranceBalance: moneyNumber(item.summary?.insBal),
+        insuranceBalance: invoiceInsuranceBalance,
         insWriteoffAmount: moneyNumber(item.summary?.insWo),
         adjustmentAmount: moneyNumber(item.summary?.appliedWo),
         lineItems,
@@ -229,6 +222,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const ledgerOverrideAppliedRef = useRef(false);
 
   // ── Local form state ─────────────────────────────────────────────────────
+  const billingConfig = useSelector(selectBillingConfiguration);
   const [selectedPatient, setSelectedPatient] = useState(
     patient ? `${patient.firstName} ${patient.lastName}` : 'test test'
   );
@@ -238,7 +232,23 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
   const [patientAmountChecked, setPatientAmountChecked] = useState(false);
   const [manualAmount,         setManualAmount]         = useState('');
   const [amountType,           setAmountType]           = useState('patient amount');
-  const [accountCredit,        setAccountCredit]        = useState(0);
+  const [patientCredit,        setPatientCredit]        = useState(0);
+  const [familyCredit,         setFamilyCredit]         = useState(0);
+  const [addFamilyCredit,      setAddFamilyCredit]      = useState(false);
+
+  const availableCredit = (paymentMethod === 'Account Credit' && addFamilyCredit)
+    ? familyCredit
+    : patientCredit;
+
+  const handlePaymentMethodChange = (method) => {
+    setPaymentMethod(method);
+    if (method === 'Account Credit') {
+      const defaultUseFamily = billingConfig?.useFamilyCredit ?? false;
+      setAddFamilyCredit(defaultUseFamily);
+    } else {
+      setAddFamilyCredit(false);
+    }
+  };
 
   // ── Fetch draft invoices for this patient (always fresh — invalidate stale cache first) ──
   useEffect(() => {
@@ -248,27 +258,17 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       dispatch(fetchPaymentDraftInvoices(patientId));
       
       apiClient.get(`/finance-dashboard/aging/${patientId}`)
-        .then(res => setAccountCredit(res.data?.data?.patientAccountCredit || 0))
+        .then(res => {
+          const data = res.data?.data;
+          const pCredit = Number(data?.patientCredit ?? data?.patientAccountCredit ?? 0);
+          const fCredit = Number(data?.familyCredit ?? pCredit);
+          setPatientCredit(pCredit);
+          setFamilyCredit(fCredit);
+        })
         .catch(err => console.warn("Failed to fetch account credit", err));
     }
   }, [dispatch, patientId]);
-
-  useEffect(() => {
-    if (
-      !patientId ||
-      loading ||
-      ledgerOverrideAppliedRef.current ||
-      ledgerItems.length === 0
-    ) {
-      return;
-    }
-    const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
-    if (ledgerInvoices.length > 0) {
-      dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
-      ledgerOverrideAppliedRef.current = true;
-    }
-  }, [dispatch, patientId, loading, ledgerItems]);
-
+  
   // ── Derived totals ───────────────────────────────────────────────────────
   const { totalChecked } = useMemo(() => {
     let sum = 0;
@@ -279,6 +279,36 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
     });
     return { totalChecked: sum };
   }, [invoices]);
+
+  // If available credit changes and totalChecked exceeds it, uncheck to stay within limit
+  useEffect(() => {
+    if (paymentMethod === 'Account Credit' && totalChecked > availableCredit) {
+      dispatch(toggleAllPaymentInvoices({ patientId, checked: false }));
+      showSnackbar("Selections reset because total exceeds available credit.", "info");
+      const timeoutId = window.setTimeout(() => setPatientAmountChecked(false), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [availableCredit, dispatch, patientId, paymentMethod, showSnackbar, totalChecked]);
+
+  // The draft-invoice fetch and the patient ledger are two independent async
+  // sources. Whichever resolves last used to win the cache, so the dialog
+  // could show its own stale arithmetic until a hard refresh. The reducer now
+  // refuses to let the draft fetch overwrite ledger-derived rows once they have
+  // been seeded (see paymentInvoicesOverridden), so this effect only has to
+  // publish those rows — it no longer has to race the fetch to do it.
+  useEffect(() => {
+    if (
+      !patientId ||
+      ledgerOverrideAppliedRef.current ||
+      ledgerItems.length === 0
+    ) {
+      return;
+    }
+    const ledgerInvoices = toLedgerPaymentInvoices(ledgerItems);
+    dispatch(setPaymentInvoicesForPatient({ patientId, invoices: ledgerInvoices }));
+    ledgerOverrideAppliedRef.current = true;
+  }, [dispatch, patientId, loading, ledgerItems]);
 
   const displayAmount   = amountType === 'specific amount'
     ? manualAmount
@@ -295,7 +325,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         invToToggle.lineItems?.forEach((i) => {
           if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
-        if (totalChecked + sumToAdd > accountCredit) {
+        if (totalChecked + sumToAdd > availableCredit) {
           showSnackbar("Cannot select invoice. Total exceeds available deposit balance.", "error");
           return;
         }
@@ -315,7 +345,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         }
       });
       if (itemToToggle && !itemToToggle.checked) {
-        if (totalChecked + Number(itemToToggle.payAmount || 0) > accountCredit) {
+        if (totalChecked + Number(itemToToggle.payAmount || 0) > availableCredit) {
           showSnackbar("Cannot select procedure. Total exceeds available deposit balance.", "error");
           return;
         }
@@ -332,7 +362,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           if (!i.checked) sumToAdd += paymentLineAmount(i);
         });
       });
-      if (totalChecked + sumToAdd > accountCredit) {
+      if (totalChecked + sumToAdd > availableCredit) {
         showSnackbar("Cannot select all. Total exceeds available deposit balance.", "error");
         return;
       }
@@ -353,7 +383,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       });
       if (itemToEdit && itemToEdit.checked) {
         let diff = Number(amount || 0) - Number(itemToEdit.payAmount || 0);
-        if (totalChecked + diff > accountCredit) {
+        if (totalChecked + diff > availableCredit) {
           showSnackbar("Amount exceeds available deposit balance.", "error");
           return;
         }
@@ -384,6 +414,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
       description,
       paymentAmount,
       overpayment: parseFloat(overpayment),
+      addFamilyCredit: paymentMethod === 'Account Credit' ? addFamilyCredit : false,
       selectedInvoices,
       selectedItems,
     });
@@ -398,7 +429,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
         bgcolor: COLORS.SURFACE_TINT, py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', 
         alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}`, m: 0 
       }}>
-        <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '15px', fontWeight: 600 }}>Add Payment</Typography>
+        <Typography sx={{ color: COLORS.TEXT_PRIMARY, fontSize: '15px', fontWeight: 600 }}>Patient Payment</Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
           <CloseIcon sx={{ fontSize: '18px' }} />
         </IconButton>
@@ -409,8 +440,12 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           selectedPatient={selectedPatient}
           setSelectedPatient={setSelectedPatient}
           paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
+          setPaymentMethod={handlePaymentMethodChange}
+          addFamilyCredit={addFamilyCredit}
+          setAddFamilyCredit={setAddFamilyCredit}
           MENU_PROPS={MENU_PROPS}
+          patientCredit={patientCredit}
+          familyCredit={familyCredit}
         />
 
         <Box sx={{ borderTop: `1px solid ${COLORS.BORDER}`, mt: 2.5, mb: 2.5 }} />
@@ -423,7 +458,7 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           displayAmount={displayAmount}
           setManualAmount={setManualAmount}
           paymentMethod={paymentMethod}
-          accountCredit={accountCredit}
+          accountCredit={availableCredit}
           MENU_PROPS={MENU_PROPS}
         />
 

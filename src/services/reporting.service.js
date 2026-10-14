@@ -86,6 +86,16 @@ export const reportingService = {
   },
 
   /**
+   * Reset recare reminder and save row details (note, contact-again, follow-up)
+   * @param {string|number} patientId
+   * @param {Object} data - { note, contactAgain, followUp }
+   */
+  async resetRecareReminder(patientId, data = {}) {
+    const response = await apiClient.post(`/reports/clinical/recare/${patientId}/reset`, data);
+    return response.data;
+  },
+
+  /**
    * Get others report data by name (e.g. login, audit)
    * @param {string} reportName
    * @param {Object} params
