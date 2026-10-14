@@ -13,9 +13,14 @@ const AddPaymentTopRow = ({
   addFamilyCredit,
   setAddFamilyCredit,
   MENU_PROPS,
+  patientCredit = 0,
+  familyCredit = 0,
 }) => {
   const greenText = COLORS.TEXT_PRIMARY;
   const paymentMethods = PAYMENT_METHODS.filter((method) => method !== 'Insurance Check');
+  const availableCredit = (paymentMethod === 'Account Credit' && addFamilyCredit)
+    ? familyCredit
+    : patientCredit;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -55,49 +60,58 @@ const AddPaymentTopRow = ({
         ))}
       </OutlinedSelect>
 
-      {paymentMethod === 'Account Credit' && (
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={addFamilyCredit}
-              onChange={(e) => setAddFamilyCredit(e.target.checked)}
-              sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#60a5fa' } }}
-            />
-          }
-          label={<Typography sx={{ fontSize: '0.8125rem', color: greenText }}>Use family credit</Typography>}
-          sx={{ ml: 1, mr: 0 }}
-        />
-      )}
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {paymentMethod === 'Account Credit' && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={addFamilyCredit}
+                onChange={(e) => setAddFamilyCredit(e.target.checked)}
+                sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#60a5fa' } }}
+              />
+            }
+            label={<Typography sx={{ fontSize: '0.8125rem', color: greenText }}>Use family credit</Typography>}
+            sx={{ ml: 1, mr: 0 }}
+          />
+        )}
 
-      {paymentMethod === 'Patient Check' && (
-        <>
-          <Typography sx={{ fontSize: '0.8125rem', ml: 2 }}>Cheque #:</Typography>
-          <TextField 
-            variant="outlined" 
-            size="small" 
-            sx={{ 
-              width: 160, mx: 1,
-              '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
-            }} 
-          />
-          <Typography sx={{ fontSize: '0.8125rem', ml: 1 }}>Bank/Branch #:</Typography>
-          <TextField 
-            variant="outlined" 
-            size="small" 
-            sx={{ 
-              width: 160, mx: 1,
-              '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
-            }} 
-          />
-        </>
-      )}
+        {/* Warning message when Account Credit selected but no credit available - far right */}
+        {paymentMethod === 'Account Credit' && availableCredit <= 0 && (
+          <Typography sx={{ color: '#d32f2f', fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            The outstanding balance of the patient is 0
+          </Typography>
+        )}
+
+        {paymentMethod === 'Patient Check' && (
+          <>
+            <Typography sx={{ fontSize: '0.8125rem', ml: 2 }}>Cheque #:</Typography>
+            <TextField 
+              variant="outlined" 
+              size="small" 
+              sx={{ 
+                width: 160, mx: 1,
+                '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
+              }} 
+            />
+            <Typography sx={{ fontSize: '0.8125rem', ml: 1 }}>Bank/Branch #:</Typography>
+            <TextField 
+              variant="outlined" 
+              size="small" 
+              sx={{ 
+                width: 160, mx: 1,
+                '& .MuiInputBase-root': { height: '28px', fontSize: '0.8125rem' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.BORDER },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#9ca3af' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: COLORS.ACCENT }
+              }} 
+            />
+          </>
+        )}
+      </Box>
     </Box>
   );
 };

@@ -444,6 +444,8 @@ const AddPaymentDialog = ({ patient, onClose, onPaymentApply }) => {
           addFamilyCredit={addFamilyCredit}
           setAddFamilyCredit={setAddFamilyCredit}
           MENU_PROPS={MENU_PROPS}
+          patientCredit={patientCredit}
+          familyCredit={familyCredit}
         />
 
         <Box sx={{ borderTop: `1px solid ${COLORS.BORDER}`, mt: 2.5, mb: 2.5 }} />

@@ -208,6 +208,11 @@ const CreditSubtractionDialog = ({ onClose, editTarget }) => {
     const backedPaid = paidByProcedure.get(String(procedureKey(p) || "")) || {};
     let insurancePaidAmt = backedPaid.insurance || 0;
     let patientPaidAmt = backedPaid.patient || 0;
+    // Fallback to procedure's own paid fields if payment row breakdown is missing
+    if (insurancePaidAmt === 0 && patientPaidAmt === 0) {
+      insurancePaidAmt = parseAmount(p.insurancePaid) || 0;
+      patientPaidAmt = parseAmount(p.patientPaid) || 0;
+    }
     let pay = insurancePaidAmt + patientPaidAmt;
     if (hasSummary && totalPayment === 0) {
       pay = 0;
