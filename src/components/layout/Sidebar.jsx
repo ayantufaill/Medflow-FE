@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { navMenuItems as menuItems, hasRequiredRole as hasRequiredRoleShared, hasRequiredPermission as hasRequiredPermissionShared } from '../../config/navMenuItems';
+import { moduleTurnedOff, moduleGranted } from '../../constants/teamModuleAccess';
 
 // Sidebar widths for desktop expanded and collapsed states
 const DRAWER_WIDTH_EXPANDED = 280;
@@ -65,6 +66,9 @@ const Sidebar = ({ open, onClose, mobileOpen }) => {
   // An item is visible if EITHER check passes — requiredRoles/requiredPermissions
   // are alternative ways to grant access, not both required.
   const isNavItemVisible = (item) => {
+    // A module the user's admin turned off on Team Access.
+    if (moduleTurnedOff(user, item.path)) return false;
+    if (moduleGranted(user, item.path)) return true;
     if (item.requiredPermissions?.length) {
       return hasRequiredRole(item.requiredRoles) || hasRequiredPermission(item.requiredPermissions);
     }

@@ -8,6 +8,7 @@ import {
 import { usePatient } from "../../../hooks/redux";
 import { useAuth } from "../../../contexts/AuthContext";
 import { hasRequiredGroup, hasRequiredPermission } from "../../../config/navMenuItems";
+import { moduleTurnedOff, moduleGranted } from "../../../constants/teamModuleAccess";
 
 const TABS = [
   { label: "Schedule", path: "/appointments/operatory-schedule" },
@@ -52,6 +53,8 @@ const NavTabs = () => {
   const isSuperUser = (user?.roles || []).some((r) => (typeof r === "string" ? r : r?.name) === "Super Admin")
     || hasRequiredPermission(user, ["*"]);
   const canOpen = (path) => {
+    if (moduleTurnedOff(user, path)) return false;
+    if (moduleGranted(user, path)) return true;
     const rule = TAB_ACCESS[path];
     if (!rule || isSuperUser) return true;
     if (rule.allowIf && rule.allowIf(user)) return true;

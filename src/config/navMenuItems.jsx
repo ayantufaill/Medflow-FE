@@ -7,6 +7,7 @@ import {
   MonitorHeart,
   AttachMoney,
   Business,
+  ManageAccounts,
 } from '@mui/icons-material';
 
 // ─── PURE 4-GROUP DEFINITIONS ────────────────────────────────────────────────
@@ -153,6 +154,13 @@ export const navMenuItems = [
     allowedGroups: ['ADMIN_GROUP'],
     requiredRoles: ['Admin', 'Group Admin', 'Branch Admin'],
   },
+  {
+    text: 'Team Access',
+    icon: <ManageAccounts />,
+    path: '/admin/team-access',
+    allowedGroups: ['ADMIN_GROUP'],
+    requiredRoles: ['Admin', 'Group Admin', 'Branch Admin'],
+  },
 ];
 
 // Roles allowed to switch the active branch context (UserProfile.jsx)
@@ -249,9 +257,31 @@ export const hasRequiredRole = (user, requiredRoles) => {
 // Consolidates permissions off every role object the user holds
 export const hasRequiredPermission = (user, requiredPermissions, requireAll = false) => {
   if (!requiredPermissions || requiredPermissions.length === 0) return true;
-  if (!user || !Array.isArray(user.roles)) return false;
+  if (!user) return false;
 
-  const consolidated = user.roles.reduce((acc, role) => {
+  const consolidated = effectivePermissionMap(user);
+  if (!consolidated) return false;
+
+  if (consolidated['*'] === true) return true;
+
+  return requireAll
+    ? requiredPermissions.every((key) => consolidated[key] === true)
+    : requiredPermissions.some((key) => consolidated[key] === true);
+};
+
+/**
+ * The user's permissions as { key: true }. Prefers the profile's `permissions`
+ * list: the backend's effective set (role keys, what a role inherits — a
+ * group_admin gets branch_admin's set live — and Team Access overrides, which
+ * can take keys away). Before the profile loads (the login response carries no
+ * permissions) it falls back to the union over the role objects.
+ */
+const effectivePermissionMap = (user) => {
+  if (Array.isArray(user.permissions)) {
+    return Object.fromEntries(user.permissions.map((key) => [key, true]));
+  }
+  if (!Array.isArray(user.roles)) return null;
+  return user.roles.reduce((acc, role) => {
     if (role && typeof role === 'object' && role.permissions && typeof role.permissions === 'object') {
       for (const [key, val] of Object.entries(role.permissions)) {
         if (val === true) acc[key] = true;
@@ -259,16 +289,4 @@ export const hasRequiredPermission = (user, requiredPermissions, requireAll = fa
     }
     return acc;
   }, {});
-  // The profile's effective permission list includes what a role inherits on the
-  // backend (a group_admin gets branch_admin's set live), which the role objects
-  // above don't carry on their own.
-  if (Array.isArray(user.permissions)) {
-    for (const key of user.permissions) consolidated[key] = true;
-  }
-
-  if (consolidated['*'] === true) return true;
-
-  return requireAll
-    ? requiredPermissions.every((key) => consolidated[key] === true)
-    : requiredPermissions.some((key) => consolidated[key] === true);
 };

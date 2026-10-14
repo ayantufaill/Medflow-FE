@@ -24,6 +24,7 @@ const PatientSearchActionsBar = ({
   onImportPatient,
   onDeactivateSelected,
   deactivateDisabled,
+  canCreate = true,
 }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mb: '14px', flexWrap: 'wrap' }}>
     <Box sx={{
@@ -61,24 +62,29 @@ const PatientSearchActionsBar = ({
     </Tooltip>
 
     <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', ml: 'auto', alignItems: 'center' }}>
-      <Button
-        variant="contained"
-        disableElevation
-        startIcon={<PersonAddIcon sx={{ fontSize: '16px' }} />}
-        onClick={onAddPatient}
-        sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
-      >
-        Add Patient
-      </Button>
-      <Button
-        variant="contained"
-        disableElevation
-        startIcon={<UploadIcon sx={{ fontSize: '16px' }} />}
-        onClick={onImportPatient}
-        sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
-      >
-        Import Patient
-      </Button>
+      {/* Adding or importing needs patients.create — Team Access can switch it off. */}
+      {canCreate && (
+        <>
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<PersonAddIcon sx={{ fontSize: '16px' }} />}
+            onClick={onAddPatient}
+            sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
+          >
+            Add Patient
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<UploadIcon sx={{ fontSize: '16px' }} />}
+            onClick={onImportPatient}
+            sx={{ ...actionButtonSx, backgroundColor: COLORS.ACCENT, '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } }}
+          >
+            Import Patient
+          </Button>
+        </>
+      )}
       <Button
         variant="contained"
         disableElevation
