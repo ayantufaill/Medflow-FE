@@ -38,20 +38,26 @@ const FinancePage = () => {
   });
   const patientFinanceRef = useRef(null);
 
+  // The patient a link asked for: navigation state, or ?patientId= (the
+  // schedule's Ledger / Finance button). Applied once per navigation, so
+  // switching patient in the header afterwards isn't pulled back to it.
+  const requestedPatientId =
+    location.state?.patientId || new URLSearchParams(location.search).get("patientId");
+  const appliedRequestRef = useRef(null);
+
   useEffect(() => {
     const loadPatientDetails = async () => {
-      // If we passed a patientId from routing state, fetch it
-      const targetPatientId = location.state?.patientId;
-      if (
-        targetPatientId &&
-        targetPatientId !== (currentPatient?._id || currentPatient?.id)
-      ) {
-        try {
-          await fetchById(targetPatientId);
-        } catch (error) {
-          console.error("Error fetching target patient details:", error);
+      const requestKey = requestedPatientId ? `${location.key}:${requestedPatientId}` : null;
+      if (requestKey && appliedRequestRef.current !== requestKey) {
+        appliedRequestRef.current = requestKey;
+        if (String(requestedPatientId) !== String(currentPatient?._id || currentPatient?.id || "")) {
+          try {
+            await fetchById(requestedPatientId);
+          } catch (error) {
+            console.error("Error fetching target patient details:", error);
+          }
+          return;
         }
-        return;
       }
 
       // If we already have currentPatient, no need to fetch
@@ -84,7 +90,7 @@ const FinancePage = () => {
     };
 
     loadPatientDetails();
-  }, [currentPatient, selectedPatientId, fetchById, setPatient]);
+  }, [currentPatient, selectedPatientId, fetchById, setPatient, requestedPatientId, location.key]);
 
   const handleViewChange = (event) => {
     setView(event.target.value);
