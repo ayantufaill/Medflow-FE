@@ -59,6 +59,8 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
   const [genderFilter, setGenderFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  // A user in one branch has no branch to pick, so the list is always theirs.
+  const onlyBranchId = branchList.length === 1 ? branchList[0].id : '';
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({ open: false, patientId: null, patientName: '' });
   const [actionMenu, setActionMenu] = useState({ anchorEl: null, patientId: null, patientName: '', isActive: null });
@@ -111,7 +113,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
       status: statusFilter,
       gender: genderFilter,
       providerId: providerFilter,
-      branchId: branchFilter,
+      branchId: branchFilter || onlyBranchId,
       dobStart: '',
       dobEnd: '',
       sortBy: sortByName ? 'name' : '',
@@ -135,7 +137,7 @@ const PatientsListPage = ({ embedded = false, onPatientSelect }) => {
     return () => {
       if (promise && promise.abort) promise.abort();
     };
-  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, branchFilter, sortByName, fetchPatientsRedux]);
+  }, [page, rowsPerPage, effectiveSearch, statusFilter, genderFilter, providerFilter, branchFilter, onlyBranchId, sortByName, fetchPatientsRedux]);
 
   // Sync Redux error to local error for display
   useEffect(() => {
