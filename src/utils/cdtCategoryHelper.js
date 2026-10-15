@@ -87,6 +87,7 @@ export const COVERAGE_BLOCKED_REASON_LABELS = {
   'age': 'Age limit',
   'frequency': 'Frequency limit',
   'lifetime-limit': 'Lifetime limit reached',
+  'teeth-limit': 'Teeth limit',
 };
 
 export const getCoverageBlockedReasonLabel = (reason) =>

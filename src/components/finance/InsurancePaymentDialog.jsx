@@ -253,14 +253,55 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       return ledgerCtx.proceduresByProcNum.get(String(procId)) || null;
     };
 
-    // Remaining balance on a procedure for the secondary-claim view:
-    // allowed − insurance already paid − write-off.
-    const balanceFor = (procId, allowedNum, woNum, fallbackPaid = 0) => {
+    // Remaining balance on a procedure: allowed − insurance already paid −
+    // patient already paid − write-off. Both the insurance and the patient
+    // payments come off the balance, so a line the patient has settled stops
+    // showing a phantom balance once a secondary insurance payment is reverted.
+    const balanceFor = (procId, allowedNum, woNum, fallbackPaid = 0, fallbackPtPaid = 0) => {
       const line = ledgerLineFor(procId);
       const insPaid = line
-        ? Number(line.insurancePaidAmount || 0)
+        ? Number(
+            line.insurancePaidAmount ||
+              line.insurancePaid ||
+              line.insPaid ||
+              0,
+          )
         : Number(fallbackPaid || 0);
-      return Math.max(0, Math.round((allowedNum - insPaid - woNum) * 100) / 100);
+      const ptPaid = line
+        ? Number(
+            line.patientPaidAmount || line.patientPaid || line.ptPaid || 0,
+          )
+        : Number(fallbackPtPaid || 0);
+      return Math.max(
+        0,
+        Math.round((allowedNum - insPaid - ptPaid - woNum) * 100) / 100,
+      );
+    };
+
+    // What the primary has already applied to this procedure, shown on a
+    // secondary claim so the user can see the leftover the secondary is billed
+    // against. `insurancePaidAmount` on the ledger line is summed across plans,
+    // which on a not-yet-paid secondary claim is the primary's payment.
+    const appliedInsPayFor = (procId, fallback = 0) => {
+      const line = ledgerLineFor(procId);
+      const paid = line
+        ? Number(
+            line.insurancePaidAmount ||
+              line.insurancePaid ||
+              line.insPaid ||
+              0,
+          )
+        : 0;
+      return paid > 0 ? paid : Number(fallback || 0);
+    };
+    // The primary's applied write-off, read off the ledger line's recorded
+    // write-off (the same figure the balance is netted against).
+    const appliedInsWoFor = (procId, fallback = 0) => {
+      const line = ledgerLineFor(procId);
+      const wo = line
+        ? Number(line.writeoff ?? line.estimatedWriteOff ?? line.writeOff ?? 0)
+        : 0;
+      return wo > 0 ? wo : Number(fallback || 0);
     };
 
     // Determine overall claim-level payments and insurance balance
@@ -374,6 +415,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowedNum,
           woNum,
           Number(p.insurancePaidAmount || 0),
+          Number(p.patientPaidAmount || p.patientPaid || p.ptPaid || 0),
         );
 
         return {
@@ -393,6 +435,15 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
+          // Amounts the primary already applied to this line (secondary view).
+          appliedInsPay: appliedInsPayFor(
+            p.id || p._id || p.ProcNum || p.procedureId,
+            Number(p.insurancePaidAmount || p.insPayAmt || p.insPaid || 0),
+          ),
+          appliedInsWo: appliedInsWoFor(
+            p.id || p._id || p.ProcNum || p.procedureId,
+            existingWo,
+          ),
           coveragePct: resolveCoveragePct(p.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
@@ -483,6 +534,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowedNum,
           woNum,
           Number(l.insurancePaidAmount || l.insurancePaid || 0),
+          Number(l.patientPaidAmount || l.patientPaid || l.ptPaid || 0),
         );
 
         return {
@@ -502,6 +554,15 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
+          // Amounts the primary already applied to this line (secondary view).
+          appliedInsPay: appliedInsPayFor(
+            l.id || l._id || l.procedureId || l.procId,
+            Number(l.insurancePaidAmount || l.insurancePaid || l.insPayAmt || l.insPaid || 0),
+          ),
+          appliedInsWo: appliedInsWoFor(
+            l.id || l._id || l.procedureId || l.procId,
+            existingWo,
+          ),
           coveragePct: resolveCoveragePct(l.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
@@ -565,6 +626,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           allowedNum,
           woNum,
           Number(item.insurancePaidAmount || 0),
+          Number(item.patientPaidAmount || item.patientPaid || item.ptPaid || 0),
         );
 
         return {
@@ -584,6 +646,15 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
           initialPay: remainingPay.toFixed(2),
           insBal: Math.max(0, Math.round(remainingPay * 100) / 100),
           insPortionEst: (remainingPay + woNum).toFixed(2),
+          // Amounts the primary already applied to this line (secondary view).
+          appliedInsPay: appliedInsPayFor(
+            item.id || item._id || item.itemId || item.procedureId,
+            Number(item.insurancePaidAmount || item.insurancePaid || item.insPayAmt || item.insPaid || 0),
+          ),
+          appliedInsWo: appliedInsWoFor(
+            item.id || item._id || item.itemId || item.procedureId,
+            existingWo,
+          ),
           coveragePct: resolveCoveragePct(item.coveragePct, billedNum, woNum, dedNum, initialEst),
           updateAllowedFee: false,
           updateInsFlatPortion: false,
@@ -939,8 +1010,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 0, maxHeight: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
-        <Box sx={{ width: '100%', minWidth: isSecondaryClaimSelected ? '1400px' : '1300px' }}>
+      <DialogContent sx={{ px: 3, pt: '24px !important', pb: 0, maxHeight: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+        <Box sx={{ width: '100%', minWidth: 0, maxWidth: '100%' }}>
           <InsurancePaymentTopRow 
             claims={claims}
             selectedClaim={selectedClaim}

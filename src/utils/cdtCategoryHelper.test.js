@@ -7,6 +7,7 @@ describe('getCoverageBlockedReasonLabel', () => {
     expect(getCoverageBlockedReasonLabel('age')).toBe('Age limit');
     expect(getCoverageBlockedReasonLabel('frequency')).toBe('Frequency limit');
     expect(getCoverageBlockedReasonLabel('lifetime-limit')).toBe('Lifetime limit reached');
+    expect(getCoverageBlockedReasonLabel('teeth-limit')).toBe('Teeth limit');
   });
 
   it('returns an empty string for missing reasons so nothing renders', () => {
@@ -25,6 +26,7 @@ describe('getCoverageBlockedReasonLabel', () => {
       'frequency',
       'lifetime-limit',
       'not-covered',
+      'teeth-limit',
       'waiting-period',
     ]);
   });

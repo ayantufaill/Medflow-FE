@@ -30,6 +30,7 @@ import AddCoverageHeader from '../../components/insurance/components/AddCoverage
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
+import { sanitizeCoverageForType } from './utils/coveragePayloadBuilder';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
 import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
 
@@ -359,6 +360,14 @@ const AddCoveragePage = () => {
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
 
+      // A Copay/Fixed Plan prices each code off its flat plan portion, so its
+      // coverage tables must not persist coverage percentages.
+      const sanitizedCoverage = sanitizeCoverageForType(
+        coverageCategoryData,
+        coverageBookData,
+        formData.coverageType,
+      );
+
       const indMaxVal = formData.coverage?.individual?.annualMax;
       const indUsedVal = formData.coverage?.individual?.usedAmount;
       const parsedIndMax = indMaxVal != null && indMaxVal !== '' ? parseFloat(String(indMaxVal).replace(/[^0-9.-]+/g, "")) : undefined;
@@ -392,8 +401,8 @@ const AddCoveragePage = () => {
               : val
           ])
         ),
-        coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
-        coverageBookData: coverageBookData,
+        coverageCategoryTable: Object.entries(sanitizedCoverage.coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
+        coverageBookData: sanitizedCoverage.coverageBookData,
         planFeeGuide: formData.planFeeGuide,
         coverageType: formData.coverageType,
         subscriberSsn: formData.subscriber.ssn ? formData.subscriber.ssn.replace(/\D/g, '') : undefined,
@@ -955,6 +964,7 @@ const AddCoveragePage = () => {
         coverageData={coverageBookData}
         setCoverageData={setCoverageBookData}
         feeGuideId={formData.planFeeGuide}
+        coverageType={formData.coverageType}
       />
 
       <ConfirmationDialog

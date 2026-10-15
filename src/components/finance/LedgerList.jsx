@@ -70,6 +70,35 @@ import ModifyClaimStatusDialog from "./ModifyClaimStatusDialog";
 import VoidConfirmationDialog from "./VoidConfirmationDialog";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 
+// An invoice whose procedures have all been removed or voided has nothing left
+// to show, so the row is dropped instead of rendering an empty invoice card.
+//
+// Only the invoice's OWN procedures count here — the grouped detail built from
+// its line items (plus any array hung directly on the item). Claim / payment /
+// adjustment details each carry their own `procedures` list too, but those are
+// not the invoice's procedures. Voided line items are skipped unless the user
+// has opted into seeing voided transactions, since an all-voided invoice reads
+// as empty otherwise.
+const invoiceHasNoProcedures = (item, includeVoided) => {
+  if (!item || item.method !== "Invoice") return false;
+  const isVoidedProcedure = (proc) => {
+    if (!proc) return false;
+    if (proc.isVoided || proc.isVoid) return true;
+    const status = String(proc.status || "").toLowerCase();
+    return status === "void" || status === "voided";
+  };
+  const groupedProcedures = (Array.isArray(item.details) ? item.details : [])
+    .filter((detail) => detail?.isGrouped && Array.isArray(detail.procedures))
+    .flatMap((detail) => detail.procedures);
+  const directProcedures = Array.isArray(item.procedures)
+    ? item.procedures
+    : [];
+  const procedures = [...groupedProcedures, ...directProcedures];
+  return !procedures.some(
+    (proc) => includeVoided || !isVoidedProcedure(proc),
+  );
+};
+
 const LedgerList = ({ patient, expanded, filters }) => {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -1192,6 +1221,11 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
         // Apply transfer filter
         if (item.isTransfer && filters?.hideBillingTransfers) {
+          return null;
+        }
+
+        // Hide invoices that no longer carry any procedure.
+        if (invoiceHasNoProcedures(item, filters?.includeVoided)) {
           return null;
         }
 
