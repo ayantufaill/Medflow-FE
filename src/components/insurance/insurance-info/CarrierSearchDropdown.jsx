@@ -5,7 +5,7 @@ import FormInput from '../components/FormInput';
 import { insuranceCompanyService } from '../../../services/insurance.service';
 import { buildCarrierSearchRows } from './carrierSearchRows';
 
-const CarrierSearchDropdown = ({ formData, handleInputChange, existingPlans = [], handleSelectResult }) => {
+const CarrierSearchDropdown = ({ formData, handleInputChange, handleSelectResult, existingPlans = [] }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -14,17 +14,14 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, existingPlans = []
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const query = formData.carrierSearch || '';
-  const matchingExistingPlans = existingPlans.filter((plan) =>
+  const normalizedQuery = query.trim().toLowerCase();
+  const matchingPlans = existingPlans.filter((plan) =>
     !formData.excludeSystemCarriers || (!plan.isSystemCarrier && !plan.isSystem)
-  ).filter((plan) =>
-    [plan.payerId, plan.carrierName, plan.groupName, plan.groupNumber, plan.planName]
-      .some((value) => String(value || '').toLowerCase().includes(query.trim().toLowerCase()))
-  ).map((plan, index) => ({
-    ...plan,
-    resolvedAddress: plan.payerAddress || '',
-    _rowKey: `existing-plan-${plan._id}-${plan.groupNumber || index}`,
-  }));
-  const visibleResults = [...matchingExistingPlans, ...searchResults];
+  ).filter((plan) => [
+    plan.payerId, plan.carrierName, plan.groupName, plan.groupNumber,
+    plan.planName, plan.employerName, plan.payerAddress,
+  ].some((value) => String(value ?? '').toLowerCase().includes(normalizedQuery)));
+  const displayedResults = [...matchingPlans, ...searchResults];
 
   useEffect(() => {
     if (!showDropdown) return undefined;
@@ -107,16 +104,16 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, existingPlans = []
                   <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Group #</TableCell>
                   <TableCell sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#1a3353', py: 1 }}>Plan/Employer Name</TableCell>
                 </TableRow>
-                {visibleResults.length === 0 ? (
+                {displayedResults.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 2.5, color: '#6b7280', fontSize: '0.75rem' }}>
                       {loading ? 'Loading carriers...' : error || 'No carriers found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  visibleResults.map((item, idx) => (
+                  displayedResults.map((item, idx) => (
                     <TableRow
-                      key={item._rowKey || idx}
+                      key={item._rowKey || (item.isExistingPlan ? `plan-${item._id}-${item.groupNumber}-${item.groupName}` : idx)}
                       hover
                       sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f5f9ff' } }}
                       onMouseDown={(e) => {
@@ -135,9 +132,9 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, existingPlans = []
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}
-                        title={item.resolvedAddress}
+                        title={item.resolvedAddress || item.payerAddress}
                       >
-                        {item.resolvedAddress || '-'}
+                        {item.resolvedAddress || item.payerAddress || '-'}
                       </TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
@@ -152,7 +149,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, existingPlans = []
                 )}
               </TableBody>
             </Table>
-            {error && searchResults.length > 0 && <Typography sx={{ p: 1, color: 'error.main' }}>{error}</Typography>}
+            {error && displayedResults.length > 0 && <Typography sx={{ p: 1, color: 'error.main' }}>{error}</Typography>}
             {hasMore && !error && (
               <Button disabled={loading} fullWidth onMouseDown={(event) => event.preventDefault()} onClick={() => setPage((current) => current + 1)}>
                 {loading ? 'Loading...' : 'Load more carriers'}
