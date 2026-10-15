@@ -10,10 +10,13 @@ export const buildCoveragePayload = (formData, coverageBookData, coverageCategor
   const parsedIndUsed = indUsedVal != null && indUsedVal !== '' ? parseFloat(String(indUsedVal).replace(/[^0-9.-]+/g, "")) : undefined;
 
   return {
-    insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
+    insuranceCompanyId: String(formData.insuranceCompanyId || ''),
     policyNumber: formData.subscriber.subscriberId,
     groupNumber: formData.groupNumber || undefined,
     groupName: formData.groupName || undefined,
+    insurancePlanName: formData.insurancePlan?.trim() || undefined,
+    employerName: formData.employerName?.trim() || null,
+    employerId: formData.employerId || null,
     subscriberName: formData.subscriber.name,
     subscriberDateOfBirth: formatDateForPayload(formData.subscriber.dateOfBirth),
     relationshipToPatient: formData.subscriber.relationship.toLowerCase(),

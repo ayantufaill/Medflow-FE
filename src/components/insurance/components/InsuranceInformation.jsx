@@ -9,21 +9,15 @@ import PhoneNumberInput from '../../shared/PhoneNumberInput';
 const InsuranceInformation = ({ 
   formData, 
   handleInputChange, 
-  insuranceCompanies = [],
   assignmentOptions = [],
   errors = {}
 }) => {
-  const companies = Array.isArray(insuranceCompanies)
-    ? insuranceCompanies
-    : (Array.isArray(insuranceCompanies?.companies) ? insuranceCompanies.companies : []);
-
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
     { value: 1, label: 'Pay to dentist (Assignment)' },
     { value: 2, label: 'Pay to patient (Benefit)' }
   ];
 
   const handleSelectResult = (item) => {
-    handleInputChange('insuranceCompanyId', item._id || item.id || '');
     handleInputChange('carrierName', item.carrierName || item.name || '');
     handleInputChange('payerId', item.payerId || '');
     handleInputChange('carrierPhone', item.carrierPhone || item.phone || '');
@@ -33,10 +27,13 @@ const InsuranceInformation = ({
     );
     handleInputChange('groupName', item.groupName || '');
     handleInputChange('groupNumber', item.groupNumber || '');
-    handleInputChange('insurancePlan', item.planName || item.name || '');
+    handleInputChange('insurancePlan', item.planName || item.employerName || '');
+    handleInputChange('employerName', item.employerName || '');
+    handleInputChange('employerId', item.employerId || '');
     if (item.feeSched || item.feeGuide) {
       handleInputChange('planFeeGuide', item.feeSched || item.feeGuide);
     }
+    handleInputChange('insuranceCompanyId', item._id || item.id || '');
     handleInputChange('carrierSearch', '');
   };
 
@@ -64,7 +61,6 @@ const InsuranceInformation = ({
         <CarrierSearchDropdown 
           formData={formData}
           handleInputChange={handleInputChange}
-          companies={companies}
           handleSelectResult={handleSelectResult}
         />
 
@@ -117,7 +113,7 @@ const InsuranceInformation = ({
           <FormInput
             label="Payer Address"
             value={formData.payerAddress || ''}
-            onChange={(e) => handleInputChange('payerAddress', e.target.value)}
+            InputProps={{ readOnly: true }}
           />
         </Box>
 

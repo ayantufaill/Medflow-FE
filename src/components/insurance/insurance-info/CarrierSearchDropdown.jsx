@@ -1,96 +1,52 @@
-import React, { useState } from 'react';
-import { Box, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import FormInput from '../components/FormInput';
+import { insuranceCompanyService } from '../../../services/insurance.service';
+import { buildCarrierSearchRows } from './carrierSearchRows';
 
-// Helper to assemble real address into a single readable string
-const formatAddress = (addr) => {
-  if (!addr) return '';
-  if (typeof addr === 'string') return addr;
-  const street = [addr.addressLine1 || addr.Address || addr.street || addr.address, addr.addressLine2 || addr.Address2 || addr.street2]
-    .filter(Boolean)
-    .join(', ');
-  const cityState = [addr.city || addr.City, addr.state || addr.State]
-    .filter(Boolean)
-    .join(', ');
-  const zip = addr.zipCode || addr.Zip || addr.zip || '';
-  const cityStateZip = [cityState, zip].filter(Boolean).join(' ');
-
-  return [street, cityStateZip].filter(Boolean).join(', ');
-};
-
-// Expand carriers with multiple addresses into distinct selectable rows
-const expandCarrierRows = (carriers) => {
-  const rows = [];
-  carriers.forEach((carrier, cIdx) => {
-    const multiAddrs = Array.isArray(carrier.addresses) && carrier.addresses.length > 0
-      ? carrier.addresses
-      : (Array.isArray(carrier.addressList) && carrier.addressList.length > 0 ? carrier.addressList : null);
-
-    if (multiAddrs) {
-      multiAddrs.forEach((addr, aIdx) => {
-        const formatted = formatAddress(addr);
-        rows.push({
-          ...carrier,
-          _rowKey: `${carrier._id || carrier.id || cIdx}-addr-${aIdx}`,
-          resolvedAddress: formatted,
-          selectedAddress: formatted
-        });
-      });
-    } else {
-      const formatted = formatAddress({
-        addressLine1: carrier.addressLine1 || carrier.Address || carrier.address,
-        addressLine2: carrier.addressLine2 || carrier.Address2,
-        city: carrier.city || carrier.City,
-        state: carrier.state || carrier.State,
-        zipCode: carrier.zipCode || carrier.Zip
-      }) || carrier.payerAddress || carrier.address || '';
-
-      rows.push({
-        ...carrier,
-        _rowKey: `${carrier._id || carrier.id || cIdx}-0`,
-        resolvedAddress: formatted,
-        selectedAddress: formatted
-      });
-    }
-  });
-  return rows;
-};
-
-const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], handleSelectResult }) => {
+const CarrierSearchDropdown = ({ formData, handleInputChange, handleSelectResult }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const query = formData.carrierSearch || '';
 
-  const handleSearch = (val, openDropdown = true) => {
+  useEffect(() => {
+    if (!showDropdown) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const result = await insuranceCompanyService.getAllInsuranceCompanies(page, 40, query.trim(), 'active', true);
+        if (cancelled) return;
+        const rows = buildCarrierSearchRows(result?.companies || [], query);
+        setSearchResults((current) => page === 1 ? rows : [...current, ...rows]);
+        setHasMore(page < (result?.pagination?.totalPages || 1));
+      } catch (requestError) {
+        if (cancelled) return;
+        setError(requestError?.response?.data?.message || 'Could not load carriers. Try again.');
+        if (page === 1) setSearchResults([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, page === 1 ? 250 : 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showDropdown, query, page]);
+
+  const handleSearch = (val) => {
     handleInputChange('carrierSearch', val);
-
-    const rawPool = Array.isArray(companies) ? companies : (companies?.companies || []);
-    const searchPool = expandCarrierRows(rawPool);
-    let filtered = searchPool;
-
-    if (val) {
-      const query = val.toLowerCase();
-      filtered = searchPool.filter(item =>
-        (item.payerId || item.id?.toString() || '').toLowerCase().includes(query) ||
-        (item.name || item.carrierName || '').toLowerCase().includes(query) ||
-        (item.resolvedAddress || '').toLowerCase().includes(query) ||
-        (item.groupName || '').toLowerCase().includes(query) ||
-        (item.groupNumber || '').toLowerCase().includes(query) ||
-        (item.planName || item.name || '').toLowerCase().includes(query)
-      );
-    }
-
-    filtered = filtered.filter(item => item.isActive !== false);
-
-    if (formData.excludeSystemCarriers) {
-      filtered = filtered.filter(item => !item.isSystemCarrier && !item.isSystem);
-    }
-
-    setSearchResults(filtered);
-    if (openDropdown) {
-      setShowDropdown(true);
-    }
+    setPage(1);
+    setSearchResults([]);
+    setLoading(true);
+    setShowDropdown(true);
   };
 
   const onSelect = (item) => {
@@ -103,18 +59,18 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], ha
       <Box ref={setAnchorEl} sx={{ position: 'relative', mt: 1 }}>
         <FormInput
           label="Search Carrier"
-          subLabel="(Search by Payer Id, Carrier, Plan name, Group name, Group number)"
+          subLabel="(Search by Payer ID, carrier, address, employer, group name or number)"
           placeholder="Search carrier..."
           InputProps={{ endAdornment: <SearchIcon color="disabled" fontSize="small" /> }}
           sx={{ mb: 0.75 }}
           value={formData.carrierSearch || ''}
           onChange={(e) => handleSearch(e.target.value)}
-          onFocus={() => handleSearch(formData.carrierSearch || '')}
+          onFocus={() => { setLoading(true); setShowDropdown(true); }}
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         />
 
         <Popper
-          open={showDropdown && Boolean(anchorEl) && (searchResults.length > 0 || Boolean(formData.carrierSearch))}
+          open={showDropdown && Boolean(anchorEl)}
           anchorEl={anchorEl}
           placement="bottom-start"
           sx={{ zIndex: 1300 }}
@@ -143,7 +99,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], ha
                 {searchResults.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 2.5, color: '#6b7280', fontSize: '0.75rem' }}>
-                      No carriers found
+                      {loading ? 'Loading carriers...' : error || 'No carriers found'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -157,7 +113,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], ha
                         onSelect(item);
                       }}
                     >
-                      <TableCell sx={{ fontSize: '0.7rem', py: 1, whiteSpace: 'nowrap' }}>{item.payerId || item.id || '-'}</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', py: 1, whiteSpace: 'nowrap' }}>{item.payerId || '-'}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.name || item.carrierName || '-'}</TableCell>
                       <TableCell
                         sx={{
@@ -174,12 +130,18 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], ha
                       </TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
+                      <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.employerName || item.planName || '-'}</TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
+            {error && searchResults.length > 0 && <Typography sx={{ p: 1, color: 'error.main' }}>{error}</Typography>}
+            {hasMore && !error && (
+              <Button disabled={loading} fullWidth onMouseDown={(event) => event.preventDefault()} onClick={() => setPage((current) => current + 1)}>
+                {loading ? 'Loading...' : 'Load more carriers'}
+              </Button>
+            )}
           </Paper>
         </Popper>
       </Box>
@@ -190,7 +152,7 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies = [], ha
             checked={formData.excludeSystemCarriers || false}
             onChange={(e) => {
               handleInputChange('excludeSystemCarriers', e.target.checked);
-              setTimeout(() => handleSearch(formData.carrierSearch || '', false), 0);
+              setPage(1);
             }}
           />
         }
