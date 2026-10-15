@@ -9,15 +9,11 @@ import PhoneNumberInput from '../../shared/PhoneNumberInput';
 const InsuranceInformation = ({ 
   formData, 
   handleInputChange, 
-  insuranceCompanies = [],
   existingPlans = [],
   onSelectExistingPlan,
   assignmentOptions = [],
   errors = {}
 }) => {
-  // Existing plans (carrier + group with saved benefits) go first so a group name /
-  // number search lands on them before the bare carrier rows.
-  const companies = [...existingPlans, ...insuranceCompanies];
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
     { value: 1, label: 'Pay to dentist (Assignment)' },
     { value: 2, label: 'Pay to patient (Benefit)' }
@@ -72,6 +68,7 @@ const InsuranceInformation = ({
           formData={formData}
           handleInputChange={handleInputChange}
           handleSelectResult={handleSelectResult}
+          existingPlans={existingPlans}
         />
 
         <Box sx={{ mt: 1, mb: 1.5 }}>

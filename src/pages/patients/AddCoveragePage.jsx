@@ -141,8 +141,8 @@ const AddCoveragePage = () => {
   }, []);
 
   const existingPlans = React.useMemo(
-    () => buildExistingPlanOptions(allCoverages, allCompanies?.companies || allCompanies || [], insuranceId),
-    [allCoverages, allCompanies, insuranceId]
+    () => buildExistingPlanOptions(allCoverages, [], insuranceId),
+    [allCoverages, insuranceId]
   );
 
   const seenLabels = new Set();
@@ -891,7 +891,6 @@ const AddCoveragePage = () => {
                   handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
                 handleInputChange={handleInputChange}
-                insuranceCompanies={allCompanies?.companies || allCompanies || []}
                 existingPlans={existingPlans}
                 onSelectExistingPlan={applyExistingPlanBenefits}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
