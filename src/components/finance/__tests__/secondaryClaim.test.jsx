@@ -17,19 +17,66 @@ const detail2WithItems = {
   ...detail2.invoice,
   lineItems: (detail2.items || []).map((it) => ({ ...it, id: it._id, total: it.totalPrice })),
 };
+
+// A procedure the primary adjudicated to $0 (fully denied): the backend moves
+// the entire insurance portion onto the patient, so the stored line ends up
+// with insPortion 0, ptPortion = total, and no secondary estimate. It is still
+// carried by a paid primary claim, so the secondary claim must list it anyway.
+const deniedInvoiceId = 'INV-DENIED-001';
+const deniedProcId = 'PROC-DENIED-1';
+const deniedInvoice = {
+  _id: deniedInvoiceId,
+  id: deniedInvoiceId,
+  invoiceNumber: 'INV0000000999',
+  invoiceDate: '2026-10-10',
+  totalAmount: 100,
+  patientPortion: 100,
+  insurancePortion: 0,
+  status: 'draft',
+};
+const deniedInvoiceWithItems = {
+  ...deniedInvoice,
+  lineItems: [
+    {
+      _id: deniedProcId,
+      id: deniedProcId,
+      cptCode: 'D9999',
+      description: 'Primary-denied crown',
+      total: 100,
+      totalPrice: 100,
+      insPortion: 0,
+      ptPortion: 100,
+      primaryInsPortion: 0,
+      secondaryInsPortion: 0,
+      writeoff: 0,
+    },
+  ],
+};
+const deniedClaim = {
+  id: 'CLAIM-DENIED-1',
+  _id: 'CLAIM-DENIED-1',
+  claimNumber: 'CLM0000000001',
+  insuranceType: 'primary',
+  claimType: 'primary',
+  status: 'paid',
+  paidAmount: 0,
+  procedures: [{ id: deniedProcId, _id: deniedProcId, code: 'D9999' }],
+};
+
 // The real invoices list endpoint ignores `includeItems` and returns summaries
 // with no line items at all — mirror that here, so the hydration path in
 // InsurancePaymentDialog is genuinely exercised.
 const invoicesWithItems = [
   ...fixture.invoices.map((inv) => ({ ...inv, lineItems: undefined })),
   { ...detail2.invoice, lineItems: undefined },
+  { ...deniedInvoice, lineItems: undefined },
 ];
-
 const invoiceService = {
   getAllInvoices: async () => ({ invoices: invoicesWithItems }),
   getInvoiceById: async (id) => {
     if (String(id) === String(detail.invoice._id)) return detailWithItems;
     if (String(id) === String(detail2.invoice._id)) return detail2WithItems;
+    if (String(id) === String(deniedInvoiceId)) return deniedInvoiceWithItems;
     return { _id: id, lineItems: [] };
   },
   getPatientCompositeLedger: async () => ({
@@ -41,7 +88,7 @@ const invoiceService = {
 };
 
 const claimService = {
-  getAllClaims: async () => ({ claims: fixture.claims }),
+  getAllClaims: async () => ({ claims: [...fixture.claims, deniedClaim] }),
   updateClaim: async () => ({ data: {} }),
 };
 
@@ -191,5 +238,60 @@ describe('secondary claim — D2140 on INV1791464041, $28.00 still owed to MetLi
     ).join(' ');
 
     expect(t).not.toContain('D2140');
+  });
+});
+
+describe('secondary claim — procedure the primary DENIED ($0 payment)', () => {
+  let store;
+  let ManualClaimDialog;
+
+  beforeAll(async () => {
+    const claimReducer = (await import('../../../store/slices/claimSlice')).default;
+    const patientReducer = (await import('../../../store/slices/patientSlice')).default;
+    const providerReducer = (await import('../../../store/slices/providerSlice')).default;
+    const patientSlice = await import('../../../store/slices/patientSlice');
+    const claimSlice = await import('../../../store/slices/claimSlice');
+
+    store = configureStore({
+      reducer: { patient: patientReducer, claims: claimReducer, provider: providerReducer },
+      middleware: (g) => g({ serializableCheck: false }),
+    });
+    await store.dispatch(claimSlice.fetchDraftInvoicesForClaim(fixture.patientId));
+    store.dispatch({
+      type: patientSlice.fetchPatientInsurances.fulfilled.type,
+      payload: { patientId: fixture.patientId, insurances: fixture.coverages },
+    });
+    ManualClaimDialog = (await import('../ManualClaimDialog')).default;
+  });
+
+  const renderWith = (element) =>
+    renderToStaticMarkup(
+      <Provider store={store}>
+        <ThemeProvider theme={createTheme()}>
+          <SnackbarProvider>{element}</SnackbarProvider>
+        </ThemeProvider>
+      </Provider>,
+    );
+
+  it('keeps the denied procedure on the queue even with insPortion 0', () => {
+    const state = store.getState();
+    const queue = state.claims?.draftInvoicesCache?.[fixture.patientId] || [];
+    const codes = queue.flatMap((i) => (i.lineItems || []).map((l) => l.cptCode || l.code));
+    expect(codes).toContain('D9999');
+  });
+
+  it('still lists it for the secondary, and hides it from the primary', () => {
+    const secondary = fixture.coverages.find((c) => c.insuranceType === 'secondary');
+    const asSecondary = text(
+      renderWith(
+        <ManualClaimDialog patient={{ _id: fixture.patientId }} secondaryInsuranceId={String(secondary._id)} onClose={() => {}} />,
+      ),
+    ).join(' ');
+    const asPrimary = text(
+      renderWith(<ManualClaimDialog patient={{ _id: fixture.patientId }} onClose={() => {}} />),
+    ).join(' ');
+
+    expect(asSecondary).toContain('D9999');
+    expect(asPrimary).not.toContain('D9999');
   });
 });

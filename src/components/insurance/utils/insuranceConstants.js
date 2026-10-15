@@ -18,7 +18,12 @@ export const DEFAULT_COVERAGE = {
 export const COVERAGE_DATA = {
   diagnostic: [
     { id: 1, label: 'Preventative', coverage: 100, waiting: 0, notes: '' },
-    { id: 2, label: 'Basic', coverage: 80, waiting: 0, notes: '' }
+    { id: 2, label: 'Basic', coverage: 80, waiting: 0, notes: '' },
+    // Periapical X-rays are on nearly every plan, so we pre-seed them as procedure-code
+    // overrides. Shape mirrors what AddCoverageItemDialog + FinalCoverageSection produce
+    // for a user-added code, so they stay editable/deletable and save the same way.
+    { id: 23, code: 'D0220', procedure: 'D0220', label: 'D0220', description: 'Intraoral - periapical first radiographic image', category: 'Diagnostic', coverage: 80, waiting: 0, waitingPeriod: 0, notes: '', deletable: true, isCustom: true, noCoverage: false },
+    { id: 24, code: 'D0230', procedure: 'D0230', label: 'D0230', description: 'Intraoral - periapical each additional radiographic image', category: 'Diagnostic', coverage: 80, waiting: 0, waitingPeriod: 0, notes: '', deletable: true, isCustom: true, noCoverage: false }
   ],
   preventative: [
     { id: 3, label: 'Preventative', coverage: 100, waiting: 0, notes: '' },

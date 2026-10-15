@@ -30,7 +30,10 @@ import AddCoverageHeader from '../../components/insurance/components/AddCoverage
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
+import { sanitizeCoverageForType } from './utils/coveragePayloadBuilder';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
+import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
+import { buildExistingPlanOptions, extractPlanBenefits } from './utils/existingPlanHelpers';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -57,6 +60,9 @@ const AddCoveragePage = () => {
   const [coverageCategoryData, setCoverageCategoryData] = useState(COVERAGE_DATA);
   const [templateToApply, setTemplateToApply] = useState(null);
   const [isTemplateConfirmOpen, setIsTemplateConfirmOpen] = useState(false);
+  // Raw coverages across all patients — the only place plan benefits (deductibles,
+  // coverages, downgrades) are stored, so the carrier search can reuse them by group.
+  const [allCoverages, setAllCoverages] = useState([]);
 
   const [formData, setFormData] = useState({
     carrierName: '',
@@ -122,6 +128,20 @@ const AddCoveragePage = () => {
     setCoverageCategoryData,
     coverageBookData,
     coverageCategoryData
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    // Best-effort: if this fails the carrier search still works against carriers only.
+    patientService.getAllPatientInsurances()
+      .then((list) => { if (!cancelled) setAllCoverages(list); })
+      .catch((err) => console.error('Failed to load existing plans for carrier search', err));
+    return () => { cancelled = true; };
+  }, []);
+
+  const existingPlans = React.useMemo(
+    () => buildExistingPlanOptions(allCoverages, allCompanies?.companies || allCompanies || [], insuranceId),
+    [allCoverages, allCompanies, insuranceId]
   );
 
   const seenLabels = new Set();
@@ -194,9 +214,13 @@ const AddCoveragePage = () => {
 
       const newErrors = {};
 
-      if ((!formData.insuranceCompanyId && !formData.carrierName?.trim()) || !formData.payerId?.trim()) {
-        newErrors.insuranceCompanyId = 'Carrier Name and Payer ID are required';
+      if (!formData.insuranceCompanyId && !formData.carrierName?.trim()) {
+        newErrors.insuranceCompanyId = 'Carrier Name is required';
       }
+
+      const payerId = normalizePayerId(formData.payerId);
+      const payerIdError = getPayerIdError(payerId);
+      if (payerIdError) newErrors.payerId = payerIdError;
 
       if (!formData.insurancePlan?.trim()) {
         newErrors.insurancePlan = 'Insurance Plan is required';
@@ -354,6 +378,14 @@ const AddCoveragePage = () => {
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
 
+      // A Copay/Fixed Plan prices each code off its flat plan portion, so its
+      // coverage tables must not persist coverage percentages.
+      const sanitizedCoverage = sanitizeCoverageForType(
+        coverageCategoryData,
+        coverageBookData,
+        formData.coverageType,
+      );
+
       const indMaxVal = formData.coverage?.individual?.annualMax;
       const indUsedVal = formData.coverage?.individual?.usedAmount;
       const parsedIndMax = indMaxVal != null && indMaxVal !== '' ? parseFloat(String(indMaxVal).replace(/[^0-9.-]+/g, "")) : undefined;
@@ -361,7 +393,7 @@ const AddCoveragePage = () => {
 
       const payload = {
         insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
-        payerId: formData.payerId || undefined,
+        payerId,
         policyNumber: formData.subscriber.subscriberId,
         groupNumber: formData.groupNumber || undefined,
         groupName: formData.groupName || undefined,
@@ -387,8 +419,8 @@ const AddCoveragePage = () => {
               : val
           ])
         ),
-        coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
-        coverageBookData: coverageBookData,
+        coverageCategoryTable: Object.entries(sanitizedCoverage.coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
+        coverageBookData: sanitizedCoverage.coverageBookData,
         planFeeGuide: formData.planFeeGuide,
         coverageType: formData.coverageType,
         subscriberSsn: formData.subscriber.ssn ? formData.subscriber.ssn.replace(/\D/g, '') : undefined,
@@ -421,6 +453,13 @@ const AddCoveragePage = () => {
             name: formData.insurancePlan,
             description: [formData.carrierName, formData.groupName].filter(Boolean).join(' — ') || undefined,
             benefits: [{
+              // Carrier details are stored too so applying the template restores the
+              // whole billing block, not just the plan rows.
+              insuranceCompanyId: formData.insuranceCompanyId,
+              carrierName: formData.carrierName,
+              payerId,
+              carrierPhone: formData.carrierPhone,
+              payerAddress: formData.payerAddress,
               insurancePlan: formData.insurancePlan,
               groupName: formData.groupName,
               groupNumber: formData.groupNumber,
@@ -444,6 +483,9 @@ const AddCoveragePage = () => {
       const backendErrors = err?.data?.error?.errors;
       if (backendErrors && typeof backendErrors === 'object') {
         const mappedErrors = {};
+        if (backendErrors.payerId) {
+          mappedErrors.payerId = Array.isArray(backendErrors.payerId) ? backendErrors.payerId[0] : backendErrors.payerId;
+        }
         if (backendErrors.policyNumber) {
           mappedErrors.subscriberId = Array.isArray(backendErrors.policyNumber) ? backendErrors.policyNumber[0] : backendErrors.policyNumber;
         }
@@ -498,15 +540,60 @@ const AddCoveragePage = () => {
     // "Save as Template") nest them inside benefits[0] since the backend's
     // coverage-template model only stores { name, description, benefits }.
     const source = template.benefits?.[0] || template;
+    // Use the template's value whenever it has one — the user already confirmed the
+    // overwrite, so keeping stale values from `prev` would leave a mixed-up plan.
+    const pick = (key, fallback) => (source[key] !== undefined && source[key] !== null && source[key] !== '' ? source[key] : fallback);
     setFormData(prev => ({
       ...prev,
-      insurancePlan: source.insurancePlan || template.name || prev.insurancePlan,
-      groupName: source.groupName || prev.groupName,
-      groupNumber: source.groupNumber || prev.groupNumber,
-      phoneNumber: source.phoneNumber || prev.phoneNumber,
+      // Carrier details are only present on templates saved after carrier info was
+      // added to the template payload; older templates fall back to current values.
+      insuranceCompanyId: pick('insuranceCompanyId', prev.insuranceCompanyId),
+      carrierName: pick('carrierName', prev.carrierName),
+      payerId: source.payerId ? normalizePayerId(source.payerId) : prev.payerId,
+      carrierPhone: pick('carrierPhone', prev.carrierPhone),
+      payerAddress: pick('payerAddress', prev.payerAddress),
+      insurancePlan: pick('insurancePlan', template.name || prev.insurancePlan),
+      groupName: pick('groupName', prev.groupName),
+      groupNumber: pick('groupNumber', prev.groupNumber),
+      phoneNumber: pick('phoneNumber', prev.phoneNumber),
       healthPlan: source.healthPlan ?? prev.healthPlan,
-      assignmentOfBenefits: source.assignmentOfBenefits || prev.assignmentOfBenefits,
+      assignmentOfBenefits: parseInt(source.assignmentOfBenefits, 10) || prev.assignmentOfBenefits,
     }));
+    // Filled fields are now valid; drop the red "required" errors left from a failed save.
+    setErrors(prev => ({ ...prev, insuranceCompanyId: null, payerId: null, insurancePlan: null, groupName: null, groupNumber: null }));
+  };
+
+  /**
+   * Called when the carrier search row is an existing plan (matched by group).
+   * Copies the plan-level benefits that the other patient's coverage already has
+   * set up so staff don't re-key deductibles, maximums, percentages and downgrades.
+   */
+  const applyExistingPlanBenefits = (sourceCoverage) => {
+    const { formFields, coverageCategoryData: categories, coverageBookData: book } = extractPlanBenefits(sourceCoverage);
+    setFormData(prev => {
+      const next = { ...prev, ...formFields };
+      // Renewal month drives the policy end date, so keep them consistent.
+      if (formFields.renewalMonth) {
+        const calculatedEnd = calculatePolicyEndDate(next.policyStarted, next.renewalMonth);
+        if (calculatedEnd) next.policyEnds = calculatedEnd;
+      }
+      return next;
+    });
+    if (categories) setCoverageCategoryData(categories);
+    if (book) setCoverageBookData(book);
+
+    const copied = [
+      formFields.deductibles && 'deductibles',
+      formFields.coverage && 'maximums',
+      categories && 'coverages & downgrades',
+      book && 'coverage book',
+    ].filter(Boolean);
+    showSnackbar(
+      copied.length
+        ? `Copied ${copied.join(', ')} from the existing plan`
+        : 'Existing plan selected, but it has no saved benefits to copy',
+      copied.length ? 'success' : 'info'
+    );
   };
 
   const handleApplyTemplate = (template) => {
@@ -703,7 +790,19 @@ const AddCoveragePage = () => {
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field, value, { rejectInvalid = false } = {}) => {
+    if (field === 'payerId') {
+      const payerId = normalizePayerId(value);
+      const payerIdError = getPayerIdError(payerId, { allowIncomplete: rejectInvalid });
+      setErrors(prev => ({ ...prev, payerId: payerIdError }));
+      // Reject invalid typing/pastes in full, without stripping or truncating IDs.
+      // Selected carrier IDs stay visible and must pass validation before saving.
+      if (!rejectInvalid || !payerIdError) {
+        setFormData(prev => ({ ...prev, payerId }));
+      }
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -713,7 +812,9 @@ const AddCoveragePage = () => {
       showSnackbar("Save as template", 'info');
     }
 
-    if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
+    if (field === 'carrierName') {
+      setErrors(prev => ({ ...prev, insuranceCompanyId: null }));
+    } else if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
       setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
     } else if (field === 'groupName') {
       setErrors(prev => ({ ...prev, groupName: null }));
@@ -779,6 +880,8 @@ const AddCoveragePage = () => {
                 }}
                 handleInputChange={handleInputChange}
                 insuranceCompanies={allCompanies?.companies || allCompanies || []}
+                existingPlans={existingPlans}
+                onSelectExistingPlan={applyExistingPlanBenefits}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 tinyText={STYLE_CONSTANTS.tinyText}
                 blueHeader={STYLE_CONSTANTS.blueHeader}
@@ -933,6 +1036,7 @@ const AddCoveragePage = () => {
         coverageData={coverageBookData}
         setCoverageData={setCoverageBookData}
         feeGuideId={formData.planFeeGuide}
+        coverageType={formData.coverageType}
       />
 
       <ConfirmationDialog

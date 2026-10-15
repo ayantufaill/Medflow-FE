@@ -37,6 +37,8 @@ export default defineConfig(({ mode }) => {
         'src/utils/icd10.test.js',
         'src/utils/createTreatmentPlanDraft.test.js',
         'src/services/invoice.service.test.js',
+        'src/utils/paymentDraftFromLedger.test.js',
+        'src/components/finance/__tests__/secondaryClaim.test.jsx',
         'src/components/finance/add-payment/AddPaymentInvoiceList.test.jsx',
       ],
     },

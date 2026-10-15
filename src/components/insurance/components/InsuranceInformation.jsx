@@ -10,10 +10,14 @@ const InsuranceInformation = ({
   formData, 
   handleInputChange, 
   insuranceCompanies = [],
+  existingPlans = [],
+  onSelectExistingPlan,
   assignmentOptions = [],
   errors = {}
 }) => {
-  const companies = insuranceCompanies.length > 0 ? insuranceCompanies : [];
+  // Existing plans (carrier + group with saved benefits) go first so a group name /
+  // number search lands on them before the bare carrier rows.
+  const companies = [...existingPlans, ...insuranceCompanies];
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
     { value: 1, label: 'Pay to dentist (Assignment)' },
     { value: 2, label: 'Pay to patient (Benefit)' }
@@ -73,6 +77,10 @@ const InsuranceInformation = ({
       handleInputChange('planFeeGuide', item.feeSched || item.feeGuide);
     }
     handleInputChange('carrierSearch', '');
+    // Existing plans also carry deductibles, coverages and downgrades to copy over.
+    if (item.isExistingPlan && item.sourceCoverage && onSelectExistingPlan) {
+      onSelectExistingPlan(item.sourceCoverage);
+    }
   };
 
   return (
@@ -120,9 +128,11 @@ const InsuranceInformation = ({
               <FormInput
                 label="Payer ID"
                 required
+                placeholder="3 to 10 letters or numbers"
                 value={formData.payerId || ''}
-                onChange={(e) => handleInputChange('payerId', e.target.value)}
-                error={!!errors.insuranceCompanyId}
+                onChange={(e) => handleInputChange('payerId', e.target.value, { rejectInvalid: true })}
+                error={!!errors.payerId}
+                helperText={errors.payerId}
               />
             </Box>
             <Box sx={{ flex: 1 }}>

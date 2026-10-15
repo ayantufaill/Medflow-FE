@@ -73,7 +73,7 @@ const FinanceDialogManager = ({
       )}
 
       {showInsurancePayment && (
-        <DialogWrapper onClose={() => setShowInsurancePayment(false)} maxWidth="1300px">
+        <DialogWrapper onClose={() => setShowInsurancePayment(false)} maxWidth="calc(100vw - 48px)">
           <InsurancePaymentDialog patient={patient} onClose={() => setShowInsurancePayment(false)} onSave={handleInsurancePaymentSave} />
         </DialogWrapper>
       )}

@@ -127,6 +127,14 @@ export const paymentService = {
   },
 
   /**
+   * Update an existing payment (method, cheque number, etc.)
+   */
+  async updatePayment(paymentId, updates) {
+    const response = await apiClient.patch(`/payments/${paymentId}`, updates);
+    return response.data.data;
+  },
+
+  /**
    * Get payment methods
    */
   getPaymentMethods() {

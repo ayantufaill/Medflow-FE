@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Table, TableHead, TableBody, TableRow, TableCell, TextField, Chip, IconButton } from "@mui/material";
 import { DeleteOutline as DeleteIcon } from "@mui/icons-material";
 
-const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteGroup }) => (
+const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteGroup, showCoveragePercent = true }) => (
   <Box sx={{ border: '1px solid #DFE5EC', borderRadius: '8px', mb: 2, overflow: 'hidden' }}>
     <Box sx={{ bgcolor: '#f0f4f8', py: 1, px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #DFE5EC' }}>
       <Box sx={{ flex: 1, textAlign: 'center' }}>
@@ -22,13 +22,15 @@ const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteG
     <Table size="small">
       <TableHead>
         <TableRow>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: '40%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
+          <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: showCoveragePercent ? '40%' : '60%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
             CATEGORY / SUB-TYPE
           </TableCell>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: '22%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-            COVERAGE %
-          </TableCell>
-          <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: '38%', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3 }}>
+          {showCoveragePercent && (
+            <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: '22%', borderRight: '1px solid #f0f0f0', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+              COVERAGE %
+            </TableCell>
+          )}
+          <TableCell sx={{ fontWeight: 700, fontSize: '0.6rem', color: '#777', textTransform: 'uppercase', width: showCoveragePercent ? '38%' : '40%', py: 1, px: 0.75, letterSpacing: '0.2px', lineHeight: 1.3 }}>
             WAITING PERIOD<br />(MONTHS)
           </TableCell>
         </TableRow>
@@ -68,31 +70,33 @@ const CoverageGroup = ({ title, rows = [], onDeleteItem, onChangeItem, onDeleteG
                 </Box>
               </Box>
             </TableCell>
-            <TableCell sx={{ fontSize: '0.7rem', color: '#1976d2', borderRight: '1px solid #f0f0f0', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
-              <TextField 
-                variant="standard"
-                size="small" 
-                type="number"
-                value={row.coverage !== undefined ? row.coverage : ''}
-                InputProps={{ inputProps: { min: 0, max: 100 }, disableUnderline: false }}
-                onChange={(e) => {
-                  if (e.target.value === '') {
-                    if (onChangeItem) onChangeItem(row.id, 'coverage', '');
-                    return;
-                  }
-                  let val = parseInt(e.target.value, 10);
-                  if (isNaN(val)) val = 0;
-                  if (val < 0) val = 0;
-                  if (val > 100) val = 100;
-                  if (onChangeItem) onChangeItem(row.id, 'coverage', val);
-                }}
-                sx={{ 
-                  '& input': { py: 0.1, px: 0.5, fontSize: '0.7rem', color: '#1976d2', width: '35px', textAlign: 'center' },
-                  '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 },
-                  '& input[type=number]': { MozAppearance: 'textfield' }
-                }} 
-              />%
-            </TableCell>
+            {showCoveragePercent && (
+              <TableCell sx={{ fontSize: '0.7rem', color: '#1976d2', borderRight: '1px solid #f0f0f0', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                <TextField 
+                  variant="standard"
+                  size="small" 
+                  type="number"
+                  value={row.coverage !== undefined ? row.coverage : ''}
+                  InputProps={{ inputProps: { min: 0, max: 100 }, disableUnderline: false }}
+                  onChange={(e) => {
+                    if (e.target.value === '') {
+                      if (onChangeItem) onChangeItem(row.id, 'coverage', '');
+                      return;
+                    }
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) val = 0;
+                    if (val < 0) val = 0;
+                    if (val > 100) val = 100;
+                    if (onChangeItem) onChangeItem(row.id, 'coverage', val);
+                  }}
+                  sx={{ 
+                    '& input': { py: 0.1, px: 0.5, fontSize: '0.7rem', color: '#1976d2', width: '35px', textAlign: 'center' },
+                    '& input[type=number]::-webkit-inner-spin-button, & input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 },
+                    '& input[type=number]': { MozAppearance: 'textfield' }
+                  }} 
+                />%
+              </TableCell>
+            )}
             <TableCell sx={{ fontSize: '0.7rem', color: '#1976d2', py: 1.2, px: 0.75, borderBottom: index === rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <TextField 

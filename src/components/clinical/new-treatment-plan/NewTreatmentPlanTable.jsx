@@ -41,6 +41,7 @@ import {
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 
 import { OutlinedInput } from '../../patients/form-components/formInputs';
+import { getCoverageBlockedReasonLabel } from '../../../utils/cdtCategoryHelper';
 import dayjs from 'dayjs';
 
 import documentSvg from '../../../assets/treatmentplan/document_1.svg';
@@ -396,6 +397,11 @@ const NewTreatmentPlanTable = ({ appointment, appointmentTypes, onUpdateAppointm
                       {row.downgradedCode && (
                         <Box sx={{ fontSize: '0.75rem', color: '#64748b', mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <span style={{ color: '#ef4444' }}>↓</span> Downgraded to {row.downgradedCode}
+                        </Box>
+                      )}
+                      {row.coverageBlockedReason && (
+                        <Box sx={{ fontSize: '0.75rem', color: '#b45309', mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <span style={{ color: '#d97706' }}>⚠</span> {getCoverageBlockedReasonLabel(row.coverageBlockedReason)}
                         </Box>
                       )}
                     </TableCell>

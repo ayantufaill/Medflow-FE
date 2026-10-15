@@ -15,6 +15,8 @@ module.exports = {
     "<rootDir>/src/utils/icd10.test.js",
     "<rootDir>/src/utils/createTreatmentPlanDraft.test.js",
     "<rootDir>/src/services/invoice.service.test.js",
+    "<rootDir>/src/utils/paymentDraftFromLedger.test.js",
+    "<rootDir>/src/components/finance/__tests__/secondaryClaim.test.jsx",
     "<rootDir>/src/components/finance/add-payment/AddPaymentInvoiceList.test.jsx",
   ],
   // The COB integration suites drive full MUI dialogs through userEvent (which

@@ -57,6 +57,42 @@ const claimUpdatedAt = (claim) =>
   claim?.attachmentUpdatedAt ||
   null;
 
+// Each invoice detail row carries its own timestamp: payments have an exact
+// `paidAt`, while adjustments, claims and the invoice statement only carry a
+// calendar date. Details used to be ordered with a numeric-id sort that only
+// held within one table — payment ids are ~1.7e15 while adjustment ids are
+// small sequence numbers, so every payment outranked every adjustment no matter
+// when it happened. Sort by the entry's own timestamp (newest first) instead.
+const ledgerDetailTime = (detail) => {
+  const raw = detail?.createdAt || detail?.rawDate || detail?.date;
+  if (!raw) return null;
+  // Date-only values ("2026-10-15") parse as UTC midnight and full ISO
+  // timestamps as their instant, so both compare on one UTC timeline.
+  const time = raw instanceof Date ? raw.getTime() : Date.parse(raw);
+  return Number.isFinite(time) ? time : null;
+};
+
+const sortLedgerDetailsNewestFirst = (details = []) =>
+  details
+    .map((detail, index) => ({ detail, index }))
+    .sort((a, b) => {
+      // The invoice's own statement line is the anchor row and stays last.
+      const aGrouped = a.detail?.isGrouped ? 1 : 0;
+      const bGrouped = b.detail?.isGrouped ? 1 : 0;
+      if (aGrouped !== bGrouped) return aGrouped - bGrouped;
+
+      const aTime = ledgerDetailTime(a.detail);
+      const bTime = ledgerDetailTime(b.detail);
+      // Rows without a usable time drop to the bottom; ties (same date, no
+      // time available) keep their existing order rather than inventing one.
+      if (aTime === null && bTime === null) return a.index - b.index;
+      if (aTime === null) return 1;
+      if (bTime === null) return -1;
+      if (bTime !== aTime) return bTime - aTime;
+      return a.index - b.index;
+    })
+    .map(({ detail }) => detail);
+
 const adjustmentDisplayType = (adjustment = {}) => {
   const note = String(adjustment.notes || "");
   const selectedType = note.match(/^\s*(.*?)\s+applied\s+to\s+/i)?.[1]?.trim();
@@ -273,7 +309,31 @@ export const fetchLedgerItems = createAsyncThunk(
                 title:
                   payment.paymentSource === "insurance_company" ||
                   payment.method === "insurance"
-                    ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "EFT"} : $${rawAmount.toFixed(2)} / $${rawAmount.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
+                    ? (() => {
+                        let insuranceCompanyName = "Insurance";
+                        if (payment.notes) {
+                          const m = payment.notes.match(/Insurance Claim #(\d+)/i);
+                          if (m?.[1]) {
+                            const num = m[1];
+                            const match = invoiceClaims.find(
+                              (c) =>
+                                String(c.claimNumber) === num ||
+                                String(c.id) === num ||
+                                String(c._id) === num,
+                            );
+                            if (match?.insuranceCompany?.name) {
+                              insuranceCompanyName = match.insuranceCompany.name;
+                            }
+                          }
+                        }
+                        if (insuranceCompanyName === "Insurance") {
+                          insuranceCompanyName =
+                            invoice?.insuranceCompany?.name ||
+                            invoice?.coverages?.[0]?.insuranceCompany?.name ||
+                            "Insurance";
+                        }
+                        return `Ins payment #${payment.receiptNumber || payment.paymentCode || payment.id} by ${insuranceCompanyName} with: ${payment.paymentMethod || "EFT"} : $${rawAmount.toFixed(2)} / $${rawAmount.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`;
+                      })()
                     : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "Patient Check"} : $${rawAmount.toFixed(2)} / $${rawAmount.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`,
                 amount: isVoided
                   ? "(Voided)"
@@ -287,6 +347,8 @@ export const fetchLedgerItems = createAsyncThunk(
                   payment.paymentSource === "insurance_company" ||
                   payment.method === "insurance",
                 isVoided,
+                method: payment.paymentMethod || payment.method || null,
+                chequeNo: payment.chequeNo ?? null,
                 initials: creatorDisplay(payment),
                 createdByName: payment.createdByName || null,
                 createdAt: payment.paidAt || null,
@@ -969,11 +1031,11 @@ export const fetchLedgerItems = createAsyncThunk(
             ptPaid: `$${ptPaidDisplay.toFixed(2)}`,
             insPaid: `$${totalInsPaidAmt.toFixed(2)}`,
           },
-          details: [
+          details: sortLedgerDetailsNewestFirst([
             ...mappedCombinedDetails,
             ...claimsMapped,
             ...detailsMapped,
-          ],
+          ]),
         };
       });
 
@@ -1171,10 +1233,26 @@ export const fetchInvoiceDetails = createAsyncThunk(
 
       let totalPaidAmt = 0;
       let paymentsMapped = [];
+      let claimsMapped = [];
+      let claims = [];
       try {
-        const paymentsResponse =
-          await paymentService.getPaymentsByInvoice(invoiceId);
+        const [paymentsResponse, claimsResponse] = await Promise.all([
+          paymentService.getPaymentsByInvoice(invoiceId),
+          claimService.getAllClaims({ invoiceId }),
+        ]);
+
         const payments = paymentsResponse?.payments || paymentsResponse || [];
+        claims = claimsResponse?.claims || claimsResponse || [];
+
+        // Build claim lookup for insurance payment titles
+        const claimByNumber = new Map();
+        (Array.isArray(claims) ? claims : []).forEach((c) => {
+          const num = String(c.claimNumber || c.id || c._id || "");
+          if (num) {
+            claimByNumber.set(num, c);
+          }
+        });
+
         const invTotal = Number(fullInvoice.totalAmount || 0);
         const invPaid = Number(fullInvoice.paidAmount || 0);
         const invBal = Number(fullInvoice.balanceDue || 0);
@@ -1207,15 +1285,29 @@ export const fetchInvoiceDetails = createAsyncThunk(
             const isIns =
               payment.paymentSource === "insurance_company" ||
               payment.method === "insurance";
-            if (isIns) {
-              // we do not have totalInsPaidAmt declared in this scope, but we can track it
-            }
 
             totalPaidAmt += paymentAmt;
             runningBalance -= paymentAmt;
 
+            let insuranceCompanyName = "Insurance";
+            if (isIns && payment.notes) {
+              const m = payment.notes.match(/Insurance Claim #(\d+)/i);
+              if (m?.[1]) {
+                const claim = claimByNumber.get(m[1]);
+                if (claim?.insuranceCompany?.name) {
+                  insuranceCompanyName = claim.insuranceCompany.name;
+                }
+              }
+            }
+            if (insuranceCompanyName === "Insurance") {
+              insuranceCompanyName =
+                fullInvoice?.insuranceCompany?.name ||
+                fullInvoice?.coverages?.[0]?.insuranceCompany?.name ||
+                "Insurance";
+            }
+
             const title = isIns
-              ? `Ins Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "EFT"} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
+              ? `Ins payment #${payment.receiptNumber || payment.paymentCode || payment.id} by ${insuranceCompanyName} with: ${payment.paymentMethod || "EFT"} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`
               : `Pt Payment #${payment.receiptNumber || payment.paymentCode || payment.id} with: ${payment.paymentMethod || "Patient Check"} : $${originalAmt.toFixed(2)} / $${originalAmt.toFixed(2)}${isVoided ? " (VOIDED)" : ""}`;
 
             return {
@@ -1225,21 +1317,20 @@ export const fetchInvoiceDetails = createAsyncThunk(
                 ? "(Voided)"
                 : `$${Math.max(0, runningBalance).toFixed(2)}`,
               isPayment: true,
+              isInsurancePayment: isIns,
               isVoided,
+              method: payment.paymentMethod || payment.method || null,
+              chequeNo: payment.chequeNo ?? null,
               createdAt: payment.paidAt || null,
             };
           })
           .reverse();
       } catch (e) {
-        console.error("Failed to fetch payments for invoice", e);
+        console.error("Failed to fetch payments/claims for invoice", e);
       }
 
-      let claimsMapped = [];
-      try {
-        const claimsResponse = await claimService.getAllClaims({ invoiceId });
-        const claims = claimsResponse?.claims || claimsResponse || [];
-
-        claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => {
+      if (Array.isArray(claims) && claimsMapped.length === 0) {
+        claimsMapped = claims.map((claim) => {
           let specificProcedures = claim.procedures;
           if (!specificProcedures || specificProcedures.length === 0) {
             specificProcedures = (fullInvoice.lineItems || []).filter(
@@ -1291,8 +1382,61 @@ export const fetchInvoiceDetails = createAsyncThunk(
             description: claim.notes || claim.description || "",
           };
         });
-      } catch (e) {
-        console.error("Failed to fetch claims for invoice", e);
+      } else if (Array.isArray(claims) && claimsMapped.length > 0) {
+        // ensure claims are mapped if not already
+        claimsMapped = (Array.isArray(claims) ? claims : []).map((claim) => {
+          const existing = claimsMapped.find((m) => String(m.id) === String(claim.id || claim._id));
+          let specificProcedures = claim.procedures || existing?.procedures;
+          if (!specificProcedures || specificProcedures.length === 0) {
+            specificProcedures = (fullInvoice.lineItems || []).filter(
+              (l) => !isDbiProcedure(l),
+            );
+          } else {
+            specificProcedures = specificProcedures
+              .map((proc) => {
+                const matchedLine = (fullInvoice.lineItems || []).find(
+                  (l) =>
+                    String(
+                      l.id || l._id || l.procedureId || l.procId || l.ProcNum,
+                    ) === String(proc.id || proc.ProcNum || proc.procedureId),
+                );
+                return { ...matchedLine, ...proc };
+              })
+              .filter((proc) => !isDbiProcedure(proc));
+          }
+          const specificAmount = specificProcedures.reduce(
+            (sum, line) =>
+              sum +
+              Number(
+                line.fee ||
+                  line.charge ||
+                  line.total ||
+                  line.totalPrice ||
+                  line.ProcFee ||
+                  0,
+              ),
+            0,
+          );
+          return {
+            id: claim.id || claim._id,
+            claimNumber: claim.claimNumber || claim.id || claim._id,
+            status: claim.statusDisplay || claim.status || existing?.status,
+            attachments: claim.attachments || [],
+            hasAttachment: Boolean(claim.hasAttachment),
+            eobs: claim.eobs || [],
+            title: `Ins Claim #${claim.claimNumber || claim.id} (${claim.statusDisplay || claim.status || existing?.status || ""}) with: ${claim.insuranceCompany?.name || existing?.insuranceCompany?.name || "Insurance"}`,
+            amount: `$${specificAmount.toFixed(2)}`,
+            isClaim: true,
+            isPayment: false,
+            procedures: specificProcedures,
+            createdAt: claim.createdAt || null,
+            createdByName: claim.createdByName || null,
+            updatedByName: claimUpdatedByName(claim),
+            updatedAt: claimUpdatedAt(claim),
+            description: claim.notes || claim.description || "",
+            insuranceCompany: claim.insuranceCompany || existing?.insuranceCompany,
+          };
+        });
       }
 
       let detailsMapped = [];
@@ -1331,7 +1475,11 @@ export const fetchInvoiceDetails = createAsyncThunk(
       return {
         patientId,
         invoiceId,
-        details: [...paymentsMapped, ...claimsMapped, ...detailsMapped],
+        details: sortLedgerDetailsNewestFirst([
+          ...paymentsMapped,
+          ...claimsMapped,
+          ...detailsMapped,
+        ]),
         totalPaidAmt,
       };
     } catch (err) {
@@ -3182,7 +3330,10 @@ const billingSlice = createSlice({
         const existingAdjs = (items[idx].details || []).filter(
           (d) => d.isAdjustment,
         );
-        items[idx].details = [...existingAdjs, ...details];
+        items[idx].details = sortLedgerDetailsNewestFirst([
+          ...existingAdjs,
+          ...details,
+        ]);
         if (totalPaidAmt > 0) {
           items[idx].summary.ptPaid = `$${totalPaidAmt.toFixed(2)}`;
         }

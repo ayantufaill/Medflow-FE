@@ -43,8 +43,12 @@ const CoverageBookModal = ({
   coverageData = [],
   setCoverageData,
   feeGuideId,
+  coverageType,
   onSave,
 }) => {
+  const isFixedBenefitPlan = ['flat', 'copay'].includes(
+    String(coverageType || '').toLowerCase().trim(),
+  );
   const [localCoverageData, setLocalCoverageData] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const hasLoadedRef = React.useRef(false);
@@ -508,7 +512,7 @@ const CoverageBookModal = ({
                       sx={{ ...headerCellStyle, width: "8%" }}
                       align="center"
                     >
-                      Flat Plan Portion
+                      {isFixedBenefitPlan ? "Patient Co-pay" : "Flat Plan Portion"}
                       <HelpOutlineIcon
                         sx={{
                           fontSize: "0.7rem",

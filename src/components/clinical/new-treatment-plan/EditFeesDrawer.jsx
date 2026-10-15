@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, roundedSelectMenuProps, standardFieldSx } from '../../../constants/styles';
+import { getCoverageBlockedReasonLabel } from '../../../utils/cdtCategoryHelper';
 
 const amount = (value) => {
   if (value === null || value === undefined || value === '-') return '';
@@ -161,6 +162,11 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving, do
             <Typography sx={{ mb: 1.5 }}>{form?.patientEstimate === '' ? 'Unavailable' : `$${Number(form?.patientEstimate || 0).toFixed(2)}`}</Typography>
             <Typography sx={labelSx}>Estimate By</Typography>
             <Typography>{procedure?.estimateSource || 'Auto'}</Typography>
+            {procedure?.coverageBlockedReason && (
+              <Typography sx={{ mt: 0.5, fontSize: fontSize.base, color: '#b45309', fontWeight: fontWeight.semibold }}>
+                ⚠ Insurance not applied — {getCoverageBlockedReasonLabel(procedure.coverageBlockedReason)}
+              </Typography>
+            )}
             {onRevert && procedure?.estimateSource === 'Manual' && (
               <Button onClick={onRevert} disabled={saving} sx={{ mt: 1, textTransform: 'none' }}>Revert to Auto-Estimates</Button>
             )}

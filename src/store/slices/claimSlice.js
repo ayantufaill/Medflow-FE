@@ -168,6 +168,13 @@ export const fetchDraftInvoicesForClaim = createAsyncThunk(
         (lineItems || [])
           .filter((item) => {
             if (item.dbi === true) return false;
+            // A procedure already carried by a primary claim still has to be
+            // adjudicated by the secondary, even when the primary paid $0
+            // (insPortion moved entirely onto the patient, so it now looks
+            // patient-only). Keep it in the queue so the secondary claim can
+            // include it; it stays hidden from the primary list at render time.
+            const itemIds = getProcedureIdentityValues(item);
+            if (itemIds.some((id) => claimedPrimaryItemIds.has(id))) return true;
             const writeoff = Number(item.writeoff || 0);
             const ins = Number(item.insPortion || item.insurance || 0);
             const secIns = Number(item.secondaryInsPortion || 0);
