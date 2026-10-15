@@ -47,11 +47,8 @@ export const useCoverageData = (
   const [loading, setLoading] = useState(false);
 
   const {
-    companies: allCompanies,
-    companiesLoading,
     templates: coverageTemplates,
     templatesLoading,
-    fetchCompanies,
     fetchTemplates,
     createTemplate,
   } = useInsuranceCatalog();
@@ -66,7 +63,6 @@ export const useCoverageData = (
   const feeGuidesLoading = useSelector(selectFeeGuidesLoading);
 
   const initialFetchRef = useRef({
-    companies: false,
     templates: false,
     feeGuides: false,
   });
@@ -79,14 +75,6 @@ export const useCoverageData = (
 
   useEffect(() => {
     if (
-      (!allCompanies || allCompanies.length === 0) &&
-      !companiesLoading &&
-      !initialFetchRef.current.companies
-    ) {
-      initialFetchRef.current.companies = true;
-      fetchCompanies();
-    }
-    if (
       (!coverageTemplates || coverageTemplates.length === 0) &&
       !templatesLoading &&
       !initialFetchRef.current.templates
@@ -95,11 +83,8 @@ export const useCoverageData = (
       fetchTemplates();
     }
   }, [
-    allCompanies,
     coverageTemplates,
-    companiesLoading,
     templatesLoading,
-    fetchCompanies,
     fetchTemplates,
   ]);
 
@@ -124,21 +109,20 @@ export const useCoverageData = (
         if (
           patientId &&
           insuranceId &&
-          insurances.length > 0 &&
-          allCompanies &&
-          allCompanies.length > 0
+          insurances.length > 0
         ) {
           const editTarget = insurances.find(
             (ins) => (ins._id || ins.id) === insuranceId,
           );
 
           if (editTarget) {
-            const fullCompany = allCompanies.find(
-              (c) =>
-                (c._id || c.id) ===
-                (editTarget.insuranceCompanyId?._id ||
-                  editTarget.insuranceCompanyId),
-            );
+            const fullCompany = editTarget.insuranceCompanyId;
+            const address = fullCompany?.address;
+            const cityState = [address?.city, address?.state].filter(Boolean).join(', ');
+            const payerAddress = [
+              [address?.street, address?.street2].filter(Boolean).join(', '),
+              [cityState, address?.zipCode].filter(Boolean).join(' '),
+            ].filter(Boolean).join(', ');
 
             setFormData((prev) => ({
               ...prev,
@@ -151,21 +135,21 @@ export const useCoverageData = (
                 fullCompany?.phone ||
                 editTarget.insuranceCompanyId?.phone ||
                 "",
-              payerAddress:
-                fullCompany?.addressLine1 ||
-                editTarget.insuranceCompanyId?.addressLine1 ||
-                fullCompany?.city ||
-                editTarget.insuranceCompanyId?.city ||
-                "",
+              payerAddress,
               phoneNumber:
                 fullCompany?.phone ||
                 editTarget.insuranceCompanyId?.phone ||
                 "",
               groupNumber: editTarget.groupNumber || "",
               groupName: editTarget.groupName || "",
+              employerName: editTarget.employerName || "",
+              employerId: editTarget.employerId || "",
               insurancePlan:
+                editTarget.insurancePlanName ||
                 editTarget.insurancePlan?.name ||
                 editTarget.insurancePlan ||
+                editTarget.groupName ||
+                editTarget.employerName ||
                 fullCompany?.name ||
                 editTarget.insuranceCompanyId?.name ||
                 "",
@@ -263,7 +247,7 @@ export const useCoverageData = (
     };
 
     loadData();
-  }, [patientId, insuranceId, insurances, allCompanies]);
+  }, [patientId, insuranceId, insurances]);
 
   const handleSave = async () => {
     try {
@@ -329,7 +313,6 @@ export const useCoverageData = (
   return {
     loading,
     feeGuides,
-    allCompanies,
     coverageTemplates,
     createTemplate,
     handleSave,

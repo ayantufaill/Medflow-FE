@@ -115,7 +115,6 @@ const AddCoveragePage = () => {
   const {
     loading,
     feeGuides,
-    allCompanies,
     coverageTemplates,
     createTemplate,
     handleCancel
@@ -142,8 +141,8 @@ const AddCoveragePage = () => {
   }, []);
 
   const existingPlans = React.useMemo(
-    () => buildExistingPlanOptions(allCoverages, allCompanies?.companies || allCompanies || [], insuranceId),
-    [allCoverages, allCompanies, insuranceId]
+    () => buildExistingPlanOptions(allCoverages, [], insuranceId),
+    [allCoverages, insuranceId]
   );
 
   const seenLabels = new Set();
@@ -216,8 +215,8 @@ const AddCoveragePage = () => {
 
       const newErrors = {};
 
-      if (!formData.insuranceCompanyId && !formData.carrierName?.trim()) {
-        newErrors.insuranceCompanyId = 'Carrier Name is required';
+      if (!formData.insuranceCompanyId) {
+        newErrors.insuranceCompanyId = 'Select a carrier from Search Carrier';
       }
 
       const payerId = normalizePayerId(formData.payerId);
@@ -391,11 +390,14 @@ const AddCoveragePage = () => {
       const parsedIndUsed = indUsedVal != null && indUsedVal !== '' ? parseFloat(String(indUsedVal).replace(/[^0-9.-]+/g, "")) : undefined;
 
       const payload = {
-        insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
+        insuranceCompanyId: String(formData.insuranceCompanyId),
         payerId,
         policyNumber: formData.subscriber.subscriberId,
         groupNumber: groupNumber || undefined,
         groupName: groupName || undefined,
+        insurancePlanName: formData.insurancePlan?.trim() || undefined,
+        employerName: formData.employerName?.trim() || null,
+        employerId: formData.employerId || null,
         subscriberName: formData.subscriber.name,
         subscriberDateOfBirth: formatDateForPayload(formData.subscriber.dateOfBirth),
         relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
@@ -816,7 +818,8 @@ const AddCoveragePage = () => {
     }
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      ...(field === 'carrierName' ? { insuranceCompanyId: '' } : {})
     }));
     
     if (field === 'saveAsTemplate' && value === true) {
@@ -888,7 +891,6 @@ const AddCoveragePage = () => {
                   handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
                 handleInputChange={handleInputChange}
-                insuranceCompanies={allCompanies?.companies || allCompanies || []}
                 existingPlans={existingPlans}
                 onSelectExistingPlan={applyExistingPlanBenefits}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
