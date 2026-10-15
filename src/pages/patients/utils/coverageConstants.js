@@ -6,8 +6,7 @@ export const ASSIGNMENT_OF_BENEFITS_OPTIONS = [
 
 export const COVERAGE_TYPES = [
   { value: 'ppo', label: 'Percentage Based Coverage (PPO)' },
-  { value: 'table', label: 'Table/Schedule of Benefits' },
-  { value: 'flat', label: 'Flat Fee' }
+  { value: 'flat', label: 'Copay/Fixed Plan' }
 ];
 
 export const monthMapReverse = {

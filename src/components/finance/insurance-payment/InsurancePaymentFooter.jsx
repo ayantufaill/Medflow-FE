@@ -10,7 +10,8 @@ const InsurancePaymentFooter = ({
   totalWo = 0,
   totalPay = 0,
   overpaymentAmount = 0,
-  underpaymentAmount = 0
+  underpaymentAmount = 0,
+  applyDisabled = false
 }) => {
   return (
     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 'auto', px: 3, pb: 2, pt: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: '#fff' }}>
@@ -53,12 +54,13 @@ const InsurancePaymentFooter = ({
           )}
 
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#8eb378' }}>Ins Payment: ${totalPay.toFixed(2)}</Typography>
-          
+
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
               variant="contained" 
               onClick={handleApplyAndPay}
-              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' } }}
+              disabled={applyDisabled}
+              sx={{ bgcolor: COLORS.ACCENT, color: '#fff', textTransform: 'none', boxShadow: 'none', px: 2, fontSize: '0.75rem', borderRadius: '8px', fontWeight: 600, '&:hover': { bgcolor: '#1565c0' }, '&.Mui-disabled': { bgcolor: '#cbd5e1', color: '#fff' } }}
             >
               Apply
             </Button>

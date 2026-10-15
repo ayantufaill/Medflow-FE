@@ -577,6 +577,10 @@ const LedgerItemCard = ({
                   date: displayItem.date,
                   invoiceId: displayItem.id,
                   isAdjustment: detail.isAdjustment || displayItem.isAdjustment,
+                  isPayment: detail.isPayment,
+                  isInsurancePayment: detail.isInsurancePayment,
+                  method: detail.method || null,
+                  chequeNo: detail.chequeNo ?? null,
                 }}
                 refreshData={{
                   idx,

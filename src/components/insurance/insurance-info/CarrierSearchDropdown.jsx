@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { Box, Button, Chip, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import FormInput from '../components/FormInput';
 import { insuranceCompanyService } from '../../../services/insurance.service';
@@ -130,7 +130,12 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, handleSelectResult
                       </TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
                       <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                      <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.employerName || item.planName || '-'}</TableCell>
+                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>
+  {item.employerName || item.planName || '-'}
+  {item.isExistingPlan && (
+    <Chip label="Plan benefits" size="small" sx={{ ml: 0.75, height: 16, fontSize: '0.55rem', bgcolor: '#e6f0fd', color: '#2563eb' }} />
+  )}
+</TableCell>
                     </TableRow>
                   ))
                 )}

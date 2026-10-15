@@ -183,6 +183,7 @@ const mapPlanItems = (items, createdAt) => {
       preAuthNumber: item.preAuthNumber || '',
       downgradedCode: item.downgradedCode || '',
       estimateSource: item.estimateSource || 'Auto',
+      coverageBlockedReason: item.coverageBlockedReason || '',
       preAuth: item.preAuth || '-',
       preAuthId: item.preAuthId || null,
       labCase: item.labCase || '-'
@@ -284,6 +285,7 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
               preAuthNumber: p.preAuthNumber || '',
               downgradedCode: p.downgradedCode || '',
               estimateSource: p.estimateSource || 'Auto',
+              coverageBlockedReason: p.coverageBlockedReason || '',
             };
           })(),
           preAuth: '-',

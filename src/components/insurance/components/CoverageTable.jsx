@@ -13,6 +13,7 @@ const CoverageTable = ({
   coverageCategoryData,
   setCoverageCategoryData
 }) => {
+  const showCoveragePercent = String(formData?.coverageType || '').toLowerCase() !== 'flat';
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <CoverageSection formData={formData} handleCoverageChange={handleCoverageChange} handleInputChange={handleInputChange} headerStyle={headerStyle} coverageCategoryData={coverageCategoryData} setCoverageCategoryData={setCoverageCategoryData} />
@@ -46,7 +47,7 @@ const CoverageTable = ({
           </Box>
         </Box>
         <Box sx={{ py: 2.5, px: 3 }}>
-          <FinalCoverageSection coverageData={coverageCategoryData} setCoverageData={setCoverageCategoryData} />
+          <FinalCoverageSection coverageData={coverageCategoryData} setCoverageData={setCoverageCategoryData} showCoveragePercent={showCoveragePercent} />
         </Box>
       </Box>
     </Box>
