@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography } from "@mui/material";
+import { Box, Paper, Popper, Table, TableBody, TableCell, TableRow, Checkbox, FormControlLabel, Typography, Chip } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import FormInput from '../components/FormInput';
 
@@ -93,7 +93,13 @@ const CarrierSearchDropdown = ({ formData, handleInputChange, companies, DUMMY_I
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.carrierName || item.name || '-'}</TableCell>
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupName || '-'}</TableCell>
                     <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.groupNumber || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>{item.planName || item.name || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 1 }}>
+                      {item.planName || item.name || '-'}
+                      {/* Tells staff this row will also copy the plan's saved benefits. */}
+                      {item.isExistingPlan && (
+                        <Chip label="Plan benefits" size="small" sx={{ ml: 0.75, height: 16, fontSize: '0.55rem', bgcolor: '#e6f0fd', color: '#2563eb' }} />
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
