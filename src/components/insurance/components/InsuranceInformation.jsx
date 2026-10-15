@@ -120,9 +120,11 @@ const InsuranceInformation = ({
               <FormInput
                 label="Payer ID"
                 required
+                placeholder="3 to 10 letters or numbers"
                 value={formData.payerId || ''}
-                onChange={(e) => handleInputChange('payerId', e.target.value)}
-                error={!!errors.insuranceCompanyId}
+                onChange={(e) => handleInputChange('payerId', e.target.value, { rejectInvalid: true })}
+                error={!!errors.payerId}
+                helperText={errors.payerId}
               />
             </Box>
             <Box sx={{ flex: 1 }}>

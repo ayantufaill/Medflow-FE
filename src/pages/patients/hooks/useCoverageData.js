@@ -12,6 +12,7 @@ import { buildCoveragePayload } from "../utils/coveragePayloadBuilder";
 import { COVERAGE_DATA } from "../../../components/insurance/utils/insuranceConstants";
 import { monthMapReverse } from "../utils/coverageConstants";
 import { useNavigate } from "react-router-dom";
+import { normalizePayerId } from "../utils/payerIdValidation";
 
 /** Normalise any stored date (ISO or MM/DD/YYYY) to the MM-DD-YYYY display form. */
 const isoToDisplayDate = (value) => {
@@ -144,7 +145,7 @@ export const useCoverageData = (
                 editTarget.insuranceCompanyId?._id ||
                 editTarget.insuranceCompanyId,
               carrierName: editTarget.insuranceCompanyId?.name || "",
-              payerId: editTarget.insuranceCompanyId?.payerId || "",
+              payerId: normalizePayerId(editTarget.insuranceCompanyId?.payerId),
               carrierPhone:
                 fullCompany?.phone ||
                 editTarget.insuranceCompanyId?.phone ||
