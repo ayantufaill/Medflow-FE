@@ -355,6 +355,15 @@ const LedgerSubRow = ({
       ? updatedByName || "STAFF"
       : initials || "STAFF";
 
+  // Each detail row shows its own transaction date. Time of day is never
+  // shown here, so entries read as a plain chronological list.
+  const formatEntryDate = (value, fallback) => {
+    if (!value) return fallback;
+    const formatted = formatDate(value);
+    return formatted === "-" ? fallback : formatted;
+  };
+  const entryDateDisplay = formatEntryDate(createdAt, date);
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
       <Box
@@ -399,7 +408,7 @@ const LedgerSubRow = ({
             variant="caption"
             sx={{ color: textSecondaryColor, fontSize: "12px", mr: 2 }}
           >
-            {date}
+            {entryDateDisplay}
           </Typography>
           <CalendarTodayOutlined
             sx={{ fontSize: 16, color: textSecondaryColor, mr: 1 }}

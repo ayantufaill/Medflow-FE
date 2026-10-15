@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import WarningIcon from '@mui/icons-material/Warning';
 import dayjs from 'dayjs';
 
 const InsurancePaymentTable = ({
@@ -7,7 +8,8 @@ const InsurancePaymentTable = ({
   handleProcedureChange,
   handleProcedureBlur,
   selectedClaimObj,
-  patientName
+  patientName,
+  showBalanceColumn = false
 }) => {
   const invoiceNum = selectedClaimObj?.invoice?.invoiceNumber || selectedClaimObj?.invoice?.id || selectedClaimObj?.invoiceId || selectedClaimObj?.claimNumber || selectedClaimObj?.id || 'N/A';
   const rawDate = selectedClaimObj?.invoice?.invoiceDate || selectedClaimObj?.createdAt || selectedClaimObj?.dateService || selectedClaimObj?.DateService || selectedClaimObj?.submissionDate;
@@ -18,6 +20,7 @@ const InsurancePaymentTable = ({
   const totalAllowed = procedures.reduce((acc, proc) => acc + Number(proc.allowed || 0), 0);
   const totalWo = procedures.reduce((acc, proc) => acc + Number(proc.wo || 0), 0);
   const totalPay = procedures.reduce((acc, proc) => acc + Number(proc.pay || 0), 0);
+  const totalBalance = procedures.reduce((acc, proc) => acc + Number(proc.balance || 0), 0);
 
   // Group procedures by invoice if available
   const invoiceGroups = React.useMemo(() => {
@@ -38,19 +41,22 @@ const InsurancePaymentTable = ({
   }, [procedures, invoiceNum, invoiceDate, selectedClaimObj]);
 
   return (
-    <Box sx={{ px: 3, pb: 2 }}>
+    <Box sx={{ px: 3, pb: 2, width: '100%' }}>
       {/* Table Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
         <Box sx={{ width: '250px' }}></Box>
         <Box sx={{ width: '40px', borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 }}></Box>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Submitted</Typography>
+        {showBalanceColumn && (
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', textAlign: 'left', color: '#555' }}>Balance</Typography>
+        )}
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Deductible</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Allowed</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', textAlign: 'left', color: '#555' }}>Ins WO</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '120px', textAlign: 'left', color: '#555' }}>Ins pay</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '130px', textAlign: 'center', color: '#555' }}>Update allowed fee</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '150px', textAlign: 'center', color: '#555' }}>Update Ins. Flat Portion</Typography>
-        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, flex: 1, textAlign: 'center', color: '#555' }}>Move to new claim ⓘ</Typography>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '150px', textAlign: 'center', color: '#555' }}>Move to new claim ⓘ</Typography>
       </Box>
 
       {/* Invoice Groups */}
@@ -72,6 +78,10 @@ const InsurancePaymentTable = ({
             const payNum = Number(proc.pay || 0);
             const procOverpay = insEst > 0 ? Math.max(0, Math.round(((woNum + payNum) - insEst) * 100) / 100) : 0;
             const isOverpaid = procOverpay > 0.005;
+            const allowedNum = Number(proc.allowed || 0);
+            const isPayOverAllowed =
+              !proc.moveToNewClaim &&
+              Math.round((payNum - allowedNum) * 100) / 100 > 0.005;
 
             return (
               <Box
@@ -79,6 +89,7 @@ const InsurancePaymentTable = ({
                 sx={{
                   display: 'flex',
                   alignItems: 'stretch',
+                  flexWrap: isPayOverAllowed ? 'wrap' : undefined,
                   borderBottom: '1px solid #f5f5f5',
                   borderRadius: isOverpaid ? '4px' : undefined,
                   border: isOverpaid ? '1px solid #90caf9' : undefined,
@@ -102,6 +113,13 @@ const InsurancePaymentTable = ({
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
                   <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>{Number(proc.charge) > 0 ? `$${Number(proc.charge).toFixed(2)}` : proc.submitted}</Typography>
                 </Box>
+                {showBalanceColumn && (
+                  <Box sx={{ width: '100px', display: 'flex', alignItems: 'center', py: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: Number(proc.balance) > 0 ? '#b26a00' : '#666' }}>
+                      ${Number(proc.balance || 0).toFixed(2)}
+                    </Typography>
+                  </Box>
+                )}
                 <Box sx={{ width: '90px', display: 'flex', alignItems: 'center', py: 1 }}>
                   <Box sx={{ border: '1px dashed #ccc', px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', width: '70px' }}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, mr: 0.25 }}>$</Typography>
@@ -142,8 +160,8 @@ const InsurancePaymentTable = ({
                   </Box>
                 </Box>
                 <Box sx={{ width: '120px', display: 'flex', alignItems: 'stretch' }}>
-                  <Box sx={{ bgcolor: isOverpaid ? '#1976d2' : '#8eb378', px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%', transition: 'background-color 0.2s' }}>
-                    <Box sx={{ border: `1px dashed ${isOverpaid ? '#1565c0' : '#7ea368'}`, px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent', width: '85px' }}>
+                  <Box sx={{ bgcolor: isPayOverAllowed ? '#d32f2f' : (isOverpaid ? '#1976d2' : '#8eb378'), px: 1, py: 1, display: 'flex', alignItems: 'center', width: '100%', transition: 'background-color 0.2s', boxShadow: isPayOverAllowed ? '0 0 0 2px rgba(211, 47, 47, 0.35)' : undefined }}>
+                    <Box sx={{ border: `1px dashed ${isPayOverAllowed ? '#ffcdd2' : (isOverpaid ? '#1565c0' : '#7ea368')}`, px: 0.5, py: 0.25, display: 'inline-flex', alignItems: 'center', bgcolor: 'transparent', width: '85px' }}>
                       <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mr: 0.25 }}>$</Typography>
                       <input
                         type="text"
@@ -170,13 +188,21 @@ const InsurancePaymentTable = ({
                     onChange={(e) => handleProcedureChange(i, 'updateInsFlatPortion', e.target.checked)} 
                   />
                 </Box>
-                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Box sx={{ width: '150px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <input 
                     type="checkbox" 
                     checked={proc.moveToNewClaim} 
                     onChange={(e) => handleProcedureChange(i, 'moveToNewClaim', e.target.checked)} 
                   />
                 </Box>
+                {isPayOverAllowed && (
+                  <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: '#fdecea', border: '1px solid #f5a9a0', borderRadius: '6px', px: 1, py: 0.5, mt: 0.5, mb: 0.5 }}>
+                    <WarningIcon sx={{ fontSize: '0.9rem', color: '#c0392b' }} />
+                    <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#c0392b' }}>
+                      Ins payment is greater than the allowed — adjust it or type a correct amount.
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             );
           })}
@@ -190,11 +216,14 @@ const InsurancePaymentTable = ({
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Total</Typography>
         </Box>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalCharge.toFixed(2)}</Typography>
+        {showBalanceColumn && (
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '100px', color: '#b26a00' }}>${totalBalance.toFixed(2)}</Typography>
+        )}
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalDeductible.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalAllowed.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '90px', color: '#555' }}>${totalWo.toFixed(2)}</Typography>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, width: '120px', color: '#555' }}>${totalPay.toFixed(2)}</Typography>
-        <Box sx={{ flex: 1 }}></Box>
+        <Box sx={{ width: '150px' }}></Box>
       </Box>
     </Box>
   );

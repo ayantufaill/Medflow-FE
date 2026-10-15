@@ -99,6 +99,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [voidTarget, setVoidTarget] = useState(null);
   const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [showEditPayment, setShowEditPayment] = useState(false);
+  const [editPaymentTarget, setEditPaymentTarget] = useState(null);
   const [showUndoDialog, setShowUndoDialog] = useState(false);
   const [undoTarget, setUndoTarget] = useState(null);
   const [showSimpleStatement, setShowSimpleStatement] = useState(false);
@@ -520,8 +522,31 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
 
   const handleEditClick = (item) => {
-    setEditTarget(item);
-    setShowCourtesyCredit(true);
+    setEditPaymentTarget(item);
+    setShowEditPayment(true);
+  };
+
+  const handleEditPaymentCancel = () => {
+    setShowEditPayment(false);
+    setEditPaymentTarget(null);
+  };
+
+  const handleEditPaymentSave = async (data) => {
+    const target = editPaymentTarget;
+    setShowEditPayment(false);
+    setEditPaymentTarget(null);
+    if (!target?.id) return;
+    try {
+      await paymentService.updatePayment(target.id, data);
+      showSnackbar("Payment updated", "success");
+      refreshLedger();
+    } catch (err) {
+      console.error("updatePayment failed:", err);
+      showSnackbar(
+        err?.response?.data?.error?.message || "Failed to update payment",
+        "error",
+      );
+    }
   };
 
   const handleCourtesyCreditSave = async (data) => {
@@ -1359,6 +1384,10 @@ const LedgerList = ({ patient, expanded, filters }) => {
         handleCourtesyCreditCancel={handleCourtesyCreditCancel}
         handleCourtesyCreditSave={handleCourtesyCreditSave}
         editTarget={editTarget}
+        showEditPayment={showEditPayment}
+        handleEditPaymentCancel={handleEditPaymentCancel}
+        handleEditPaymentSave={handleEditPaymentSave}
+        editPaymentTarget={editPaymentTarget}
         showUndoDialog={showUndoDialog}
         handleUndoCancel={handleUndoCancel}
         handleUndoConfirm={handleUndoConfirm}

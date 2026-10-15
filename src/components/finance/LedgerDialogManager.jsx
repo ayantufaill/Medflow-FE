@@ -15,6 +15,7 @@ import VoidInvoiceProceduresDialog from "./VoidInvoiceProceduresDialog";
 import SimpleStatement from "./SimpleStatement";
 import DetailedStatement from "./DetailedStatement";
 import EditDeposit from "./EditDeposit";
+import EditPaymentDialog from "./EditPaymentDialog";
 import InvoiceModal from "./InvoiceModal";
 import TransferCreditConfirmationDialog from "./TransferCreditConfirmationDialog";
 import EditInvoiceDetailsDialog from "./EditInvoiceDetailsDialog";
@@ -51,6 +52,10 @@ const LedgerDialogManager = ({
   handleCourtesyCreditCancel,
   handleCourtesyCreditSave,
   editTarget,
+  showEditPayment,
+  handleEditPaymentCancel,
+  handleEditPaymentSave,
+  editPaymentTarget,
   showUndoDialog,
   handleUndoCancel,
   handleUndoConfirm,
@@ -254,6 +259,13 @@ const LedgerDialogManager = ({
         />
       </DialogContent>
     </Dialog>
+
+    <EditPaymentDialog
+      open={showEditPayment}
+      paymentData={editPaymentTarget}
+      onSave={handleEditPaymentSave}
+      onCancel={handleEditPaymentCancel}
+    />
 
     <Dialog
       open={showInvoiceModal}
