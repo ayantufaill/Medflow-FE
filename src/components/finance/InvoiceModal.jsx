@@ -29,7 +29,7 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
-import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
+import { calculatePortionsForCategory, getCoverageBlockedReasonLabel } from "../../utils/cdtCategoryHelper";
 import {
   Close as CloseIcon,
   Receipt as ReceiptIcon,
@@ -190,6 +190,7 @@ const InvoiceModal = ({
             ptPortion: `$${localPt.toFixed(2)}`,
             balance: `$${portions.balance.toFixed(2)}`,
             coveragePct: portions.coveragePct,
+            coverageBlockedReason: null,
           };
         });
         console.log(
@@ -232,6 +233,7 @@ const InvoiceModal = ({
                     totalInsPortion: totalIns,
                     ptPortion: `$${pt.toFixed(2)}`,
                     writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+                    coverageBlockedReason: est.coverageBlockedReason ?? null,
                   };
                 }));
               }
@@ -373,6 +375,7 @@ const InvoiceModal = ({
           newProcedure.totalInsPortion = totalIns;
           newProcedure.ptPortion = `$${pt.toFixed(2)}`;
           newProcedure.writeoff = `$${Number(est.writeoff || 0).toFixed(2)}`;
+          newProcedure.coverageBlockedReason = est.coverageBlockedReason ?? null;
           newProcedure.balance = `$${fee.toFixed(2)}`;
           if (est.allowedFee !== undefined) {
             newProcedure.allowedFee = Number(est.allowedFee);
@@ -478,6 +481,7 @@ const InvoiceModal = ({
           updated.ptPortion = `$${portions.ptPortion.toFixed(2)}`;
           updated.balance = `$${portions.balance.toFixed(2)}`;
           updated.coveragePct = portions.coveragePct;
+          updated.coverageBlockedReason = null;
         } else if (["ptPortion", "insPortion"].includes(field)) {
           updated.balance = `$${numCharge.toFixed(2)}`;
         } else if (field === "charge") {
@@ -541,9 +545,10 @@ const InvoiceModal = ({
                 primaryInsPortion: prim,
                 secondaryInsPortion: sec,
                 totalInsPortion: totalIns,
-                ptPortion: `$${pt.toFixed(2)}`,
-                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-                balance: `$${numCharge.toFixed(2)}`,
+                ptPortion: `${pt.toFixed(2)}`,
+                writeoff: `${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `${numCharge.toFixed(2)}`,
+                coverageBlockedReason: est.coverageBlockedReason ?? null,
                 allowedFee:
                   est.allowedFee !== undefined
                     ? Number(est.allowedFee)
@@ -600,6 +605,7 @@ const InvoiceModal = ({
           ptPortion: `$${portions.ptPortion.toFixed(2)}`,
           balance: `$${portions.balance.toFixed(2)}`,
           coveragePct: portions.coveragePct,
+          coverageBlockedReason: null,
         };
       }),
     );
@@ -643,9 +649,10 @@ const InvoiceModal = ({
                 primaryInsPortion: prim,
                 secondaryInsPortion: sec,
                 totalInsPortion: totalIns,
-                ptPortion: `$${pt.toFixed(2)}`,
-                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-                balance: `$${numCharge.toFixed(2)}`,
+                ptPortion: `${pt.toFixed(2)}`,
+                writeoff: `${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `${numCharge.toFixed(2)}`,
+                coverageBlockedReason: est.coverageBlockedReason ?? null,
                 allowedFee:
                   est.allowedFee !== undefined
                     ? Number(est.allowedFee)
@@ -1029,6 +1036,19 @@ const InvoiceModal = ({
                       </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
                         {row.insPortion}
+                        {row.coverageBlockedReason && (
+                          <Typography
+                            sx={{
+                              fontSize: "10px",
+                              color: "#b45309",
+                              fontStyle: "italic",
+                              lineHeight: 1.2,
+                              mt: 0.25,
+                            }}
+                          >
+                            {getCoverageBlockedReasonLabel(row.coverageBlockedReason)}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell sx={{ py: 1 }}>
                         <TextField
