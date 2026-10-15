@@ -13,6 +13,7 @@ import { COVERAGE_DATA } from "../../../components/insurance/utils/insuranceCons
 import { monthMapReverse } from "../utils/coverageConstants";
 import { useNavigate } from "react-router-dom";
 import { normalizePayerId } from "../utils/payerIdValidation";
+import { expandStandardSelection } from "../utils/deductibleStandardSelection";
 
 /** Normalise any stored date (ISO or MM/DD/YYYY) to the MM-DD-YYYY display form. */
 const isoToDisplayDate = (value) => {
@@ -206,7 +207,7 @@ export const useCoverageData = (
                   : "",
               },
               deductibles: editTarget.deductiblesGrid?.length
-                ? editTarget.deductiblesGrid.map((d) => ({
+                ? expandStandardSelection(editTarget.deductiblesGrid).map((d) => ({
                     ...d,
                     metDate: isoToDisplayDate(d.metDate),
                   }))
