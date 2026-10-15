@@ -112,6 +112,8 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                   onChange={(e) =>
                     handleInputChange("groupName", e.target.value)
                   }
+                  onBlur={() => handleInputChange('groupName', (formData.groupName || '').trim())}
+                  inputProps={{ maxLength: 50 }}
                   required
                   error={!!errors.groupName}
                   helperText={errors.groupName}
@@ -140,7 +142,7 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                       PopperProps={{ sx: { zIndex: 999999 } }}
                       title={
                         <Typography sx={{ fontSize: '11.5px', color: '#1e3a8a', lineHeight: 1.45, fontWeight: 500, p: 0.5 }}>
-                          If you don't have a group number, enter NA instead.
+                          Enter the group number shown on the insurance card, using letters, numbers, or a single inner hyphen.
                         </Typography>
                       }
                       placement="top"
@@ -191,14 +193,9 @@ const PlanBillingTable = ({ formData, handleInputChange, benefits, errors = {} }
                     },
                   }}
                   value={formData.groupNumber || ""}
-                  onChange={(e) => {
-                    const alphanumericValue = e.target.value.replace(
-                      /[^a-zA-Z0-9\s-]/g,
-                      "",
-                    );
-                    handleInputChange("groupNumber", alphanumericValue);
-                  }}
+                  onChange={(e) => handleInputChange('groupNumber', e.target.value)}
                   placeholder="e.g. GRP-300871"
+                  inputProps={{ maxLength: 20 }}
                   required
                   error={!!errors.groupNumber}
                   helperText={errors.groupNumber}

@@ -268,7 +268,7 @@ const MemberPage = () => {
 
       let hasInvalidDeductibleDate = false;
       formData.deductibles?.forEach((ded) => {
-        if (ded.metDate && !isValidDeductibleDate(ded.metDate)) {
+        if (!(ded.standard && String(ded.type || '').toLowerCase() !== 'standard') && ded.metDate && !isValidDeductibleDate(ded.metDate)) {
           hasInvalidDeductibleDate = true;
         }
       });

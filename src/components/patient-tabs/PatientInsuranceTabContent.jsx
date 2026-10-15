@@ -44,14 +44,27 @@ import ImportedCoverageBanner from '../insurance/ImportedCoverageBanner';
 import FamilyCoverageBanner from '../insurance/FamilyCoverageBanner';
 import FamilyCoverageMatrix from '../insurance/components/FamilyCoverageMatrix';
 import CoverageOrderPanel from '../cob/CoverageOrderPanel';
-import { getCoverageAmounts, getCoverageUsage } from '../insurance/utils/insuranceHelpers';
+import { getCoverageAmounts, getCoverageUsage, getFeeGuideLabel } from '../insurance/utils/insuranceHelpers';
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
 import {
   fetchInsuranceUsage,
-  selectInsuranceUsage,
   selectInsuranceUsageCache,
 } from '../../store/slices/patientSlice';
+
+const formatCoverageAddress = (address) => {
+  if (!address) return '-';
+  if (typeof address === 'string') return address.trim() || '-';
+  const street = [address.street, address.street2].filter(Boolean).join(' ');
+  const cityStateZip = [address.city, address.state, address.zipCode].filter(Boolean).join(', ');
+  return [street, cityStateZip].filter(Boolean).join(', ') || '-';
+};
+
+const getRenewalMonthLabel = (value) => {
+  const month = Number(value);
+  return Number.isInteger(month) && month >= 1 && month <= 12
+    ? dayjs().month(month - 1).format('MMMM') : '-';
+};
 
 const CoverageRow = ({
   ins, 
@@ -65,7 +78,6 @@ const CoverageRow = ({
   isLast,
   onMoveUp,
   onMoveDown,
-  patient,
   onViewCarrierInfo,
   usage
 }) => {
@@ -80,7 +92,10 @@ const CoverageRow = ({
   };
   const company = getCompany(ins.insuranceCompanyId);
   const payerId = company?.payerId || company?.electronicId || '-';
-  const address = company?.address ? `${company.address.street || ''} ${company.address.city || ''}, ${company.address.state || ''} ${company.address.zipCode || ''}` : '-';
+  const address = formatCoverageAddress(company?.address);
+  const remainingBenefits = usage?.annualMaxAvailable && usage.remaining != null
+    ? `$${Number(usage.remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '-';
 
   return (
     <Paper variant="outlined" sx={{ borderColor: COLORS.BORDER, borderRadius: radius.xl, overflow: 'hidden' }}>
@@ -152,6 +167,10 @@ const CoverageRow = ({
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{payerId}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Phone Number:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{company?.phone || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Group Name:</Typography>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.groupName || ins.planName || '-'}</Typography>
               </Box>
@@ -167,29 +186,53 @@ const CoverageRow = ({
             <Box sx={{ width: 340, justifySelf: 'center' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Patient's Relationship to Subscriber:</Typography>
-                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.relationshipToPatient || 'Self'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.relationshipToPatient || '-'}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's Name:</Typography>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>
-                  {ins.subscriberName || ((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : '-')}
+                  {ins.subscriberName || '-'}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's Birthday:</Typography>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>
-                  {ins.subscriberDateOfBirth ? formatDate(ins.subscriberDateOfBirth) : (((!ins.relationshipToPatient || ins.relationshipToPatient.toLowerCase() === 'self') && patient?.dateOfBirth) ? formatDate(patient.dateOfBirth) : '-')}
+                  {ins.subscriberDateOfBirth ? formatDate(ins.subscriberDateOfBirth) : '-'}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Subscriber's ID:</Typography>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.subscriberId || ins.policyNumber || '-'}</Typography>
               </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Renewal Date:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{getRenewalMonthLabel(ins.renewalMonth)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Policy Started:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.effectiveDate ? formatDate(ins.effectiveDate) : '-'}</Typography>
+              </Box>
             </Box>
             <Box sx={{ width: 340, justifySelf: 'end' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Employer Name:</Typography>
-                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.employerName || '-'}</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Employer/Insurance Plan Name:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.employerName || ins.groupName || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Plan Fee Guide:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.planFeeGuideName || getFeeGuideLabel(ins.planFeeGuide) || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Employer Address:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{formatCoverageAddress(ins.employerAddress)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Employer Phone Number:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{ins.employerPhone || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Remaining Individual Benefits:</Typography>
+                <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, textAlign: 'right' }}>{remainingBenefits}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: COLORS.TEXT_SECONDARY }}>Payer Address:</Typography>
@@ -251,10 +294,9 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
   const [carrierInfoOpen, setCarrierInfoOpen] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  const insuranceUsage = useSelector(selectInsuranceUsage);
   const insuranceUsageCache = useSelector(selectInsuranceUsageCache);
   const cachedUsage = patientId ? insuranceUsageCache[patientId]?.data : null;
-  const activeUsage = cachedUsage ?? insuranceUsage ?? null;
+  const activeUsage = cachedUsage ?? null;
 
   const handleViewCarrierInfo = (company) => {
     setSelectedCarrier(company);
@@ -674,7 +716,6 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                   isLast={index === array.length - 1}
                   onMoveUp={() => handleMoveUp(index, array)}
                   onMoveDown={() => handleMoveDown(index, array)}
-                  patient={patient}
                   onViewCarrierInfo={handleViewCarrierInfo}
                   usage={getUsageForCoverage(ins, index)}
                 />

@@ -32,6 +32,8 @@ import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
 import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
+import { getGroupNameError, getGroupNumberError, normalizeGroupName, normalizeGroupNumber } from './utils/groupValidation';
+import { updateDeductibleSelection } from './utils/deductibleStandardSelection';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -207,15 +209,12 @@ const AddCoveragePage = () => {
         newErrors.insurancePlan = 'Insurance Plan is required';
       }
 
-      if (!formData.groupName?.trim()) {
-        newErrors.groupName = 'Group Name is required';
-      }
-
-      if (!formData.groupNumber?.trim()) {
-        newErrors.groupNumber = 'Group Number is required';
-      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.groupNumber)) {
-        newErrors.groupNumber = 'Group Number must be alphanumeric, and can contain spaces or hyphens';
-      }
+      const groupNumber = normalizeGroupNumber(formData.groupNumber);
+      const groupName = normalizeGroupName(formData.groupName);
+      const groupNumberError = getGroupNumberError(groupNumber);
+      const groupNameError = getGroupNameError(groupName);
+      if (groupNumberError) newErrors.groupNumber = groupNumberError;
+      if (groupNameError) newErrors.groupName = groupNameError;
 
       if (!formData.subscriber.name?.trim()) {
         newErrors.subscriberName = 'Subscriber Name is required';
@@ -313,7 +312,7 @@ const AddCoveragePage = () => {
 
       let hasInvalidDeductibleDate = false;
       formData.deductibles?.forEach((ded) => {
-        if (ded.metDate && !isValidDeductibleDate(ded.metDate)) {
+        if (!(ded.standard && String(ded.type || '').toLowerCase() !== 'standard') && ded.metDate && !isValidDeductibleDate(ded.metDate)) {
           hasInvalidDeductibleDate = true;
         }
       });
@@ -368,8 +367,8 @@ const AddCoveragePage = () => {
         insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
         payerId,
         policyNumber: formData.subscriber.subscriberId,
-        groupNumber: formData.groupNumber || undefined,
-        groupName: formData.groupName || undefined,
+        groupNumber: groupNumber || undefined,
+        groupName: groupName || undefined,
         subscriberName: formData.subscriber.name,
         subscriberDateOfBirth: formatDateForPayload(formData.subscriber.dateOfBirth),
         relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
@@ -427,8 +426,8 @@ const AddCoveragePage = () => {
             description: [formData.carrierName, formData.groupName].filter(Boolean).join(' — ') || undefined,
             benefits: [{
               insurancePlan: formData.insurancePlan,
-              groupName: formData.groupName,
-              groupNumber: formData.groupNumber,
+              groupName,
+              groupNumber,
               phoneNumber: formData.phoneNumber,
               healthPlan: formData.healthPlan,
               assignmentOfBenefits: formData.assignmentOfBenefits
@@ -724,6 +723,18 @@ const AddCoveragePage = () => {
       return;
     }
 
+    if (field === 'groupNumber') {
+      value = normalizeGroupNumber(value);
+      if (value.length > 20 || !/^[A-Z0-9-]*$/.test(value) ||
+          value.startsWith('-') || value.includes('--')) {
+        setErrors(prev => ({ ...prev, groupNumber: 'Group Number contains unsupported characters or exceeds 20 characters' }));
+        return;
+      }
+    }
+    if (field === 'groupName' && (String(value).length > 50 || !/^[A-Za-z0-9 .&,-]*$/.test(String(value)))) {
+      setErrors(prev => ({ ...prev, groupName: 'Group Name contains unsupported characters or exceeds 50 characters' }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -747,9 +758,7 @@ const AddCoveragePage = () => {
   const handleDeductibleChange = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      deductibles: prev.deductibles.map((deductible, i) => 
-        i === index ? { ...deductible, [field]: value } : deductible
-      )
+      deductibles: updateDeductibleSelection(prev.deductibles, index, field, value)
     }));
   };
 
