@@ -1,125 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography } from '@mui/material';
 import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import { useClaimActions } from '../../hooks/useClaimActions';
-import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
-import { mapClaimFields } from './claimUtils';
-import { applyDateFilter } from './claimFilterUtils';
+
+import { useFilteredClaimTab } from './useFilteredClaimTab';
+
+const DEFAULT_FILTERS = {
+    sort: 'none', claimType: 'all', carrier: 'all', attachment: 'all',
+    status: 'all', filterDate: 'all', searchPatient: '', searchClaim: '',
+};
 
 const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
-  const [claims, setClaims] = useState([]);
-  const [filteredClaims, setFilteredClaims] = useState([]);
-  const [loadingClaims, setLoadingClaims] = useState(true);
-  
-  const [filters, setFilters] = useState({
-    sort: 'none',
-    claimType: 'all',
-    carrier: 'all',
-    attachment: 'all',
-    status: 'all',
-    filterDate: 'all',
-    searchPatient: '',
-    searchClaim: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
-
-  const [showInactivePolicies, setShowInactivePolicies] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-
+  const [showInactivePolicies, setShowInactivePolicies] = useState(false);
   const [selectedClaims, setSelectedClaims] = useState({});
   const [expandedProcedures, setExpandedProcedures] = useState({});
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
-  
-  const { loading, changeStatus, convertType, sendClaims, printPage, deleteClaim, toggleHide } = useClaimActions(loadData);
-
-  useEffect(() => {
-    loadData();
-    const handleRefresh = () => loadData();
-    window.addEventListener('refresh-claims', handleRefresh);
-    return () => window.removeEventListener('refresh-claims', handleRefresh);
-  }, []);
-
-  async function loadData() {
-    setLoadingClaims(true);
-    try {
-      const data = await claimService.getAllClaims({ tab: 'predetermination' });
-      const claimsData = (data.claims || []).map(c => mapClaimFields(c, 'predetermination'));
-      setClaims(claimsData);
-      applyFilters(claimsData, filters);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingClaims(false);
-    }
-  }
-
-  const applyFilters = (data, currentFilters, hidden, dateRange = customDateRange) => {
-    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
-
-    if (!hidden) {
-      result = result.filter(c => !c.isHidden);
-    }
-
-    if (currentFilters.carrier !== 'all') {
-      result = result.filter((c) => c.carrier === currentFilters.carrier);
-    }
-    if (currentFilters.claimType !== 'all') {
-      result = result.filter((c) => c.claimType && c.claimType.includes(currentFilters.claimType));
-    }
-    if (currentFilters.status !== 'all') {
-      result = result.filter((c) => c.status === currentFilters.status);
-    }
-    if (currentFilters.attachment === 'yes') {
-      result = result.filter(c => c.attachments?.length > 0 || c.redAttachment || c.attachmentColor);
-    } else if (currentFilters.attachment === 'no') {
-      result = result.filter(c => !c.attachments?.length && !c.redAttachment && !c.attachmentColor);
-    }
-    
-    if (currentFilters.searchPatient) {
-      const q = currentFilters.searchPatient.toLowerCase();
-      result = result.filter(c => c.patientName?.toLowerCase().includes(q));
-    }
-    if (currentFilters.searchClaim) {
-      const q = currentFilters.searchClaim.toLowerCase();
-      result = result.filter(c => c.claimNumber?.toLowerCase().includes(q));
-    }
-    
-    setFilteredClaims(result);
-  };
+  const { filteredClaims, loadingClaims, loadError, loadData } =
+    useFilteredClaimTab('predetermination', filters, customDateRange, showHidden, showInactivePolicies);
+  const { changeStatus, convertType, sendClaims, printPage, deleteClaim, toggleHide } = useClaimActions(loadData);
 
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden, customDateRange);
+    setFilters((current) => ({ ...current, [key]: value }));
+    setSelectedClaims({});
   };
-
   const handleCustomDateRangeChange = (range) => {
     setCustomDateRange(range);
-    applyFilters(claims, filters, showHidden, range);
+    setSelectedClaims({});
   };
-
   const handleClearAll = () => {
-    const defaultFilters = {
-      sort: 'none',
-      claimType: 'all',
-      carrier: 'all',
-      attachment: 'all',
-      status: 'all',
-      filterDate: 'all',
-      searchPatient: '',
-      searchClaim: '',
-    };
-    setFilters(defaultFilters);
+    setFilters(DEFAULT_FILTERS);
     setCustomDateRange({ start: null, end: null });
-    applyFilters(claims, defaultFilters, showHidden, { start: null, end: null });
+    setShowHidden(false);
+    setShowInactivePolicies(false);
   };
-
-  const handleToggleHidden = (val) => {
-    setShowHidden(val);
-    applyFilters(claims, filters, val);
+  const handleToggleHidden = (value) => {
+    setShowHidden(value);
+    setSelectedClaims({});
   };
 
   // Selection
@@ -143,6 +65,18 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   };
 
   const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+
+  const handlePrint = () => {
+    const claimsToPrint = selectedIds.length > 0
+      ? filteredClaims.filter((c) => selectedClaims[c.id])
+      : filteredClaims;
+    printPage({
+      claims: claimsToPrint,
+      tabTitle: 'Predeterminations',
+      filters,
+      customDateRange,
+    });
+  };
 
   const panelFilters = [
     {
@@ -196,6 +130,8 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   return (
     <Box>
+      {loadingClaims && <Typography sx={{ py: 1 }}>Loading claims...</Typography>}
+      {loadError && <Typography color="error" sx={{ py: 1 }}>{loadError}</Typography>}
       <ClaimFilterPanel
         filters={panelFilters}
         searchPlaceholder="Search by .."
@@ -209,7 +145,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           }
         ]}
         checkboxes={[
-          { label: 'Show Predeterminations for Inactive Policies', checked: showInactivePolicies, onChange: setShowInactivePolicies },
+          { label: 'Show Predeterminations for Inactive Policies', checked: showInactivePolicies, onChange: (value) => { setShowInactivePolicies(value); setSelectedClaims({}); } },
           { label: 'Show Hidden Claims', checked: showHidden, onChange: handleToggleHidden }
         ]}
         onRefresh={loadData}
@@ -243,7 +179,7 @@ const PredeterminationTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             label: 'Print',
             variant: 'print',
             icon: 'print',
-            onClick: () => printPage(),
+            onClick: handlePrint,
             disabled: false,
           },
         ]}
