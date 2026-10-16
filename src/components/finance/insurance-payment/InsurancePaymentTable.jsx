@@ -22,7 +22,32 @@ const COLS = {
   moveToNewClaim: 1.25,
 };
 
-const col = (grow, extra = {}) => ({ flex: `${grow} 1 0`, minWidth: 0, ...extra });
+const gridTemplate = (showBalance) => [
+  COLS.code,
+  COLS.rsl,
+  COLS.submitted,
+  showBalance && COLS.balance,
+  COLS.deductible,
+  COLS.allowed,
+  showBalance && COLS.appliedInsPay,
+  showBalance && COLS.appliedInsWo,
+  COLS.insWo,
+  COLS.insPay,
+  COLS.updateAllowedFee,
+  COLS.updateInsFlatPortion,
+  COLS.moveToNewClaim,
+].filter(Boolean).map((size) => `${size}fr`).join(' ');
+
+// `boxSizing: 'border-box'` keeps every cell's width exactly its flex share.
+// Without it the per-cell padding is added outside the flex-basis, so cells
+// with different padding (inputs, the RSL spacer, …) end up slightly wider and
+// each row's columns drift out of line with the header/total labels.
+const col = (grow, extra = {}) => ({
+  flex: `${grow} 1 0`,
+  minWidth: 0,
+  boxSizing: 'border-box',
+  ...extra,
+});
 
 const headerCell = (grow, extra = {}) => ({
   ...col(grow),
@@ -102,7 +127,7 @@ const InsurancePaymentTable = ({
   return (
     <Box sx={{ px: 3, pb: 2, width: '100%', boxSizing: 'border-box' }}>
       {/* Table Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: gridTemplate(showBalanceColumn), alignItems: 'center', mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
         <Box sx={col(COLS.code)}></Box>
         <Box sx={col(COLS.rsl, { borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 })}></Box>
         <Typography sx={headerCell(COLS.submitted)}>Submitted</Typography>
@@ -152,9 +177,9 @@ const InsurancePaymentTable = ({
               <Box
                 key={i}
                 sx={{
-                  display: 'flex',
+                  display: 'grid',
+                  gridTemplateColumns: gridTemplate(showBalanceColumn),
                   alignItems: 'stretch',
-                  flexWrap: isPayOverAllowed ? 'wrap' : undefined,
                   borderBottom: '1px solid #f5f5f5',
                   borderRadius: isOverpaid ? '4px' : undefined,
                   border: isOverpaid ? '1px solid #90caf9' : undefined,
@@ -277,7 +302,7 @@ const InsurancePaymentTable = ({
                   />
                 </Box>
                 {isPayOverAllowed && (
-                  <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: '#fdecea', border: '1px solid #f5a9a0', borderRadius: '6px', px: 1, py: 0.5, mt: 0.5, mb: 0.5 }}>
+                  <Box sx={{ gridColumn: '1 / -1', width: '100%', display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: '#fdecea', border: '1px solid #f5a9a0', borderRadius: '6px', px: 1, py: 0.5, mt: 0.5, mb: 0.5 }}>
                     <WarningIcon sx={{ fontSize: '0.9rem', color: '#c0392b' }} />
                     <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#c0392b' }}>
                       Ins payment is greater than the allowed — adjust it or type a correct amount.
@@ -291,7 +316,7 @@ const InsurancePaymentTable = ({
       ))}
 
       {/* Total Row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', py: 1, borderBottom: '1px solid #eee', mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: gridTemplate(showBalanceColumn), alignItems: 'center', py: 1, borderBottom: '1px solid #eee', mb: 3 }}>
         <Box sx={col(COLS.code)}></Box>
         <Box sx={col(COLS.rsl, { display: 'flex', alignItems: 'center', borderRight: '1px solid #eee', pr: 1.5, mr: 1.5 })}>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>Total</Typography>
