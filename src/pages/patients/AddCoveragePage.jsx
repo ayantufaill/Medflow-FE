@@ -33,9 +33,9 @@ import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from 
 import { sanitizeCoverageForType } from './utils/coveragePayloadBuilder';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
 import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
-import { buildExistingPlanOptions, extractPlanBenefits } from './utils/existingPlanHelpers';
 import { getGroupNameError, getGroupNumberError, normalizeGroupName, normalizeGroupNumber } from './utils/groupValidation';
 import { updateDeductibleSelection } from './utils/deductibleStandardSelection';
+import { buildExistingPlanOptions, extractPlanBenefits } from './utils/existingPlanHelpers';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>

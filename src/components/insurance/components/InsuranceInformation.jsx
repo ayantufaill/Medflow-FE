@@ -67,8 +67,8 @@ const InsuranceInformation = ({
         <CarrierSearchDropdown 
           formData={formData}
           handleInputChange={handleInputChange}
-          existingPlans={existingPlans}
           handleSelectResult={handleSelectResult}
+          existingPlans={existingPlans}
         />
 
         <Box sx={{ mt: 1, mb: 1.5 }}>
