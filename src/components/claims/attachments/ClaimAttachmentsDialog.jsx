@@ -280,6 +280,12 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
                     <Typography sx={{ fontSize: '0.6rem', mt: 0.5, textAlign: 'center', px: 0.5, wordBreak: 'break-word', lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
   {attachment.name || attachment.documentName || 'Doc'}
 </Typography>
+                    <Typography
+                      title={attachment.deliveryErrorMessage || ''}
+                      sx={{ fontSize: '0.58rem', mt: 0.5, fontWeight: 600, color: attachment.deliveryStatus === 'error' ? '#b91c1c' : '#475569' }}
+                    >
+                      {attachment.deliveryStatus === 'sent' ? 'Sent' : attachment.deliveryStatus === 'error' ? 'Error' : 'Pending'}
+                    </Typography>
                   </Box>
                   <IconButton
   size="small"

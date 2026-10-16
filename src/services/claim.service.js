@@ -52,6 +52,14 @@ export const claimService = {
       showHidden = false,
       patientName = '',
       tab = '',
+      outstandingSort = '', outstandingClaimType = '', outstandingCarrier = '',
+      outstandingAttachment = '', outstandingStatus = '', outstandingDate = '',
+      outstandingStart = '', outstandingEnd = '', outstandingPatient = '', outstandingClaim = '',
+      includeNonAssignment = false, includeInactivePolicies = false,
+      reportFilter = false, reportSort = '', reportClaimType = '', reportCarrier = '',
+      reportAttachment = '', reportStatus = '', reportDate = '', reportStart = '',
+      reportEnd = '', reportSearch = '', reportPatient = '', reportClaim = '',
+      reportIncludeInactive = false,
     } = options;
 
     const params = new URLSearchParams();
@@ -72,6 +80,23 @@ export const claimService = {
     if (showHidden) params.append('showHidden', 'true');
     if (patientName) params.append('patientName', patientName);
     if (tab) params.append('tab', tab);
+    for (const [key, value] of Object.entries({
+      outstandingSort, outstandingClaimType, outstandingCarrier, outstandingAttachment,
+      outstandingStatus, outstandingDate, outstandingStart, outstandingEnd,
+      outstandingPatient, outstandingClaim,
+    })) {
+      if (value) params.append(key, value);
+    }
+    if (includeNonAssignment) params.append('includeNonAssignment', 'true');
+    if (includeInactivePolicies) params.append('includeInactivePolicies', 'true');
+    if (reportFilter) params.append('reportFilter', 'true');
+    for (const [key, value] of Object.entries({
+      reportSort, reportClaimType, reportCarrier, reportAttachment, reportStatus,
+      reportDate, reportStart, reportEnd, reportSearch, reportPatient, reportClaim,
+    })) {
+      if (value) params.append(key, value);
+    }
+    if (reportIncludeInactive) params.append('reportIncludeInactive', 'true');
 
     const response = await apiClient.get(`/claims?${params.toString()}`);
     const data = response.data.data;
@@ -88,7 +113,11 @@ export const claimService = {
           id: claim._id || claim.id,
           patient: patientObj || claim.patient,
           invoice: claim.invoiceId || claim.invoice,
-          insuranceCompany: claim.insuranceCompanyId || claim.insuranceCompany,
+          insuranceCompany: (claim.insuranceCompany && typeof claim.insuranceCompany === 'object')
+            ? claim.insuranceCompany
+            : (claim.insuranceCompanyId && typeof claim.insuranceCompanyId === 'object')
+              ? claim.insuranceCompanyId
+              : claim.insuranceCompany,
         };
       });
     }
@@ -321,8 +350,10 @@ export const claimService = {
    * Get Dentical remittance and eligibility reports
    * @returns {Promise<Array>} Dentical reports
    */
-  async getDenticalReports() {
-    const response = await apiClient.get('/claims/dentical-reports');
+  async getDenticalReports({ page = 1, limit = 100, search = '' } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.append('search', search);
+    const response = await apiClient.get(`/claims/dentical-reports?${params.toString()}`);
     return response.data.data;
   },
 
@@ -337,6 +368,7 @@ export const claimService = {
       limit = 10,
       eraTab = 'active',
       search = '',
+      status = '', paymentType = '', carrier = '', startDate = '', endDate = '',
     } = options;
 
     const params = new URLSearchParams();
@@ -344,6 +376,9 @@ export const claimService = {
     if (limit) params.append('limit', limit);
     if (eraTab) params.append('eraTab', eraTab);
     if (search) params.append('search', search);
+    for (const [key, value] of Object.entries({ status, paymentType, carrier, startDate, endDate })) {
+      if (value) params.append(key, value);
+    }
 
     const response = await apiClient.get(`/claims/era-reports?${params.toString()}`);
     return response.data.data;
