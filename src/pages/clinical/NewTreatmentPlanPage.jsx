@@ -2435,6 +2435,7 @@ const NewTreatmentPlanPage = () => {
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
         patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
         appointmentId={activeAppointmentId}
+        providerId={currentAppointment?.providerId || currentAppointment?.provider || user?.providerId || null}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
       />
