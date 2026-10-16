@@ -126,6 +126,9 @@ const EditInvoiceDetailsDialog = ({ onClose, invoiceId = '25136' }) => {
     originalFee:
       Number(item.editAllowedFee) > 0 ? Number(item.editAllowedFee) : undefined,
     dbi: Boolean(item.editDbi),
+    // Pass the tooth so a code with a coverage-book teeth limit is priced on this
+    // line's tooth instead of being blocked as "tooth unknown".
+    site: item.editSite || item.site || undefined,
   });
 
   // Map a single estimate response row back onto an item's edit fields. Shared

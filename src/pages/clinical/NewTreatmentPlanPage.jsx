@@ -752,6 +752,7 @@ const NewTreatmentPlanPage = () => {
             const itemsForEstimate = apptProcs.map(proc => ({
               code: proc.code,
               charge: Number(String(proc.negRate || '0').replace(/[^0-9.-]+/g, '')) || 0,
+              site: proc.site ?? proc.tooth ?? undefined,
             }));
             const estimates = await invoiceService.estimateInvoiceItems(patientId, itemsForEstimate);
             if (Array.isArray(estimates) && estimates.length) {

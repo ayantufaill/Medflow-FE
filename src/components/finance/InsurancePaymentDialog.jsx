@@ -226,7 +226,12 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       setProcedures([]);
       return;
     }
-    
+
+    // A claim reopened after a partial payment keeps its partial state, both in
+    // the columns it shows and in the "Partial Payment" checkbox, so re-applying
+    // it does not silently finalise the claim as fully paid.
+    setIsPartialPayment(String(claim.status || '').toLowerCase().includes('partial'));
+
     // Restate a procedure with its current (debit-adjusted) numbers from the
     // shared ledger context. The claim API only carries the original submitted
     // estimate, so without this a debit posted against the invoice stays
@@ -253,31 +258,6 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       return ledgerCtx.proceduresByProcNum.get(String(procId)) || null;
     };
 
-    // Remaining balance on a procedure: allowed − insurance already paid −
-    // patient already paid − write-off. Both the insurance and the patient
-    // payments come off the balance, so a line the patient has settled stops
-    // showing a phantom balance once a secondary insurance payment is reverted.
-    const balanceFor = (procId, allowedNum, woNum, fallbackPaid = 0, fallbackPtPaid = 0) => {
-      const line = ledgerLineFor(procId);
-      const insPaid = line
-        ? Number(
-            line.insurancePaidAmount ||
-              line.insurancePaid ||
-              line.insPaid ||
-              0,
-          )
-        : Number(fallbackPaid || 0);
-      const ptPaid = line
-        ? Number(
-            line.patientPaidAmount || line.patientPaid || line.ptPaid || 0,
-          )
-        : Number(fallbackPtPaid || 0);
-      return Math.max(
-        0,
-        Math.round((allowedNum - insPaid - ptPaid - woNum) * 100) / 100,
-      );
-    };
-
     // What the primary has already applied to this procedure, shown on a
     // secondary claim so the user can see the leftover the secondary is billed
     // against. `insurancePaidAmount` on the ledger line is summed across plans,
@@ -295,13 +275,28 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
       return paid > 0 ? paid : Number(fallback || 0);
     };
     // The primary's applied write-off, read off the ledger line's recorded
-    // write-off (the same figure the balance is netted against).
+    // write-off (the same figure the Balance column is netted against).
     const appliedInsWoFor = (procId, fallback = 0) => {
       const line = ledgerLineFor(procId);
       const wo = line
         ? Number(line.writeoff ?? line.estimatedWriteOff ?? line.writeOff ?? 0)
         : 0;
       return wo > 0 ? wo : Number(fallback || 0);
+    };
+
+    // Remaining balance on a procedure, as shown in the secondary claim's
+    // Balance column: what is left for the secondary after the primary's
+    // applied payment and write-off — allowed minus the two "Applied Ins"
+    // columns to its right. It deliberately does NOT net off the secondary
+    // claim's own figures (nor the patient's), so the primary's leftover does
+    // not shrink just by opening or editing the secondary claim.
+    const balanceFor = (procId, allowedNum, fallbackPaid = 0, fallbackWo = 0) => {
+      const appliedPay = appliedInsPayFor(procId, fallbackPaid);
+      const appliedWo = appliedInsWoFor(procId, fallbackWo);
+      return Math.max(
+        0,
+        Math.round((allowedNum - appliedPay - appliedWo) * 100) / 100,
+      );
     };
 
     // Determine overall claim-level payments and insurance balance
@@ -413,9 +408,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const balanceNum = balanceFor(
           p.id || p._id || p.ProcNum || p.procedureId,
           allowedNum,
-          woNum,
-          Number(p.insurancePaidAmount || 0),
-          Number(p.patientPaidAmount || p.patientPaid || p.ptPaid || 0),
+          Number(p.insurancePaidAmount || p.insPayAmt || p.insPaid || 0),
+          existingWo,
         );
 
         return {
@@ -532,9 +526,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const balanceNum = balanceFor(
           l.id || l._id || l.procedureId || l.procId,
           allowedNum,
-          woNum,
-          Number(l.insurancePaidAmount || l.insurancePaid || 0),
-          Number(l.patientPaidAmount || l.patientPaid || l.ptPaid || 0),
+          Number(l.insurancePaidAmount || l.insurancePaid || l.insPayAmt || l.insPaid || 0),
+          existingWo,
         );
 
         return {
@@ -624,9 +617,8 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
         const balanceNum = balanceFor(
           item.id || item._id || item.itemId || item.procedureId,
           allowedNum,
-          woNum,
-          Number(item.insurancePaidAmount || 0),
-          Number(item.patientPaidAmount || item.patientPaid || item.ptPaid || 0),
+          Number(item.insurancePaidAmount || item.insurancePaid || item.insPayAmt || item.insPaid || 0),
+          existingWo,
         );
 
         return {
@@ -697,8 +689,11 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
   const PAY_OVER_ALLOWED_MSG =
     'Ins payment is greater than the allowed — adjust it or type a correct amount.';
 
-  // The Balance column only makes sense on a secondary claim: it is the primary
-  // payment's leftover that the secondary is billed against.
+  // The Balance / Applied Ins columns make sense on a secondary claim (the
+  // primary payment's leftover that the secondary is billed against) and on a
+  // claim that was submitted as a partial payment, where the unadjudicated
+  // balance stays with the insurance. Re-opening such a claim must show the
+  // same columns so the remaining insurance balance is visible again.
   const selectedClaimObj = claims.find(c => c.id === selectedClaim);
   const isSecondaryClaimSelected = React.useMemo(() => {
     if (!selectedClaimObj) return false;
@@ -707,6 +702,14 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
     ).toLowerCase();
     return type === 'secondary' || type === 's';
   }, [selectedClaimObj]);
+
+  const isPartialClaimSelected = React.useMemo(() => {
+    if (!selectedClaimObj) return false;
+    const status = String(selectedClaimObj.status || '').toLowerCase();
+    return status.includes('partial');
+  }, [selectedClaimObj]);
+
+  const showBalanceColumns = isSecondaryClaimSelected || isPartialClaimSelected;
 
   const checkboxOptions = [
     { label: 'Update allowed fee', checked: updateAllowedFee, onChange: (e) => setUpdateAllowedFee(e.target.checked) },
@@ -1032,7 +1035,7 @@ const InsurancePaymentDialog = ({ patient, onClose, onSave }) => {
             handleProcedureChange={handleProcedureChange}
             handleProcedureBlur={handleProcedureBlur}
             selectedClaimObj={selectedClaimObj}
-            showBalanceColumn={isSecondaryClaimSelected}
+            showBalanceColumn={showBalanceColumns}
             patientName={patient ? `${patient.firstName || ''} ${patient.lastName || ''}`.trim() : ''}
           />
         </Box>

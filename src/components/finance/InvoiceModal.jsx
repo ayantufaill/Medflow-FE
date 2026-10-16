@@ -53,6 +53,9 @@ const toEstimateItem = (p) => ({
   allowedFee: p.allowedFee !== undefined ? Number(p.allowedFee) : undefined,
   originalFee: p.originalFee !== undefined ? Number(p.originalFee) : undefined,
   dbi: Boolean(p.dbi),
+  // The estimator needs the tooth so a code with a coverage-book teeth limit is
+  // priced on this line's tooth rather than being blocked as "tooth unknown".
+  site: p.site ?? p.tooth ?? undefined,
 });
 
 // Draft rows carry the client-generated id assigned when they were added, so a
@@ -210,7 +213,8 @@ const InvoiceModal = ({
             charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
             allowedFee: p.allowedFee,
             originalFee: p.originalFee,
-            dbi: Boolean(p.dbi)
+            dbi: Boolean(p.dbi),
+            site: p.site ?? p.tooth ?? undefined,
           }));
           
           invoiceService.estimateInvoiceItems(activePatientId, payload)
@@ -359,6 +363,7 @@ const InvoiceModal = ({
               charge: fee,
               allowedFee: fee,
               originalFee: fee,
+              site: newProcedure.site,
             },
           ],
         );
@@ -519,6 +524,7 @@ const InvoiceModal = ({
                 allowedFee: baseFee,
                 originalFee: baseFee,
                 dbi: Boolean(updatedProcedure.dbi),
+                site: updatedProcedure.site,
               }
             : toEstimateItem(p),
         );
@@ -624,6 +630,7 @@ const InvoiceModal = ({
             allowedFee: baseFee,
             originalFee: baseFee,
             dbi: Boolean(p.dbi),
+            site: p.site ?? p.tooth ?? undefined,
           };
         });
         const estimates = await invoiceService.estimateInvoiceItems(
