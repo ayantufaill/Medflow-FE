@@ -1,12 +1,13 @@
 import React from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 
-const FormInput = ({ label, required, children, labelEndAdornment, renderInput, ...props }) => {
+const FormInput = ({ label, subLabel, required, children, labelEndAdornment, renderInput, ...props }) => {
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
       {label && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
           <Typography
+            component="span"
             sx={{
               fontSize: '12px', // Standardized label size
               fontWeight: 700,
@@ -16,6 +17,19 @@ const FormInput = ({ label, required, children, labelEndAdornment, renderInput, 
           >
             {label} {required && <span style={{ color: '#d32f2f' }}>*</span>}
           </Typography>
+          {subLabel && (
+            <Typography
+              component="span"
+              sx={{
+                fontSize: '11px',
+                fontWeight: 400,
+                color: '#6b7280',
+                textTransform: 'none'
+              }}
+            >
+              {subLabel}
+            </Typography>
+          )}
           {labelEndAdornment}
         </Box>
       )}

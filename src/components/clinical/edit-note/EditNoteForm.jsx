@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { useForm, Controller } from 'react-hook-form';
 import dayjs from 'dayjs';
@@ -19,7 +19,6 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, standardFieldSx, roundedSelectMenuProps, radius } from '../../../constants/styles';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
-import { providerService } from '../../../services/provider.service';
 import { clinicalExamService } from '../../../services/clinical-exam.service';
 import { formatPeriodontalNotes } from '../../../utils/formatPeriodontalNotes';
 
@@ -99,7 +98,7 @@ const defaultValues = {
 
 const ISOLATION_OPTIONS = ['Dryshield (XP)', 'Dryshield (M)', 'Dryshield (P)', 'Dryshield (L)', 'Dryshield (S)', 'Mouth prop'];
 
-const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, currentPatient, selectedProcedures, onCancel, onSuccess }) => {
+const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, linkToAppointment = true, currentPatient, selectedProcedures, onCancel, onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const providersList = useSelector(selectProviderDropdownList) || [];
@@ -257,9 +256,12 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
       setIsSaving(true);
       
       // Determine the actual provider ID from the selected procedures
-      let actualProviderId = providerId && providerId !== "1" ? providerId : "1";
-      if (selectedProcedures && selectedProcedures.length > 0) {
-        const validProcWithProvider = selectedProcedures.find(p => p.provider && p.provider !== '-');
+      let actualProviderId = /^\d+$/.test(String(providerId || '')) ? String(providerId) : null;
+      if (!actualProviderId && selectedProcedures && selectedProcedures.length > 0) {
+        const validProcWithProvider = selectedProcedures.find(p =>
+          p.provider && p.provider !== '-' && appointmentId &&
+          String(p.appointmentId || p._appointmentId || '') === String(appointmentId)
+        );
         if (validProcWithProvider) {
           const pVal = validProcWithProvider.provider;
           const matchedProvider = providersList.find(p => 
@@ -269,13 +271,13 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
           );
           if (matchedProvider) {
              actualProviderId = matchedProvider._id || matchedProvider.ProvNum?.toString();
-          } else if (pVal === 'CB') {
-             actualProviderId = "1";
-          } else {
-             // If it's still text and not found, default to "1" to avoid backend validation error (must be int)
-             actualProviderId = isNaN(parseInt(pVal, 10)) ? "1" : pVal;
+          } else if (/^\d+$/.test(String(pVal))) {
+             actualProviderId = String(pVal);
           }
         }
+      }
+      if (!/^\d+$/.test(String(patientId || '')) || !/^\d+$/.test(String(actualProviderId || ''))) {
+        throw new Error('A valid patient and provider are required to save this note.');
       }
       
       // Gather procedure codes explicitly so they can be shown in reports
@@ -289,14 +291,14 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
       };
 
       const notePayload = {
-        patientId: patientId || "1",
+        patientId: String(patientId),
         providerId: actualProviderId,
         noteType: 'progress',
         structuredData: structuredDataToSave
       };
       
       // Only include appointmentId if it's a real appointment, to avoid the unique conflict error
-      if (appointmentId && appointmentId !== "1") {
+      if (view === 'create' && linkToAppointment && appointmentId && /^\d+$/.test(String(appointmentId))) {
         notePayload.appointmentId = appointmentId;
       }
 
@@ -322,7 +324,7 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, curr
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Failed to save note:', error);
-      alert(error.response?.data?.error?.message || 'Failed to save note');
+      alert(error.response?.data?.error?.message || error.message || 'Failed to save note');
     } finally {
       setIsSaving(false);
     }

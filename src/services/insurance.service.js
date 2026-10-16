@@ -14,13 +14,14 @@ export const insuranceCompanyService = {
    * @param {string} status - Status filter ('active', 'inactive', or '')
    * @returns {Promise<Object>} Object with companies array and pagination info
    */
-  async getAllInsuranceCompanies(page = 1, limit = 10, search = '', status = '') {
+  async getAllInsuranceCompanies(page = 1, limit = 10, search = '', status = '', includePlans = false) {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('limit', limit.toString());
     if (search) {
       params.append('search', search);
     }
+    if (includePlans) params.append('includePlans', 'true');
     if (status === 'active') {
       params.append('isActive', 'true');
     } else if (status === 'inactive') {

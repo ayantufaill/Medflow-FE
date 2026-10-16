@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Paper, TextField, InputAdornment, Button } from '@mui/material';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Paper, TextField, InputAdornment, Button, TablePagination, Typography } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { DenticalReportsTable } from './DenticalReportsTable';
 import { claimService } from '../../services/claim.service';
@@ -7,36 +7,59 @@ import refreshIcon from '../../assets/claimicons/refreshicon.svg';
 
 const DenticalReportsTab = () => {
   const [reports, setReports] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const requestId = useRef(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const loadData = useCallback(async () => {
+    const currentRequest = ++requestId.current;
+    setLoading(true);
+    try {
+      const data = await claimService.getDenticalReports({
+        page: page + 1,
+        limit: rowsPerPage,
+        search: debouncedSearch,
+      });
+      if (currentRequest !== requestId.current) return;
+      setReports(data?.reports || []);
+      setTotal(data?.pagination?.total || 0);
+    } catch (err) {
+      console.error(err);
+      if (currentRequest === requestId.current) {
+        setReports([]);
+        setTotal(0);
+      }
+    } finally {
+      if (currentRequest === requestId.current) {
+        setLoading(false);
+      }
+    }
+  }, [page, rowsPerPage, debouncedSearch]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const data = await claimService.getDenticalReports();
-      setReports(data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
 
-  // Filter the reports based on search
-  const filteredReports = reports.filter((report) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      (report.patientName && report.patientName.toLowerCase().includes(q)) ||
-      (report.claimNumber && report.claimNumber.toLowerCase().includes(q)) ||
-      (report.date && report.date.toLowerCase().includes(q)) ||
-      (report.reportType && report.reportType.toLowerCase().includes(q))
-    );
-  });
+  const handleRowsPerPageChange = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <Box>
@@ -103,7 +126,19 @@ const DenticalReportsTab = () => {
         </Button>
       </Paper>
 
-      <DenticalReportsTable filteredDenticalReports={filteredReports} />
+      {loading && <Typography sx={{ py: 1, fontSize: '0.85rem', color: '#64748b' }}>Loading reports...</Typography>}
+
+      <DenticalReportsTable filteredDenticalReports={reports} />
+
+      <TablePagination
+        component="div"
+        count={total}
+        page={page}
+        onPageChange={handlePageChange}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleRowsPerPageChange}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+      />
     </Box>
   );
 };
