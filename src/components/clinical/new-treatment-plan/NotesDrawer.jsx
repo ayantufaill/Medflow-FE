@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Drawer, Box, Typography, IconButton, Divider, Chip, Button, Paper, CircularProgress, Menu, MenuItem, ListSubheader, Checkbox, Popover, FormControl, Select, Alert } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -21,10 +21,11 @@ import dayjs from 'dayjs';
 import EditNoteForm from '../edit-note/EditNoteForm';
 import NotesDrawerComposer from './NotesDrawerComposer';
 import EmergencyTraumaNoteForm, { TRAUMA_TEMPLATE_NAME } from './EmergencyTraumaNoteForm';
+import HygieneNoteForm, { HYGIENE_TEMPLATE_NAME } from './HygieneNoteForm';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
 import { progressNoteService } from '../../../services/progress-note.service';
 import { noteTemplateService } from '../../../services/note-template.service';
-import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
+import { selectProviderDropdownList, fetchAllProvidersForDropdown } from '../../../store/slices/providerSlice';
 
 const TEMPLATE_MENU_NAMES = [
   'Exam - Emergency Trauma',
@@ -37,7 +38,15 @@ const TEMPLATE_MENU_NAMES = [
 ];
 
 const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, providerId, currentPatient, selectedProcedures }) => {
+  const dispatch = useDispatch();
   const providersList = useSelector(selectProviderDropdownList) || [];
+
+  useEffect(() => {
+    if (open && (!providersList || providersList.length === 0) && typeof dispatch === 'function') {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+  }, [open, dispatch, providersList.length]);
+
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilters, setActiveFilters] = useState([]);
@@ -53,16 +62,46 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
   const [activeNoteId, setActiveNoteId] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'history' | 'edit' | 'create'
 
-  const resolvedProviderId = (() => {
-    const candidates = [providerId];
+  const resolvedPatientId = (() => {
+    const candidates = [
+      patientId,
+      currentPatient?.PatNum,
+      currentPatient?._id,
+      currentPatient?.id,
+      currentPatient?.patientId,
+    ];
     for (const candidate of candidates) {
+      if (/^\d+$/.test(String(candidate || ''))) return String(candidate);
+    }
+    return patientId || (currentPatient ? (currentPatient.PatNum || currentPatient._id || currentPatient.id) : null);
+  })();
+
+  const resolvedProviderId = (() => {
+    const procProvider = (selectedProcedures || []).find((p) => p.provider && p.provider !== '-')?.provider;
+    const candidates = [
+      providerId,
+      currentPatient?.PriProv,
+      currentPatient?.primaryProviderId,
+      currentPatient?.preferredDentistId,
+      currentPatient?.preferredHygienistId,
+      currentPatient?.providerId,
+      procProvider,
+    ];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
       const directId = typeof candidate === 'object' ? candidate?._id || candidate?.id || candidate?.ProvNum : candidate;
       if (/^\d+$/.test(String(directId || ''))) return String(directId);
       const matched = providersList.find((provider) =>
         String(provider.providerCode || '') === String(directId || '') ||
+        String(provider._id || '') === String(directId || '') ||
         `${provider.userId?.firstName || provider.firstName || ''} ${provider.userId?.lastName || provider.lastName || ''}`.trim() === String(directId || '')
       );
       if (matched?._id || matched?.id) return String(matched._id || matched.id);
+    }
+    if (providersList.length > 0) {
+      const first = providersList[0];
+      const fallbackId = first?._id || first?.id || first?.ProvNum;
+      if (/^\d+$/.test(String(fallbackId || ''))) return String(fallbackId);
     }
     return null;
   })();
@@ -95,7 +134,8 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
   };
 
   const loadRealNotes = async () => {
-    if (!patientId) return;
+    const pid = resolvedPatientId;
+    if (!pid) return;
     const currentRequest = ++requestId.current;
     try {
       setIsLoading(true);
@@ -112,12 +152,12 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
       };
       const [clinicalResult, generalResult] = await Promise.allSettled([
         loadPages(
-          (page) => clinicalNoteService.getClinicalNotesByPatient(patientId, page, 100),
+          (page) => clinicalNoteService.getClinicalNotesByPatient(pid, page, 100),
           (result) => result?.clinicalNotes || [],
           (result) => result?.pagination,
         ),
         loadPages(
-          (page) => progressNoteService.getAll({ patientId, category: 'General Notes', page, limit: 100 }),
+          (page) => progressNoteService.getAll({ patientId: pid, category: 'General Notes', page, limit: 100 }),
           (result) => result?.data?.notes || [],
           (result) => result?.data?.pagination,
         ),
@@ -134,7 +174,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
           n.noteType !== 'soap' || n.structuredData || n.text || n.subjective || n.objective || n.assessment || n.plan || n.chiefComplaint
         );
         const mappedClinical = validNotes.map(n => {
-          let titleStr = n.structuredData?.emergencyTrauma?.title || n.structuredData?.templateName || n.structuredData?.restorativeTreatment?.split('\n')[0] || n.chiefComplaint;
+          let titleStr = n.structuredData?.emergencyTrauma?.title || n.structuredData?.hygiene?.title || n.structuredData?.templateName || n.structuredData?.restorativeTreatment?.split('\n')[0] || n.chiefComplaint;
           if (!titleStr) {
             const type = n.noteType || 'Clinical Note';
             titleStr = type === 'soap' || type === 'progress' ? 'Clinical Note' : type.charAt(0).toUpperCase() + type.slice(1);
@@ -157,7 +197,8 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
             status: n.isSigned ? 'Signed' : 'Draft',
             category: 'Clinical',
             tags: Array.isArray(n.structuredData?.isolation) ? n.structuredData.isolation : [],
-            text: n.structuredData?.emergencyTrauma?.chiefComplaint || n.structuredData?.emergencyTrauma?.limitedExam || n.structuredData?.emergencyTrauma?.traumaHistory ||
+            text: n.structuredData?.emergencyTrauma?.chiefComplaint || n.structuredData?.emergencyTrauma?.limitedExam || n.structuredData?.emergencyTrauma?.traumaHistory || n.structuredData?.emergencyTrauma?.diagnosis || n.structuredData?.emergencyTrauma?.treatmentPlan ||
+              n.structuredData?.hygiene?.exam || n.structuredData?.hygiene?.treatmentNotes || n.structuredData?.hygiene?.prevention || n.structuredData?.hygiene?.occlusion || n.structuredData?.hygiene?.softTissueExtraoral || n.structuredData?.hygiene?.oralHygieneStatus ||
               n.structuredData?.procedureAccomplished || n.structuredData?.treatmentRequirementsNotes ||
               n.structuredData?.templateFields?.map((field) => `${field.label}: ${Array.isArray(field.value) ? field.value.join(', ') : field.value ?? ''}`).join('\n') ||
               [n.subjective, n.objective, n.assessment, n.plan].filter(Boolean).join('\n') || '',
@@ -195,7 +236,7 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
 
   useEffect(() => {
     if (open) {
-      if (patientId) {
+      if (resolvedPatientId) {
         loadRealNotes();
       } else {
         requestId.current += 1;
@@ -393,7 +434,12 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
                   elevation={0} 
                   onClick={() => {
                     setActiveNoteId(note._id || note.id);
-                    setComposerKind(note.source === 'general' ? 'general' : note.original?.structuredData?.formType === 'emergencyTrauma' ? 'emergencyTrauma' : note.original?.noteType === 'soap' ? 'soap' : 'clinical');
+                    setComposerKind(
+                      note.source === 'general' ? 'general' :
+                      note.original?.structuredData?.formType === 'emergencyTrauma' ? 'emergencyTrauma' :
+                      note.original?.structuredData?.formType === 'hygiene' ? 'hygiene' :
+                      note.original?.noteType === 'soap' ? 'soap' : 'clinical'
+                    );
                     setSelectedTemplate(null);
                     setView('edit');
                   }}
@@ -482,12 +528,12 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
           </Box>
           
           {/* Main Content (Form) */}
-          <Box sx={{ flex: 1, minHeight: 0, overflowY: composerKind === 'emergencyTrauma' ? 'hidden' : 'auto', bgcolor: '#fff' }}>
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', bgcolor: '#fff' }}>
             {composerKind === 'clinical' ? (
               <EditNoteForm
                 noteId={activeNoteId}
                 view={view}
-                patientId={patientId}
+                patientId={resolvedPatientId}
                 appointmentId={appointmentId}
                 linkToAppointment={false}
                 providerId={resolvedProviderId}
@@ -501,8 +547,26 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
                 key={activeNoteId || 'new-emergency-trauma'}
                 note={view === 'edit' ? notes.find((item) => item.id === activeNoteId)?.original : null}
                 template={selectedTemplate}
-                patientId={patientId}
+                patientId={resolvedPatientId}
                 providerId={resolvedProviderId}
+                currentPatient={currentPatient}
+                selectedProcedures={selectedProcedures}
+                providersList={providersList}
+                onCancel={() => setView('list')}
+                onSuccess={() => { loadRealNotes(); setView('list'); }}
+              />
+            ) : composerKind === 'hygiene' ? (
+              <HygieneNoteForm
+                key={activeNoteId || 'new-hygiene'}
+                note={view === 'edit' ? notes.find((item) => item.id === activeNoteId)?.original : null}
+                template={selectedTemplate}
+                patientId={resolvedPatientId}
+                patientName={patientName}
+                providerId={resolvedProviderId}
+                appointmentId={appointmentId}
+                currentPatient={currentPatient}
+                selectedProcedures={selectedProcedures}
+                providersList={providersList}
                 onCancel={() => setView('list')}
                 onSuccess={() => { loadRealNotes(); setView('list'); }}
               />
@@ -511,9 +575,10 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
                 kind={composerKind}
                 note={view === 'edit' ? notes.find((item) => item.id === activeNoteId)?.original : null}
                 template={selectedTemplate}
-                patientId={patientId}
+                patientId={resolvedPatientId}
                 providerId={resolvedProviderId}
                 appointmentId={appointmentId}
+                providersList={providersList}
                 onCancel={() => setView('list')}
                 onSuccess={() => { loadRealNotes(); setView('list'); }}
               />
@@ -603,7 +668,11 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
         {TEMPLATE_MENU_NAMES.map((name) => (
           <MenuItem key={name} disabled={templatesLoading} onClick={() => {
             const template = templates.find((item) => item.name?.trim().toLowerCase() === name.toLowerCase());
-            startNote(name === TRAUMA_TEMPLATE_NAME ? 'emergencyTrauma' : 'soap', template || { name, missingContent: true });
+            startNote(
+              name === TRAUMA_TEMPLATE_NAME ? 'emergencyTrauma' :
+              name === HYGIENE_TEMPLATE_NAME ? 'hygiene' : 'soap',
+              template || { name, missingContent: true }
+            );
           }} sx={{ fontSize: 13, whiteSpace: 'normal' }}>
             {name}
           </MenuItem>
@@ -627,7 +696,12 @@ const NotesDrawer = ({ open, onClose, patientName, patientId, appointmentId, pro
       >
         <MenuItem onClick={() => {
           const note = notes.find((item) => item.id === activeNoteId);
-          setComposerKind(note?.source === 'general' ? 'general' : note?.original?.structuredData?.formType === 'emergencyTrauma' ? 'emergencyTrauma' : note?.original?.noteType === 'soap' ? 'soap' : 'clinical');
+          setComposerKind(
+            note?.source === 'general' ? 'general' :
+            note?.original?.structuredData?.formType === 'emergencyTrauma' ? 'emergencyTrauma' :
+            note?.original?.structuredData?.formType === 'hygiene' ? 'hygiene' :
+            note?.original?.noteType === 'soap' ? 'soap' : 'clinical'
+          );
           setSelectedTemplate(null);
           setMenuAnchorEl(null);
           setView('edit');

@@ -5,7 +5,7 @@ import { clinicalNoteService } from '../../../services/clinical-note.service';
 import { progressNoteService } from '../../../services/progress-note.service';
 import { noteTemplateService } from '../../../services/note-template.service';
 
-jest.mock('react-redux', () => ({ useSelector: () => [] }));
+jest.mock('react-redux', () => ({ useSelector: () => [], useDispatch: () => jest.fn() }));
 jest.mock('../../../store/slices/providerSlice', () => ({ selectProviderDropdownList: jest.fn() }));
 jest.mock('../edit-note/EditNoteForm', () => ({ patientId, providerId }) => (
   <div>Clinical editor for {patientId} with provider {providerId}</div>
@@ -86,14 +86,14 @@ it('opens the clinical note form from the plus menu', async () => {
 
 it('prefills saved custom template fields and persists their values', async () => {
   noteTemplateService.getActiveTemplates.mockResolvedValue({ noteTemplates: [{
-    _id: '12', name: 'Exam - Hygiene',
+    _id: '12', name: 'Exam - Limited',
     templateStructure: { fields: [{ id: 'field_1', label: 'Hygiene findings', type: 'textarea', required: true }] },
     defaultContent: { field_1: 'Saved template text' },
   }] });
   renderDrawer();
   fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
-  await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Exam - Hygiene' })).toBeEnabled());
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Exam - Hygiene' }));
+  await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Exam - Limited' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Exam - Limited' }));
   expect(screen.getByRole('textbox', { name: 'Hygiene findings' })).toHaveValue('Saved template text');
   fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
   await waitFor(() => expect(clinicalNoteService.createClinicalNote).toHaveBeenCalledWith(expect.objectContaining({
@@ -158,3 +158,28 @@ it('signs the saved trauma note when Complete is selected', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
   await waitFor(() => expect(clinicalNoteService.signClinicalNote).toHaveBeenCalledWith('92'));
 });
+
+it('saves every selected hygiene field and reopens the dedicated form', async () => {
+  const saved = {
+    _id: '95', noteType: 'soap', structuredData: {
+      formType: 'hygiene', templateName: 'Exam - Hygiene',
+      hygiene: { appt: 'Periodic exam', panoramicXrayTaken: 'Yes', rightMolar: 'Class 1', complete: false },
+    },
+  };
+  clinicalNoteService.createClinicalNote.mockResolvedValue({ _id: '95' });
+  clinicalNoteService.getClinicalNotesByPatient
+    .mockResolvedValueOnce({ clinicalNotes: [], pagination: { pages: 1 } })
+    .mockResolvedValue({ clinicalNotes: [saved], pagination: { pages: 1 } });
+  renderDrawer();
+  fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Exam - Hygiene' }));
+  expect(screen.getByRole('radio', { name: 'Periodic exam' })).toBeInTheDocument();
+  expect(screen.getByText('Was occlusion deferred?')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('radio', { name: 'Periodic exam' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(clinicalNoteService.createClinicalNote).toHaveBeenCalledWith(expect.objectContaining({
+    patientId: '42', providerId: '7', noteType: 'soap',
+    structuredData: expect.objectContaining({ formType: 'hygiene', hygiene: expect.objectContaining({ appt: 'Periodic exam' }) }),
+  })));
+});
+

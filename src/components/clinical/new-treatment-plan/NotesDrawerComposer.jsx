@@ -14,7 +14,7 @@ const SOAP_FIELDS = [
 const emptySoap = { chiefComplaint: '', subjective: '', objective: '', assessment: '', plan: '' };
 const hasFieldValue = (value) => Array.isArray(value) ? value.length > 0 : typeof value === 'boolean' ? value : String(value ?? '').trim().length > 0;
 
-const NotesDrawerComposer = ({ kind, note, template, patientId, providerId, onCancel, onSuccess }) => {
+const NotesDrawerComposer = ({ kind, note, template, patientId, providerId, appointmentId, providersList = [], onCancel, onSuccess }) => {
   const [soap, setSoap] = useState(emptySoap);
   const [fieldValues, setFieldValues] = useState({});
   const [description, setDescription] = useState('');
@@ -35,7 +35,32 @@ const NotesDrawerComposer = ({ kind, note, template, patientId, providerId, onCa
   }, [kind, note, template, templateFields]);
 
   const save = async () => {
-    if (!/^\d+$/.test(String(patientId || '')) || (!note && !/^\d+$/.test(String(providerId || '')))) {
+    const effectivePatientId = (() => {
+      const candidates = [
+        patientId,
+        note?.patientId?._id || note?.patientId?.id || note?.patientId,
+      ];
+      for (const c of candidates) {
+        if (/^\d+$/.test(String(c || ''))) return String(c);
+      }
+      return null;
+    })();
+
+    const effectiveProviderId = (() => {
+      const candidates = [
+        note?.providerId?._id || note?.providerId?.id || note?.providerId,
+        providerId,
+        providersList?.[0]?._id || providersList?.[0]?.id || providersList?.[0]?.ProvNum,
+      ];
+      for (const c of candidates) {
+        if (!c) continue;
+        const raw = typeof c === 'object' ? c._id || c.id || c.ProvNum : c;
+        if (/^\d+$/.test(String(raw || ''))) return String(raw);
+      }
+      return null;
+    })();
+
+    if (!effectivePatientId || (!note && !effectiveProviderId)) {
       setError('A valid patient and provider are required to save this note.');
       return;
     }
@@ -61,13 +86,12 @@ const NotesDrawerComposer = ({ kind, note, template, patientId, providerId, onCa
         if (note) {
           await progressNoteService.update(note.id, { description: description.trim(), category: 'General Notes' });
         } else {
-          await progressNoteService.create({ patientId: String(patientId), providerId: String(providerId), category: 'General Notes', description: description.trim() });
+          await progressNoteService.create({ patientId: String(effectivePatientId), providerId: String(effectiveProviderId), category: 'General Notes', description: description.trim() });
         }
       } else {
-        const existingProviderId = note?.providerId?._id || note?.providerId?.id || note?.providerId || providerId;
         const payload = {
-          patientId: String(patientId),
-          ...(/^\d+$/.test(String(existingProviderId || '')) ? { providerId: String(existingProviderId) } : {}),
+          patientId: String(effectivePatientId),
+          ...(effectiveProviderId ? { providerId: String(effectiveProviderId) } : {}),
           noteType: 'soap',
           ...(usesTemplateFields ? {
             templateId: String(template?._id || template?.id || note?.templateId || ''),

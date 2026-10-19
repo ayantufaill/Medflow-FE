@@ -276,6 +276,11 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, link
           }
         }
       }
+      if (!actualProviderId && providersList && providersList.length > 0) {
+        const first = providersList[0];
+        const fId = first?._id || first?.id || first?.ProvNum;
+        if (/^\d+$/.test(String(fId || ''))) actualProviderId = String(fId);
+      }
       if (!/^\d+$/.test(String(patientId || '')) || !/^\d+$/.test(String(actualProviderId || ''))) {
         throw new Error('A valid patient and provider are required to save this note.');
       }
