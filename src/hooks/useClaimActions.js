@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { claimService } from '../services/claim.service';
 import { authorizationService } from '../services/authorization.service';
+import { printClaimsReport } from '../components/claims/claimPrintUtils';
 
 export const useClaimActions = (onSuccess) => {
   const [loading, setLoading] = useState(false);
@@ -166,8 +167,8 @@ export const useClaimActions = (onSuccess) => {
     showMessage("Exported report to CSV!");
   };
 
-  const printPage = () => {
-    window.print();
+  const printPage = (options = {}) => {
+    return printClaimsReport(options);
   };
 
   return {

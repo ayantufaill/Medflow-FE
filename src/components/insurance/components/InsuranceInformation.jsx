@@ -9,73 +9,33 @@ import PhoneNumberInput from '../../shared/PhoneNumberInput';
 const InsuranceInformation = ({ 
   formData, 
   handleInputChange, 
-  insuranceCompanies = [],
   existingPlans = [],
   onSelectExistingPlan,
   assignmentOptions = [],
   errors = {}
 }) => {
-  // Existing plans (carrier + group with saved benefits) go first so a group name /
-  // number search lands on them before the bare carrier rows.
-  const companies = [...existingPlans, ...insuranceCompanies];
   const benefits = assignmentOptions.length > 0 ? assignmentOptions : [
     { value: 1, label: 'Pay to dentist (Assignment)' },
     { value: 2, label: 'Pay to patient (Benefit)' }
   ];
 
-  // Robust dummy data to ensure results show up as in the screenshot
-  const DUMMY_INSURANCE = [
-    { payerId: '00621', carrierName: 'Blue Cross Blue Shield of Illinois', groupName: 'VIVID SEATS, LLC', groupNumber: '300871', planName: 'BCBS IL', payerAddress: '123 Blue St, Chicago, IL', carrierPhone: '800-123-4567' },
-    { payerId: '52133', carrierName: 'United Healthcare Dental', groupName: 'DOXIM', groupNumber: '1602187', planName: 'UHC ( DOXIM )', payerAddress: '456 Health Way, Minnetonka, MN', carrierPhone: '800-987-6543' },
-    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna Dental Plans', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
-    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'Texas Health Resources', groupNumber: '087639801700001', planName: 'Aetna Dental Plans', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
-    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TX Health Resources', groupNumber: '087639801300001', planName: 'TX HEALTH RESOURCES', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
-    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'Texas Health Resources', groupNumber: '876398-17-001', planName: '800-451-7715', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
-    { payerId: '60054', carrierName: 'Aetna Dental Plans', groupName: 'TEXAS HEALTH RESOURCES', groupNumber: '087639801300001', planName: 'Aetna(TEXAS HEALTH RESOURCES)', payerAddress: '789 Aetna Dr, Hartford, CT', carrierPhone: '800-111-2222' },
-  ];
-
-  const handleSearch = (val, forceOpen = true, excludeOverride = undefined) => {
-    handleInputChange('carrierSearch', val);
-
-    const searchPool = companies.length > 0 ? companies : DUMMY_INSURANCE;
-    let filtered = searchPool;
-    
-    if (val) {
-      filtered = searchPool.filter(item => 
-        (item.payerId || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.carrierName || item.name || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.groupName || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.groupNumber || '').toLowerCase().includes(val.toLowerCase()) ||
-        (item.planName || item.name || '').toLowerCase().includes(val.toLowerCase())
-      );
-    }
-
-    // Always filter out inactive companies regardless of the checkbox
-    filtered = filtered.filter(item => item.isActive !== false);
-
-    const exclude = excludeOverride !== undefined ? excludeOverride : formData.excludeSystemCarriers;
-    if (exclude) {
-      filtered = filtered.filter(item => !item.isSystemCarrier && !item.isSystem);
-    }
-
-    setSearchResults(filtered);
-    if (forceOpen) {
-      setShowDropdown(true);
-    }
-  };
-
   const handleSelectResult = (item) => {
-    handleInputChange('insuranceCompanyId', item._id || item.id || 1);
     handleInputChange('carrierName', item.carrierName || item.name || '');
     handleInputChange('payerId', item.payerId || '');
     handleInputChange('carrierPhone', item.carrierPhone || item.phone || '');
-    handleInputChange('payerAddress', item.payerAddress || item.address || item.city || '');
+    handleInputChange(
+      'payerAddress',
+      item.selectedAddress || item.resolvedAddress || item.addressLine1 || item.payerAddress || item.address || item.city || ''
+    );
     handleInputChange('groupName', item.groupName || '');
     handleInputChange('groupNumber', item.groupNumber || '');
-    handleInputChange('insurancePlan', item.planName || item.name || '');
+    handleInputChange('insurancePlan', item.planName || item.employerName || '');
+    handleInputChange('employerName', item.employerName || '');
+    handleInputChange('employerId', item.employerId || '');
     if (item.feeSched || item.feeGuide) {
       handleInputChange('planFeeGuide', item.feeSched || item.feeGuide);
     }
+    handleInputChange('insuranceCompanyId', item._id || item.id || '');
     handleInputChange('carrierSearch', '');
     // Existing plans also carry deductibles, coverages and downgrades to copy over.
     if (item.isExistingPlan && item.sourceCoverage && onSelectExistingPlan) {
@@ -107,9 +67,8 @@ const InsuranceInformation = ({
         <CarrierSearchDropdown 
           formData={formData}
           handleInputChange={handleInputChange}
-          companies={companies}
-          DUMMY_INSURANCE={DUMMY_INSURANCE}
           handleSelectResult={handleSelectResult}
+          existingPlans={existingPlans}
         />
 
         <Box sx={{ mt: 1, mb: 1.5 }}>
@@ -161,7 +120,7 @@ const InsuranceInformation = ({
           <FormInput
             label="Payer Address"
             value={formData.payerAddress || ''}
-            onChange={(e) => handleInputChange('payerAddress', e.target.value)}
+            InputProps={{ readOnly: true }}
           />
         </Box>
 
