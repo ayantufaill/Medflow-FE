@@ -30,6 +30,12 @@ const FINANCE_SUBMENU_ITEMS = [
   { label: "E-trans", path: "/era" },
 ];
 
+const CLINICAL_SUBMENU_ITEMS = [
+  { label: "Treatment Plan", path: "/clinical/treatment-plan" },
+  { label: "Images", path: "/clinical/images" },
+  { label: "Lab Cases", path: "/clinical/lab-cases" },
+];
+
 // Same checks as each tab's route guard, so the bar never offers a page that
 // answers "Access denied".
 const STAFF = ["FULL_ADMIN_GROUP", "CLINICAL_GROUP", "OPERATIONS_GROUP"];
@@ -71,6 +77,8 @@ const NavTabs = () => {
   const reportsMenuCloseTimer = useRef(null);
   const [financeMenuAnchor, setFinanceMenuAnchor] = useState(null);
   const financeMenuCloseTimer = useRef(null);
+  const [clinicalMenuAnchor, setClinicalMenuAnchor] = useState(null);
+  const clinicalMenuCloseTimer = useRef(null);
   const patientId =
     currentPatient?._id ||
     currentPatient?.id ||
@@ -158,6 +166,18 @@ const NavTabs = () => {
     );
   };
 
+  const openClinicalMenu = (event) => {
+    window.clearTimeout(clinicalMenuCloseTimer.current);
+    setClinicalMenuAnchor(event.currentTarget);
+  };
+
+  const closeClinicalMenu = () => {
+    clinicalMenuCloseTimer.current = window.setTimeout(
+      () => setClinicalMenuAnchor(null),
+      150,
+    );
+  };
+
   const handleFinanceClick = (path) => {
     navigate(path);
     setFinanceMenuAnchor(null);
@@ -182,8 +202,8 @@ const NavTabs = () => {
           <Box
             key={label}
             onClick={() => handleNavClick(path)}
-            onMouseEnter={label === "Patients" ? openPatientsMenu : label === "Patient Reports" ? openReportsMenu : label === "Finance" ? openFinanceMenu : undefined}
-            onMouseLeave={label === "Patients" ? closePatientsMenu : label === "Patient Reports" ? closeReportsMenu : label === "Finance" ? closeFinanceMenu : undefined}
+            onMouseEnter={label === "Patients" ? openPatientsMenu : label === "Patient Reports" ? openReportsMenu : label === "Finance" ? openFinanceMenu : label === "Clinical" ? openClinicalMenu : undefined}
+            onMouseLeave={label === "Patients" ? closePatientsMenu : label === "Patient Reports" ? closeReportsMenu : label === "Finance" ? closeFinanceMenu : label === "Clinical" ? closeClinicalMenu : undefined}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -219,6 +239,29 @@ const NavTabs = () => {
           </Box>
         );
       })}
+      <Popper
+        anchorEl={clinicalMenuAnchor}
+        open={Boolean(clinicalMenuAnchor)}
+        placement="bottom-start"
+        modifiers={[{ name: "offset", options: { offset: [0, 4] } }]}
+        sx={{ zIndex: 1600 }}
+      >
+        <Box
+          onMouseEnter={() => window.clearTimeout(clinicalMenuCloseTimer.current)}
+          onMouseLeave={closeClinicalMenu}
+          sx={{ minWidth: 160, backgroundColor: "#fff", border: "1px solid", borderColor: "divider", borderRadius: "8px", boxShadow: "0 8px 24px rgba(0,0,0,.12)", py: 1 }}
+        >
+          {CLINICAL_SUBMENU_ITEMS.map((item) => (
+            <Typography
+              key={item.path}
+              onClick={() => { navigate(item.path); setClinicalMenuAnchor(null); }}
+              sx={{ px: 2, py: 1.2, fontSize: "0.8rem", fontWeight: 500, color: location.pathname === item.path ? theme.palette.primary.main : "text.secondary", cursor: "pointer", "&:hover": { color: theme.palette.primary.main, backgroundColor: "rgba(25,118,210,.08)" } }}
+            >
+              {item.label}
+            </Typography>
+          ))}
+        </Box>
+      </Popper>
       <Popper
         anchorEl={patientsMenuAnchor}
         open={Boolean(patientsMenuAnchor)}

@@ -34,6 +34,8 @@ import VitalSignsListPage from '../pages/vital-signs/VitalSignsListPage';
 import CreateVitalSignPage from '../pages/vital-signs/CreateVitalSignPage';
 import EditVitalSignPage from '../pages/vital-signs/EditVitalSignPage';
 import PatientVitalHistoryPage from '../pages/vital-signs/PatientVitalHistoryPage';
+import ImagesPage from '../pages/clinical/ImagesPage';
+import LabCasesPage from '../pages/clinical/LabCasesPage';
 
 const CLINICAL_ALLOWED_GROUPS = ['FULL_ADMIN_GROUP', 'CLINICAL_GROUP'];
 
@@ -90,6 +92,8 @@ const clinicalRoutes = [
   <Route key="/clinical/diagnostic-opinion/functional" path="/clinical/diagnostic-opinion/functional" element={clinicalRoute(<FunctionalPage />)} />,
   <Route key="/clinical/diagnostic-opinion/dentofacial" path="/clinical/diagnostic-opinion/dentofacial" element={clinicalRoute(<DentofacialPage />)} />,
   <Route key="/clinical/treatment-plan" path="/clinical/treatment-plan" element={treatmentPlanRoute(<NewTreatmentPlanPage />)} />,
+  <Route key="/clinical/images" path="/clinical/images" element={clinicalRoute(<ImagesPage />)} />,
+  <Route key="/clinical/lab-cases" path="/clinical/lab-cases" element={clinicalRoute(<LabCasesPage />)} />,
   <Route key="/clinical/adjunctive-therapy" path="/clinical/adjunctive-therapy" element={clinicalRoute(<AdjunctiveTherapyPage />)} />,
   <Route key="/clinical/rx" path="/clinical/rx" element={clinicalRoute(<RXPage />)} />,
   <Route key="/clinical/referral" path="/clinical/referral" element={clinicalRoute(<ReferralPage />)} />,
