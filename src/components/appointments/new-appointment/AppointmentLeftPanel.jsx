@@ -200,6 +200,7 @@ const AppointmentLeftPanel = ({
             parseFloat(String(fp.charge || "").replace(/[^0-9.-]+/g, "")) || 0,
           allowedFee:
             fp.allowedFee !== undefined ? Number(fp.allowedFee) : undefined,
+          site: fp.site ?? fp.tooth ?? undefined,
         }));
 
         const estimates = await invoiceService.estimateInvoiceItems(
@@ -633,6 +634,7 @@ const AppointmentLeftPanel = ({
                         p.allowedFee !== undefined
                           ? Number(p.allowedFee)
                           : undefined,
+                      site: p.site ?? p.tooth ?? undefined,
                     }));
                     const estimates = await invoiceService.estimateInvoiceItems(
                       pid,

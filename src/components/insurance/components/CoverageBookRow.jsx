@@ -78,7 +78,18 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
               (Array.isArray(row.teeth) ? row.teeth.join(', ') : '') ||
               ''
             }
-            onChange={(e) => handleFieldChange(index, 'teethLimit', e.target.value)}
+            onChange={(e) => {
+              // Keep the `teeth` array in step with the text field: the backend
+              // prefers `teethLimit` but falls back to `teeth`, so a stale array
+              // would resurrect a limit the user just cleared (or typed over).
+              const value = e.target.value;
+              handleFieldChange(index, 'teethLimit', value);
+              handleFieldChange(
+                index,
+                'teeth',
+                value.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean)
+              );
+            }}
             sx={{ ...inputFieldSx, width: '100%' }}
           />
           <EditIcon

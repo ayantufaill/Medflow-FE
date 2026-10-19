@@ -124,18 +124,33 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
   const claimId = attachingClaim?._id || attachingClaim?.id;
   if (!claimId) return;
 
+  let cancelled = false;
   setUploadedFiles([]);
+  setPayorRefValue(attachingClaim.payerReferenceNumber || attachingClaim.payorReferenceNumber || attachingClaim.referenceNumber || '');
   setLocalClaimEobs(attachingClaim.eobs || []);
   setLoadingAttachments(true);
 
-  claimService.getClaimDocuments(claimId)
-    .then((docs) => setExistingAttachments(docs || []))
+  Promise.all([
+    claimService.getClaimById(claimId),
+    claimService.getClaimDocuments(claimId),
+  ])
+    .then(([claim, docs]) => {
+      if (cancelled) return;
+      setPayorRefValue(claim?.payerReferenceNumber || claim?.payorReferenceNumber || claim?.referenceNumber || '');
+      setExistingAttachments(docs || []);
+    })
     .catch((err) => {
       console.error('Failed to load claim attachments', err);
       setExistingAttachments([]);
     })
-    .finally(() => setLoadingAttachments(false));
-}, [attachingClaim]);
+    .finally(() => {
+      if (!cancelled) setLoadingAttachments(false);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [attachingClaim, open]);
 
   const hasAnyAttachments = existingAttachments.length > 0 || uploadedFiles.length > 0;
 
@@ -143,13 +158,16 @@ export default function ClaimAttachmentsDialog({ open, attachingClaim, onClose, 
     const newFiles = uploadedFiles.map(u => u.file).filter(Boolean);
     const claimId = attachingClaim?._id || attachingClaim?.id;
 
-    if (newFiles.length > 0 && claimId) {
+    if (claimId) {
       setSaving(true);
       try {
-        await claimService.uploadAttachments(claimId, newFiles);
+        if (newFiles.length > 0) {
+          await claimService.uploadAttachments(claimId, newFiles);
+        }
+        await claimService.updateClaim(claimId, { payerReferenceNumber: payorRefValue.trim() || null });
       } catch (err) {
-        console.error('Failed to upload attachments', err);
-        alert('Failed to upload attachments. Please try again.');
+        console.error('Failed to save claim attachment details', err);
+        alert('Failed to save claim attachment details. Please try again.');
         setSaving(false);
         return;
       }

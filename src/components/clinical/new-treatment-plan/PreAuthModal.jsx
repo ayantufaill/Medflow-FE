@@ -71,6 +71,7 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [savedAuthorizationId, setSavedAuthorizationId] = useState(null);
+  const [printPreviewUrl, setPrintPreviewUrl] = useState(null);
   
   const [tagAnchorEl, setTagAnchorEl] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -368,29 +369,26 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
     try {
       const { blob } = await getAuthorizationForm();
       const url = window.URL.createObjectURL(blob);
-
-      const printFrame = document.createElement('iframe');
-      printFrame.title = 'Print authorization form';
-      printFrame.style.position = 'fixed';
-      printFrame.style.right = '0';
-      printFrame.style.bottom = '0';
-      printFrame.style.width = '1px';
-      printFrame.style.height = '1px';
-      printFrame.style.border = '0';
-      printFrame.style.opacity = '0';
-      printFrame.onload = () => {
-        printFrame.contentWindow?.focus();
-        printFrame.contentWindow?.print();
-        window.setTimeout(() => {
-          printFrame.remove();
-          window.URL.revokeObjectURL(url);
-        }, 1000);
-      };
-      printFrame.src = url;
-      document.body.appendChild(printFrame);
+      setPrintPreviewUrl((previousUrl) => {
+        if (previousUrl) window.URL.revokeObjectURL(previousUrl);
+        return url;
+      });
     } catch {
       showSnackbar('Failed to generate print form', 'error');
     }
+  };
+
+  const closePrintPreview = () => {
+    setPrintPreviewUrl((url) => {
+      if (url) window.URL.revokeObjectURL(url);
+      return null;
+    });
+  };
+
+  const printPreview = () => {
+    const frame = document.getElementById('preauth-print-preview');
+    frame?.contentWindow?.focus();
+    frame?.contentWindow?.print();
   };
 
   const handleDownload = async () => {
@@ -399,11 +397,11 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `PreAuth-${authorizationId}.pdf`;
+      link.download = `ADA-PreAuth-${authorizationId}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       showSnackbar('Form downloaded successfully', 'success');
     } catch {
       showSnackbar('Failed to download form', 'error');
@@ -899,6 +897,35 @@ const PreAuthModal = ({ open, onClose, preAuthId, patientId, selectedProcedures 
           onSave={handleWizardSave}
         />
       )}
+
+      <Dialog
+        open={Boolean(printPreviewUrl)}
+        onClose={closePrintPreview}
+        maxWidth="lg"
+        fullWidth
+        sx={{ zIndex: 150000 }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
+          <Typography sx={{ fontWeight: 600 }}>ADA preauthorization form</Typography>
+          <IconButton onClick={closePrintPreview} size="small" aria-label="Close preview">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, height: '75vh', bgcolor: '#525252' }}>
+          {printPreviewUrl && (
+            <iframe
+              id="preauth-print-preview"
+              title="ADA preauthorization form preview"
+              src={printPreviewUrl}
+              style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1.5 }}>
+          <Button onClick={closePrintPreview} variant="outlined">Cancel</Button>
+          <Button onClick={printPreview} variant="contained" startIcon={<PrintIcon />}>Print</Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
