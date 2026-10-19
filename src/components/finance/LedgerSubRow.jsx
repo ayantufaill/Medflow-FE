@@ -221,11 +221,14 @@ const LedgerSubRow = ({
   const paymentTotal = hasProcedures
     ? procedures.reduce((sum, proc) => sum + Number(proc.appliedPayment || 0), 0)
     : 0;
-  const displayPatientTotal = showPaymentColumn
-    ? Math.max(0, patientTotal - paymentTotal)
-    : isClaim
-      ? procedures.reduce((sum, proc) => sum + claimPatientPortion(proc), 0)
-      : patientTotal;
+  // Snapshot rows already carry the split as it stood the moment the entry
+  // posted (the payer's own bucket was reduced when the entry applied), so
+  // the Patient summary is the remaining patient portion directly.
+  // Subtracting appliedPayment a second time here double-counted every
+  // insurance payment against the patient (775.50 shown as 601.00).
+  const displayPatientTotal = isClaim
+    ? procedures.reduce((sum, proc) => sum + claimPatientPortion(proc), 0)
+    : patientTotal;
 
   const statusIsClosed = ["paid", "cancelled"].includes(
     claimStatus?.toLowerCase(),

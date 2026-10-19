@@ -1,0 +1,302 @@
+import { useState, useMemo, useCallback } from "react";
+import { usePatient } from "../../hooks/redux";
+import { patientKey, patientName } from "../images/imagesConstants";
+import { STORAGE_KEY, defaultLabCases, EXPORT_COLUMNS } from "./labCasesConstants";
+
+const emptyFormData = (title) => ({
+  patient: title,
+  date: "",
+  procedures: [],
+  lab: "",
+  trackingNumber: "",
+  estReceiveDate: "",
+  notes: "",
+  shipping: "",
+  labFee: "",
+  status: "Draft",
+});
+
+export const useLabCasesPage = () => {
+  const { currentPatient, selectedPatientId } = usePatient();
+  const patientId = patientKey(currentPatient) || selectedPatientId;
+  const title = useMemo(() => patientName(currentPatient), [currentPatient]);
+
+  const loadCases = useCallback((id) => {
+    const key = id ? `${STORAGE_KEY}-${id}` : STORAGE_KEY;
+    const saved = JSON.parse(localStorage.getItem(key) || "null");
+    return saved || (id ? [] : defaultLabCases);
+  }, []);
+
+  const [labCases, setLabCases] = useState(() => loadCases(patientId));
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [rowMenuAnchor, setRowMenuAnchor] = useState(null);
+  const [rowMenuCase, setRowMenuCase] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+
+  const [prevPatientId, setPrevPatientId] = useState(patientId);
+  if (prevPatientId !== patientId) {
+    setPrevPatientId(patientId);
+    setLabCases(loadCases(patientId));
+    setSelectedIds([]);
+    setPage(0);
+  }
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formData, setFormData] = useState(emptyFormData(""));
+
+  const filteredCases = useMemo(() => {
+    return labCases.filter((c) => {
+      const matchSearch =
+        !search.trim() ||
+        [c.date, c.type, c.procedure, c.lab, c.estReceiveDate, c.apptDate, c.provider, c.status, c.notes, String(c.total ?? "")]
+          .some((v) => (v || "").toLowerCase().includes(search.toLowerCase()));
+      const matchStatus = !statusFilter || c.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [labCases, search, statusFilter]);
+
+  const paginatedCases = useMemo(() => {
+    const start = page * rowsPerPage;
+    return filteredCases.slice(start, start + rowsPerPage);
+  }, [filteredCases, page, rowsPerPage]);
+
+  const allSelected = paginatedCases.length > 0 && paginatedCases.every((c) => selectedIds.includes(c.id));
+  const someSelected = selectedIds.some((id) => paginatedCases.some((c) => c.id === id)) && !allSelected;
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const pageIds = paginatedCases.map((c) => c.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    } else {
+      const pageIds = new Set(paginatedCases.map((c) => c.id));
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.has(id)));
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const handleRefresh = () => {
+    setLabCases(loadCases(patientId));
+  };
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("");
+    setPage(0);
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return `${m}/${d}/${y}`;
+  };
+
+  const toIso = (value) => {
+    if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const [m, d, y] = value.split("/");
+    return y && m && d ? `${y}-${m}-${d}` : "";
+  };
+
+  const persistCases = (next) => {
+    const key = patientId ? `${STORAGE_KEY}-${patientId}` : STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(next));
+  };
+
+  const closeRowMenu = () => {
+    setRowMenuAnchor(null);
+    setRowMenuCase(null);
+  };
+
+  const handleEditRow = () => {
+    const c = rowMenuCase;
+    closeRowMenu();
+    if (!c) return;
+    setFormData({
+      patient: title,
+      date: toIso(c.date),
+      procedures: (c.procedure || "")
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean),
+      lab: c.lab || "",
+      trackingNumber: c.trackingNumber || "",
+      estReceiveDate: toIso(c.estReceiveDate),
+      notes: c.notes || "",
+      shipping: c.shipping != null ? String(c.shipping) : "",
+      labFee: c.labFee != null ? String(c.labFee) : "",
+      status: c.status || "Draft",
+    });
+    setEditingId(c.id);
+    setDialogOpen(true);
+  };
+
+  const handleDuplicateRow = () => {
+    const c = rowMenuCase;
+    closeRowMenu();
+    if (!c) return;
+    const copy = { ...c, id: `lab-${Date.now()}` };
+    const next = [copy, ...labCases];
+    setLabCases(next);
+    persistCases(next);
+  };
+
+  const handleDeleteRow = () => {
+    const c = rowMenuCase;
+    closeRowMenu();
+    if (!c) return;
+    const next = labCases.filter((item) => item.id !== c.id);
+    setLabCases(next);
+    persistCases(next);
+    setSelectedIds((prev) => prev.filter((id) => id !== c.id));
+  };
+
+  const handleOpenNewDialog = () => {
+    setFormData(emptyFormData(title));
+    setEditingId(null);
+    setDialogOpen(true);
+  };
+
+  const handleSaveNewCase = () => {
+    const procedures = (formData.procedures || []).map((p) => p.trim()).filter(Boolean);
+    const newCase = {
+      id: `lab-${Date.now()}`,
+      date: formatDate(formData.date) || new Date().toLocaleDateString(),
+      procedure: procedures.join(", "),
+      lab: formData.lab.trim(),
+      trackingNumber: formData.trackingNumber.trim(),
+      estReceiveDate: formatDate(formData.estReceiveDate),
+      notes: (formData.notes || "").trim(),
+      shipping: parseFloat(formData.shipping) || 0,
+      labFee: parseFloat(formData.labFee) || 0,
+      total: (parseFloat(formData.shipping) || 0) + (parseFloat(formData.labFee) || 0),
+      status: formData.status,
+    };
+    const next = editingId
+      ? labCases.map((c) => (c.id === editingId ? { ...c, ...newCase, id: editingId } : c))
+      : [newCase, ...labCases];
+    setLabCases(next);
+    persistCases(next);
+    setEditingId(null);
+    setDialogOpen(false);
+  };
+
+  const handleExportCsv = () => {
+    const csvCell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const header = EXPORT_COLUMNS.map(([label]) => csvCell(label)).join(",");
+    const rows = filteredCases.map((c) =>
+      EXPORT_COLUMNS.map(([, getter]) => csvCell(getter(c))).join(",")
+    );
+    const csv = [header, ...rows].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `lab-cases-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintList = () => {
+    const esc = (v) =>
+      String(v ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    const head = EXPORT_COLUMNS.map(([label]) => `<th>${esc(label)}</th>`).join("");
+    const body = filteredCases
+      .map(
+        (c) =>
+          `<tr>${EXPORT_COLUMNS.map(([, getter]) => `<td>${esc(getter(c))}</td>`).join("")}</tr>`
+      )
+      .join("");
+    const html = `<!doctype html>
+<html>
+<head>
+  <title>Lab Cases</title>
+  <style>
+    body { font-family: Inter, Arial, sans-serif; margin: 24px; color: #0f172a; }
+    h1 { font-size: 16px; margin: 0 0 4px; }
+    p { font-size: 12px; color: #64748b; margin: 0 0 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    @media print { body { margin: 10mm; } }
+  </style>
+</head>
+<body>
+  <h1>Lab Cases</h1>
+  <p>${esc(title)}${title ? " — " : ""}${filteredCases.length} case(s)${search || statusFilter ? " (filtered)" : ""}</p>
+  <table>
+    <thead><tr>${head}</tr></thead>
+    <tbody>${body || '<tr><td colspan="' + EXPORT_COLUMNS.length + '" style="text-align:center">No lab cases</td></tr>'}</tbody>
+  </table>
+</body>
+</html>`;
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    const doPrint = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    };
+    if (doc.readyState === "complete") doPrint();
+    else iframe.onload = doPrint;
+  };
+
+  return {
+    patientId,
+    title,
+    labCases,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    selectedIds,
+    menuAnchor,
+    setMenuAnchor,
+    rowMenuAnchor,
+    setRowMenuAnchor,
+    rowMenuCase,
+    setRowMenuCase,
+    editingId,
+    setEditingId,
+    dialogOpen,
+    setDialogOpen,
+    formData,
+    setFormData,
+    filteredCases,
+    paginatedCases,
+    allSelected,
+    someSelected,
+    handleSelectAll,
+    handleSelectOne,
+    handleRefresh,
+    handleResetFilters,
+    closeRowMenu,
+    handleEditRow,
+    handleDuplicateRow,
+    handleDeleteRow,
+    handleOpenNewDialog,
+    handleSaveNewCase,
+    handleExportCsv,
+    handlePrintList,
+  };
+};

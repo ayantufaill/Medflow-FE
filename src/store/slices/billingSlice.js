@@ -25,7 +25,10 @@ import { claimService } from "../../services/claim.service";
 import { paymentService } from "../../services/payment.service";
 import { reportingService } from "../../services/reporting.service";
 import dayjs from "dayjs";
-import { buildLedgerProcedureContext } from "../../utils/ledgerCalculations";
+import {
+  buildLedgerProcedureContext,
+  procedureTargetsOf,
+} from "../../utils/ledgerCalculations";
 
 const EMPTY_ARRAY = Object.freeze([]);
 
@@ -196,9 +199,8 @@ export const fetchLedgerItems = createAsyncThunk(
         adjustments,
       });
       const {
-        proceduresForPayment,
-      } = ledgerProcedures;
-      const { proceduresForAdjustment } = currentLiabilityProcedures;
+        proceduresForAdjustment,
+      } = currentLiabilityProcedures;
 
       const mappedInvoices = invoices.map((invoice) => {
         // Reconstruct the original total charge. The backend may update totalAmount to
@@ -270,6 +272,150 @@ export const fetchLedgerItems = createAsyncThunk(
         let totalInsWoAmt = 0;
         let runningBalance = baseOriginalTotal;
 
+        // ── Point-in-time snapshots for detail rows ─────────────────────────
+        // Every payment / adjustment entry must expand into the procedure
+        // split as it stood the moment that entry posted — not today's
+        // numbers. The state is seeded from each line's ORIGINAL split
+        // (procedureBaseAmounts, before any debit restatement) and walked
+        // chronologically below, so later debits / estimate changes never
+        // rewrite history on old entries. The invoice's own grouped detail
+        // stays live (mapped further down) — only these entry rows freeze.
+        const snapshotOrder = [];
+        const snapshotState = new Map(); // procKey -> { line, fee, ptPortion, insPortion, writeoff }
+        const snapshotKeyOf = (proc) =>
+          String(
+            proc?._id ??
+              proc?.id ??
+              proc?.procedureId ??
+              proc?.procId ??
+              proc?.ProcNum ??
+              "",
+          );
+        (invoice.lineItems || []).forEach((line) => {
+          const key = snapshotKeyOf(line);
+          if (!key || snapshotState.has(key)) return;
+          const { fee, ptPortion, insPortion, pricingWriteOff } =
+            ledgerProcedures.procedureBaseAmounts(line);
+          snapshotState.set(key, {
+            line,
+            fee: moneyNumber(fee),
+            ptPortion: moneyNumber(ptPortion),
+            insPortion: moneyNumber(insPortion),
+            writeoff: moneyNumber(pricingWriteOff),
+          });
+          snapshotOrder.push(key);
+        });
+
+        const snapshotRows = (appliedByKey) =>
+          snapshotOrder.map((key) => {
+            const s = snapshotState.get(key);
+            return {
+              ...s.line,
+              fee: s.fee,
+              ptPortion: s.ptPortion,
+              insPortion: s.insPortion,
+              writeoff: s.writeoff,
+              estimatedWriteOff: s.writeoff,
+              ...(appliedByKey
+                ? appliedByKey.get(key) || {}
+                : { appliedPayment: 0 }),
+            };
+          });
+
+        // Line-order keys an adjustment targets (by procedureId / code refs
+        // in the notes); every line when it names none.
+        const snapshotAdjTargets = (adj) => {
+          const targets = procedureTargetsOf(adj);
+          if (targets.length > 0) {
+            const set = new Set(targets.map(String));
+            return snapshotOrder.filter((k) => set.has(k));
+          }
+          return [...snapshotOrder];
+        };
+
+        // A payment consumes its own payer's bucket on each targeted line:
+        // insurance money eats the insurance estimate, patient money eats the
+        // patient portion. Returns the per-line amounts applied, for the
+        // Payment column.
+        const applyPaymentToSnapshot = (payment, paymentAmt) => {
+          const applied = new Map();
+          if (!(paymentAmt > 0)) return applied;
+          const isInsurance =
+            payment.paymentSource === "insurance_company" ||
+            payment.method === "insurance";
+          const eat = (state) => {
+            if (isInsurance)
+              state.insPortion = roundMoney(
+                Math.max(0, state.insPortion - paymentAmt),
+              );
+            else
+              state.ptPortion = roundMoney(
+                Math.max(0, state.ptPortion - paymentAmt),
+              );
+          };
+          const splits = payment.splits || payment.paysplits || [];
+          if (splits.length > 0) {
+            splits.forEach((split) => {
+              const key = String(
+                split.procedureId || split.procNum || split.ProcNum || "",
+              );
+              const state = snapshotState.get(key);
+              if (!state) return;
+              const amt = Math.abs(moneyNumber(split.amount || split.SplitAmt));
+              if (!(amt > 0)) return;
+              if (isInsurance)
+                state.insPortion = roundMoney(Math.max(0, state.insPortion - amt));
+              else
+                state.ptPortion = roundMoney(Math.max(0, state.ptPortion - amt));
+              applied.set(key, { appliedPayment: amt });
+            });
+            return applied;
+          }
+          const firstKey = snapshotOrder[0];
+          if (!firstKey) return applied;
+          eat(snapshotState.get(firstKey));
+          applied.set(firstKey, { appliedPayment: paymentAmt });
+          return applied;
+        };
+
+        // An adjustment mutates only the bucket it belongs to — insurance
+        // write-offs burn the write-off, patient credits burn the patient
+        // portion — distributed across the targeted lines by each one's
+        // share of that bucket. Debits / transfers apply an Adjustment
+        // column amount but never move the snapshot (history stays frozen;
+        // only the invoice's live row restates after a debit).
+        const applyAdjustmentToSnapshot = (adj, adjAmt, { isInsWriteOff, isCourtesyLike }) => {
+          const applied = new Map();
+          if (!(adjAmt > 0)) return applied;
+          const targets = snapshotAdjTargets(adj);
+          if (targets.length === 0) return applied;
+          const isDebit = adjAmt > 0 && !isInsWriteOff && !isCourtesyLike;
+          if (isDebit) {
+            targets.forEach((key) =>
+              applied.set(key, { appliedAdjustment: adjAmt }),
+            );
+            return applied;
+          }
+          const bucketOf = (s) => (isInsWriteOff ? s.writeoff : s.ptPortion);
+          const totalBucket = targets.reduce(
+            (sum, key) => sum + bucketOf(snapshotState.get(key)),
+            0,
+          );
+          targets.forEach((key) => {
+            const s = snapshotState.get(key);
+            const share =
+              totalBucket > 0
+                ? bucketOf(s) / totalBucket
+                : 1 / targets.length;
+            const portion = roundMoney(adjAmt * share);
+            if (isInsWriteOff)
+              s.writeoff = roundMoney(Math.max(0, s.writeoff - portion));
+            else s.ptPortion = roundMoney(Math.max(0, s.ptPortion - portion));
+            applied.set(key, { appliedAdjustment: portion });
+          });
+          return applied;
+        };
+
         // Combine payments and adjustments to calculate a single unified running balance chronologically
         const combinedDetails = [
           ...invoicePms.map((p) => ({ ...p, _isPmt: true })),
@@ -282,33 +428,53 @@ export const fetchLedgerItems = createAsyncThunk(
 
         const mappedCombinedDetails = combinedDetails
           .map((item) => {
-            if (item._isPmt) {
-              const payment = item;
-              const isVoided =
-                String(payment.status || "").toLowerCase() === "void" ||
-                String(payment.status || "").toLowerCase() === "voided";
-              const rawAmount =
-                payment.isAccountCredit &&
-                payment.appliedCreditAmount !== undefined
-                  ? Number(payment.appliedCreditAmount)
-                  : Number(payment.amount || 0);
-              const paymentAmt = isVoided ? 0 : rawAmount;
+          if (item._isPmt) {
+            const payment = item;
+            const isVoided =
+              String(payment.status || "").toLowerCase() === "void" ||
+              String(payment.status || "").toLowerCase() === "voided";
+            const rawAmount =
+              payment.isAccountCredit &&
+              payment.appliedCreditAmount !== undefined
+                ? Number(payment.appliedCreditAmount)
+                : Number(payment.amount || 0);
+            const paymentAmt = isVoided ? 0 : rawAmount;
 
-              if (
-                payment.paymentSource === "insurance_company" ||
-                payment.method === "insurance"
-              ) {
-                totalInsPaidAmt += paymentAmt;
-              } else {
-                totalPtPaidAmt += paymentAmt;
-              }
-              runningBalance -= paymentAmt;
+            const isInsurancePayment =
+              payment.paymentSource === "insurance_company" ||
+              payment.method === "insurance";
+            if (isInsurancePayment) {
+              totalInsPaidAmt += paymentAmt;
+            } else {
+              totalPtPaidAmt += paymentAmt;
+            }
+            runningBalance -= paymentAmt;
+
+            // Freeze this entry's procedure rows at the state right after it
+            // posted — later payments / write-offs / debits never change them.
+            const paymentApplied = applyPaymentToSnapshot(payment, paymentAmt);
+            const paymentProcedures =
+              paymentApplied.size > 0
+                ? snapshotOrder
+                    .filter((key) => paymentApplied.has(key))
+                    .map((key) => {
+                      const s = snapshotState.get(key);
+                      return {
+                        ...s.line,
+                        fee: s.fee,
+                        ptPortion: s.ptPortion,
+                        insPortion: s.insPortion,
+                        writeoff: s.writeoff,
+                        estimatedWriteOff: s.writeoff,
+                        ...paymentApplied.get(key),
+                      };
+                    })
+                : snapshotRows(null);
 
               return {
                 id: payment._id || payment.id,
                 title:
-                  payment.paymentSource === "insurance_company" ||
-                  payment.method === "insurance"
+                  isInsurancePayment
                     ? (() => {
                         let insuranceCompanyName = "Insurance";
                         if (payment.notes) {
@@ -353,7 +519,7 @@ export const fetchLedgerItems = createAsyncThunk(
                 createdByName: payment.createdByName || null,
                 createdAt: payment.paidAt || null,
                 description: payment.notes || "",
-                procedures: proceduresForPayment(payment),
+                procedures: paymentProcedures,
               };
             } else {
               const adj = item;
@@ -416,6 +582,33 @@ export const fetchLedgerItems = createAsyncThunk(
                 totalPtAdjAmt += adjAmt;
               runningBalance += signedAdjAmt;
 
+              // Freeze this entry at the state right after it posted. Only
+              // the buckets it belongs to move: insurance write-offs burn the
+              // write-off, patient credits burn the patient portion, and
+              // debits / transfers apply an amount without moving anything —
+              // history never rewrites, the live invoice row handles debits.
+              const adjustmentApplied = applyAdjustmentToSnapshot(adj, adjAmt, {
+                isInsWriteOff,
+                isCourtesyLike:
+                  (isCourtesy || isTransfer) &&
+                  !isInsWriteOff &&
+                  signedAdjAmt < 0,
+              });
+              const adjustmentProcedures = snapshotOrder.map((key) => {
+                const s = snapshotState.get(key);
+                return {
+                  ...s.line,
+                  fee: s.fee,
+                  ptPortion: s.ptPortion,
+                  insPortion: s.insPortion,
+                  writeoff: s.writeoff,
+                  estimatedWriteOff: s.writeoff,
+                  ...(adjustmentApplied.get(key) || {
+                    appliedAdjustment: 0,
+                  }),
+                };
+              });
+
               return {
                 id: adj._id || adj.id,
                 title: isTransfer
@@ -437,9 +630,9 @@ export const fetchLedgerItems = createAsyncThunk(
                 createdByName: adj.createdByName || null,
                 createdAt: adj.createdAt || null,
                 description: adj.notes || "",
-                // The line items this adjustment hit, restated with the
-                // write-off folded in, so the row can expand into them.
-                procedures: proceduresForAdjustment(adj),
+                // The line items this adjustment hit, frozen at the state
+                // this entry left them in.
+                procedures: adjustmentProcedures,
               };
             }
           })
@@ -912,85 +1105,15 @@ export const fetchLedgerItems = createAsyncThunk(
           Math.max(0, adjustedInvBal - adjustedInsBal),
         );
 
-        if (detailsMapped[0]?.isGrouped && detailsMapped[0]?.procedures?.length) {
-          const groupedProcedures = detailsMapped[0].procedures;
-          const groupedTotal = groupedProcedures.reduce(
-            (sum, proc) =>
-              sum +
-              moneyNumber(
-                proc.fee ||
-                  proc.totalPrice ||
-                  proc.total ||
-                  proc.ProcFee ||
-                  proc.charge ||
-                  proc.amount,
-              ),
-            0,
-          );
-          const currentPtTotal = groupedProcedures.reduce(
-            (sum, proc) => sum + moneyNumber(proc.ptPortion),
-            0,
-          );
-          const currentInsTotal = groupedProcedures.reduce(
-            (sum, proc) => sum + moneyNumber(proc.insPortion),
-            0,
-          );
-
-          // Reconcile each side against its own header total, never both at
-          // once. Re-spreading insurance whenever the PATIENT side was off
-          // destroyed a correct per-procedure split: a $124 balance that
-          // belonged entirely to one claimed line was smeared across a second
-          // unclaimed line as $63.62 / $60.38 just because that other line had
-          // a stale patient portion.
-          const ptNeedsReconcile =
-            Math.abs(currentPtTotal - adjustedPtBal) > 0.01;
-          const insNeedsReconcile =
-            Math.abs(currentInsTotal - adjustedInsBal) > 0.01;
-          if (
-            groupedTotal > 0 &&
-            totalDebitAdjAmt <= 0 &&
-            (ptNeedsReconcile || insNeedsReconcile)
-          ) {
-            let remainingPt = adjustedPtBal;
-            let remainingIns = adjustedInsBal;
-            detailsMapped = detailsMapped.map((detail) => {
-              if (!detail.isGrouped) return detail;
-              const procedures = detail.procedures.map((proc, index) => {
-                const charge = moneyNumber(
-                  proc.fee ||
-                    proc.totalPrice ||
-                    proc.total ||
-                    proc.ProcFee ||
-                    proc.charge ||
-                    proc.amount,
-                );
-                const isLast = index === detail.procedures.length - 1;
-                // A side that already reconciles keeps its per-procedure
-                // values; only the side that is actually off gets re-spread.
-                const nextPt = !ptNeedsReconcile
-                  ? moneyNumber(proc.ptPortion)
-                  : isLast
-                    ? remainingPt
-                    : roundMoney(adjustedPtBal * (charge / groupedTotal));
-                const nextIns = !insNeedsReconcile
-                  ? moneyNumber(proc.insPortion)
-                  : isLast
-                    ? remainingIns
-                    : roundMoney(adjustedInsBal * (charge / groupedTotal));
-                remainingPt = roundMoney(remainingPt - nextPt);
-                remainingIns = roundMoney(remainingIns - nextIns);
-                return {
-                  ...proc,
-                  ptPortion: Math.max(0, nextPt),
-                  patientPortion: Math.max(0, nextPt),
-                  insPortion: Math.max(0, nextIns),
-                  insurancePortion: Math.max(0, nextIns),
-                };
-              });
-              return { ...detail, procedures };
-            });
-          }
-        }
+        // The invoice's grouped detail keeps the liability split from
+        // procedureAfterAdjustments — the original portions, restated only by
+        // posted adjustments (debits / write-offs / credits). It is deliberately
+        // NOT reconciled against adjustedPtBal / adjustedInsBal: those are the
+        // live balances that go to zero once payments land, and re-spreading
+        // them here wiped the invoice entry's Patient / Insurance columns to
+        // $0.00 after a fully paid invoice. Payments belong in the header
+        // balances (summary.ptBal / insBal) and in each entry's own frozen
+        // snapshot — never on the invoice row.
 
         const ptPaidDisplay = totalPtPaidAmt;
 
