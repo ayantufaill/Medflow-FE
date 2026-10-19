@@ -2433,8 +2433,9 @@ const NewTreatmentPlanPage = () => {
         open={isNotesDrawerOpen}
         onClose={() => setIsNotesDrawerOpen(false)}
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
-        patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
+        patientId={currentPatientId || (currentPatient ? (currentPatient.PatNum || currentPatient._id || currentPatient.id) : undefined)}
         appointmentId={activeAppointmentId}
+        providerId={currentAppointment?.providerId || currentAppointment?.provider || currentPatient?.PriProv || user?.providerId || null}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
       />

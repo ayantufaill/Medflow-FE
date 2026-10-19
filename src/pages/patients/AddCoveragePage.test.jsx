@@ -30,7 +30,10 @@ jest.mock('../../hooks/redux/usePatient', () => ({ usePatient: () => ({ currentP
 jest.mock('../../hooks/redux/usePatientInsurance', () => ({
   usePatientInsurance: () => ({ create: mockCreate, update: mockUpdate }),
 }));
-jest.mock('../../services/patient.service', () => ({ patientService: { getAllPatients: jest.fn().mockResolvedValue([]) } }));
+jest.mock('../../services/patient.service', () => ({ patientService: {
+  getAllPatients: jest.fn().mockResolvedValue([]),
+  getAllPatientInsurances: jest.fn().mockResolvedValue([]),
+} }));
 jest.mock('./hooks/useCoverageData', () => ({
   useCoverageData: (_patientId, _insuranceId, _patient, _fetchPatient, _form, setFormData) => {
     const { useEffect } = require('react');

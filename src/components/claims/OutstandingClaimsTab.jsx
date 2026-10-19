@@ -1,31 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
-import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS, DATE_RANGES, GROUP_BY_OPTIONS } from '../../pages/claims/claimsConstants';
+import { CARRIERS, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
 import { mapClaimFields } from './claimUtils';
-import { applyDateFilter } from './claimFilterUtils';
+import { groupOutstandingClaims } from './outstandingClaimGroups';
+import { getOutstandingDateBounds } from './outstandingDateBounds';
+
+const DEFAULT_FILTERS = {
+  sort: 'none', claimType: 'all', carrier: 'all', attachment: 'all',
+  status: 'all', dateRange: 'none', filterDate: 'all', groupBy: 'none',
+  searchPatient: '', searchClaim: '',
+};
 
 const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
-  const [claims, setClaims] = useState([]);
   const [filteredClaims, setFilteredClaims] = useState([]);
   const [loadingClaims, setLoadingClaims] = useState(true);
+  const [loadError, setLoadError] = useState('');
   
-  const [filters, setFilters] = useState({
-    sort: 'none',
-    claimType: 'all',
-    carrier: 'all',
-    attachment: 'all',
-    status: 'all',
-    dateRange: 'none',
-    filterDate: 'all',
-    groupBy: 'none',
-    searchPatient: '',
-    searchClaim: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
 
   const [showNonAssignment, setShowNonAssignment] = useState(false);
@@ -34,96 +30,81 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   const [selectedClaims, setSelectedClaims] = useState({});
   const [expandedProcedures, setExpandedProcedures] = useState({});
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
-  
-  const { loading, changeStatus, voidAndRecreate, printPage, exportCSV, toggleHide } = useClaimActions(loadData);
+  const requestId = useRef(0);
+
+  const loadData = useCallback(async () => {
+    const currentRequest = ++requestId.current;
+    setLoadingClaims(true);
+    setLoadError('');
+    setFilteredClaims([]);
+    try {
+      const dateBounds = getOutstandingDateBounds(filters.filterDate, customDateRange);
+      const options = {
+        tab: 'outstanding', limit: 100,
+        outstandingSort: filters.sort,
+        outstandingClaimType: filters.claimType,
+        outstandingCarrier: filters.carrier,
+        outstandingAttachment: filters.attachment,
+        outstandingStatus: filters.status,
+        outstandingDate: filters.filterDate,
+        outstandingStart: dateBounds.start,
+        outstandingEnd: dateBounds.end,
+        outstandingPatient: filters.searchPatient,
+        outstandingClaim: filters.searchClaim,
+        includeNonAssignment: showNonAssignment,
+        includeInactivePolicies: showInactivePolicies,
+      };
+      const result = [];
+      let page = 1;
+      let pages = 1;
+      do {
+        const data = await claimService.getAllClaims({ ...options, page });
+        if (currentRequest !== requestId.current) return;
+        result.push(...(data.claims || []).map((claim) => mapClaimFields(claim, 'outstanding')));
+        pages = data.pagination?.pages || 1;
+        page += 1;
+      } while (page <= pages);
+      setFilteredClaims(result);
+    } catch (err) {
+      console.error(err);
+      if (currentRequest === requestId.current) {
+        setFilteredClaims([]);
+        setLoadError('Could not load outstanding claims. Use Refresh to try again.');
+      }
+    } finally {
+      if (currentRequest === requestId.current) setLoadingClaims(false);
+    }
+  }, [filters, customDateRange, showNonAssignment, showInactivePolicies]);
+
+  const { changeStatus, printPage, exportCSV, toggleHide } = useClaimActions(loadData);
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(loadData, filters.searchPatient || filters.searchClaim ? 250 : 0);
     const handleRefresh = () => loadData();
     window.addEventListener('refresh-claims', handleRefresh);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('refresh-claims', handleRefresh);
+      requestId.current += 1;
     };
-  }, []);
-
-  async function loadData() {
-    setLoadingClaims(true);
-    try {
-      const data = await claimService.getAllClaims({ tab: 'outstanding' });
-      const claimsData = (data.claims || []).map(c => mapClaimFields(c, 'outstanding'));
-      setClaims(claimsData);
-      applyFilters(claimsData, filters);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingClaims(false);
-    }
-  }
-
-  const applyFilters = (data, currentFilters, dateRange = customDateRange) => {
-    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
-    if (currentFilters.carrier !== 'all') {
-      result = result.filter((c) => c.carrier === currentFilters.carrier);
-    }
-    if (currentFilters.claimType !== 'all') {
-      result = result.filter((c) => c.claimType && c.claimType.includes(currentFilters.claimType));
-    }
-    if (currentFilters.status !== 'all') {
-      result = result.filter(c => c.status === currentFilters.status);
-    }
-    if (currentFilters.attachment === 'yes') {
-      result = result.filter(c => c.attachments?.length > 0 || c.redAttachment || c.attachmentColor);
-    }
-    if (currentFilters.attachment === 'no') {
-      result = result.filter(c => !c.attachments?.length && !c.redAttachment && !c.attachmentColor);
-    }
-    // Simple date range mock logic
-    if (currentFilters.dateRange !== 'all') {
-      // In a real app, you would parse the date and compare
-    }
-    if (currentFilters.searchPatient) {
-      const q = currentFilters.searchPatient.toLowerCase();
-      result = result.filter(c => c.patientName?.toLowerCase().includes(q));
-    }
-    if (currentFilters.searchClaim) {
-      const q = currentFilters.searchClaim.toLowerCase();
-      result = result.filter(c => c.claimNumber?.toLowerCase().includes(q));
-    }
-    if (currentFilters.sort === 'date') {
-      result.sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
-    } else if (currentFilters.sort === 'name') {
-      result.sort((a, b) => (a.patientName || '').localeCompare(b.patientName || ''));
-    }
-    setFilteredClaims(result);
-  };
+  }, [loadData, filters.searchPatient, filters.searchClaim]);
 
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    applyFilters(claims, newFilters, customDateRange);
+    setFilters((current) => ({ ...current, [key]: value }));
+    setSelectedClaims({});
   };
 
   const handleCustomDateRangeChange = (range) => {
     setCustomDateRange(range);
-    applyFilters(claims, filters, range);
+    setSelectedClaims({});
   };
 
   const handleClearAll = () => {
-    const defaultFilters = {
-      sort: 'none',
-      claimType: 'all',
-      carrier: 'all',
-      attachment: 'all',
-      status: 'all',
-      dateRange: 'none',
-      filterDate: 'all',
-      groupBy: 'none',
-      searchPatient: '',
-      searchClaim: '',
-    };
-    setFilters(defaultFilters);
+    setFilters(DEFAULT_FILTERS);
     setCustomDateRange({ start: null, end: null });
-    applyFilters(claims, defaultFilters, { start: null, end: null });
+    setShowNonAssignment(false);
+    setShowInactivePolicies(false);
+    setSelectedClaims({});
   };
 
   // Selection
@@ -147,6 +128,19 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   };
 
   const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+
+  const handlePrint = () => {
+    const claimsToPrint = selectedIds.length > 0
+      ? filteredClaims.filter((c) => selectedClaims[c.id])
+      : filteredClaims;
+    printPage({
+      claims: claimsToPrint,
+      tabTitle: 'Outstanding Claims',
+      isOutstanding: true,
+      filters,
+      customDateRange,
+    });
+  };
 
   const panelFilters = [
     {
@@ -221,6 +215,7 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       width: '140px',
       value: filters.dateRange,
       options: [
+        { value: 'none', label: 'None' },
         { value: 'dos', label: 'Claim Date of Service' },
       ],
       onChange: (val) => handleFilterChange('dateRange', val),
@@ -255,8 +250,8 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
           }
         ]}
         checkboxes={[
-          { label: 'Show Non-Assignment Claims', checked: showNonAssignment, onChange: setShowNonAssignment },
-          { label: 'Show Claims for Inactive Policies', checked: showInactivePolicies, onChange: setShowInactivePolicies }
+          { label: 'Show Non-Assignment Claims', checked: showNonAssignment, onChange: (value) => { setShowNonAssignment(value); setSelectedClaims({}); } },
+          { label: 'Show Claims for Inactive Policies', checked: showInactivePolicies, onChange: (value) => { setShowInactivePolicies(value); setSelectedClaims({}); } }
         ]}
         onRefresh={loadData}
         onClearAll={handleClearAll}
@@ -280,109 +275,46 @@ const OutstandingClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             label: 'Print',
             variant: 'print',
             icon: 'print',
-            onClick: () => printPage(),
+            onClick: handlePrint,
             disabled: false,
           },
         ]}
       />
 
-      {filters.dateRange === 'dos' ? (
-        (() => {
-          const buckets = { "0-30 days": [], "31-60 days": [], "61-90 days": [], ">90 days": [], "Unknown": [] };
-          const getAgeBucket = (dateStr) => {
-            if (!dateStr) return "Unknown";
-            const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 3600 * 24));
-            if (days <= 30) return "0-30 days";
-            if (days <= 60) return "31-60 days";
-            if (days <= 90) return "61-90 days";
-            return ">90 days";
-          };
-          filteredClaims.forEach(c => {
-            buckets[getAgeBucket(c.createdDate)].push(c);
-          });
-          const activeBuckets = ["0-30 days", "31-60 days", "61-90 days", ">90 days", "Unknown"].filter(b => buckets[b].length > 0);
-          
-          if (activeBuckets.length === 0) {
-            return (
-              <StandardClaimsTable
-                activeTab={4} // Outstanding is index 4
-                filteredClaims={[]}
-                dateRange="none"
-                selectedClaims={selectedClaims}
-                handleSelectAll={handleSelectAll}
-                handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
-                isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
-                handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
-                handleSelectSubset={handleSelectSubset}
-                selectAllAnchorEl={selectAllAnchorEl}
-                handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
-                toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
-                expandedProcedures={expandedProcedures}
-                handleRevalidate={(id) => {}}
-                handleNoteOpen={() => {}}
-                handleOpenEdit={onOpenEdit}
-                handleOpenAttach={onOpenAttach}
-                handleOpenPreview={onOpenPreview}
-                handleToggleHide={toggleHide}
-                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
-              />
-            );
-          }
-
-          return activeBuckets.map(bucket => (
-            <Box key={bucket} sx={{ mb: 4 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, textTransform: 'uppercase', mt: 2 }}>
-                {bucket} Group
-              </Typography>
-              <StandardClaimsTable
-                activeTab={4}
-                filteredClaims={buckets[bucket]}
-                dateRange="none"
-                selectedClaims={selectedClaims}
-                handleSelectAll={handleSelectAll}
-                handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
-                isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
-                handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
-                handleSelectSubset={handleSelectSubset}
-                selectAllAnchorEl={selectAllAnchorEl}
-                handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
-                toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
-                expandedProcedures={expandedProcedures}
-                handleRevalidate={(id) => {}}
-                handleNoteOpen={() => {}}
-                handleOpenEdit={onOpenEdit}
-                handleOpenAttach={onOpenAttach}
-                handleOpenPreview={onOpenPreview}
-                handleToggleHide={toggleHide}
-                handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
-              />
-            </Box>
-          ));
-        })()
-      ) : (
-        <StandardClaimsTable
-          activeTab={4} // Outstanding is index 4
-          filteredClaims={filteredClaims}
-          dateRange="none"
-          selectedClaims={selectedClaims}
-          handleSelectAll={handleSelectAll}
-          handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
-          isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
-          handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
-          handleSelectSubset={handleSelectSubset}
-          selectAllAnchorEl={selectAllAnchorEl}
-          handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
-          toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
-          expandedProcedures={expandedProcedures}
-          handleRevalidate={(id) => {}}
-          handleNoteOpen={() => {}}
-          handleOpenEdit={onOpenEdit}
-          handleOpenAttach={onOpenAttach}
-          handleOpenPreview={onOpenPreview}
-          handleToggleHide={toggleHide}
-          handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
-        />
-      )}
+      {loadingClaims && <Typography sx={{ py: 1, color: '#64748b' }}>Loading claims...</Typography>}
+      {loadError && <Typography sx={{ py: 1, color: 'error.main' }}>{loadError}</Typography>}
+      {(filteredClaims.length ? groupOutstandingClaims(filteredClaims, filters.dateRange, filters.groupBy)
+        : [{ label: null, claims: [] }]).map((group) => (
+        <Box key={group.label || 'all'} sx={{ mb: group.label ? 4 : 0 }}>
+          {group.label && (
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1, mt: 2 }}>
+              {group.label}
+            </Typography>
+          )}
+          <StandardClaimsTable
+            activeTab={4}
+            filteredClaims={group.claims}
+            dateRange="none"
+            selectedClaims={selectedClaims}
+            handleSelectAll={handleSelectAll}
+            handleSelectAllMenuOpen={(e) => setSelectAllAnchorEl(e.currentTarget)}
+            isSelectAllMenuOpen={Boolean(selectAllAnchorEl)}
+            handleSelectAllMenuClose={() => setSelectAllAnchorEl(null)}
+            handleSelectSubset={handleSelectSubset}
+            selectAllAnchorEl={selectAllAnchorEl}
+            handleSelectClaim={(id) => setSelectedClaims((prev) => ({ ...prev, [id]: !prev[id] }))}
+            toggleProcedures={(id) => setExpandedProcedures(prev => ({ ...prev, [id]: !prev[id] }))}
+            expandedProcedures={expandedProcedures}
+            handleRevalidate={() => {}}
+            handleNoteOpen={() => {}}
+            handleOpenEdit={onOpenEdit}
+            handleOpenAttach={onOpenAttach}
+            handleOpenPreview={onOpenPreview}
+            handleToggleHide={toggleHide}
+            handleRowStatusChange={(id, newStatus) => changeStatus([id], newStatus, 'outstanding')}
+          />
+        </Box>
+      ))}
     </Box>
   );
 };

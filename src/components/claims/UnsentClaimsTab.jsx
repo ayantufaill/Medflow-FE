@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography } from '@mui/material';
 import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
@@ -8,136 +8,45 @@ import InvalidInfoDialog from './InvalidInfoDialog';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
-import { mapClaimFields } from './claimUtils';
-import { applyDateFilter } from './claimFilterUtils';
+
+import { useFilteredClaimTab } from './useFilteredClaimTab';
+
+const DEFAULT_FILTERS = {
+    carrier: 'all', claimType: 'all', attachment: 'all', status: 'all',
+    filterDate: 'all', sort: 'none', search: '',
+};
 
 const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
-  const [claims, setClaims] = useState([]);
-  const [filteredClaims, setFilteredClaims] = useState([]);
-  const [loadingClaims, setLoadingClaims] = useState(true);
-  
-  // Filter state
-  const [filters, setFilters] = useState({
-    carrier: 'all',
-    claimType: 'all',
-    attachment: 'all',
-    status: 'all',
-    filterDate: 'all',
-    search: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
   const [showHidden, setShowHidden] = useState(false);
-  const [showReadyOnly, setShowReadyOnly] = useState(false);
-
-  // Table state
   const [selectedClaims, setSelectedClaims] = useState({});
   const [expandedProcedures, setExpandedProcedures] = useState({});
-  
-  // Menu anchors
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
-  
-  // Dialog state
   const [invalidInfoClaim, setInvalidInfoClaim] = useState(null);
-  
-  // Use shared actions
-  const {
-    loading, changeStatus, sendClaims, convertType, toggleHide, printPage, exportCSV, showMessage
-  } = useClaimActions(loadData);
-
-  useEffect(() => {
-    loadData();
-    const handleRefresh = () => loadData();
-    window.addEventListener('refresh-claims', handleRefresh);
-    return () => {
-      window.removeEventListener('refresh-claims', handleRefresh);
-    };
-  }, []);
-
-  async function loadData() {
-    setLoadingClaims(true);
-    try {
-      const data = await claimService.getAllClaims({ tab: 'unsent' });
-      const claimsData = (data.claims || []).map(c => mapClaimFields(c, 'unsent'));
-      setClaims(claimsData);
-      applyFilters(claimsData, filters, showHidden, showReadyOnly);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingClaims(false);
-    }
-  }
-
-  const applyFilters = (data, currentFilters, hidden, readyOnly, dateRange = customDateRange) => {
-    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
-    if (currentFilters.carrier !== 'all') {
-      result = result.filter((c) => c.carrier === currentFilters.carrier);
-    }
-    if (currentFilters.claimType !== 'all') {
-      result = result.filter((c) => c.claimType && c.claimType.includes(currentFilters.claimType));
-    }
-    if (currentFilters.status !== 'all') {
-      result = result.filter((c) => c.status === currentFilters.status);
-    }
-    if (currentFilters.attachment === 'yes') {
-      result = result.filter((c) => c.attachments && c.attachments.length > 0);
-    } else if (currentFilters.attachment === 'no') {
-      result = result.filter((c) => !c.attachments || c.attachments.length === 0);
-    }
-    if (currentFilters.search) {
-      const q = currentFilters.search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.patientName.toLowerCase().includes(q) ||
-          c.claimNumber.toLowerCase().includes(q)
-      );
-    }
-    if (!hidden) {
-      result = result.filter((c) => !c.isHidden);
-    }
-    if (readyOnly) {
-      result = result.filter((c) => c.status === 'readyForSubmission');
-    }
-    setFilteredClaims(result);
-  };
+  const { filteredClaims, loadingClaims, loadError, loadData } =
+    useFilteredClaimTab('unsent', filters, customDateRange, showHidden, false);
+  const {    changeStatus, sendClaims, convertType, toggleHide, printPage, exportCSV, showMessage} = useClaimActions(loadData);
 
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden, showReadyOnly, customDateRange);
+    setFilters((current) => ({ ...current, [key]: value }));
+    setSelectedClaims({});
   };
-
   const handleCustomDateRangeChange = (range) => {
     setCustomDateRange(range);
-    applyFilters(claims, filters, showHidden, showReadyOnly, range);
+    setSelectedClaims({});
   };
-
   const handleClearAll = () => {
-    const defaultFilters = {
-      carrier: 'all',
-      claimType: 'all',
-      attachment: 'all',
-      status: 'all',
-      filterDate: 'all',
-      search: '',
-    };
-    setFilters(defaultFilters);
+    setFilters(DEFAULT_FILTERS);
     setCustomDateRange({ start: null, end: null });
-    applyFilters(claims, defaultFilters, showHidden, showReadyOnly, { start: null, end: null });
+    setShowHidden(false);
+    setSelectedClaims({});
   };
-
-  const handleSearchChange = (value) => {
-    handleFilterChange('search', value);
+  const handleToggleHidden = (value) => {
+    setShowHidden(value);
+    setSelectedClaims({});
   };
-
-  const handleToggleHidden = (checked) => {
-    setShowHidden(checked);
-    applyFilters(claims, filters, checked, showReadyOnly);
-  };
-
-  const handleToggleReadyOnly = (checked) => {
-    setShowReadyOnly(checked);
-    applyFilters(claims, filters, showHidden, checked);
-  };
+  const handleSearchChange = (value) => handleFilterChange('search', value);
 
   // Table selection logic
   const handleSelectAll = (event) => {
@@ -189,6 +98,18 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
   const alertCount = filteredClaims.filter((c) => c.status === 'validationError').length;
+
+  const handlePrint = () => {
+    const claimsToPrint = selectedIds.length > 0
+      ? filteredClaims.filter((c) => selectedClaims[c.id])
+      : filteredClaims;
+    printPage({
+      claims: claimsToPrint,
+      tabTitle: 'Unsent Claims',
+      filters,
+      customDateRange,
+    });
+  };
 
   const panelFilters = [
     {
@@ -250,6 +171,8 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   return (
     <Box>
+      {loadingClaims && <Typography sx={{ py: 1 }}>Loading claims...</Typography>}
+      {loadError && <Typography color="error" sx={{ py: 1 }}>{loadError}</Typography>}
       <ClaimFilterPanel
         filters={panelFilters}
         searchValue={filters.search}
@@ -302,7 +225,7 @@ const UnsentClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             label: 'Print',
             variant: 'print',
             icon: 'print',
-            onClick: () => printPage(),
+            onClick: handlePrint,
             disabled: false,
           },
         ]}

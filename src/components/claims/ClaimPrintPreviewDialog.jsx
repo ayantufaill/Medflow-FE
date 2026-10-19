@@ -22,7 +22,13 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [printSaveError, setPrintSaveError] = useState('');
   const iframeRef = useRef(null);
+  const printCleanupRef = useRef(null);
+
+  useEffect(() => () => {
+    printCleanupRef.current?.();
+  }, []);
 
   useEffect(() => {
     let objectUrl = null;
@@ -55,14 +61,43 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
   }, [open, claim?.id]);
 
   const handlePrint = () => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.print();
+    const frameWindow = iframeRef.current?.contentWindow;
+    if (!frameWindow || !claim?.id) return;
+
+    printCleanupRef.current?.();
+    setPrintSaveError('');
+    const claimId = claim.id;
+    const handleAfterPrint = async () => {
+      printCleanupRef.current?.();
+      // Browsers may fire afterprint when the dialog is canceled. This records dialog completion, not physical printing.
+      try {
+        await claimService.updateClaim(claimId, { printedDate: new Date().toISOString() });
+        window.dispatchEvent(new Event('refresh-claims'));
+      } catch (err) {
+        console.error('Failed to save claim print date:', err);
+        setPrintSaveError('Print dialog completed, but the print date could not be saved.');
+      }
+    };
+    frameWindow.addEventListener('afterprint', handleAfterPrint, { once: true });
+    printCleanupRef.current = () => {
+      frameWindow.removeEventListener('afterprint', handleAfterPrint);
+      printCleanupRef.current = null;
+    };
+    try {
+      frameWindow.focus();
+      frameWindow.print();
+    } catch (err) {
+      printCleanupRef.current?.();
+      console.error('Failed to open claim print dialog:', err);
+      setPrintSaveError('Could not open the print dialog. Please try again.');
     }
   };
 
   const handleClose = () => {
+    printCleanupRef.current?.();
     setPdfUrl(null);
     setError(null);
+    setPrintSaveError('');
     onClose();
   };
 
@@ -135,6 +170,7 @@ const ClaimPrintPreviewDialog = ({ open, claim, onClose }) => {
       </DialogContent>
 
       <DialogActions sx={{ p: 2, backgroundColor: '#ffffff', borderTop: `1px solid ${COLORS.BORDER}`, justifyContent: 'flex-end', gap: 1 }}>
+        {printSaveError && <Typography color="error" sx={{ fontSize: '12px', flex: 1 }}>{printSaveError}</Typography>}
         <Button 
           onClick={handleClose} 
           variant="outlined" 

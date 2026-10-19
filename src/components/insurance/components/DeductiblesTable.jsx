@@ -20,10 +20,15 @@ const parseToDayjs = (val) => {
   return parsedStandard.isValid() ? parsedStandard : null;
 };
 
-const InsuranceDatePicker = ({ value, onChange, error, id }) => {
+const InsuranceDatePicker = ({ value, onChange, error, id, disabled = false }) => {
   const [anchorEl, setAnchorEl] = useState(null);
 
+  useEffect(() => {
+    if (disabled) setAnchorEl(null);
+  }, [disabled]);
+
   const handleOpen = (event) => {
+    if (disabled) return;
     setAnchorEl(event.currentTarget);
   };
 
@@ -31,7 +36,7 @@ const InsuranceDatePicker = ({ value, onChange, error, id }) => {
     setAnchorEl(null);
   };
 
-  const open = Boolean(anchorEl);
+  const open = !disabled && Boolean(anchorEl);
 
   const handleTextChange = (e) => {
     const raw = e.target.value;
@@ -47,13 +52,14 @@ const InsuranceDatePicker = ({ value, onChange, error, id }) => {
         size="small"
         placeholder="mm / dd / yyyy"
         value={value || ''}
+        disabled={disabled}
         onClick={handleOpen}
         onChange={handleTextChange}
         error={error}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end" sx={{ ml: 0 }}>
-              <IconButton size="small" onClick={handleOpen} sx={{ p: '2px', color: '#2362EF' }}>
+              <IconButton size="small" disabled={disabled} onClick={handleOpen} sx={{ p: '2px', color: '#2362EF' }}>
                 <CalendarIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </InputAdornment>
@@ -165,6 +171,8 @@ const isCodeRow = (row) => {
   }
   return /^D?\d{4,5}$/i.test(String(row.type || '').trim());
 };
+
+const usesStandardRow = (row) => Boolean(row?.standard) && String(row.type || '').toLowerCase() !== 'standard';
 
 const ProcedureCodeSearchAutocomplete = ({ value, onChange, onRemove, readOnly = false }) => {
   const [options, setOptions] = useState([]);
@@ -474,7 +482,8 @@ const DeductiblesTable = ({
                   <TextField 
                     fullWidth
                     size="small" 
-                    value={row.individual}
+                    value={usesStandardRow(row) ? '' : row.individual}
+                    disabled={usesStandardRow(row)}
                     onChange={(e) => handleDeductibleChange(index, 'individual', e.target.value)}
                     InputProps={{
                       startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
@@ -486,7 +495,8 @@ const DeductiblesTable = ({
                   <TextField 
                     fullWidth
                     size="small" 
-                    value={row.family}
+                    value={usesStandardRow(row) ? '' : row.family}
+                    disabled={usesStandardRow(row)}
                     onChange={(e) => handleDeductibleChange(index, 'family', e.target.value)}
                     InputProps={{
                       startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
@@ -498,7 +508,8 @@ const DeductiblesTable = ({
                   <TextField 
                     fullWidth
                     size="small" 
-                    value={row.metAmount}
+                    value={usesStandardRow(row) ? '' : row.metAmount}
+                    disabled={usesStandardRow(row)}
                     onChange={(e) => handleDeductibleChange(index, 'metAmount', e.target.value)}
                     InputProps={{
                       startAdornment: <InputAdornment position="start"><Typography sx={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#94a3b8' }}>$</Typography></InputAdornment>,
@@ -509,9 +520,10 @@ const DeductiblesTable = ({
                 <TableCell sx={{ borderBottom: '1px solid #f0f0f0', py: 1 }}>
                   <InsuranceDatePicker
                     id={`metDate-input-${index}`}
-                    value={row.metDate}
+                    value={usesStandardRow(row) ? '' : row.metDate}
+                    disabled={usesStandardRow(row)}
                     onChange={(formatted) => handleDeductibleChange(index, 'metDate', formatted)}
-                    error={isInvalidDate(row.metDate)}
+                    error={!usesStandardRow(row) && isInvalidDate(row.metDate)}
                   />
                 </TableCell>
               </TableRow>

@@ -72,6 +72,7 @@ export const MOCK_FILTER_TAGS = [
   { label: 'Birthday', icon: '🎂', bg: '#f3e8ff', color: '#7e22ce' },
   { label: 'CLAIM ADJS', icon: '—', bg: '#dcfce7', color: '#15803d' },
   { label: 'Clinical', icon: '⚕️', bg: '#f1f5f9', color: '#475569' },
+  { label: 'General', icon: '📝', bg: '#f1f5f9', color: '#475569' },
   { label: 'Dismiss', icon: '🚫', bg: '#fecdd3', color: '#be123c' },
   { label: 'Family Appointment', icon: '👥', bg: '#f1f5f9', color: '#334155' },
   { label: 'FREE VISIT PER DR.', icon: '🎟️', bg: '#ffedd5', color: '#c2410c' },
