@@ -1,22 +1,45 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import {
-  Container,
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Alert,
-  Paper,
-  Link as MuiLink,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Box, Typography, Alert } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import { loginValidations } from '../../validations/auth.validations';
+import { AuthLayout, AuthInput, AuthButton } from '../../components/auth';
+
+const alertSx = {
+  mb: 2,
+  fontFamily: 'Manrope, sans-serif',
+  fontSize: '13px',
+  borderRadius: '8px',
+};
+
+const footerLinkSx = {
+  textAlign: 'center',
+  mt: '28px',
+  fontFamily: 'Manrope, sans-serif',
+  fontSize: '13px',
+  color: '#6B7280',
+};
+
+const linkStyle = {
+  color: '#2D6CDF',
+  fontWeight: 600,
+  textDecoration: 'none',
+};
+
+const showHideButtonSx = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  fontFamily: 'Manrope, sans-serif',
+  fontWeight: 700,
+  fontSize: '11px',
+  letterSpacing: '0.06em',
+  color: '#6B7280',
+  '&:hover': { color: '#082545' },
+  transition: 'color 0.15s ease',
+};
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -63,7 +86,7 @@ const ForgotPasswordPage = () => {
       } else {
         setError(result.error || 'Failed to send reset code. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -128,7 +151,7 @@ const ForgotPasswordPage = () => {
       } else {
         setError(result.error || 'Failed to reset password. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -154,7 +177,7 @@ const ForgotPasswordPage = () => {
       } else {
         setError(result.error || 'Failed to resend reset code. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setResending(false);
@@ -182,258 +205,232 @@ const ForgotPasswordPage = () => {
   }, [resendTimer]);
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 4,
-          marginBottom: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
+    <AuthLayout>
+      <Box sx={{ width: '100%', maxWidth: 380 }}>
+        {/* Heading */}
+        <Typography
+          component="h1"
           sx={{
-            padding: { xs: 2, sm: 3 },
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
+            fontFamily: 'Manrope, sans-serif',
+            fontWeight: 800,
+            fontSize: '24px',
+            lineHeight: 1,
+            letterSpacing: '-0.24px',
+            color: '#082545',
+            mb: '6px',
           }}
         >
-          <Typography component="h1" variant="h4" gutterBottom>
-            {step === 1 && 'Forgot Password'}
-            {step === 2 && 'Verify Reset Code'}
-            {step === 3 && 'Reset Password'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {step === 1 && "Enter your email address and we'll send you a reset code."}
-            {step === 2 && `We've sent a reset code to ${resetEmail}. Please check your email.`}
-            {step === 3 && 'Enter your new password below.'}
-          </Typography>
+          {step === 1 && 'Forgot password?'}
+          {step === 2 && 'Check your email'}
+          {step === 3 && 'Set new password'}
+        </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          {success && step === 2 && (
-            <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-              Reset code sent to your email!
-            </Alert>
-          )}
-
-
-          {/* Step 1: Request Reset */}
-          {step === 1 && (
-            <Box
-              component="form"
-              onSubmit={handleSubmit(handleRequestReset)}
-              sx={{ mt: 1, width: '100%' }}
-            >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                autoComplete="email"
-                autoFocus
-                error={!!errors.email}
-                helperText={errors.email?.message}
-                {...register('email', loginValidations.email)}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-              >
-                {loading ? 'Sending...' : 'Send Reset Code'}
-              </Button>
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <MuiLink component={Link} to="/login" variant="body2">
-                  Back to Sign In
-                </MuiLink>
-              </Box>
-            </Box>
-          )}
-
-          {/* Step 2: Verify Code */}
+        {/* Subtitle */}
+        <Typography
+          sx={{
+            fontFamily: 'Manrope, sans-serif',
+            fontWeight: 400,
+            fontSize: '14px',
+            color: '#6B7280',
+            mb: '28px',
+          }}
+        >
+          {step === 1 && "Enter your email address and we'll send you a 6-digit reset code."}
           {step === 2 && (
-            <Box sx={{ mt: 1, width: '100%' }}>
-              <TextField
-                fullWidth
-                id="resetCode"
-                label="Reset Code"
-                value={resetCode}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setResetCode(value);
-                  // Only clear error when user starts typing, not on every keystroke
-                  if (error && value.length === 0) {
-                    setError('');
-                  }
-                }}
-                inputProps={{
-                  maxLength: 6,
-                  style: { textAlign: 'center', fontSize: '24px', letterSpacing: '8px' },
-                }}
-                error={!!error}
-                helperText={error || ''}
-                sx={{ mb: 2 }}
-                autoFocus
-              />
-
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={handleVerifyCode}
-                disabled={loading || resetCode.length !== 6}
-                sx={{ mb: 2 }}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-              >
-                {loading ? 'Verifying...' : 'Verify Code'}
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={handleResendCode}
-                disabled={resending || resendTimer > 0}
-                sx={{ mb: 2 }}
-                startIcon={resending ? <CircularProgress size={20} color="inherit" /> : null}
-              >
-                {resending
-                  ? 'Resending...'
-                  : resendTimer > 0
-                  ? `Resend Code (${resendTimer}s)`
-                  : 'Resend Code'}
-              </Button>
-
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <MuiLink
-                  component="button"
-                  variant="body2"
-                  onClick={() => {
-                    setStep(1);
-                    setResetCode('');
-                    setError('');
-                    setSuccess(false);
-                  }}
-                  sx={{ cursor: 'pointer', border: 'none', background: 'none' }}
-                >
-                  Use Different Email
-                </MuiLink>
+            <>
+              We've sent a 6-digit reset code to{' '}
+              <Box component="span" sx={{ fontWeight: 600, color: '#082545' }}>
+                {resetEmail}
               </Box>
-            </Box>
+              . Please check your inbox.
+            </>
           )}
+          {step === 3 && 'Choose a new password for your MedFlow account.'}
+        </Typography>
 
-          {/* Step 3: Reset Password */}
-          {step === 3 && (
-            <Box
-              component="form"
-              onSubmit={handleSubmit(handleResetPassword)}
-              sx={{ mt: 1, width: '100%' }}
-            >
-              {success && (
-                <Alert severity="success" sx={{ width: '100%', mb: 2 }}>
-                  Password reset successfully! Redirecting to login...
-                </Alert>
-              )}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="New Password"
-                type={showPassword ? 'text' : 'password'}
-                id="newPassword"
-                error={!!errors.newPassword}
-                helperText={
-                  errors.newPassword?.message ||
-                  'Password must be at least 8 characters with uppercase, lowercase, and number'
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={alertSx}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Success Alert */}
+        {success && step === 2 && (
+          <Alert severity="success" sx={alertSx}>
+            Reset code sent to your email!
+          </Alert>
+        )}
+
+        {/* Step 1: Request Reset */}
+        {step === 1 && (
+          <Box component="form" onSubmit={handleSubmit(handleRequestReset)} noValidate>
+            <AuthInput
+              id="email"
+              label="CLINIC EMAIL"
+              type="email"
+              placeholder="dr.wells@medflow.io"
+              autoFocus
+              autoComplete="email"
+              error={errors.email?.message}
+              {...register('email', loginValidations.email)}
+            />
+            <AuthButton type="submit" loading={loading} loadingText="Sending...">
+              Send Reset Code
+            </AuthButton>
+            <Typography sx={footerLinkSx}>
+              <Link to="/login" style={linkStyle}>
+                Back to Sign In
+              </Link>
+            </Typography>
+          </Box>
+        )}
+
+        {/* Step 2: Verify Code */}
+        {step === 2 && (
+          <Box>
+            <AuthInput
+              id="resetCode"
+              label="RESET CODE"
+              placeholder="123456"
+              autoFocus
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={6}
+              value={resetCode}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setResetCode(value);
+                // Only clear error when user starts typing, not on every keystroke
+                if (error && value.length === 0) {
+                  setError('');
                 }
-                {...register('newPassword', {
-                  required: 'New password is required',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters long',
-                  },
-                  pattern: {
-                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                    message:
-                      'Password must contain at least one uppercase letter, one lowercase letter, and one number',
-                  },
-                })}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Confirm New Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword?.message}
-                {...register('confirmPassword', {
-                  required: 'Please confirm your password',
-                  validate: (value) => value === password || 'Passwords do not match',
-                })}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2 }}
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+              }}
+              style={{
+                textAlign: 'center',
+                fontSize: '22px',
+                fontWeight: 600,
+                letterSpacing: '10px',
+              }}
+            />
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <AuthButton
+                loading={loading}
+                loadingText="Verifying..."
+                disabled={resetCode.length !== 6}
+                onClick={handleVerifyCode}
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
-              </Button>
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <MuiLink component={Link} to="/login" variant="body2">
-                  Back to Sign In
-                </MuiLink>
-              </Box>
+                Verify Code
+              </AuthButton>
+              <AuthButton
+                variant="outlined"
+                loading={resending}
+                loadingText="Resending..."
+                disabled={resendTimer > 0}
+                onClick={handleResendCode}
+              >
+                {resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code'}
+              </AuthButton>
             </Box>
-          )}
-        </Paper>
+
+            <Typography sx={footerLinkSx}>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => {
+                  setStep(1);
+                  setResetCode('');
+                  setError('');
+                  setSuccess(false);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  ...linkStyle,
+                }}
+              >
+                Use Different Email
+              </Box>
+            </Typography>
+          </Box>
+        )}
+
+        {/* Step 3: Reset Password */}
+        {step === 3 && (
+          <Box component="form" onSubmit={handleSubmit(handleResetPassword)} noValidate>
+            {success && (
+              <Alert severity="success" sx={alertSx}>
+                Password reset successfully! Redirecting to login...
+              </Alert>
+            )}
+            <AuthInput
+              id="newPassword"
+              label="NEW PASSWORD"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter new password"
+              autoComplete="new-password"
+              error={errors.newPassword?.message}
+              endAdornment={
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  sx={showHideButtonSx}
+                >
+                  {showPassword ? 'HIDE' : 'SHOW'}
+                </Box>
+              }
+              {...register('newPassword', {
+                required: 'New password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters long',
+                },
+                pattern: {
+                  value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                  message:
+                    'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+                },
+              })}
+            />
+            <AuthInput
+              id="confirmPassword"
+              label="CONFIRM NEW PASSWORD"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Re-enter new password"
+              autoComplete="new-password"
+              error={errors.confirmPassword?.message}
+              endAdornment={
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  sx={showHideButtonSx}
+                >
+                  {showConfirmPassword ? 'HIDE' : 'SHOW'}
+                </Box>
+              }
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value) => value === password || 'Passwords do not match',
+              })}
+            />
+            <AuthButton type="submit" loading={loading} loadingText="Resetting...">
+              Reset Password
+            </AuthButton>
+            <Typography sx={footerLinkSx}>
+              <Link to="/login" style={linkStyle}>
+                Back to Sign In
+              </Link>
+            </Typography>
+          </Box>
+        )}
       </Box>
-    </Container>
+    </AuthLayout>
   );
 };
 
 export default ForgotPasswordPage;
-

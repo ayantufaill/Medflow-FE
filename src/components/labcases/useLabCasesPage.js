@@ -1,7 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import dayjs from "dayjs";
 import { usePatient } from "../../hooks/redux";
 import { patientKey, patientName } from "../images/imagesConstants";
 import { STORAGE_KEY, defaultLabCases, EXPORT_COLUMNS } from "./labCasesConstants";
+import { labCaseService } from "../../services/lab-case.service";
 
 const emptyFormData = (title) => ({
   patient: title,
@@ -16,6 +18,69 @@ const emptyFormData = (title) => ({
   status: "Draft",
 });
 
+const BACKEND_STATUS_TO_FE = {
+  New: "Draft",
+  Draft: "Draft",
+  Sent: "Sent",
+  Received: "Received",
+  "Quality Checked": "Ready",
+  Ready: "Ready",
+  Returned: "Returned",
+  Complete: "Complete",
+  Completed: "Complete",
+  "In Progress": "Received",
+};
+
+const parseInstructions = (instructions) => {
+  const lines = String(instructions || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const pick = (label) => {
+    const line = lines.find((l) => l.toLowerCase().startsWith(label.toLowerCase()));
+    return line ? line.slice(label.length).trim() : "";
+  };
+  return {
+    type: pick("Type:"),
+    provider: pick("Provider:"),
+    procedures: pick("Procedures:"),
+    shipping: pick("Shipping:"),
+    tracking: pick("Tracking:"),
+    status: pick("Status:"),
+    notes: pick("Notes:"),
+    raw: String(instructions || ""),
+  };
+};
+
+const toDisplayDate = (iso) =>
+  iso && /^\d{4}-\d{2}-\d{2}/.test(String(iso)) ? dayjs(iso).format("MM/DD/YYYY") : "";
+
+const mapBackendCase = (c) => {
+  const parsed = parseInstructions(c.instructions);
+  const labFee = Number(c.labFee) || 0;
+  const shipping = Number(parsed.shipping) || 0;
+  return {
+    id: `bc-${c._id}`,
+    sourceId: String(c._id),
+    isBackend: true,
+    date: toDisplayDate(c.createdDate) || toDisplayDate(c.dueDate) || "—",
+    type: parsed.type || "Lab",
+    procedure: parsed.procedures || parsed.raw.split("\n")[0] || "",
+    lab: c.laboratory?.name || "",
+    laboratoryId: c.laboratory?.id ? String(c.laboratory.id) : "",
+    trackingNumber: parsed.tracking || "",
+    estReceiveDate: toDisplayDate(c.dueDate),
+    apptDate: toDisplayDate(c.appointmentDate),
+    provider: c.provider?.name || parsed.provider || "",
+    providerId: c.provider?.id ? String(c.provider.id) : "",
+    status: parsed.status || BACKEND_STATUS_TO_FE[c.status] || "Draft",
+    notes: parsed.notes || parsed.raw,
+    shipping,
+    labFee,
+    total: labFee + shipping,
+  };
+};
+
 export const useLabCasesPage = () => {
   const { currentPatient, selectedPatientId } = usePatient();
   const patientId = patientKey(currentPatient) || selectedPatientId;
@@ -28,6 +93,7 @@ export const useLabCasesPage = () => {
   }, []);
 
   const [labCases, setLabCases] = useState(() => loadCases(patientId));
+  const [serverCases, setServerCases] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
@@ -37,6 +103,28 @@ export const useLabCasesPage = () => {
   const [rowMenuAnchor, setRowMenuAnchor] = useState(null);
   const [rowMenuCase, setRowMenuCase] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [editingRow, setEditingRow] = useState(null);
+  const [labs, setLabs] = useState([]);
+
+  useEffect(() => {
+    const loadLabs = async () => {
+      try {
+        const response = await labCaseService.getAllLaboratories(1, 100);
+        const list = response?.data?.laboratories || response?.laboratories || [];
+        if (Array.isArray(list)) {
+          setLabs(
+            list.map((l) => ({
+              id: String(l.LaboratoryNum || l._id || l.id),
+              name: l.Description || l.name || "Laboratory",
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Could not load labs in useLabCasesPage:", err);
+      }
+    };
+    loadLabs();
+  }, []);
 
   const [prevPatientId, setPrevPatientId] = useState(patientId);
   if (prevPatientId !== patientId) {
@@ -49,8 +137,45 @@ export const useLabCasesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState(emptyFormData(""));
 
+  // Cases created from the appointment form (or the backend generally) live in the
+  // API, not localStorage — fetch and merge them into the list.
+  const fetchServerCases = useCallback(async () => {
+    try {
+      const rawId = patientKey(currentPatient) || selectedPatientId;
+      const numericId = [currentPatient?.PatNum, rawId].find((v) =>
+        /^\d+$/.test(String(v || "")),
+      );
+      const result = await labCaseService.getAllLabCases({
+        page: 1,
+        limit: 200,
+        patientId: numericId || undefined,
+      });
+      let list = result?.data?.labCases || result?.labCases || [];
+      if (!numericId) {
+        const name = (title || "").trim();
+        if (name && name !== "Selected Patient") {
+          list = list.filter((c) => (c.patient?.name || "").trim() === name);
+        }
+      }
+      setServerCases(list.map(mapBackendCase));
+    } catch (err) {
+      console.warn("Failed to load lab cases from server:", err);
+      setServerCases([]);
+    }
+  }, [currentPatient, selectedPatientId, title]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchServerCases();
+  }, [fetchServerCases]);
+
+  const allCases = useMemo(
+    () => [...serverCases, ...labCases],
+    [serverCases, labCases],
+  );
+
   const filteredCases = useMemo(() => {
-    return labCases.filter((c) => {
+    return allCases.filter((c) => {
       const matchSearch =
         !search.trim() ||
         [c.date, c.type, c.procedure, c.lab, c.estReceiveDate, c.apptDate, c.provider, c.status, c.notes, String(c.total ?? "")]
@@ -58,7 +183,7 @@ export const useLabCasesPage = () => {
       const matchStatus = !statusFilter || c.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [labCases, search, statusFilter]);
+  }, [allCases, search, statusFilter]);
 
   const paginatedCases = useMemo(() => {
     const start = page * rowsPerPage;
@@ -84,6 +209,7 @@ export const useLabCasesPage = () => {
 
   const handleRefresh = () => {
     setLabCases(loadCases(patientId));
+    fetchServerCases();
   };
 
   const handleResetFilters = () => {
@@ -94,7 +220,7 @@ export const useLabCasesPage = () => {
 
   const formatDate = (iso) => {
     if (!iso) return "";
-    const [y, m, d] = iso.split("-");
+    const [y, m, d] = String(iso).split("-");
     return `${m}/${d}/${y}`;
   };
 
@@ -127,14 +253,19 @@ export const useLabCasesPage = () => {
         .map((p) => p.trim())
         .filter(Boolean),
       lab: c.lab || "",
+      laboratoryId: c.laboratoryId || "",
+      type: c.type || "",
+      provider: c.provider || "",
+      providerId: c.providerId || "",
       trackingNumber: c.trackingNumber || "",
       estReceiveDate: toIso(c.estReceiveDate),
       notes: c.notes || "",
-      shipping: c.shipping != null ? String(c.shipping) : "",
+      shipping: c.shipping ? String(c.shipping) : "",
       labFee: c.labFee != null ? String(c.labFee) : "",
       status: c.status || "Draft",
     });
     setEditingId(c.id);
+    setEditingRow(c);
     setDialogOpen(true);
   };
 
@@ -143,29 +274,88 @@ export const useLabCasesPage = () => {
     closeRowMenu();
     if (!c) return;
     const copy = { ...c, id: `lab-${Date.now()}` };
+    delete copy.isBackend;
+    delete copy.sourceId;
     const next = [copy, ...labCases];
     setLabCases(next);
     persistCases(next);
   };
 
-  const handleDeleteRow = () => {
+  const handleDeleteRow = async () => {
     const c = rowMenuCase;
     closeRowMenu();
     if (!c) return;
+    if (c.isBackend && c.sourceId) {
+      try {
+        await labCaseService.deleteLabCase(c.sourceId);
+      } catch (err) {
+        console.warn("Failed to delete lab case from server:", err);
+      }
+      fetchServerCases();
+      setSelectedIds((prev) => prev.filter((item) => item !== c.id));
+      return;
+    }
     const next = labCases.filter((item) => item.id !== c.id);
     setLabCases(next);
     persistCases(next);
-    setSelectedIds((prev) => prev.filter((id) => id !== c.id));
+    setSelectedIds((prev) => prev.filter((item) => item !== c.id));
   };
 
   const handleOpenNewDialog = () => {
     setFormData(emptyFormData(title));
     setEditingId(null);
+    setEditingRow(null);
     setDialogOpen(true);
   };
 
-  const handleSaveNewCase = () => {
+  const handleSaveNewCase = async () => {
     const procedures = (formData.procedures || []).map((p) => p.trim()).filter(Boolean);
+
+    if (editingRow?.isBackend && editingRow.sourceId) {
+      const typeVal = (formData.type || editingRow.type || "Lab").trim();
+      const provVal = (formData.provider || editingRow.provider || "").trim();
+      const trackingVal = (formData.trackingNumber || "").trim();
+      const statusVal = formData.status || editingRow.status || "Draft";
+      const notesVal = (formData.notes || "").trim();
+
+      const instructions = [
+        `Type: ${typeVal}`,
+        provVal ? `Provider: ${provVal}` : "",
+        `Procedures: ${procedures.join(", ")}`,
+        formData.shipping !== "" && formData.shipping != null
+          ? `Shipping: ${parseFloat(formData.shipping) || 0}`
+          : "",
+        trackingVal ? `Tracking: ${trackingVal}` : "",
+        `Status: ${statusVal}`,
+        notesVal ? `Notes: ${notesVal}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const matchedLab = labs.find(
+        (l) => l.name?.toLowerCase() === formData.lab?.trim()?.toLowerCase() || l.id === formData.lab
+      );
+      const laboratoryId = matchedLab?.id || formData.laboratoryId || editingRow.laboratoryId || undefined;
+
+      try {
+        await labCaseService.updateLabCase(editingRow.sourceId, {
+          laboratoryId,
+          instructions,
+          labFee: parseFloat(formData.labFee) || 0,
+          dueDate: formData.estReceiveDate || undefined,
+          createdDate: formData.date || undefined,
+          status: statusVal,
+        });
+        await fetchServerCases();
+      } catch (err) {
+        console.warn("Failed to update lab case on server:", err);
+      }
+      setEditingId(null);
+      setEditingRow(null);
+      setDialogOpen(false);
+      return;
+    }
+
     const newCase = {
       id: `lab-${Date.now()}`,
       date: formatDate(formData.date) || new Date().toLocaleDateString(),
@@ -185,6 +375,7 @@ export const useLabCasesPage = () => {
     setLabCases(next);
     persistCases(next);
     setEditingId(null);
+    setEditingRow(null);
     setDialogOpen(false);
   };
 
@@ -192,10 +383,10 @@ export const useLabCasesPage = () => {
     const csvCell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const header = EXPORT_COLUMNS.map(([label]) => csvCell(label)).join(",");
     const rows = filteredCases.map((c) =>
-      EXPORT_COLUMNS.map(([, getter]) => csvCell(getter(c))).join(",")
+      EXPORT_COLUMNS.map(([, getter]) => csvCell(getter(c))).join(","),
     );
     const csv = [header, ...rows].join("\r\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -213,7 +404,7 @@ export const useLabCasesPage = () => {
     const body = filteredCases
       .map(
         (c) =>
-          `<tr>${EXPORT_COLUMNS.map(([, getter]) => `<td>${esc(getter(c))}</td>`).join("")}</tr>`
+          `<tr>${EXPORT_COLUMNS.map(([, getter]) => `<td>${esc(getter(c))}</td>`).join("")}</tr>`,
       )
       .join("");
     const html = `<!doctype html>
@@ -260,7 +451,7 @@ export const useLabCasesPage = () => {
   return {
     patientId,
     title,
-    labCases,
+    labCases: allCases,
     search,
     setSearch,
     statusFilter,

@@ -28,7 +28,7 @@ const LabCasesDialog = ({ open, onClose }) => {
     includeInactive: false,
     dateRange: 'Range',
     startDate: dayjs().subtract(30, 'day'),
-    endDate: dayjs()
+    endDate: dayjs().add(30, 'day')
   });
   const [sortConfig, setSortConfig] = useState({ key: 'dueDate', order: 'asc' });
   const [expandedNotes, setExpandedNotes] = useState(false);
@@ -69,7 +69,7 @@ const LabCasesDialog = ({ open, onClose }) => {
         includeInactive: false,
         dateRange: 'Range',
         startDate: dayjs().subtract(30, 'day'),
-        endDate: dayjs()
+        endDate: dayjs().add(30, 'day')
       });
       setSortConfig({ key: 'dueDate', order: 'asc' });
       setPagination({ page: 1, limit: 25, total: 0 });
@@ -177,28 +177,32 @@ const LabCasesDialog = ({ open, onClose }) => {
         <Link
           href="#"
           underline="always"
-          sx={{ color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem', mt: 1, mb: 2, display: 'inline-block' }}
+          sx={{ color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem', mt: 1, mb: 2, display: 'inline-block', flexShrink: 0 }}
         >
         </Link>
 
         {/* Filters */}
-        <LabCasesFilters
-          filters={filters}
-          onFiltersChange={setFilters}
-          onApplyFilters={handleApplyFilters}
-        />
+        <Box sx={{ flexShrink: 0 }}>
+          <LabCasesFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            onApplyFilters={handleApplyFilters}
+          />
+        </Box>
 
         {/* Actions */}
-        <LabCasesActions
-          onExportCSV={handleExportCSV}
-          onPrint={handlePrint}
-          expandedNotes={expandedNotes}
-          onToggleNotes={() => setExpandedNotes(!expandedNotes)}
-          disabled={loading}
-        />
+        <Box sx={{ flexShrink: 0 }}>
+          <LabCasesActions
+            onExportCSV={handleExportCSV}
+            onPrint={handlePrint}
+            expandedNotes={expandedNotes}
+            onToggleNotes={() => setExpandedNotes(!expandedNotes)}
+            disabled={loading}
+          />
+        </Box>
 
         {/* Table */}
-        <Box sx={{ mb: '25px' }}>
+        <Box sx={{ mb: '25px', flexShrink: 0 }}>
           <LabCasesTable
             labCases={labCases}
             loading={loading}

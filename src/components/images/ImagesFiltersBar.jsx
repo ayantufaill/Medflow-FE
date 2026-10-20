@@ -11,13 +11,12 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import AddIcon from "@mui/icons-material/Add";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
 import SettingsIcon from "@mui/icons-material/Settings";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import { COLORS } from "../../constants/colors";
-import { radius, fontSize, fontWeight, roundedSelectMenuProps } from "../../constants/styles";
+import { radius, fontSize, roundedSelectMenuProps } from "../../constants/styles";
 import { actionButtonSx, pillSelectSx, LAYOUT_OPTIONS } from "./imagesConstants";
 
 const ImagesFiltersBar = ({
@@ -25,7 +24,6 @@ const ImagesFiltersBar = ({
   onSearchChange,
   onClearSearch,
   onOpenNewMountMenu,
-  onOpenImportDialog,
   onOpenSettings,
   selectedCount,
   onOpenBatchDelete,
@@ -91,19 +89,6 @@ const ImagesFiltersBar = ({
           }}
         >
           New Mount
-        </Button>
-        <Button
-          variant="contained"
-          disableElevation
-          startIcon={<UploadFileIcon sx={{ fontSize: "16px" }} />}
-          onClick={onOpenImportDialog}
-          sx={{
-            ...actionButtonSx,
-            backgroundColor: COLORS.ACCENT,
-            "&:hover": { backgroundColor: COLORS.ACCENT_HOVER },
-          }}
-        >
-          Import Images
         </Button>
         <Button
           variant="outlined"
