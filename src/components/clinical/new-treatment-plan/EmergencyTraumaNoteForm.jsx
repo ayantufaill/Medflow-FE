@@ -150,71 +150,110 @@ const RichNarrative = ({ label, value, onChange, placeholder, readOnly }) => {
 const ChoiceField = ({ label, value, options, onChange, readOnly, otherValue, onOtherChange }) => (
   <Field label={label}>
     <RadioGroup value={value} onChange={(event) => onChange(event.target.value)} sx={{ gap: 0.2 }}>
-      {options.map((option) => (
-        <Box key={option} sx={{ display: 'flex', alignItems: 'center', minHeight: 30 }}>
-          <FormControlLabel
-            value={option}
-            control={<Radio size="small" disabled={readOnly} sx={{ '&.Mui-checked': { color: COLORS.ACCENT } }} />}
-            label={<Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{option}</Typography>}
-            sx={{ m: 0, mr: 1 }}
-          />
-          {option === 'Other' && onOtherChange && (
-            <TextField
-              size="small"
-              value={otherValue}
-              onChange={(event) => onOtherChange(event.target.value)}
-              aria-label={`${label} Other`}
-              placeholder="Other"
-              disabled={readOnly || value !== 'Other'}
-              sx={{ ...standardFieldSx, maxWidth: 220, flex: 1 }}
+      {options.map((option) => {
+        const isOther = option === 'Other';
+        return (
+          <Box
+            key={option}
+            sx={{
+              display: 'flex',
+              flexDirection: isOther ? 'column' : 'row',
+              alignItems: isOther ? 'flex-start' : 'center',
+              minHeight: 30,
+              minWidth: 0,
+            }}
+          >
+            <FormControlLabel
+              value={option}
+              control={<Radio size="small" disabled={readOnly} sx={{ '&.Mui-checked': { color: COLORS.ACCENT } }} />}
+              label={<Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{option}</Typography>}
+              sx={{ m: 0, mr: 1 }}
             />
-          )}
-        </Box>
-      ))}
+            {isOther && onOtherChange && (
+              <Box sx={{ width: '100%', maxWidth: 300, mt: 0.75, pl: 3.5 }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={otherValue}
+                  onChange={(event) => onOtherChange(event.target.value)}
+                  aria-label={`${label} Other`}
+                  placeholder="Other"
+                  disabled={readOnly || value !== 'Other'}
+                  sx={standardFieldSx}
+                />
+              </Box>
+            )}
+          </Box>
+        );
+      })}
     </RadioGroup>
   </Field>
 );
 
-const MultiField = ({ label, value, options, onChange, readOnly, otherValue, onOtherChange }) => (
-  <Field label={label}>
-    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 1, rowGap: 0.5 }}>
-      {options.map((option) => (
-        <Box key={option} sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={value.includes(option)}
-                disabled={readOnly}
-                onChange={(event) => {
-                  if (!event.target.checked) {
-                    onChange(value.filter((item) => item !== option));
-                  } else {
-                    onChange([...value.filter((item) => item !== option), option]);
-                  }
-                }}
-                sx={{ '&.Mui-checked': { color: COLORS.ACCENT } }}
+const MultiField = ({ label, value, options, onChange, readOnly, otherValue, onOtherChange }) => {
+  const isLong = (opt) => typeof opt === 'string' && opt.length > 80;
+  return (
+    <Field label={label}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 1, rowGap: 0.5 }}>
+        {options.map((option) => {
+          const isOther = option === 'Other';
+          const long = isLong(option);
+          return (
+            <Box
+              key={option}
+              sx={{
+                display: 'flex',
+                flexDirection: isOther ? 'column' : 'row',
+                alignItems: isOther ? 'flex-start' : long ? 'flex-start' : 'center',
+                minWidth: 0,
+                py: 0.25,
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={value.includes(option)}
+                    disabled={readOnly}
+                    onChange={(event) => {
+                      if (!event.target.checked) {
+                        onChange(value.filter((item) => item !== option));
+                      } else {
+                        onChange([...value.filter((item) => item !== option), option]);
+                      }
+                    }}
+                    sx={{
+                      p: 0.5,
+                      mr: 0.5,
+                      mt: long ? -0.25 : 0,
+                      '&.Mui-checked': { color: COLORS.ACCENT },
+                    }}
+                  />
+                }
+                label={<Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY, lineHeight: 1.4 }}>{option}</Typography>}
+                sx={{ m: 0, mr: 1, alignItems: long ? 'flex-start' : 'center' }}
               />
-            }
-            label={<Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_BODY }}>{option}</Typography>}
-            sx={{ m: 0, mr: 1 }}
-          />
-          {option === 'Other' && onOtherChange && (
-            <TextField
-              size="small"
-              value={otherValue}
-              onChange={(event) => onOtherChange(event.target.value)}
-              aria-label={`${label} Other`}
-              placeholder="Other"
-              disabled={readOnly || !value.includes('Other')}
-              sx={{ ...standardFieldSx, minWidth: 95, maxWidth: 180, flex: 1 }}
-            />
-          )}
-        </Box>
-      ))}
-    </Box>
-  </Field>
-);
+              {isOther && onOtherChange && (
+                <Box sx={{ width: '100%', maxWidth: 300, mt: 0.75, pl: 3.5 }}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    value={otherValue}
+                    onChange={(event) => onOtherChange(event.target.value)}
+                    aria-label={`${label} Other`}
+                    placeholder="Other"
+                    disabled={readOnly || !value.includes('Other')}
+                    sx={standardFieldSx}
+                  />
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Field>
+  );
+};
 
 /* ── Main Component ──────────────────────────────────────────────────────── */
 
