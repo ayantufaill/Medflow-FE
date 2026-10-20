@@ -136,9 +136,9 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
   let procString = formatProcedures(
     appt.procedures || appt.procedureCodes,
     appt.chiefComplaint ||
-      appt.appointmentTypeName ||
-      appt.type ||
-      "EXAM, PROPHY",
+    appt.appointmentTypeName ||
+    appt.type ||
+    "EXAM, PROPHY",
   );
   let computedPrice = appt.totalAmount || 0;
 
@@ -318,8 +318,8 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
         backgroundPosition: '0 0, 10px 10px',
         backgroundSize: '20px 20px',
         "&:hover": {
-          backgroundColor: isCloseOpenDayMode 
-            ? (isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent') 
+          backgroundColor: isCloseOpenDayMode
+            ? (isClosed ? 'rgba(0, 0, 0, 0.05)' : 'transparent')
             : (isCellFullyPast ? 'rgba(0, 0, 0, 0.05)' : "rgba(34, 98, 239, 0.02)"),
         },
       }}
@@ -378,15 +378,15 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
               if (onSlotClick) onSlotClick(activeCell.hour, activeCell.mins, activeCell.roomId);
               setActiveCell(null);
             }}
-            sx={{ 
-              fontSize: '10px', 
-              fontWeight: fontWeight.semibold, 
-              textTransform: 'none', 
-              py: 0.5, 
-              width: '100%', 
-              backgroundColor: COLORS.ACCENT, 
+            sx={{
+              fontSize: '10px',
+              fontWeight: fontWeight.semibold,
+              textTransform: 'none',
+              py: 0.5,
+              width: '100%',
+              backgroundColor: COLORS.ACCENT,
               borderRadius: '6px',
-              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER } 
+              '&:hover': { backgroundColor: COLORS.ACCENT_HOVER }
             }}
           >
             Schedule Appointment
@@ -398,13 +398,13 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
               if (onBlockClick) onBlockClick(activeCell.hour, activeCell.mins, activeCell.roomId);
               setActiveCell(null);
             }}
-            sx={{ 
-              fontSize: '10px', 
-              fontWeight: fontWeight.semibold, 
-              textTransform: 'none', 
-              py: 0.5, 
-              width: '100%', 
-              color: COLORS.TEXT_PRIMARY, 
+            sx={{
+              fontSize: '10px',
+              fontWeight: fontWeight.semibold,
+              textTransform: 'none',
+              py: 0.5,
+              width: '100%',
+              color: COLORS.TEXT_PRIMARY,
               borderColor: COLORS.BORDER,
               borderRadius: '6px',
             }}
@@ -502,8 +502,8 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
         const apptDate = appt.appointmentDate
           ? String(appt.appointmentDate).slice(0, 10)
           : null;
-        
-        const isDateValid = isWeek 
+
+        const isDateValid = isWeek
           ? (apptDate >= weekStart && apptDate <= weekEnd)
           : (apptDate === targetDate);
 
@@ -528,9 +528,9 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
 
     const blocks = scheduleBlocks.map(block => {
       if (!block.startTime || !block.endTime) return null;
-      
+
       const blockDate = dayjs(block.date).format("YYYY-MM-DD");
-      const isBlockDateValid = isWeek 
+      const isBlockDateValid = isWeek
         ? (blockDate >= weekStart && blockDate <= weekEnd)
         : (blockDate === targetDate);
 
@@ -540,7 +540,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
       const startM = parseInt(block.startTime.split(':')[1], 10);
       const endH = parseInt(block.endTime.split(':')[0], 10);
       const endM = parseInt(block.endTime.split(':')[1], 10);
-      
+
       if (startH >= END_HOUR || endH <= START_HOUR) return null;
 
       const durationMinutes = (endH - startH) * 60 + (endM - startM);
@@ -618,7 +618,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
             const isToday = dayjs(dateStr).isSame(dayjs(), 'day');
 
             return (
-              <DroppableCell 
+              <DroppableCell
                 key={col._id || col.id || idx}
                 hour={hour}
                 room={col}
@@ -668,11 +668,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
             const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
             const colIndex = colIndexMap[apptDateStr] ?? 0;
             const pos = getGridPosition(gridItem, colIndex);
-            
+
             // Group by the exact top position (or 30 min block)
             const blockIndex = Math.floor(pos.top / (HOUR_HEIGHT / 2));
             const key = `${colIndex}-${blockIndex}`;
-            
+
             if (!weekGroups[key]) {
               weekGroups[key] = {
                 colIndex,
@@ -685,7 +685,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
             }
             weekGroups[key].appointments.push(gridItem);
           });
-          
+
           return Object.values(weekGroups).map((group, i) => (
             <Box
               key={`week-group-${i}`}
@@ -707,20 +707,20 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
             >
               {group.appointments.map((appt, j) => (
                 <Box key={appt.id || j} sx={{ height: '24px', flexShrink: 0 }}>
-                  <CompactAppointmentPoint 
-                    appointment={appt} 
+                  <CompactAppointmentPoint
+                    appointment={appt}
                     onSlotClick={(e) => {
                       const detailAppt = e.detail;
                       window.dispatchEvent(new CustomEvent('appointment-card-clicked', {
                         detail: { ...detailAppt },
                       }));
                       if (detailAppt.patientId) {
-                        const pId = typeof detailAppt.patientId === 'object' 
-                          ? detailAppt.patientId._id || detailAppt.patientId.id || detailAppt.patientId.PatNum 
+                        const pId = typeof detailAppt.patientId === 'object'
+                          ? detailAppt.patientId._id || detailAppt.patientId.id || detailAppt.patientId.PatNum
                           : detailAppt.patientId;
                         if (pId) dispatch(fetchPatientById(pId));
                       }
-                    }} 
+                    }}
                   />
                 </Box>
               ))}
@@ -729,15 +729,30 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
         }
 
         // DAY VIEW
-        return visibleAppointments.map((gridItem, i) => {
+        const positioned = visibleAppointments.map((gridItem) => {
           const colIndex = colIndexMap[gridItem.roomId] ?? 0;
-          const pos = getGridPosition(gridItem, colIndex);
+          return { gridItem, colIndex, pos: getGridPosition(gridItem, colIndex) };
+        });
+
+        return positioned.map(({ gridItem, colIndex, pos }, i) => {
           const statusStr = String(gridItem.status || '').toLowerCase();
           const isGhosted = statusStr === 'cancelled' || statusStr === 'no_show' || statusStr === 'no show' || statusStr === 'broken';
 
+          // Ghosted cards go half-width only when they actually collide with
+          // another appointment in the same operatory column; alone they keep
+          // full width. Strict < means back-to-back slots don't count.
           if (isGhosted) {
-            pos.left = pos.left + pos.width / 2;
-            pos.width = pos.width / 2;
+            const overlaps = positioned.some(
+              (other) =>
+                other.gridItem !== gridItem &&
+                other.colIndex === colIndex &&
+                pos.top < other.pos.top + other.pos.height &&
+                other.pos.top < pos.top + pos.height
+            );
+            if (overlaps) {
+              pos.left = pos.left + pos.width / 2;
+              pos.width = pos.width / 2;
+            }
           }
 
           return (
