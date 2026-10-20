@@ -14,9 +14,15 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
-import { fontSize, fontWeight, standardFieldSx, radius } from '../../../constants/styles';
+import { fontSize, fontWeight, standardFieldSx, radius, roundedSelectMenuProps } from '../../../constants/styles';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
 import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
+
+const enhancedMenuProps = {
+  ...roundedSelectMenuProps,
+  style: { zIndex: 9999 },
+  sx: { zIndex: 9999 },
+};
 
 export const TRAUMA_TEMPLATE_NAME = 'Exam - Emergency Trauma';
 
@@ -222,6 +228,7 @@ const EmergencyTraumaNoteForm = ({
   providersList: propProvidersList = [],
   onCancel,
   onSuccess,
+  onOpenActions,
 }) => {
   const reduxProviders = useSelector(selectProviderDropdownList) || [];
   const providersList = propProvidersList.length > 0 ? propProvidersList : reduxProviders;
@@ -428,7 +435,7 @@ const EmergencyTraumaNoteForm = ({
             </Typography>
             <Box>
               <IconButton size="small"><NotificationsNoneIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
-              <IconButton size="small"><MoreVertIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
+              <IconButton size="small" aria-label="Note actions" onClick={onOpenActions} disabled={!onOpenActions}><MoreVertIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
             </Box>
           </Box>
           <Grid container spacing={2} alignItems="center">
@@ -461,6 +468,7 @@ const EmergencyTraumaNoteForm = ({
                   disabled={readOnly}
                   displayEmpty
                   sx={{ height: 32, fontSize: fontSize.sm }}
+                  MenuProps={enhancedMenuProps}
                 >
                   {providersList.map((p) => {
                     const id = String(p._id || p.id || p.ProvNum || '');

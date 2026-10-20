@@ -98,7 +98,7 @@ const defaultValues = {
 
 const ISOLATION_OPTIONS = ['Dryshield (XP)', 'Dryshield (M)', 'Dryshield (P)', 'Dryshield (L)', 'Dryshield (S)', 'Mouth prop'];
 
-const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, linkToAppointment = true, currentPatient, selectedProcedures, onCancel, onSuccess }) => {
+const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, linkToAppointment = true, currentPatient, selectedProcedures, onCancel, onSuccess, onOpenActions }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const providersList = useSelector(selectProviderDropdownList) || [];
@@ -351,7 +351,7 @@ const EditNoteForm = ({ noteId, view, patientId, appointmentId, providerId, link
             <Typography sx={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>{dayjs().format('MMMM D, YYYY')}</Typography>
             <Box>
               <IconButton size="small"><NotificationsNoneIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
-              <IconButton size="small"><MoreVertIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
+              <IconButton size="small" aria-label="Note actions" onClick={onOpenActions} disabled={!onOpenActions}><MoreVertIcon sx={{ color: COLORS.TEXT_SECONDARY }} /></IconButton>
             </Box>
           </Box>
           <Grid container spacing={2}>

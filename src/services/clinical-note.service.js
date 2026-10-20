@@ -30,6 +30,11 @@ export const clinicalNoteService = {
     return response.data.data.clinicalNote;
   },
 
+  async getHistory(clinicalNoteId) {
+    const response = await apiClient.get(`/clinical-notes/${clinicalNoteId}/history`);
+    return response.data.data.history;
+  },
+
   async getClinicalNotesByPatient(patientId, page = 1, limit = 10, signal) {
     const params = new URLSearchParams();
     params.append('page', page);

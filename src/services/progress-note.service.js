@@ -1,6 +1,15 @@
 import apiClient from '../config/api';
 
 export const progressNoteService = {
+  async getById(id) {
+    const response = await apiClient.get(`/progress-notes/${id}`);
+    return response.data.data.progressNote;
+  },
+
+  async getHistory(id) {
+    const response = await apiClient.get(`/progress-notes/${id}/history`);
+    return response.data.data.history;
+  },
   async getAll(params) {
     const response = await apiClient.get('/progress-notes', { params });
     return response.data;
