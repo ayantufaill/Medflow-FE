@@ -196,6 +196,90 @@ export function branchDateStr(value) {
   return d.isValid() ? d.format('YYYY-MM-DD') : '';
 }
 
+export const DEFAULT_CLINIC_TIMEZONE = 'America/New_York';
+
+export function resolveClinicTimeZone(branchOrTz) {
+  if (!branchOrTz) return DEFAULT_CLINIC_TIMEZONE;
+  const tz = typeof branchOrTz === 'string' ? branchOrTz : branchOrTz.timeZone;
+  if (typeof tz === 'string' && tz.trim() && tz !== 'UTC' && tz !== 'Etc/UTC') {
+    return tz.trim();
+  }
+  return DEFAULT_CLINIC_TIMEZONE;
+}
+
+export function getUserLocalTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+export function isDifferentFromUserTz(clinicTz) {
+  const userTz = getUserLocalTimeZone();
+  const tz = resolveClinicTimeZone(clinicTz);
+  return userTz !== tz;
+}
+
+export function getTimeZoneAbbr(timeZone) {
+  const tz = resolveClinicTimeZone(timeZone);
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    }).formatToParts(new Date());
+    const tzPart = parts.find((p) => p.type === 'timeZoneName');
+    return tzPart ? tzPart.value : tz;
+  } catch {
+    return tz;
+  }
+}
+
 export function todayInBranch(tz) {
-  return clinicNow(tz).format('YYYY-MM-DD');
+  const resolved = resolveClinicTimeZone(tz);
+  return clinicNow(resolved).format('YYYY-MM-DD');
+}
+
+export function clinicStartOfDay(tz) {
+  const resolved = resolveClinicTimeZone(tz);
+  return clinicNow(resolved).startOf('day');
+}
+
+export function isPastDateInClinic(date, timeZone) {
+  if (!date) return false;
+  const targetDateStr = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())
+    ? date.trim()
+    : branchDateStr(date);
+  if (!targetDateStr) return false;
+  const clinicTodayStr = todayInBranch(timeZone);
+  return targetDateStr < clinicTodayStr;
+}
+
+export function isTodayInClinic(date, timeZone) {
+  if (!date) return false;
+  const targetDateStr = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())
+    ? date.trim()
+    : branchDateStr(date);
+  if (!targetDateStr) return false;
+  const clinicTodayStr = todayInBranch(timeZone);
+  return targetDateStr === clinicTodayStr;
+}
+
+export function isPastSlotInClinic(dateStr, timeStr, timeZone) {
+  if (!dateStr || !timeStr) return false;
+  const cleanDate = typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())
+    ? dateStr.trim()
+    : branchDateStr(dateStr);
+  const clinicTodayStr = todayInBranch(timeZone);
+
+  if (cleanDate < clinicTodayStr) return true;
+  if (cleanDate > clinicTodayStr) return false;
+
+  // Same calendar date: compare minutes against clinic now
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return false;
+  const slotMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  const nowInClinic = clinicNow(resolveClinicTimeZone(timeZone));
+  const currentMinutes = nowInClinic.hour() * 60 + nowInClinic.minute();
+  return slotMinutes < currentMinutes;
 }

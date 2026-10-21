@@ -15,6 +15,8 @@ import {
   History as HistoryIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone, clinicNow } from "../../../../utils/dateUtils";
+import { useBranch } from "../../../../hooks/redux";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../../../store/slices/appointmentSlice";
 import { selectCurrentPatient } from "../../../../store/slices/patientSlice";
@@ -32,6 +34,11 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const appointments = useSelector(selectPatientHistoryList);
   const loading = useSelector(selectPatientHistoryLoading);
   const currentPatient = useSelector(selectCurrentPatient);
+
+  // ── Clinic timezone ─────────────────────────────────────────────────────────
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const clinicNowVal = clinicNow(clinicTz);
 
   // Enrich patient name: if caller only passed { _id, id }, pull name from Redux
   const patientName = patient?.firstName
@@ -73,13 +80,13 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
       result = result.filter(a => {
         const d = dayjs(a.date || a.appointmentDate);
         const time = a.startTime ? a.startTime.split(':') : [0,0];
-        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isBefore(dayjs());
+        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isBefore(clinicNowVal);
       });
     } else if (filterType === "future") {
       result = result.filter(a => {
         const d = dayjs(a.date || a.appointmentDate);
         const time = a.startTime ? a.startTime.split(':') : [0,0];
-        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isAfter(dayjs());
+        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isAfter(clinicNowVal);
       });
     }
 

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Box, Typography, Checkbox, Collapse, Button, Divider } from "@mui/material";
 import { CalendarToday as CalendarTodayIcon, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone, clinicNow } from "../../../../utils/dateUtils";
+import { useBranch } from "../../../../hooks/redux";
 import { COLORS } from "../../../../constants/colors";
 import { fontWeight } from "../../../../constants/styles";
 import AppointmentSummaryCard from "../../left-panel/AppointmentSummaryCard";
@@ -99,6 +101,10 @@ const FamilyAppointmentsScheduledTab = ({
   onClose,
   onSubmit
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const clinicToday = clinicNow(clinicTz);
+
   const memberIds = [patientId, ...(familyMembers || []).map((m) => m.id || m._id)].filter(Boolean);
 
   const INACTIVE_STATUSES = new Set([
@@ -137,7 +143,7 @@ const FamilyAppointmentsScheduledTab = ({
     memberIds.forEach((mid) => {
       const codes = recareDueDates?.[mid] || {};
       const needSchedule = Object.entries(codes)
-        .filter(([code, v]) => v?.dueDate && dayjs(v.dueDate).isBefore(dayjs().startOf('day')) && !isAlreadyScheduled(mid, code))
+        .filter(([code, v]) => v?.dueDate && dayjs(v.dueDate).isBefore(clinicToday.startOf('day')) && !isAlreadyScheduled(mid, code))
         .map(([code, v]) => ({ code, ...v }));
       if (needSchedule.length > 0) dueByMember[mid] = needSchedule;
     });
@@ -178,7 +184,7 @@ const FamilyAppointmentsScheduledTab = ({
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {allAppointments
-            .filter((appt) => dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day"))
+            .filter((appt) => dayjs(appt.appointmentDate).isAfter(clinicToday.subtract(1, "day"), "day"))
             .sort((a, b) => dayjs(a.appointmentDate).diff(dayjs(b.appointmentDate)))
             .map((appt, i) => (
               <Box
@@ -215,7 +221,7 @@ const FamilyAppointmentsScheduledTab = ({
               </Box>
             ))}
           {allAppointments.filter((appt) =>
-            dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day")
+          dayjs(appt.appointmentDate).isAfter(clinicToday.subtract(1, "day"), "day")
           ).length === 0 && (
             <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_MUTED, fontStyle: "italic" }}>
               No upcoming appointments

@@ -21,6 +21,12 @@ import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
+import {
+  clinicNow,
+  resolveClinicTimeZone,
+  isPastDateInClinic,
+  todayInBranch,
+} from "../../utils/dateUtils";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -59,8 +65,24 @@ const AddNewPatientAppointmentForm = ({
       : initialPatient || null,
   );
 
+  const [branchId, setBranchId] = useState(
+    initialShortlistData?.BranchId
+      ? String(initialShortlistData.BranchId)
+      : initialAppointment?.branchId
+        ? String(initialAppointment.branchId)
+        : "",
+  );
+  const { branches, currentBranch, fetchBranches: loadBranches } = useBranch();
+  const activeBranch = branches?.find((b) => String(b.id) === String(branchId)) || currentBranch;
+  const clinicTz = resolveClinicTimeZone(activeBranch);
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Parse shortlist date/time if available
-  const defaultInitialDateTime = initialDateTime || dayjs().add(30, "minute");
+  const defaultInitialDateTime = initialDateTime || clinicNow(clinicTz).add(30, "minute");
   let parsedDate = defaultInitialDateTime;
   if (initialShortlistData?.AppointmentDate) {
     let d = dayjs(initialShortlistData.AppointmentDate);
@@ -112,20 +134,6 @@ const AddNewPatientAppointmentForm = ({
     initialShortlistData?.DurationMins || 60,
   );
 
-  // Branch — optional, narrows the Operatory/Provider pickers below once picked.
-  // Omitted, the backend derives the appointment's branch from its room.
-  const [branchId, setBranchId] = useState(
-    initialShortlistData?.BranchId
-      ? String(initialShortlistData.BranchId)
-      : initialAppointment?.branchId
-        ? String(initialAppointment.branchId)
-        : "",
-  );
-  const { branches, fetchBranches: loadBranches } = useBranch();
-  useEffect(() => {
-    if (branches.length === 0) loadBranches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // Same global cache the page-level dropdown data uses (see OperatorySchedulePage) —
   // resolves to the same unfiltered lists when branchId is empty, or a freshly
   // fetched branch-filtered list once one is picked. Scoped to this modal only;
@@ -1108,7 +1116,7 @@ const AddNewPatientAppointmentForm = ({
           setSelectedColorTags(new Set());
         }
       } else {
-        const defaultDate = initialDateTime || dayjs().add(30, "minute");
+        const defaultDate = initialDateTime || clinicNow(clinicTz).add(30, "minute");
         setPatient(initialPatient || null);
         setApptDate(defaultDate);
         setTimeHours(defaultDate.format("hh"));
@@ -1615,8 +1623,9 @@ const AddNewPatientAppointmentForm = ({
       })
       .filter((tag) => tag.label);
 
-    const start = dateTime || dayjs();
-    if (!initialAppointment && start.isBefore(dayjs().startOf("day"))) {
+    const start = dateTime || clinicNow(clinicTz);
+    const dateStr = start.format("YYYY-MM-DD");
+    if (!initialAppointment && isPastDateInClinic(dateStr, clinicTz)) {
       setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }

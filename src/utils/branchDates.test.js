@@ -1,6 +1,8 @@
 import {
   formatBranchDate, formatBranchDateTime,
   formatBranchDateLong, formatBranchTime, branchDateStr,
+  isPastDateInClinic, isTodayInClinic, isPastSlotInClinic,
+  resolveClinicTimeZone, DEFAULT_CLINIC_TIMEZONE,
 } from './dateUtils';
 
 describe('branch date helpers', () => {
@@ -21,5 +23,24 @@ describe('branch date helpers', () => {
   it('returns placeholder for missing values', () => {
     expect(formatBranchDate(null)).toBe('-');
     expect(branchDateStr(null)).toBe('');
+  });
+
+  it('correctly checks isPastDateInClinic, isTodayInClinic, and isPastSlotInClinic', () => {
+    const tz = 'America/New_York';
+    expect(isPastDateInClinic('2000-01-01', tz)).toBe(true);
+    expect(isPastDateInClinic('2099-12-31', tz)).toBe(false);
+
+    expect(isTodayInClinic('2000-01-01', tz)).toBe(false);
+    expect(isTodayInClinic('2099-12-31', tz)).toBe(false);
+
+    expect(isPastSlotInClinic('2000-01-01', '09:00', tz)).toBe(true);
+    expect(isPastSlotInClinic('2099-12-31', '09:00', tz)).toBe(false);
+  });
+
+  it('resolves clinic timezones correctly', () => {
+    expect(resolveClinicTimeZone('Asia/Karachi')).toBe('Asia/Karachi');
+    expect(resolveClinicTimeZone({ timeZone: 'America/New_York' })).toBe('America/New_York');
+    expect(resolveClinicTimeZone(null)).toBe(DEFAULT_CLINIC_TIMEZONE);
+    expect(resolveClinicTimeZone('')).toBe(DEFAULT_CLINIC_TIMEZONE);
   });
 });

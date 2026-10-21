@@ -7,7 +7,14 @@ import DateNavigation from './DateNavigation';
 import ActionIconsBar from './ActionIconsBar';
 import NewAppointmentButton from './NewAppointmentButton';
 import VerticalDivider from '../../common/VerticalDivider';
-import { useScheduleState } from '../../../hooks/redux';
+import { useScheduleState, useBranch } from '../../../hooks/redux';
+import {
+  clinicNow,
+  resolveClinicTimeZone,
+  getTimeZoneAbbr,
+  isDifferentFromUserTz,
+  getUserLocalTimeZone,
+} from '../../../utils/dateUtils';
 import { COLORS } from '../../../constants/colors';
 import { radius, fontSize, fontWeight } from '../../../constants/styles';
 
@@ -18,15 +25,20 @@ import { radius, fontSize, fontWeight } from '../../../constants/styles';
 
 const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, privacyMode, setPrivacyMode, hideBlocks, setHideBlocks, showGhosted, setShowGhosted }) => {
   const { calendarView, selectedDate, setCalendarView, setSelectedDate } = useScheduleState();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const tzAbbr = getTimeZoneAbbr(clinicTz);
+  const isDiff = isDifferentFromUserTz(clinicTz);
+  const userTz = getUserLocalTimeZone();
 
-  const [currentTime, setCurrentTime] = useState(() => dayjs().format('h:mm A'));
+  const [currentTime, setCurrentTime] = useState(() => clinicNow(clinicTz).format('h:mm A'));
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(dayjs().format('h:mm A'));
-    }, 1000);
+    const updateTime = () => setCurrentTime(clinicNow(clinicTz).format('h:mm A'));
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [clinicTz]);
 
   // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
   const dayjsDate = dayjs(selectedDate);
@@ -73,17 +85,18 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
       >
         <ViewToggle value={viewLabel} onChange={handleViewChange} />
 
-        {/* Live Current Time Display - clean text on background */}
+        {/* Live Current Time Display - with clinic timezone badge */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '6px',
             px: '6px',
             py: '4px',
             flexShrink: 0,
             userSelect: 'none',
           }}
+          title={isDiff ? `Clinic time (${clinicTz}). Your local device time is ${userTz}.` : `Clinic time (${clinicTz})`}
         >
           <AccessTimeIcon sx={{ fontSize: '15px', color: COLORS.TEXT_SECONDARY }} />
           <Typography
@@ -96,6 +109,21 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
             }}
           >
             {currentTime}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '11px',
+              fontWeight: fontWeight.semibold,
+              color: COLORS.PRIMARY,
+              backgroundColor: 'rgba(34, 98, 239, 0.08)',
+              border: '1px solid rgba(34, 98, 239, 0.2)',
+              px: '5px',
+              py: '1px',
+              borderRadius: '4px',
+              letterSpacing: '0.5px',
+            }}
+          >
+            {tzAbbr}
           </Typography>
         </Box>
         <DateNavigation
