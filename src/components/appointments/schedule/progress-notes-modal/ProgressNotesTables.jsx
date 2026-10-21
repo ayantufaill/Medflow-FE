@@ -15,6 +15,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import dayjs from 'dayjs';
+import { resolveClinicTimeZone } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 
 const tableHeadSx = { 
   bgcolor: "#f8fafc", 
@@ -43,6 +45,9 @@ const ProgressNotesTables = ({
   handleSignNote,
   getProviderName
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       
@@ -104,7 +109,7 @@ const ProgressNotesTables = ({
                   <React.Fragment key={n._id || n.id || i}>
                     <TableRow onClick={() => toggleNoteExpansion(n._id || n.id)} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
                       <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
-                      <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
+                      <TableCell sx={cellSx}>{n.createdAt && dayjs(n.createdAt).isValid() ? dayjs(n.createdAt).tz(clinicTz).format("MM/DD/YYYY") : "—"}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Treatment"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>
                       <TableCell align="right" sx={cellSx} className="no-print">
@@ -188,7 +193,7 @@ const ProgressNotesTables = ({
                   <React.Fragment key={n._id || n.id || i}>
                     <TableRow onClick={() => toggleNoteExpansion(n._id || n.id)} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
                       <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500, cursor: "pointer" }}>{n.patientId?.firstName} {n.patientId?.lastName}</TableCell>
-                      <TableCell sx={cellSx}>{dayjs(n.createdAt).format("MM/DD/YYYY")}</TableCell>
+                      <TableCell sx={cellSx}>{n.createdAt && dayjs(n.createdAt).isValid() ? dayjs(n.createdAt).tz(clinicTz).format("MM/DD/YYYY") : "—"}</TableCell>
                       <TableCell sx={cellSx}>{n.noteType || "Recare"}</TableCell>
                       <TableCell sx={cellSx}>{getProviderName(n.providerId)}</TableCell>
                       <TableCell align="right" sx={cellSx} className="no-print">

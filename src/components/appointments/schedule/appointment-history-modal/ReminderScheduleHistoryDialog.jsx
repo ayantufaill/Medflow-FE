@@ -22,6 +22,8 @@ import {
   radius,
 } from "../../../../constants/styles";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone } from "../../../../utils/dateUtils";
+import { useBranch } from "../../../../hooks/redux";
 
 const diffSubHeaderSx = {
   fontFamily: "Inter",
@@ -142,6 +144,9 @@ const ReminderScheduleHistoryDialog = ({
   onClose,
   appointment,
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const [auditData, setAuditData] = useState([]);
   const [filterAction, setFilterAction] = useState("All");
 
@@ -351,13 +356,13 @@ const ReminderScheduleHistoryDialog = ({
                         verticalAlign: "top",
                       }}
                     >
-                      {row.date ? dayjs(row.date).format("MM/DD/YYYY") : "---"}
+                      {row.date && dayjs(row.date).isValid() ? dayjs(row.date).tz(clinicTz).format("MM/DD/YYYY") : "---"}
                       <br />
                       <Typography
                         component="span"
                         sx={{ color: COLORS.TEXT_MUTED, fontSize: fontSize.xs }}
                       >
-                        {row.date ? dayjs(row.date).format("hh:mm:ss A") : ""}
+                        {row.date && dayjs(row.date).isValid() ? dayjs(row.date).tz(clinicTz).format("hh:mm:ss A") : ""}
                       </Typography>
                     </TableCell>
                     <TableCell

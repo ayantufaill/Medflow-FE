@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
+import { resolveClinicTimeZone, clinicNow } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 
 import { ReportFilterBar, ReportSelect } from '../../../reports/ui';
 import DateNavigation from '../DateNavigation';
@@ -20,20 +22,24 @@ const ProgressNotesFilters = ({
   onApply,
   onClear
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const handleDateRangeChange = (e) => {
     const val = e.target.value;
     setDateRange(val);
+    const now = clinicNow(clinicTz);
     if (val === 'Today') {
-      setStartDate(dayjs());
-      setEndDate(dayjs());
+      setStartDate(now);
+      setEndDate(now);
     } else if (val === 'This Week') {
-      setStartDate(dayjs().startOf('week'));
-      setEndDate(dayjs().endOf('week'));
+      setStartDate(now.startOf('week'));
+      setEndDate(now.endOf('week'));
     } else if (val === 'This Month') {
-      setStartDate(dayjs().startOf('month'));
-      setEndDate(dayjs().endOf('month'));
+      setStartDate(now.startOf('month'));
+      setEndDate(now.endOf('month'));
     } else if (val === 'Range') {
-      setEndDate(dayjs());
+      setEndDate(now);
     }
   };
 

@@ -14,6 +14,8 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DescriptionIcon from "@mui/icons-material/Description";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone, clinicNow } from "../../../../utils/dateUtils";
+import { useBranch } from "../../../../hooks/redux";
 import { COLORS } from '../../../../constants/colors';
 import { exportToCSV } from "../../../../utils/exportUtils";
 import medflowLogo from '../../../../assets/medflow-logo.png';
@@ -40,11 +42,13 @@ import ProgressNotesTables from "./ProgressNotesTables";
 
 const ProgressNotesDialog = ({ open, onClose }) => {
   const dispatch = useDispatch();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const { providers = [] } = useDropdownData({ providers: true });
 
    const [dateRange, setDateRange] = useState('Today');
-   const [startDate, setStartDate] = useState(dayjs());
-   const [endDate, setEndDate] = useState(dayjs());
+   const [startDate, setStartDate] = useState(() => clinicNow(clinicTz));
+   const [endDate, setEndDate] = useState(() => clinicNow(clinicTz));
    const [kind, setKind] = useState("All");
    const [providerId, setProviderId] = useState("All");
 
@@ -257,7 +261,7 @@ const ProgressNotesDialog = ({ open, onClose }) => {
         const notePatId = extractId(n.patientId);
         if (!notePatId || notePatId !== ptId) return false;
         const noteDay = n.createdAt
-          ? dayjs(n.createdAt).format('YYYY-MM-DD')
+          ? dayjs(n.createdAt).tz(clinicTz).format('YYYY-MM-DD')
           : null;
         return !!(apptDay && noteDay && apptDay === noteDay);
       });
@@ -368,12 +372,13 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   }, [signedNotes, unsignedNotes, checkoutAppointments, providers, filterKind, filterProvider, reportMissingNotes]);
 
   const handleClear = () => {
-    setStartDate(dayjs());
-    setEndDate(dayjs());
+    const now = clinicNow(clinicTz);
+    setStartDate(now);
+    setEndDate(now);
     setDateRange('Today');
     setKind('All');
     setProviderId('All');
-    fetchData(dayjs(), dayjs(), 'All', 'All');
+    fetchData(now, now, 'All', 'All');
   };
 
   const handlePrint = () => {
@@ -383,8 +388,8 @@ const ProgressNotesDialog = ({ open, onClose }) => {
   const handleExport = () => {
     const data = [
       ...missingNotes.map(n => ({ status: 'Missing', patient: n.patientName, date: String(n.appointmentDate).slice(0, 10), provider: n.providerName || `${n.providerId?.firstName || ''} ${n.providerId?.lastName || ''}`.trim() || 'Unknown' })),
-      ...unsignedNotes.map(n => ({ status: 'Unsigned', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.firstName || 'Unknown' })),
-      ...signedNotes.map(n => ({ status: 'Signed', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: dayjs(n.createdAt).format('YYYY-MM-DD'), provider: n.providerId?.firstName || 'Unknown' }))
+      ...unsignedNotes.map(n => ({ status: 'Unsigned', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: n.createdAt ? dayjs(n.createdAt).tz(clinicTz).format('YYYY-MM-DD') : '', provider: n.providerId?.firstName || 'Unknown' })),
+      ...signedNotes.map(n => ({ status: 'Signed', patient: `${n.patientId?.firstName} ${n.patientId?.lastName}`, date: n.createdAt ? dayjs(n.createdAt).tz(clinicTz).format('YYYY-MM-DD') : '', provider: n.providerId?.firstName || 'Unknown' }))
     ];
     exportToCSV(data, [
       { header: 'Status', key: 'status' },
@@ -398,8 +403,8 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       // Reset filters to defaults and immediately fetch with those exact values.
       // We pass the default values directly into fetchData so there is no
       // dependency on React state (which may not have flushed yet).
-      const defaultStart = dayjs();
-      const defaultEnd   = dayjs();
+      const defaultStart = clinicNow(clinicTz);
+      const defaultEnd   = clinicNow(clinicTz);
       setDateRange('Today');
       setStartDate(defaultStart);
       setEndDate(defaultEnd);
@@ -407,16 +412,17 @@ const ProgressNotesDialog = ({ open, onClose }) => {
       setProviderId("All");
       fetchData(defaultStart, defaultEnd, "All", "All");
     } else {
+      const now = clinicNow(clinicTz);
       setDateRange('Today');
-      setStartDate(dayjs());
-      setEndDate(dayjs());
+      setStartDate(now);
+      setEndDate(now);
       setKind("All");
       setProviderId("All");
       setExpandedNoteIds(new Set());
       setEditingNoteId(null);
       setEditingContent("");
     }
-  }, [open, fetchData]);
+  }, [open, fetchData, clinicTz]);
 
   const handleEditStart = (n) => {
     setEditingNoteId(n._id || n.id);

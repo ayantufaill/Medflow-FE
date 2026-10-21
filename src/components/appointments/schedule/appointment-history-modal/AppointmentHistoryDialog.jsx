@@ -123,8 +123,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
           // However, if updatedAt is virtually identical to createdAt (or missing), it means the appointment 
           // was never updated since creation. In that case, we fall back to the actual appointment date.
           // This prevents newly created appointments from artificially bubbling to the top of the status change sort.
-          const created = dayjs(apt.createdAt || apt.date || dayjs().toISOString());
-          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || dayjs().toISOString());
+          const created = dayjs(apt.createdAt || apt.date || clinicNowVal.toISOString());
+          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || clinicNowVal.toISOString());
           
           if (apt.updatedAt && updated.diff(created, 'second') > 60) {
             // It has been updated at least 1 minute after creation! Use the updatedAt time.
