@@ -37,6 +37,9 @@ import DiagnosisCard from "../../components/clinical/periodontal/DiagnosisCard";
 import SummaryCard from "../../components/clinical/periodontal/SummaryCard";
 import PeriographTab from "../../components/clinical/periodontal/PeriographTab";
 import RightPanel from '../../components/appointments/right-panel/RightPanel';
+import { patientService } from '../../services/patient.service';
+import { buildPeriodontalChartPrintHtml, printPeriodontalChart } from '../../utils/printPeriodontalChart';
+import medflowLogo from '../../assets/medflow-logo.png';
 
 
 const defaultDiagnosis = {
@@ -94,6 +97,8 @@ const PeriodontalExamEditor = ({
   appointment: appointmentProp,
 }) => {
   const { showSnackbar } = useSnackbar();
+  const currentPatient = useSelector(state => state.patient?.currentPatient);
+  const [isPrinting, setIsPrinting] = useState(false);
   const authProviderId = useSelector(state => state.auth.user?.providerId);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -614,6 +619,46 @@ const PeriodontalExamEditor = ({
     ];
   }, [chartData, missingTeeth]);
 
+  const handlePrint = async () => {
+    if (isPrinting) return;
+    if (!patientId || !activeAppointmentId || examLoading || radioLoading || examError || radioError || hydratedKeyRef.current !== sessionKey) {
+      showSnackbar('The periodontal chart is still loading. Please try printing again.', 'error');
+      return;
+    }
+    setIsPrinting(true);
+    try {
+      const cachedPatientId = currentPatient?._id || currentPatient?.id;
+      const patient = String(cachedPatientId) === String(patientId)
+        ? currentPatient
+        : await patientService.getPatientById(patientId);
+      if (hydratedKeyRef.current !== sessionKey) {
+        throw new Error('The selected patient or exam changed while preparing the printout. Please print again.');
+      }
+      const recordProvider = examRecord?.providerId || examRecord?.provider;
+      const providerRecord = recordProvider || currentAppointment?.providerId;
+      const provider = typeof providerRecord === 'object' && providerRecord !== null
+        ? [providerRecord.firstName, providerRecord.lastName].filter(Boolean).join(' ') || providerRecord.providerCode || providerRecord.name || ''
+        : '';
+      const historyVisit = (historicalDates || []).find(item =>
+        typeof item === 'object' && String(item.appointmentId) === String(activeAppointmentId));
+      const examDate = viewingHistory
+        ? historyVisit?.date || examRecord?.examDate || examRecord?.createdAt
+        : currentAppointment?.appointmentDate || currentAppointment?.date || currentAppointment?.AptDateTime || examRecord?.examDate;
+      const html = buildPeriodontalChartPrintHtml({
+        patient, patientId, appointmentId: activeAppointmentId, examDate,
+        savedAt: examRecord?.updatedAt || examRecord?.createdAt,
+        provider, diagnosis, summaryData: dynamicSummaryData, chartData, missingTeeth,
+        isSigned, unsaved: dirtyRef.current || isSaving,
+        logoUrl: new URL(medflowLogo, window.location.origin).href,
+      });
+      await printPeriodontalChart(html);
+    } catch (error) {
+      showSnackbar(error?.message || 'The periodontal chart could not be printed. Please try again.', 'error');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   if (examLoading) {
     return (
       <Box sx={{ display: 'flex', gap: 2, p: embedded ? 0 : 2, height: embedded ? '100%' : 'calc(100vh - 64px)', overflow: 'hidden', backgroundColor: '#f9fafb' }}>
@@ -763,7 +808,9 @@ const PeriodontalExamEditor = ({
               <img src={settingIcon} alt="Settings" style={{ width: 16, height: 16 }} />
             </IconButton>
             <IconButton 
-              onClick={() => window.print()}
+              onClick={handlePrint}
+              disabled={isPrinting}
+              aria-label="Print periodontal chart"
               sx={{ 
                 width: 32,
                 height: 32,

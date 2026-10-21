@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import PeriodontalExamPage from './PeriodontalExamPage';
@@ -12,6 +12,8 @@ const mockExamQuery = jest.fn();
 const mockSave = jest.fn();
 const mockSign = jest.fn();
 const mockSnackbar = jest.fn();
+const mockBuildPrintHtml = jest.fn(() => '<html></html>');
+const mockPrintChart = jest.fn(() => Promise.resolve());
 const mockMutation = { mutateAsync: mockSave, isPending: false };
 jest.mock('../../hooks/queries/useClinicalExam', () => ({
   useClinicalExamQuery: (type, appointmentId) => {
@@ -27,6 +29,11 @@ jest.mock('../../contexts/SnackbarContext', () => ({ useSnackbar: () => ({ showS
 jest.mock('../../hooks/redux/useAppointment', () => ({ useAppointmentDetail: () => ({ currentAppointment: mockAppointment }) }));
 jest.mock('../../store/slices/patientSlice', () => ({ selectSelectedPatientId: () => '1' }));
 jest.mock('../../store/slices/appointmentSlice', () => ({ selectSelectedAppointmentId: () => '10' }));
+jest.mock('../../services/patient.service', () => ({ patientService: { getPatientById: jest.fn() } }));
+jest.mock('../../utils/printPeriodontalChart', () => ({
+  buildPeriodontalChartPrintHtml: (...args) => mockBuildPrintHtml(...args),
+  printPeriodontalChart: (...args) => mockPrintChart(...args),
+}));
 jest.mock('../../components/clinical/ClinicalNavbar', () => () => null);
 jest.mock('../../components/clinical/ExamNavbar', () => () => null);
 jest.mock('../../components/shared/ConfirmationDialog', () => () => null);
@@ -71,6 +78,8 @@ beforeEach(() => {
   mockExamQuery.mockClear();
   mockSave.mockReset().mockResolvedValue({});
   mockSign.mockReset().mockResolvedValue({});
+  mockBuildPrintHtml.mockClear();
+  mockPrintChart.mockClear();
 });
 afterEach(() => { jest.useRealTimers(); });
 
@@ -79,6 +88,22 @@ test('opening a new chart leaves measurements blank and does not autosave', asyn
   const data = JSON.parse(screen.getByTestId('chart').textContent);
   expect(data['1'].facial).toMatchObject({ probe: ['', '', ''], bleeding: [], recession: ['', '', ''], mobility: '', pcs: [] });
   await act(async () => { jest.advanceTimersByTime(5000); });
+  expect(mockSave).not.toHaveBeenCalled();
+});
+
+test('prints the selected patient and appointment chart without saving it', async () => {
+  const { patientService } = require('../../services/patient.service');
+  patientService.getPatientById.mockResolvedValueOnce({ _id: '1', firstName: 'Ava', lastName: 'Stone', patientCode: 'P-1' });
+  mockRecord = { examData: { chartData: { 1: { facial: { probe: ['5', '', ''] } } } }, updatedAt: '2026-10-12' };
+  fixture();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Print periodontal chart' }));
+  await waitFor(() => expect(mockPrintChart).toHaveBeenCalledWith('<html></html>'));
+  expect(mockBuildPrintHtml).toHaveBeenCalledWith(expect.objectContaining({
+    patient: expect.objectContaining({ firstName: 'Ava' }),
+    patientId: '1', appointmentId: '10',
+    chartData: expect.objectContaining({ 1: expect.objectContaining({ facial: expect.objectContaining({ probe: ['5', '', ''] }) }) }),
+  }));
   expect(mockSave).not.toHaveBeenCalled();
 });
 
