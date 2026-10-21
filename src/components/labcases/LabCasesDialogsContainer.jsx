@@ -1,16 +1,17 @@
-import { Menu, MenuItem, Typography } from "@mui/material";
-import PrintIcon from "@mui/icons-material/Print";
-import DownloadFileIcon from "@mui/icons-material/Download";
-import SettingsIcon from "@mui/icons-material/Settings";
+import { Box, Menu, MenuItem, Typography } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import FileCopyIcon from "@mui/icons-material/FileCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
+import printIcon from "../../assets/clinicalicons/print icon.svg";
+import exportIcon from "../../assets/clinicalicons/export icon.svg";
+import settingsIcon from "../../assets/clinicalicons/setting icon.svg";
 import { COLORS } from "../../constants/colors";
 import { fontSize } from "../../constants/styles";
 import NewLabCaseDialog from "./NewLabCaseDialog";
 import { menuPaperSx, menuItemSx } from "./labCasesConstants";
 
 const menuItemIconSx = { mr: 1.5, fontSize: "18px", color: COLORS.TEXT_MUTED };
+const headerMenuIconSx = { width: 18, height: 18, mr: 1.5, flexShrink: 0 };
 
 const LabCasesDialogsContainer = ({
   menuAnchor,
@@ -40,7 +41,7 @@ const LabCasesDialogsContainer = ({
         }}
         sx={menuItemSx}
       >
-        <PrintIcon sx={menuItemIconSx} />
+        <Box component="img" src={printIcon} alt="" sx={headerMenuIconSx} />
         <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md }}>Print List</Typography>
       </MenuItem>
       <MenuItem
@@ -50,11 +51,11 @@ const LabCasesDialogsContainer = ({
         }}
         sx={menuItemSx}
       >
-        <DownloadFileIcon sx={menuItemIconSx} />
+        <Box component="img" src={exportIcon} alt="" sx={headerMenuIconSx} />
         <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md }}>Export to CSV</Typography>
       </MenuItem>
       <MenuItem onClick={onCloseMenu} sx={menuItemSx}>
-        <SettingsIcon sx={menuItemIconSx} />
+        <Box component="img" src={settingsIcon} alt="" sx={headerMenuIconSx} />
         <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.md }}>Lab Settings</Typography>
       </MenuItem>
     </Menu>
@@ -79,6 +80,7 @@ const LabCasesDialogsContainer = ({
 
     {/* New / Edit Lab Case Dialog */}
     <NewLabCaseDialog
+      scheduleStyle
       open={dialogOpen}
       onClose={onCloseDialog}
       title={title}

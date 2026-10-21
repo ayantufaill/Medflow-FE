@@ -10,38 +10,50 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import CollectionsOutlinedIcon from "@mui/icons-material/CollectionsOutlined";
 import { COLORS } from "../../constants/colors";
+import { fontSize, fontWeight, radius, standardFieldSx } from "../../constants/styles";
 
 // ─── Visual Mount Thumbnail Card ──────────────────────────────
 const MountThumbnailCard = ({ name, isSelected, onClick, children }) => (
   <Box
+    component="button"
+    type="button"
     onClick={onClick}
+    aria-label={`Select ${name} mount layout`}
+    aria-pressed={isSelected}
     sx={{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
+      gap: 1,
+      width: "100%",
+      minWidth: 0,
+      p: 1.25,
+      border: `1px solid ${isSelected ? COLORS.ACCENT : COLORS.BORDER}`,
+      borderRadius: radius.md,
+      backgroundColor: isSelected ? COLORS.ACCENT_BG : COLORS.SURFACE_CARD,
       cursor: "pointer",
       userSelect: "none",
-      transition: "transform 0.12s ease",
-      "&:hover": { transform: "translateY(-1px)" },
+      fontFamily: "Inter",
+      transition: "border-color 0.15s ease, background-color 0.15s ease",
+      "&:hover": { borderColor: COLORS.ACCENT, backgroundColor: isSelected ? COLORS.ACCENT_BG : COLORS.SURFACE_HOVER },
+      "&:focus-visible": { outline: `2px solid ${COLORS.ACCENT}`, outlineOffset: 2 },
     }}
   >
     <Box
+      component="span"
       sx={{
-        width: 138,
-        height: 82,
+        width: "100%",
+        maxWidth: 138,
+        aspectRatio: "138 / 82",
         backgroundColor: "#000000",
-        borderRadius: "8px",
+        borderRadius: radius.sm,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         p: "6px",
-        border: isSelected ? `2.5px solid ${COLORS.ACCENT}` : "1.5px solid #1e293b",
-        boxShadow: isSelected ? "0 0 0 2px rgba(35, 98, 239, 0.3)" : "none",
-        transition: "border-color 0.15s ease",
-        "&:hover": {
-          borderColor: isSelected ? COLORS.ACCENT : "#4b5563",
-        },
+        border: "1px solid #1e293b",
       }}
     >
       <svg viewBox="0 0 100 60" style={{ width: "100%", height: "100%", overflow: "visible" }}>
@@ -49,14 +61,14 @@ const MountThumbnailCard = ({ name, isSelected, onClick, children }) => (
       </svg>
     </Box>
     <Typography
+      component="span"
       sx={{
         fontFamily: "Inter",
-        fontSize: "11px",
-        fontWeight: isSelected ? 700 : 600,
-        color: isSelected ? COLORS.ACCENT : "#0f172a",
-        mt: 0.8,
+        fontSize: fontSize.base,
+        fontWeight: isSelected ? fontWeight.bold : fontWeight.semibold,
+        color: isSelected ? COLORS.ACCENT : COLORS.TEXT_PRIMARY,
         textAlign: "center",
-        whiteSpace: "nowrap",
+        lineHeight: 1.3,
       }}
     >
       {name}
@@ -82,44 +94,60 @@ const NewMountLayoutDialog = ({
     <Dialog
       open={open}
       onClose={() => !importLoading && onClose()}
-        fullWidth
-        maxWidth="lg"
-        sx={{ zIndex: 9999 }}
-        PaperProps={{
-          sx: {
-            borderRadius: "10px",
-            overflow: "hidden",
-            boxShadow: "0px 10px 40px rgba(0,0,0,0.12)",
-          },
-        }}
-      >
+      aria-labelledby="import-images-title"
+      fullWidth
+      maxWidth="lg"
+      sx={{ zIndex: 9999 }}
+      PaperProps={{
+        sx: {
+          borderRadius: radius.lg,
+          border: `1px solid ${COLORS.BORDER}`,
+          overflow: "hidden",
+          boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.1)",
+        },
+      }}
+    >
         <DialogTitle
+          component="div"
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: "1px solid #e2e8f0",
-            py: 1.8,
-            px: 3,
+            gap: 1.5,
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_TINT,
+            py: 1.25,
+            px: { xs: 2, sm: 2.5 },
           }}
         >
-          <Typography
+          <Box
             sx={{
-              fontFamily: "Inter",
-              fontSize: "15px",
-              color: "#64748b",
+              width: 36,
+              height: 36,
+              borderRadius: radius.md,
+              backgroundColor: "#eff6ff",
+              color: COLORS.ACCENT,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            Patients / {title} / Imaging /{" "}
-            <Box component="span" sx={{ fontWeight: 700, color: "#0f172a" }}>
-              New Mount
-            </Box>
-          </Typography>
+            <CollectionsOutlinedIcon sx={{ fontSize: 20 }} />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography id="import-images-title" component="h2" sx={{ fontFamily: "Inter", fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
+              Import Images
+            </Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>
+              Choose a mount layout{title ? ` for ${title}` : ""}, then select images.
+            </Typography>
+          </Box>
           <IconButton
             size="small"
-            onClick={() => onClose()}
+            aria-label="Close import images"
+            onClick={onClose}
             disabled={importLoading}
-            sx={{ color: "#94a3b8", "&:hover": { color: "#334155" } }}
+            sx={{ color: COLORS.TEXT_SECONDARY }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -127,18 +155,20 @@ const NewMountLayoutDialog = ({
 
         <DialogContent
           sx={{
-            p: 3,
+            p: { xs: 2, sm: 3 },
+            ".MuiDialogTitle-root + &": { pt: { xs: 2, sm: 3 } },
             maxHeight: "75vh",
             overflowY: "auto",
+            backgroundColor: COLORS.SURFACE_CARD,
           }}
         >
           {/* Name Field */}
           <Typography
             sx={{
               fontFamily: "Inter",
-              fontWeight: 700,
-              fontSize: "14px",
-              color: "#0f172a",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.md,
+              color: COLORS.TEXT_PRIMARY,
               mb: 1,
             }}
           >
@@ -147,17 +177,14 @@ const NewMountLayoutDialog = ({
           <TextField
             size="small"
             placeholder="Optional"
+            slotProps={{ htmlInput: { "aria-label": "Mount name" } }}
             value={mountName}
             onChange={(e) => onMountNameChange(e.target.value)}
             sx={{
               mb: 3,
+              width: "100%",
               maxWidth: 320,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "6px",
-                fontFamily: "Inter",
-                fontSize: "13px",
-                "& fieldset": { borderColor: "#cbd5e1" },
-              },
+              ...standardFieldSx,
             }}
           />
 
@@ -165,9 +192,9 @@ const NewMountLayoutDialog = ({
           <Typography
             sx={{
               fontFamily: "Inter",
-              fontWeight: 700,
-              fontSize: "14px",
-              color: "#0f172a",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.md,
+              color: COLORS.TEXT_PRIMARY,
               mb: 1.5,
             }}
           >
@@ -178,15 +205,15 @@ const NewMountLayoutDialog = ({
           <Typography
             sx={{
               fontFamily: "Inter",
-              fontWeight: 600,
-              fontSize: "12px",
-              color: "#334155",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.base,
+              color: COLORS.TEXT_BODY,
               mb: 1,
             }}
           >
             Intraoral Photo
           </Typography>
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(3, minmax(0, 1fr))", md: "repeat(6, minmax(0, 1fr))" }, gap: 1.5, mb: 3 }}>
             <MountThumbnailCard
               name="Grid"
               isSelected={layout === "Grid"}
@@ -212,9 +239,9 @@ const NewMountLayoutDialog = ({
           <Typography
             sx={{
               fontFamily: "Inter",
-              fontWeight: 600,
-              fontSize: "12px",
-              color: "#334155",
+              fontWeight: fontWeight.semibold,
+              fontSize: fontSize.base,
+              color: COLORS.TEXT_BODY,
               mb: 1,
             }}
           >
@@ -225,11 +252,11 @@ const NewMountLayoutDialog = ({
             sx={{
               display: "grid",
               gridTemplateColumns: {
-                xs: "repeat(2, 1fr)",
-                sm: "repeat(3, 1fr)",
-                md: "repeat(6, 1fr)",
+                xs: "repeat(2, minmax(0, 1fr))",
+                sm: "repeat(3, minmax(0, 1fr))",
+                md: "repeat(6, minmax(0, 1fr))",
               },
-              gap: "16px 14px",
+              gap: 1.5,
             }}
           >
             {/* Card 1: 2 BW/PA */}
@@ -422,28 +449,30 @@ const NewMountLayoutDialog = ({
 
         <DialogActions
           sx={{
-            py: 2,
-            px: 3,
+            py: 1.5,
+            px: { xs: 2, sm: 3 },
             display: "flex",
-            justifyContent: "center",
-            gap: 1.5,
-            borderTop: "1px solid #f1f5f9",
+            justifyContent: "flex-end",
+            gap: 1,
+            borderTop: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_CARD,
           }}
         >
           <Button
-            onClick={() => onClose()}
+            variant="outlined"
+            onClick={onClose}
             disabled={importLoading}
             sx={{
               textTransform: "none",
-              px: 3.5,
-              py: 0.7,
-              borderRadius: "6px",
-              border: "1px solid #cbd5e1",
-              color: "#374151",
+              px: 2,
+              py: 0.875,
+              borderRadius: radius.md,
+              borderColor: "#d0d5dd",
+              color: COLORS.TEXT_BODY,
               fontFamily: "Inter",
-              fontSize: "13px",
-              fontWeight: 600,
-              "&:hover": { backgroundColor: "#f8fafc", borderColor: "#94a3b8" },
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.medium,
+              "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
             }}
           >
             Cancel
@@ -455,20 +484,20 @@ const NewMountLayoutDialog = ({
             disabled={importLoading}
             sx={{
               textTransform: "none",
-              px: 3.5,
-              py: 0.7,
-              borderRadius: "6px",
-              backgroundColor: "#e2eafc",
-              color: "#2563eb",
+              px: 2.5,
+              py: 0.875,
+              borderRadius: radius.md,
+              backgroundColor: COLORS.ACCENT,
+              color: COLORS.WHITE,
               fontFamily: "Inter",
-              fontSize: "13px",
-              fontWeight: 700,
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.semibold,
               boxShadow: "none",
               "&:hover": {
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
+                backgroundColor: COLORS.ACCENT_HOVER,
                 boxShadow: "none",
               },
+              "&.Mui-disabled": { backgroundColor: "#c5d3f8", color: COLORS.WHITE },
             }}
           >
             Continue

@@ -4,6 +4,7 @@ import { usePatient } from "../../hooks/redux";
 import { patientKey, patientName } from "../images/imagesConstants";
 import { STORAGE_KEY, defaultLabCases, EXPORT_COLUMNS } from "./labCasesConstants";
 import { labCaseService } from "../../services/lab-case.service";
+import { printLabCasesReport } from "../../utils/printLabCasesReport";
 
 const emptyFormData = (title) => ({
   patient: title,
@@ -98,6 +99,7 @@ export const useLabCasesPage = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [printError, setPrintError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [rowMenuAnchor, setRowMenuAnchor] = useState(null);
@@ -398,54 +400,9 @@ export const useLabCasesPage = () => {
   };
 
   const handlePrintList = () => {
-    const esc = (v) =>
-      String(v ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-    const head = EXPORT_COLUMNS.map(([label]) => `<th>${esc(label)}</th>`).join("");
-    const body = filteredCases
-      .map(
-        (c) =>
-          `<tr>${EXPORT_COLUMNS.map(([, getter]) => `<td>${esc(getter(c))}</td>`).join("")}</tr>`,
-      )
-      .join("");
-    const html = `<!doctype html>
-<html>
-<head>
-  <title>Lab Cases</title>
-  <style>
-    body { font-family: Inter, Arial, sans-serif; margin: 24px; color: #0f172a; }
-    h1 { font-size: 16px; margin: 0 0 4px; }
-    p { font-size: 12px; color: #64748b; margin: 0 0 16px; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
-    th { background: #f1f5f9; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
-    tr:nth-child(even) td { background: #f8fafc; }
-    @media print { body { margin: 10mm; } }
-  </style>
-</head>
-<body>
-  <h1>Lab Cases</h1>
-  <p>${esc(title)}${title ? " — " : ""}${filteredCases.length} case(s)${search || statusFilter ? " (filtered)" : ""}</p>
-  <table>
-    <thead><tr>${head}</tr></thead>
-    <tbody>${body || '<tr><td colspan="' + EXPORT_COLUMNS.length + '" style="text-align:center">No lab cases</td></tr>'}</tbody>
-  </table>
-</body>
-</html>`;
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
-    document.body.appendChild(iframe);
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    const doPrint = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    };
-    if (doc.readyState === "complete") doPrint();
-    else iframe.onload = doPrint;
+    setPrintError("");
+    printLabCasesReport({ cases: filteredCases, patientName: title, search, statusFilter })
+      .catch((error) => setPrintError(error.message));
   };
 
   return {
@@ -460,6 +417,8 @@ export const useLabCasesPage = () => {
     setPage,
     rowsPerPage,
     setRowsPerPage,
+    printError,
+    setPrintError,
     selectedIds,
     menuAnchor,
     setMenuAnchor,
