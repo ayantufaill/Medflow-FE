@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import medflowDates from './eslint-rules/no-host-dates.js'
 
 export default defineConfig([
   globalIgnores(['dist', '.claude/worktrees']),
@@ -24,6 +25,14 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Clinic datetimes are pseudo-instants (UTC wall-clock == clinic
+      // wall-clock), so formatting them in the host's local zone makes a
+      // clinic's schedule shift by a day depending on where it is viewed.
+      // `warn` while the codebase is migrated; flipped to `error` in Phase 3.
+      'medflow-dates/no-host-dates': 'warn',
+    },
+    plugins: {
+      'medflow-dates': medflowDates,
     },
   },
   // Test files run under Jest (see jest.config.cjs), so describe/it/expect/jest

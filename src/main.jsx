@@ -1,3 +1,4 @@
+import './config/dayjs';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/roboto/300.css';
