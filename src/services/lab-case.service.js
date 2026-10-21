@@ -8,8 +8,19 @@ class LabCaseService {
     if (patientId) params.append('patientId', patientId);
     if (tab) params.append('tab', tab);
     if (status && status !== 'Select Status' && status !== 'All') {
-      // Map FE 'Printed' to BE 'Sent' if necessary
-      params.append('status', status === 'Printed' ? 'Sent' : status);
+      // Map FE status vocabulary to the backend's derived statuses
+      const FE_TO_BACKEND_STATUS = {
+        Draft: 'New',
+        New: 'New',
+        Sent: 'Sent',
+        Printed: 'Sent',
+        Received: 'Received',
+        Ready: 'Ready',
+        Returned: 'Returned',
+        Complete: 'Quality Checked',
+        Completed: 'Quality Checked',
+      };
+      params.append('status', FE_TO_BACKEND_STATUS[status] || status);
     }
     if (sortBy) params.append('sortBy', sortBy);
     if (order) params.append('order', order);

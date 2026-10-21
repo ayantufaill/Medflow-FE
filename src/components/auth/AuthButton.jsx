@@ -14,16 +14,20 @@ import { Box, CircularProgress, Typography } from "@mui/material";
  *   - Disabled / loading: opacity 0.65
  *
  * Props:
- *   type, loading, disabled, onClick, children
+ *   type, loading, disabled, onClick, variant ("primary" | "outlined"),
+ *   loadingText, children
  */
 const AuthButton = ({
   type = "button",
   loading = false,
   disabled = false,
   onClick,
+  variant = "primary",
+  loadingText = "Signing in...",
   children,
 }) => {
   const isDisabled = disabled || loading;
+  const isOutlined = variant === "outlined";
 
   return (
     <Box
@@ -38,14 +42,14 @@ const AuthButton = ({
         alignItems: "center",
         justifyContent: "center",
         gap: "8px",
-        backgroundColor: "#2D6CDF",
-        border: "none",
+        backgroundColor: isOutlined ? "transparent" : "#2D6CDF",
+        border: isOutlined ? "1px solid #2D6CDF" : "none",
         borderRadius: "10px",
         cursor: isDisabled ? "not-allowed" : "pointer",
         opacity: isDisabled ? 0.65 : 1,
         transition: "background-color 0.2s ease, transform 0.1s ease, opacity 0.2s ease",
         "&:hover:not(:disabled)": {
-          backgroundColor: "#1D55B8",
+          backgroundColor: isOutlined ? "rgba(45, 108, 223, 0.06)" : "#1D55B8",
         },
         "&:active:not(:disabled)": {
           transform: "scale(0.98)",
@@ -60,7 +64,7 @@ const AuthButton = ({
         <CircularProgress
           size={16}
           thickness={4}
-          sx={{ color: "#ffffff" }}
+          sx={{ color: isOutlined ? "#2D6CDF" : "#ffffff" }}
         />
       )}
       <Typography
@@ -69,13 +73,13 @@ const AuthButton = ({
           fontFamily: "Manrope, sans-serif",
           fontWeight: 600,
           fontSize: "15px",
-          color: "#ffffff",
+          color: isOutlined ? "#2D6CDF" : "#ffffff",
           textTransform: "none",
           letterSpacing: "0",
           lineHeight: 1,
         }}
       >
-        {loading ? "Signing in..." : children}
+        {loading ? loadingText : children}
       </Typography>
     </Box>
   );

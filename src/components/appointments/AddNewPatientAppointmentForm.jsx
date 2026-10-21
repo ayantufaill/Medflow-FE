@@ -14,7 +14,9 @@ import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
 import AppointmentFooter from "./new-appointment/AppointmentFooter";
 import AppointmentLeftPanel from "./new-appointment/AppointmentLeftPanel";
 import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
-import LabOrderModal from "./new-appointment/LabOrderModal";
+import NewLabCaseDialog from "../labcases/NewLabCaseDialog";
+import { providerLabel } from "./new-appointment/helpers";
+import { labCaseService } from "../../services/lab-case.service";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
 import { useSnackbar } from "../../contexts/SnackbarContext";
@@ -179,6 +181,7 @@ const AddNewPatientAppointmentForm = ({
 
   const { showSnackbar } = useSnackbar();
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
+  const [labCaseForm, setLabCaseForm] = useState(null);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
 
   // Auto-revert status from "completed" when any checked procedure becomes incomplete.
@@ -1934,6 +1937,112 @@ const AddNewPatientAppointmentForm = ({
     patient?._id ||
     "";
 
+  // Provider options for the lab case dialog (union of the lists the panels use).
+  const labProviderOptions = (() => {
+    const seen = new Set();
+    const opts = [];
+    for (const p of [...(branchProviders || []), ...(providers || [])]) {
+      if (!p) continue;
+      const id = String(p.ProvNum || p.providerId || p._id || p.id || "");
+      if (!id || id === "undefined" || seen.has(id)) continue;
+      seen.add(id);
+      opts.push({ value: id, label: providerLabel(p) || id });
+    }
+    const selectedId = String(providerRows[0]?.providerId || "");
+    if (selectedId && selectedId !== "undefined" && !seen.has(selectedId)) {
+      opts.unshift({ value: selectedId, label: selectedId });
+    }
+    return opts;
+  })();
+
+  const buildLabCaseForm = () => ({
+    patient: patientDisplayName,
+    date: apptDate ? apptDate.format("YYYY-MM-DD") : "",
+    procedures: procedures.map((p) => p?.code).filter(Boolean),
+    provider: String(providerRows[0]?.providerId || ""),
+    type: visitType,
+    lab: "",
+    trackingNumber: "",
+    estReceiveDate: "",
+    notes: "",
+    shipping: "",
+    labFee: "",
+    status: "Draft",
+  });
+
+  const handleCreateLabCase = async () => {
+    const form = labCaseForm;
+    if (!form) return;
+
+    const procCodes = (form.procedures || [])
+      .map((code) => String(code || "").trim())
+      .filter(Boolean);
+    if (procCodes.length === 0) {
+      showSnackbar(
+        "Add at least one procedure to the appointment before creating a lab order.",
+        "warning",
+      );
+      return;
+    }
+    if (!patientId) {
+      showSnackbar("Please select a patient before creating a lab order.", "warning");
+      return;
+    }
+
+    const providerName =
+      labProviderOptions.find((o) => o.value === String(form.provider || ""))?.label || "";
+
+    const instructions = [
+      `Type: ${form.type || visitType}`,
+      providerName ? `Provider: ${providerName}` : "",
+      `Procedures: ${procCodes.join(", ")}`,
+      form.shipping !== "" && form.shipping != null
+        ? `Shipping: ${parseFloat(form.shipping) || 0}`
+        : "",
+      form.notes ? `Notes: ${form.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    let laboratoryId = "";
+    try {
+      const result = await labCaseService.getAllLaboratories(1, 100);
+      const list = result?.data?.laboratories || result?.laboratories || [];
+      const match =
+        list.find((l) => (l.name || l.description) === form.lab) || list[0];
+      laboratoryId = String(match?._id || match?.id || "");
+    } catch (err) {
+      console.warn("Could not load laboratories for lab order:", err);
+    }
+
+    const apptId =
+      initialAppointment?.id || initialAppointment?._id || initialAppointment?.AptNum;
+
+    const payload = {
+      patientId: String(patientId),
+      laboratoryId: laboratoryId || "1",
+      appointmentId: apptId ? String(apptId) : undefined,
+      dueDate: form.estReceiveDate || dayjs().add(7, "day").format("YYYY-MM-DD"),
+      instructions,
+      labFee: parseFloat(form.labFee) || 0,
+      providerNum: form.provider ? String(form.provider) : undefined,
+    };
+
+    try {
+      await labCaseService.createLabCase(payload);
+      showSnackbar("Lab order created successfully!", "success");
+      setIsLabOrderOpen(false);
+      setLabCaseForm(null);
+    } catch (err) {
+      console.warn("Failed to create lab case:", err);
+      showSnackbar(
+        "Failed to create lab order: " +
+          (err?.response?.data?.message || err?.message || err),
+        "error",
+      );
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -2103,7 +2212,10 @@ const AddNewPatientAppointmentForm = ({
           onEnterEdit={() => setIsEditing(true)}
           onToggleEdit={() => setIsEditing((v) => !v)}
           isRescheduling={isRescheduling}
-          onLabOrderClick={() => setIsLabOrderOpen(true)}
+          onLabOrderClick={() => {
+            setLabCaseForm(buildLabCaseForm());
+            setIsLabOrderOpen(true);
+          }}
           computedVisitType={computedVisitType}
           hasConflict={hasOccupancyConflict}
           createdBy={initialAppointment?.createdBy ?? null}
@@ -2142,25 +2254,21 @@ const AddNewPatientAppointmentForm = ({
         </Dialog>
       )}
 
-      {isLabOrderOpen && (
-        <LabOrderModal
+      {isLabOrderOpen && labCaseForm && (
+        <NewLabCaseDialog
           open={isLabOrderOpen}
-          onClose={() => setIsLabOrderOpen(false)}
-          procedures={procedures}
-          patientId={
-            patient?.patientId ||
-            patient?.chartNumber ||
-            patient?.id ||
-            patient?._id ||
-            ""
-          }
-          appointmentId={
-            initialAppointment?._id || initialAppointment?.id || ""
-          }
-          onSave={(labCase) => {
-            console.log("Lab Case created:", labCase);
-            setToastMessage("Lab order slip created and saved successfully!");
+          onClose={() => {
+            setIsLabOrderOpen(false);
+            setLabCaseForm(null);
           }}
+          title={patientDisplayName || "Patient"}
+          heading="New Lab Case"
+          submitLabel="Create Lab Order"
+          formData={labCaseForm}
+          onFormChange={setLabCaseForm}
+          onSubmit={handleCreateLabCase}
+          providerOptions={labProviderOptions}
+          typeOptions={["treatment", "recare"]}
         />
       )}
 

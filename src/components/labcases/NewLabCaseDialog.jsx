@@ -27,6 +27,10 @@ import {
   selectProcedureCodes,
   selectProcedureCodesLoading,
 } from "../../store/slices/feeGuideSlice";
+import {
+  fetchAllProvidersForDropdown,
+  selectProviderDropdownList,
+} from "../../store/slices/providerSlice";
 import apiClient from "../../config/api";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, roundedAutocompletePaperSx } from "../../constants/styles";
@@ -59,6 +63,14 @@ const fieldSx = {
   "& .MuiInputBase-input::placeholder": { color: "#94a3b8" },
 };
 
+const subLabelSx = {
+  fontFamily: "Inter",
+  fontWeight: 600,
+  fontSize: "12px",
+  color: "#334155",
+  mb: 1,
+};
+
 const NewLabCaseDialog = ({
   open,
   onClose,
@@ -68,10 +80,13 @@ const NewLabCaseDialog = ({
   formData,
   onFormChange,
   onSubmit,
+  providerOptions = null,
+  typeOptions = null,
 }) => {
   const dispatch = useDispatch();
   const procedureCodes = useSelector(selectProcedureCodes) || [];
   const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
+  const dropdownProviders = useSelector(selectProviderDropdownList) || [];
   const [labs, setLabs] = useState(DEFAULT_LABS);
 
   useEffect(() => {
@@ -79,6 +94,24 @@ const NewLabCaseDialog = ({
       dispatch(fetchProcedureCodes({ limit: 2000 }));
     }
   }, [open, dispatch, procedureCodes.length, procedureCodesLoading]);
+
+  useEffect(() => {
+    if (open && dropdownProviders.length === 0) {
+      dispatch(fetchAllProvidersForDropdown());
+    }
+  }, [open, dispatch, dropdownProviders.length]);
+
+  const effectiveProviderOptions =
+    providerOptions ||
+    (dropdownProviders.length > 0
+      ? dropdownProviders.map((p) => {
+          const name = `${p.FName || ""} ${p.LName || ""}`.trim() || p.name || `Provider #${p.ProvNum || p.id}`;
+          return { value: name, label: name };
+        })
+      : null);
+
+  const effectiveTypeOptions =
+    typeOptions || ["Crown", "Bridge", "Denture", "Retainer", "Nightguard", "Implant", "Treatment", "Other"];
 
   useEffect(() => {
     if (!open) return;
@@ -322,9 +355,73 @@ const NewLabCaseDialog = ({
         </Box>
 
         {/* ─── Details ────────────────────────────────────── */}
-        <Box sx={{ mt: 3 }}>
-          <Typography sx={{ ...fieldLabelSx, mb: 1.5 }}>Details</Typography>
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography sx={{ ...fieldLabelSx, mb: 1.5 }}>Details</Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
+              {effectiveProviderOptions && (
+                <Box>
+                  <Typography sx={subLabelSx}>Provider</Typography>
+                  <TextField
+                    size="small"
+                    select
+                    name="provider"
+                    value={formData.provider || ""}
+                    onChange={handleChange}
+                    fullWidth
+                    displayEmpty
+                    sx={fieldSx}
+                    SelectProps={{
+                      MenuProps: { sx: { zIndex: 10000 } },
+                    }}
+                  >
+                    <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#94a3b8" }}>
+                      Select provider
+                    </MenuItem>
+                    {effectiveProviderOptions.map((opt) => (
+                      <MenuItem
+                        key={opt.value}
+                        value={opt.value}
+                        sx={{ fontFamily: "Inter", fontSize: "13px" }}
+                      >
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+              )}
+
+              {effectiveTypeOptions && (
+                <Box>
+                  <Typography sx={subLabelSx}>Type</Typography>
+                  <TextField
+                    size="small"
+                    select
+                    name="type"
+                    value={formData.type || ""}
+                    onChange={handleChange}
+                    fullWidth
+                    displayEmpty
+                    sx={fieldSx}
+                    SelectProps={{
+                      MenuProps: { sx: { zIndex: 10000 } },
+                    }}
+                  >
+                    <MenuItem value="" sx={{ fontFamily: "Inter", fontSize: "13px", color: "#94a3b8" }}>
+                      Select type
+                    </MenuItem>
+                    {effectiveTypeOptions.map((opt) => (
+                      <MenuItem
+                        key={opt}
+                        value={opt}
+                        sx={{ fontFamily: "Inter", fontSize: "13px" }}
+                      >
+                        {String(opt).charAt(0).toUpperCase() + String(opt).slice(1)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+              )}
+
             <Box>
               <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
                 Select Lab
