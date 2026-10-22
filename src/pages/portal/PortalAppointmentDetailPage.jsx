@@ -7,7 +7,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import dayjs from 'dayjs';
+import { calendarDateStr } from '../../utils/dateUtils';
 import { portalService } from '../../services/portal.service';
 import {
   PortalPageHeader,
@@ -99,7 +99,7 @@ const PortalAppointmentDetailPage = () => {
               label="Date"
               value={
                 appointment.appointmentDate
-                  ? dayjs(appointment.appointmentDate).format('ddd, MMM D, YYYY')
+                  ? calendarDateStr(appointment.appointmentDate, 'ddd, MMM D, YYYY')
                   : '-'
               }
             />

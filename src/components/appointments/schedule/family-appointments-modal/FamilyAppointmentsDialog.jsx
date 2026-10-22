@@ -19,7 +19,7 @@ import {
   EventBusy as EventBusyIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { resolveClinicTimeZone, todayInBranch, clinicNow } from "../../../../utils/dateUtils";
+import { resolveClinicTimeZone, todayInBranch, branchDateStr, clinicDateOffset } from "../../../../utils/dateUtils";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFamilyAppointments,
@@ -216,7 +216,9 @@ const FamilyAppointmentsDialog = () => {
           appointments: allAppointments.filter(
             (appt) =>
               getApptPatientId(appt) === memberId &&
-              dayjs(appt.appointmentDate).isAfter(clinicNow(clinicTz).subtract(1, "day"), "day")
+              // From the clinic's yesterday onwards (appointment datetimes are
+              // pseudo-instants, so their UTC date is the clinic's date).
+              branchDateStr(appt.appointmentDate) >= clinicDateOffset(clinicTz, -1)
           ),
         };
       })

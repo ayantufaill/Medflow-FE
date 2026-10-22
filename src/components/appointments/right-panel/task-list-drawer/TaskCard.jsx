@@ -1,7 +1,7 @@
 import { Box, Typography, IconButton } from "@mui/material";
 import { RadioButtonUnchecked, CheckCircle, CalendarTodayOutlined, PeopleOutline, DeleteOutline, AddLinkOutlined } from "@mui/icons-material";
 import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
-import dayjs from "dayjs";
+import { formatBranchDate } from "../../../../utils/dateUtils";
 import { useDeleteTask } from "../../../../hooks/queries/useTasks";
 
 const TaskCard = ({ task, onToggleComplete }) => {
@@ -49,7 +49,7 @@ const TaskCard = ({ task, onToggleComplete }) => {
           {/* Date */}
           <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <CalendarTodayOutlined sx={{ fontSize: "13px", color: "#9aa3ae" }} />
-            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>{dateStr ? dayjs(dateStr).format('MM/DD/YYYY') : '-'}</Typography>
+            <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#9aa3ae" }}>{dateStr ? formatBranchDate(dateStr, 'MM/DD/YYYY') : '-'}</Typography>
           </Box>
 
           {/* Location / Assignee */}

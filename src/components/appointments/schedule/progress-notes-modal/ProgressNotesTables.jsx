@@ -15,7 +15,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import dayjs from 'dayjs';
-import { resolveClinicTimeZone } from '../../../../utils/dateUtils';
+import { formatBranchDate, resolveClinicTimeZone } from '../../../../utils/dateUtils';
 import { useBranch } from '../../../../hooks/redux';
 
 const tableHeadSx = { 
@@ -72,7 +72,7 @@ const ProgressNotesTables = ({
               {missingNotes.length > 0 ? missingNotes.map((a, i) => (
                 <TableRow key={a._id || i}>
                   <TableCell sx={{ ...cellSx, color: "black", fontWeight: 500 }}>{a.patientName || `${a.patientId?.firstName || ''} ${a.patientId?.lastName || ''}`}</TableCell>
-                  <TableCell sx={cellSx}>{a.appointmentDate ? dayjs(String(a.appointmentDate).slice(0, 10)).format("MM/DD/YYYY") : "—"}</TableCell>
+                  <TableCell sx={cellSx}>{a.appointmentDate ? formatBranchDate(a.appointmentDate, "MM/DD/YYYY") : "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.toothNumber || "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.surface || "—"}</TableCell>
                   <TableCell sx={cellSx}>{a.code || "—"}</TableCell>

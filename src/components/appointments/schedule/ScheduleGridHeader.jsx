@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { AccessTime as AccessTimeIcon } from '@mui/icons-material';
-import dayjs from 'dayjs';
 import ViewToggle from './ViewToggle';
 import DateNavigation from './DateNavigation';
 import ActionIconsBar from './ActionIconsBar';
@@ -14,6 +13,9 @@ import {
   getTimeZoneAbbr,
   isDifferentFromUserTz,
   getUserLocalTimeZone,
+  clinicCivilDate,
+  clinicCivilDayjs,
+  clinicStartOfDayInstant,
 } from '../../../utils/dateUtils';
 import { COLORS } from '../../../constants/colors';
 import { radius, fontSize, fontWeight } from '../../../constants/styles';
@@ -40,8 +42,9 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
     return () => clearInterval(timer);
   }, [clinicTz]);
 
-  // Redux stores selectedDate as an ISO string; DateNavigation expects a dayjs object.
-  const dayjsDate = dayjs(selectedDate);
+  // Redux stores selectedDate as an ISO string (a real instant); it has to be
+  // read in the clinic's zone, otherwise the header shows the host's day.
+  const dayjsDate = clinicCivilDayjs(selectedDate, clinicTz);
 
   // ViewToggle emits title-case ('Day'/'Week'/'Month') but Redux keeps lowercase.
   // Convert at both boundaries to avoid spreading the format discrepancy.
@@ -57,12 +60,12 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
 
   useEffect(() => {
     setLastViewedDates(prev => {
-      const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
+      const dateStr = clinicCivilDate(selectedDate, clinicTz);
       if (prev.length > 0 && prev[0] === dateStr) return prev;
       const updated = [dateStr, ...prev.filter(d => d !== dateStr)].slice(0, 10);
       return updated;
     });
-  }, [selectedDate]);
+  }, [selectedDate, clinicTz]);
 
   return (
     <Box
@@ -130,7 +133,11 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
           date={dayjsDate}
           onPrev={handlePrev}
           onNext={handleNext}
-          onDateSelect={(newDate) => setSelectedDate(newDate.toISOString())}
+          onDateSelect={(newDate) =>
+            setSelectedDate(
+              clinicStartOfDayInstant(newDate.format('YYYY-MM-DD'), clinicTz).toISOString()
+            )
+          }
         />
 
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}
@@ -146,7 +153,9 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
           showGhosted={showGhosted}
           onToggleShowGhosted={() => setShowGhosted(!showGhosted)}
           lastViewedDates={lastViewedDates}
-          onDateSelect={(dateStr) => setSelectedDate(dayjs(dateStr).toISOString())}
+          onDateSelect={(dateStr) =>
+            setSelectedDate(clinicStartOfDayInstant(dateStr, clinicTz).toISOString())
+          }
         />
         <VerticalDivider height="36px" />
         <NewAppointmentButton onClick={onNewAppointment} />

@@ -35,6 +35,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
+import { calendarDateStr, formatBranchTime } from '../../utils/dateUtils';
 import { recurringAppointmentValidations } from '../../validations/recurringAppointmentValidations';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
@@ -400,7 +401,7 @@ const RecurringAppointmentForm = ({
         patientId: formValues.patientId,
         providerId: formValues.providerId,
         appointmentTypeId: formValues.appointmentTypeId,
-        preferredDate: dayjs(apt.date).format('YYYY-MM-DD'),
+        preferredDate: calendarDateStr(apt.date),
         preferredTimeStart: apt.startTime,
         preferredTimeEnd: apt.endTime,
         priority: 'normal',
@@ -898,7 +899,7 @@ const RecurringAppointmentForm = ({
                     {previewData.previewAppointments.map((apt) => {
                       const status = getAppointmentStatus(apt);
                       const override = appointmentOverrides[apt.appointmentNumber];
-                      const displayDate = override?.customDate ? dayjs(override.customDate) : dayjs(apt.date);
+                      const displayDateValue = override?.customDate || apt.date;
                       const displayStartTime = override?.customStartTime || apt.startTime;
                       const displayEndTime = override?.customEndTime || apt.endTime;
 
@@ -916,15 +917,15 @@ const RecurringAppointmentForm = ({
                         >
                           <TableCell>{apt.appointmentNumber}</TableCell>
                           <TableCell>
-                            {displayDate.format('MMM DD, YYYY')}
+                            {calendarDateStr(displayDateValue, 'MMM DD, YYYY')}
                             {override?.customDate && (
                               <Typography variant="caption" color="info.main" display="block">(modified)</Typography>
                             )}
                           </TableCell>
-                          <TableCell>{displayDate.format('dddd')}</TableCell>
+                          <TableCell>{calendarDateStr(displayDateValue, 'dddd')}</TableCell>
                           <TableCell>
-                            {dayjs(`2000-01-01 ${displayStartTime}`).format('h:mm A')} -{' '}
-                            {dayjs(`2000-01-01 ${displayEndTime}`).format('h:mm A')}
+                            {formatBranchTime(displayStartTime, 'h:mm A')} -{' '}
+                            {formatBranchTime(displayEndTime, 'h:mm A')}
                             {(override?.customStartTime || override?.customEndTime) && (
                               <Typography variant="caption" color="info.main" display="block">(modified)</Typography>
                             )}
@@ -987,7 +988,7 @@ const RecurringAppointmentForm = ({
                     .map((apt) => (
                       <Box key={apt.appointmentNumber} sx={{ mb: 1 }}>
                         <Typography variant="body2" color="error">
-                          Appointment #{apt.appointmentNumber} ({dayjs(apt.date).format('MMM DD, YYYY')}): {apt.conflictReason}
+                          Appointment #{apt.appointmentNumber} ({calendarDateStr(apt.date, 'MMM DD, YYYY')}): {apt.conflictReason}
                         </Typography>
                         {apt.conflictingAppointments.map((conflict, idx) => (
                           <Typography key={idx} variant="caption" sx={{ ml: 2, display: 'block' }}>

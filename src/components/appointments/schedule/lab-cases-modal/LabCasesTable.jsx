@@ -14,7 +14,7 @@ import {
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../../utils/dateUtils';
 
 // Same status vocabulary as the clinical LabCasesPage (useLabCasesPage.js),
 // so both views label the same backend state identically.
@@ -131,9 +131,9 @@ const LabCasesTable = ({
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.patient?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.laboratory?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{procedures || 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.dueDate ? dayjs(row.dueDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.appointmentDate ? dayjs(row.appointmentDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.sentDate ? dayjs(row.sentDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.dueDate ? formatBranchDate(row.dueDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.appointmentDate ? formatBranchDate(row.appointmentDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.sentDate ? formatBranchDate(row.sentDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{BACKEND_STATUS_TO_FE[row.status] || row.status || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>
                      <div style={{

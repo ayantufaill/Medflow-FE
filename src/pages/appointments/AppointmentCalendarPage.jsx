@@ -93,11 +93,11 @@ const AppointmentCalendarPage = () => {
       let startDate, endDate;
 
       if (calendarApi) {
-        startDate = dayjs(calendarApi.view.activeStart).format("YYYY-MM-DD");
-        endDate = dayjs(calendarApi.view.activeEnd).format("YYYY-MM-DD");
+        startDate = dayjs.utc(calendarApi.view.activeStart).format("YYYY-MM-DD");
+        endDate = dayjs.utc(calendarApi.view.activeEnd).format("YYYY-MM-DD");
       } else {
-        startDate = dayjs(currentDate).startOf("month").format("YYYY-MM-DD");
-        endDate = dayjs(currentDate).endOf("month").format("YYYY-MM-DD");
+        startDate = dayjs.utc(currentDate).startOf("month").format("YYYY-MM-DD");
+        endDate = dayjs.utc(currentDate).endOf("month").format("YYYY-MM-DD");
       }
 
       const providerId = selectedProvider || "";
@@ -178,7 +178,7 @@ const AppointmentCalendarPage = () => {
     if (!selectedProviderData || !selectedProviderData.workingHours)
       return true;
 
-    const dayOfWeek = dayjs(date).day();
+    const dayOfWeek = dayjs.utc(date).day();
     const workingHours = selectedProviderData.workingHours;
     const daySchedule = workingHours.find((wh) => wh.dayOfWeek === dayOfWeek);
 
@@ -201,9 +201,11 @@ const AppointmentCalendarPage = () => {
     );
   };
 
+  // The calendar runs in the clinic's wall-clock frame (UTC), so "past" is
+  // decided against the clinic's clock and not the host machine's.
   const isPastDate = (date) => {
-    const now = dayjs();
-    const slotDate = dayjs(date);
+    const now = dayjs.utc();
+    const slotDate = dayjs.utc(date);
     return slotDate.isBefore(now, "minute");
   };
 
@@ -280,7 +282,7 @@ const AppointmentCalendarPage = () => {
   const isSlotAvailable = (date, time) => {
     if (!selectedProvider) return true; // If no provider selected, allow all slots
 
-    const dateStr = dayjs(date).format("YYYY-MM-DD");
+    const dateStr = dayjs.utc(date).format("YYYY-MM-DD");
     if (!(dateStr in availableSlots)) return true;
 
     const slots = availableSlots[dateStr] || [];
@@ -292,7 +294,7 @@ const AppointmentCalendarPage = () => {
   const getSlotLaneClassNames = useCallback(
     (arg) => {
       const slotDate = arg.date;
-      const time = dayjs(slotDate).format("HH:mm");
+      const time = dayjs.utc(slotDate).format("HH:mm");
 
       const isDisabled =
         isPastDate(slotDate) ||
@@ -326,8 +328,8 @@ const AppointmentCalendarPage = () => {
   const handleDatesSet = useCallback(
     (dateInfo) => {
       const newDate = dateInfo.start;
-      const newStartDate = dayjs(dateInfo.start).format("YYYY-MM-DD");
-      const newEndDate = dayjs(dateInfo.end).format("YYYY-MM-DD");
+      const newStartDate = dayjs.utc(dateInfo.start).format("YYYY-MM-DD");
+      const newEndDate = dayjs.utc(dateInfo.end).format("YYYY-MM-DD");
 
       // Update current date
       setCurrentDate(newDate);
@@ -356,9 +358,9 @@ const AppointmentCalendarPage = () => {
   );
 
   const handleDateSelect = (selectInfo) => {
-    const startDate = dayjs(selectInfo.start).format("YYYY-MM-DD");
-    const startTime = dayjs(selectInfo.start).format("HH:mm");
-    const endTime = dayjs(selectInfo.end).format("HH:mm");
+    const startDate = dayjs.utc(selectInfo.start).format("YYYY-MM-DD");
+    const startTime = dayjs.utc(selectInfo.start).format("HH:mm");
+    const endTime = dayjs.utc(selectInfo.end).format("HH:mm");
 
     if (isPastDate(selectInfo.start)) {
       showSnackbar("Cannot book appointments in the past", "warning");
@@ -402,7 +404,7 @@ const AppointmentCalendarPage = () => {
 
     if (!selectedProvider) return true;
 
-    const startTime = dayjs(selectInfo.start).format("HH:mm");
+    const startTime = dayjs.utc(selectInfo.start).format("HH:mm");
     if (!isWithinWorkingHours(selectInfo.start, startTime)) return false;
 
     return isSlotAvailable(selectInfo.start, startTime);
@@ -576,9 +578,9 @@ const AppointmentCalendarPage = () => {
 
   const handleEventDrop = async (dropInfo) => {
     const { event } = dropInfo;
-    const start = dayjs(event.start).format("YYYY-MM-DD");
-    const startTime = dayjs(event.start).format("HH:mm");
-    const endTime = event.end ? dayjs(event.end).format("HH:mm") : undefined;
+    const start = dayjs.utc(event.start).format("YYYY-MM-DD");
+    const startTime = dayjs.utc(event.start).format("HH:mm");
+    const endTime = event.end ? dayjs.utc(event.end).format("HH:mm") : undefined;
 
     try {
       await appointmentService.updateAppointment(event.id, {
@@ -596,7 +598,7 @@ const AppointmentCalendarPage = () => {
 
   const handleEventResize = async (resizeInfo) => {
     const { event } = resizeInfo;
-    const endTime = event.end ? dayjs(event.end).format("HH:mm") : undefined;
+    const endTime = event.end ? dayjs.utc(event.end).format("HH:mm") : undefined;
 
     try {
       await appointmentService.updateAppointment(event.id, {
@@ -866,6 +868,7 @@ const AppointmentCalendarPage = () => {
             })}
           >
             <FullCalendar
+              timeZone="UTC"
               ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView={currentView}

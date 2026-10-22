@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { useDropdownData } from '../../../../hooks/redux/useDropdownData';
+import { formatBranchDate, formatBranchTime } from '../../../../utils/dateUtils';
 
 const capitalizeFirst = (str) => {
   if (typeof str !== 'string' || !str) return str;
@@ -244,8 +245,8 @@ const AppointmentHistoryTable = ({
                           onChange={() => handleSelectOne(rowId)}
                         />
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{dayjs(appt.appointmentDate).format("MM/DD/YYYY")}</TableCell>
-                      <TableCell>{appt.startTime ? dayjs(`2000-01-01 ${appt.startTime}`).format("hh:mm A") : dayjs(appt.appointmentDate).format("hh:mm A")}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{formatBranchDate(appt.appointmentDate)}</TableCell>
+                      <TableCell>{appt.startTime ? formatBranchTime(appt.startTime, "hh:mm A") : formatBranchTime(appt.appointmentDate)}</TableCell>
                       <TableCell>{capitalizeFirst(getVisitType(appt))}</TableCell>
                       <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {capitalizeFirst(proceduresText)}

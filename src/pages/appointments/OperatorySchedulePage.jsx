@@ -13,6 +13,14 @@ import RightPanelCollapsed from '../../components/appointments/right-panel/Right
 import AddNewPatientAppointmentForm from '../../components/appointments/AddNewPatientAppointmentForm';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { usePatients, usePatient, useScheduleState, useAppointmentList, useBranch } from '../../hooks/redux';
+import {
+  branchDateStr,
+  calendarDateStr,
+  clinicNow,
+  formatBranchTime,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from '../../utils/dateUtils';
 import { fetchPatientById, fetchPatients } from '../../store/slices/patientSlice';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { COLORS } from '../../constants/colors';
@@ -107,8 +115,9 @@ const OperatorySchedulePage = () => {
   // A group admin sees every branch in their group; with one branch selected
   // the schedule shows only that branch's operatories, providers and
   // appointments. "All branches" (no selection) keeps the combined view.
-  const { currentBranchId } = useBranch();
+  const { currentBranchId, currentBranch } = useBranch();
   const scheduleBranchId = currentBranchId || '';
+  const clinicTz = resolveClinicTimeZone(currentBranch);
 
   // ── Dropdown data (providers, rooms, appointment types) ──────────
   const { providers, rooms, appointmentTypes } = useDropdownData({
@@ -196,8 +205,8 @@ const OperatorySchedulePage = () => {
     const highlightParam = searchParams.get('highlightAppointmentId');
     if (!dateParam && !highlightParam) return;
 
-    if (dateParam && dayjs(dateParam).isValid() && reduxSelectedDate !== dayjs(dateParam).format("YYYY-MM-DD")) {
-      setSelectedDate(dayjs(dateParam).format("YYYY-MM-DD"));
+    if (dateParam && dayjs(dateParam).isValid() && reduxSelectedDate !== calendarDateStr(dateParam)) {
+      setSelectedDate(calendarDateStr(dateParam));
     }
     if (highlightParam) {
       setHighlightAppointmentId(highlightParam);
@@ -531,7 +540,7 @@ const OperatorySchedulePage = () => {
     const handleNavigateToSlot = (e) => {
       const { date, time } = e.detail;
       if (date && dayjs(date).isValid()) {
-        setSelectedDate(dayjs(date).format("YYYY-MM-DD"));
+        setSelectedDate(calendarDateStr(date));
         // Store time to scroll to it after date change
         const timeMatch = time?.match(/(\d+):(\d+)\s*(AM|PM)?/i);
         if (timeMatch) {
@@ -743,17 +752,18 @@ const OperatorySchedulePage = () => {
         return null;
       }
 
-      // Parse the ISO string to the local timezone to avoid shifting days
-      const dateOnly = dayjs(iso).format("YYYY-MM-DD");
+      // The stored datetime is a pseudo-instant whose UTC wall-clock is the
+      // clinic's wall-clock, so the day is read in UTC to stay host independent.
+      const dateOnly = branchDateStr(iso);
 
-      const startObj = a.startTime ? dayjs(`${dateOnly}T${a.startTime}`) : null;
+      const startObj = a.startTime ? dayjs.utc(`${dateOnly}T${a.startTime}`) : null;
       if (!startObj || !startObj.isValid()) {
         console.warn("mapAppointment dropped: invalid startObj", a);
         return null;
       }
 
       const endObj = a.endTime
-        ? dayjs(`${dateOnly}T${a.endTime}`)
+        ? dayjs.utc(`${dateOnly}T${a.endTime}`)
         : startObj.add(a.durationMinutes || SLOT_MINUTES, "minute");
       if (!endObj.isValid()) {
         console.warn("mapAppointment dropped: invalid endObj", a);
@@ -830,7 +840,7 @@ const OperatorySchedulePage = () => {
       const scheduledBy = a.createdBy?.name || a.scheduledBy?.name || a.createdByName || "";
       
       const safeStartTime = a.startTime?.length === 5 ? `${a.startTime}:00` : a.startTime;
-      const displayTime = safeStartTime ? dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A") : "";
+      const displayTime = safeStartTime ? formatBranchTime(safeStartTime, "h:mm A") : "";
 
       let rawProcs = cf.procedures && Array.isArray(cf.procedures) && cf.procedures.length > 0
         ? cf.procedures 
@@ -1132,7 +1142,7 @@ const OperatorySchedulePage = () => {
     const raw = appointment?.rawAppointment || appointment;
     const date = raw?.appointmentDate || raw?.date;
     const time = raw?.startTime || '00:00';
-    const parsed = date ? dayjs(`${dayjs(date).format('YYYY-MM-DD')}T${time}`) : null;
+    const parsed = date ? dayjs.utc(`${branchDateStr(date)}T${time}`) : null;
     return parsed?.isValid() ? parsed.valueOf() : 0;
   };
   const resolveRecareSourceAppointmentId = (formData, start) => {
@@ -1253,11 +1263,11 @@ const OperatorySchedulePage = () => {
         return;
       }
       
-      const startObj = dayjs(`${apptDateStr}T${startTimeStr}`);
+      const startObj = dayjs.utc(`${apptDateStr}T${startTimeStr}`);
       const duration = data.DurationMins || data.durationMinutes || 60;
       const endObj = startObj.clone().add(duration, 'minute');
       
-      if (startObj.isBefore(dayjs())) {
+      if (startObj.isBefore(clinicNow(clinicTz))) {
         showSnackbar("The specified time for this shortlist item has already passed.", "error");
         return;
       }
@@ -1312,7 +1322,7 @@ const OperatorySchedulePage = () => {
 
     window.addEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
     return () => window.removeEventListener('add-shortlist-to-schedule', handleAddShortlistToSchedule);
-  }, [createAppointment]);
+  }, [createAppointment, clinicTz]);
 
   const handleDragStart = (event) => {
     setActiveDragData(event.active.data.current);
@@ -1343,7 +1353,7 @@ const OperatorySchedulePage = () => {
         const minutesFromStart = (hour - START_HOUR) * 60 + mins;
 
         if (dragData.isFamilyAppointmentsBlock) {
-          const dateStr = reduxSelectedDate || dayjs().format("YYYY-MM-DD");
+          const dateStr = reduxSelectedDate || todayInBranch(clinicTz);
           setFamilyAppointmentsSchedulingDate(dateStr);
           setFamilyAppointmentsSchedulingTime({ hour, mins });
           setFamilyAppointmentsSchedulingRoomId(roomId);
@@ -1427,7 +1437,7 @@ const OperatorySchedulePage = () => {
               closedOperatories={closedOperatories}
               viewMyColumn={viewMyColumn}
               onToggleOperatoryStatus={(columnId) => {
-                const dateStr = selectedDate ? (typeof selectedDate.format === 'function' ? selectedDate.format('YYYY-MM-DD') : new Date(selectedDate).toISOString().split('T')[0]) : dayjs().format('YYYY-MM-DD');
+                const dateStr = selectedDate ? calendarDateStr(selectedDate) : todayInBranch(clinicTz);
                 handleToggleOperatoryStatus(dateStr, columnId);
               }}
               onSlotClick={(hour, mins, roomId) => {

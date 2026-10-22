@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { formatBranchTime } from "../../utils/dateUtils";
 import {
   Autocomplete,
   Box,
@@ -122,7 +122,7 @@ const CreateAppointmentDialog = ({
               size="small"
               label="Start"
               value={
-                draft.startIso ? dayjs(draft.startIso).format("h:mm A") : ""
+                draft.startIso ? formatBranchTime(draft.startIso, "h:mm A") : ""
               }
               disabled
               InputLabelProps={{ sx: { fontSize: 13 } }}
@@ -131,7 +131,7 @@ const CreateAppointmentDialog = ({
             <TextField
               size="small"
               label="End"
-              value={draft.endIso ? dayjs(draft.endIso).format("h:mm A") : ""}
+              value={draft.endIso ? formatBranchTime(draft.endIso, "h:mm A") : ""}
               disabled
               InputLabelProps={{ sx: { fontSize: 13 } }}
               InputProps={{ sx: { fontSize: 13, borderRadius: 1.5 } }}

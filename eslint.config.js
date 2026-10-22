@@ -35,6 +35,20 @@ export default defineConfig([
       'medflow-dates': medflowDates,
     },
   },
+  // The legacy operatory pages are unrouted (no route imports them) and are
+  // kept only as a reference for the rewrite. Their whole grid is anchored to
+  // the host's clock, so migrating them piecemeal would be a half-measure:
+  // they are exempt from the host-date guard rail until they are deleted.
+  {
+    files: [
+      'src/pages/appointments/OperatorySchedulePageOld.jsx',
+      'src/components/appointments/OperatoryScheduleGrid.jsx',
+      'src/components/appointments/OperatorySidebar.jsx',
+    ],
+    rules: {
+      'medflow-dates/no-host-dates': 'off',
+    },
+  },
   // Test files run under Jest (see jest.config.cjs), so describe/it/expect/jest
   // are globals and the files are CommonJS-transformed — without this every
   // assertion reads as `no-undef`.

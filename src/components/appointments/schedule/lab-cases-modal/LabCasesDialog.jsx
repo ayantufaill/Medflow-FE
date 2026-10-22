@@ -12,8 +12,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import ScienceIcon from '@mui/icons-material/Science';
 import { COLORS } from '../../../../constants/colors';
-import dayjs from 'dayjs';
-import { resolveClinicTimeZone, clinicNow } from '../../../../utils/dateUtils';
+import { resolveClinicTimeZone, clinicNow, formatBranchDate } from '../../../../utils/dateUtils';
 import { useBranch } from '../../../../hooks/redux';
 import { labCaseService } from '../../../../services/lab-case.service';
 
@@ -101,9 +100,9 @@ const LabCasesDialog = ({ open, onClose }) => {
       ...labCases.map(lc => [
         `"${(lc.patient?.name || '').replace(/"/g, '""')}"`,
         `"${(lc.laboratory?.name || '').replace(/"/g, '""')}"`,
-        `"${lc.dueDate ? dayjs(lc.dueDate).format('MM/DD/YYYY') : ''}"`,
-        `"${lc.appointmentDate ? dayjs(lc.appointmentDate).format('MM/DD/YYYY') : ''}"`,
-        `"${lc.sentDate ? dayjs(lc.sentDate).format('MM/DD/YYYY') : ''}"`,
+        `"${lc.dueDate ? formatBranchDate(lc.dueDate, 'MM/DD/YYYY') : ''}"`,
+        `"${lc.appointmentDate ? formatBranchDate(lc.appointmentDate, 'MM/DD/YYYY') : ''}"`,
+        `"${lc.sentDate ? formatBranchDate(lc.sentDate, 'MM/DD/YYYY') : ''}"`,
         `"${(lc.status || '').replace(/"/g, '""')}"`,
         `"${(lc.instructions || '').replace(/<[^>]*>?/gm, '').replace(/"/g, '""')}"`
       ].join(','))

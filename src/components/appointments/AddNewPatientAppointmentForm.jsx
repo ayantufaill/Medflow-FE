@@ -26,6 +26,10 @@ import {
   resolveClinicTimeZone,
   isPastDateInClinic,
   todayInBranch,
+  clinicDateOffset,
+  clinicWallClockAt,
+  clinicWallClockOf,
+  branchDateStr,
 } from "../../utils/dateUtils";
 
 const AddNewPatientAppointmentForm = ({
@@ -85,7 +89,9 @@ const AddNewPatientAppointmentForm = ({
   const defaultInitialDateTime = initialDateTime || clinicNow(clinicTz).add(30, "minute");
   let parsedDate = defaultInitialDateTime;
   if (initialShortlistData?.AppointmentDate) {
-    let d = dayjs(initialShortlistData.AppointmentDate);
+    // The stored datetime is a pseudo-instant: its UTC components are the
+    // clinic's wall clock, so it is re-anchored to the branch's zone.
+    let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
     if (initialShortlistData.StartTime) {
       const [h, m] = initialShortlistData.StartTime.split(":");
       d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -268,7 +274,7 @@ const AddNewPatientAppointmentForm = ({
   const isFuture = useMemo(() => {
     if (!isExistingAppointment) return false;
     if (!selectedStart || !selectedStart.isValid()) return false;
-    return dayjs().isBefore(selectedStart);
+    return clinicNow(clinicTz).isBefore(selectedStart);
   }, [isExistingAppointment, selectedStart]);
 
   const isStatusLocked = useMemo(() => {
@@ -522,7 +528,7 @@ const AddNewPatientAppointmentForm = ({
 
           setPatient(fullPatient || mockPatient);
 
-          let parsedDate = dayjs();
+          let parsedDate = clinicNow(clinicTz);
           const rawDate =
             sourceAppt.appointmentDate ||
             initialAppointment.date ||
@@ -532,7 +538,7 @@ const AddNewPatientAppointmentForm = ({
               typeof rawDate === "string" && rawDate.includes("T")
                 ? rawDate.split("T")[0]
                 : rawDate;
-            parsedDate = dayjs(dateStr);
+            parsedDate = clinicWallClockAt(dateStr, "00:00", clinicTz);
           }
 
           const timeStr =
@@ -910,9 +916,9 @@ const AddNewPatientAppointmentForm = ({
           }
         }
 
-        let parsedDate = dayjs().add(30, "minute");
+        let parsedDate = clinicNow(clinicTz).add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
-          let d = dayjs(initialShortlistData.AppointmentDate);
+          let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
           if (initialShortlistData.StartTime) {
             const [h, m] = initialShortlistData.StartTime.split(":");
             d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -1192,7 +1198,7 @@ const AddNewPatientAppointmentForm = ({
     const raw = appointment?.rawAppointment || appointment;
     const date = raw?.appointmentDate || raw?.date;
     const time = raw?.startTime || "00:00";
-    const parsed = date ? dayjs(`${dayjs(date).format("YYYY-MM-DD")}T${time}`) : null;
+    const parsed = date ? dayjs.utc(`${branchDateStr(date)}T${time}`) : null;
     return parsed?.isValid() ? parsed.valueOf() : 0;
   };
 
@@ -1336,8 +1342,8 @@ const AddNewPatientAppointmentForm = ({
     const h = parseInt(timeHours || "9", 10);
     const m = parseInt(timeMins || "0", 10);
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
-    return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
-  }, [apptDate, timeHours, timeMins, amPm]);
+    return (apptDate || clinicNow(clinicTz)).hour(hour24).minute(m).second(0);
+  }, [apptDate, timeHours, timeMins, amPm, clinicTz]);
 
   useEffect(() => {
     if (!open || isRecareTemplate || isExistingAppointment) return;
@@ -2031,7 +2037,7 @@ const AddNewPatientAppointmentForm = ({
       patientId: String(patientId),
       laboratoryId: laboratoryId || "1",
       appointmentId: apptId ? String(apptId) : undefined,
-      dueDate: form.estReceiveDate || dayjs().add(7, "day").format("YYYY-MM-DD"),
+      dueDate: form.estReceiveDate || clinicDateOffset(clinicTz, 7),
       instructions,
       labFee: parseFloat(form.labFee) || 0,
       providerNum: form.provider ? String(form.provider) : undefined,

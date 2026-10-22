@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Box, Button } from '@mui/material';
 import { NotificationsActiveOutlined } from '@mui/icons-material';
-import dayjs from 'dayjs';
 import { appointmentService } from '../../../../services/appointment.service';
 import { useSnackbar } from '../../../../contexts/SnackbarContext';
+import { resolveClinicTimeZone, todayInBranch } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 
 const AppointmentDetailFooter = ({
   onClose, onSave, status, notes, editDate, editTime, editAmPm,
@@ -12,6 +13,8 @@ const AppointmentDetailFooter = ({
 }) => {
   const { showSnackbar } = useSnackbar();
   const [sendingConfirmation, setSendingConfirmation] = useState(false);
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
 
   const handleSendConfirmation = async () => {
     if (!appointmentId || sendingConfirmation) return;
@@ -97,7 +100,7 @@ const AppointmentDetailFooter = ({
               onSave({ 
                 status, 
                 notes,
-                appointmentDate: editDate ? editDate.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+                appointmentDate: editDate ? editDate.format('YYYY-MM-DD') : todayInBranch(clinicTz),
                 startTime: startTime24
               });
             }}

@@ -2,7 +2,14 @@ import React, { useState } from "react";
 import { Box, Typography, Checkbox, Collapse, Button, Divider } from "@mui/material";
 import { CalendarToday as CalendarTodayIcon, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { resolveClinicTimeZone, clinicNow } from "../../../../utils/dateUtils";
+import {
+  resolveClinicTimeZone,
+  branchDateStr,
+  clinicDateOffset,
+  formatBranchDate,
+  formatBranchTime,
+  isPastDateInClinic,
+} from "../../../../utils/dateUtils";
 import { useBranch } from "../../../../hooks/redux";
 import { COLORS } from "../../../../constants/colors";
 import { fontWeight } from "../../../../constants/styles";
@@ -75,7 +82,7 @@ const ProcedureSelectionBlock = ({ memberId, memberName, dueProcedures, selected
                     {proc.procedureName || proc.code}
                   </Typography>
                   <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_MUTED }}>
-                    Due {dayjs(proc.dueDate).format('MM/DD/YYYY')}
+                    Due {formatBranchDate(proc.dueDate, 'MM/DD/YYYY')}
                   </Typography>
                 </Box>
               </Box>
@@ -103,7 +110,6 @@ const FamilyAppointmentsScheduledTab = ({
 }) => {
   const { currentBranch } = useBranch();
   const clinicTz = resolveClinicTimeZone(currentBranch);
-  const clinicToday = clinicNow(clinicTz);
 
   const memberIds = [patientId, ...(familyMembers || []).map((m) => m.id || m._id)].filter(Boolean);
 
@@ -143,7 +149,7 @@ const FamilyAppointmentsScheduledTab = ({
     memberIds.forEach((mid) => {
       const codes = recareDueDates?.[mid] || {};
       const needSchedule = Object.entries(codes)
-        .filter(([code, v]) => v?.dueDate && dayjs(v.dueDate).isBefore(clinicToday.startOf('day')) && !isAlreadyScheduled(mid, code))
+        .filter(([code, v]) => v?.dueDate && isPastDateInClinic(v.dueDate, clinicTz) && !isAlreadyScheduled(mid, code))
         .map(([code, v]) => ({ code, ...v }));
       if (needSchedule.length > 0) dueByMember[mid] = needSchedule;
     });
@@ -184,7 +190,7 @@ const FamilyAppointmentsScheduledTab = ({
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {allAppointments
-            .filter((appt) => dayjs(appt.appointmentDate).isAfter(clinicToday.subtract(1, "day"), "day"))
+            .filter((appt) => branchDateStr(appt.appointmentDate) >= clinicDateOffset(clinicTz, -1))
             .sort((a, b) => dayjs(a.appointmentDate).diff(dayjs(b.appointmentDate)))
             .map((appt, i) => (
               <Box
@@ -203,7 +209,7 @@ const FamilyAppointmentsScheduledTab = ({
                 </Typography>
                 <Typography sx={{ fontSize: "11px", color: COLORS.TEXT_SECONDARY, mt: "2px" }}>
                   {dayjs(appt.appointmentDate).isValid()
-                    ? dayjs(appt.appointmentDate).format("ddd, MMM DD")
+                    ? formatBranchDate(appt.appointmentDate, "ddd, MMM DD")
                     : "Date TBD"}
                 </Typography>
                 <Typography sx={{ fontSize: "11px", color: COLORS.TEXT_MUTED }}>
@@ -215,13 +221,13 @@ const FamilyAppointmentsScheduledTab = ({
                       hour = hour % 12 || 12;
                       return `${hour}:${m || '00'} ${ampm}`;
                     }
-                    return dayjs(appt.startTime).isValid() ? dayjs(appt.startTime).format("h:mm A") : "--:--";
+                    return formatBranchTime(appt.startTime, "h:mm A");
                   })()}
                 </Typography>
               </Box>
             ))}
           {allAppointments.filter((appt) =>
-          dayjs(appt.appointmentDate).isAfter(clinicToday.subtract(1, "day"), "day")
+          branchDateStr(appt.appointmentDate) >= clinicDateOffset(clinicTz, -1)
           ).length === 0 && (
             <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_MUTED, fontStyle: "italic" }}>
               No upcoming appointments

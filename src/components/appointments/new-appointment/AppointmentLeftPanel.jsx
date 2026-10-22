@@ -31,6 +31,13 @@ import { useDispatch } from "react-redux";
 import { createInvoice } from "../../../store/slices/billingSlice";
 import { invalidatePatientBalance, invalidateInsuranceUsage } from "../../../store/slices/patientSlice";
 import { claimService } from "../../../services/claim.service";
+import { useBranch } from "../../../hooks/redux";
+import {
+  clinicNow,
+  isPastDateInClinic,
+  isTodayInClinic,
+  resolveClinicTimeZone,
+} from "../../../utils/dateUtils";
 
 const AppointmentLeftPanel = ({
   // Patient
@@ -83,6 +90,16 @@ const AppointmentLeftPanel = ({
   const [invoiceModalData, setInvoiceModalData] = useState(null);
   const { showSnackbar } = useSnackbar();
   const dispatch = useDispatch();
+
+  // ── Clinic timezone ────────────────────────────────────────────────────────
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  // The picked day is a calendar day, so it is compared as a plain date.
+  const apptDateStr = apptDate
+    ? dayjs.isDayjs(apptDate)
+      ? apptDate.format("YYYY-MM-DD")
+      : String(apptDate).slice(0, 10)
+    : null;
 
   const handleCollectPayment = async () => {
     if (!appointmentId) {
@@ -456,7 +473,9 @@ const AppointmentLeftPanel = ({
                     value={apptDate}
                     onChange={(v) => v && onDateChange(v)}
                     views={["year", "month", "day"]}
-                    disablePast
+                    shouldDisableDate={(date) =>
+                      !!date && isPastDateInClinic(date.format("YYYY-MM-DD"), clinicTz)
+                    }
                     slotProps={{
                       popper: { sx: { zIndex: 1400 } },
                       textField: {
@@ -484,7 +503,7 @@ const AppointmentLeftPanel = ({
                       const m = parseInt(timeMins, 10);
                       const hour24 =
                         amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
-                      return dayjs().hour(hour24).minute(m).second(0);
+                      return clinicNow(clinicTz).hour(hour24).minute(m).second(0);
                     })()}
                     onChange={(v) => {
                       if (!v) return;
@@ -492,8 +511,8 @@ const AppointmentLeftPanel = ({
                       onAmPmChange(v.format("A"));
                     }}
                     minTime={
-                      apptDate && dayjs(apptDate).isSame(dayjs(), "day")
-                        ? dayjs().startOf("minute")
+                      apptDateStr && isTodayInClinic(apptDateStr, clinicTz)
+                        ? clinicNow(clinicTz).startOf("minute")
                         : undefined
                     }
                     slotProps={{

@@ -56,7 +56,7 @@ const ALLERGY_DEFAULTS = { allergen: '', reaction: '', severity: 'mild', isActiv
 
 const AllergyDialog = ({ open, onClose, patientId, allergy, mode, onSave, saving, setSaving }) => {
   const { showSnackbar } = useSnackbar();
-  const today = useMemo(() => dayjs(), []);
+  const today = useMemo(() => dayjs.utc(), []);
 
   const { register, handleSubmit, control, formState: { errors }, reset } = useForm({
     defaultValues: allergy || ALLERGY_DEFAULTS,
@@ -351,7 +351,7 @@ const PatientAllergyTab = ({ patientId }) => {
                         ? `${all.documentedBy.firstName || ''} ${all.documentedBy.lastName || ''}`.trim() || '-'
                         : '-'}
                     </TableCell>
-                    <TableCell>{all.documentedDate ? dayjs(all.documentedDate).format('MM/DD/YYYY') : '-'}</TableCell>
+                    <TableCell>{all.documentedDate ? formatBranchDate(all.documentedDate, 'MM/DD/YYYY') : '-'}</TableCell>
                     <TableCell align="right">
                       <IconButton size="small" onClick={(e) => handleMenuOpen(e, all)}><MoreVertIcon /></IconButton>
                     </TableCell>

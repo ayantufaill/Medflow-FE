@@ -1,8 +1,13 @@
 import { Box, Button, Typography } from "@mui/material";
 import { PersonOutline, EmailOutlined, MessageOutlined, ScienceOutlined, HistoryOutlined } from "@mui/icons-material";
-import dayjs from "dayjs";
+import { formatClinicInstant, resolveClinicTimeZone } from "../../../utils/dateUtils";
+import { useBranch } from "../../../hooks/redux";
 
-const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick, computedVisitType, hasConflict = false, isEditing, onEnterEdit, onToggleEdit, isRescheduling, createdBy, createdAt, onViewAuditHistory }) => (
+const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, onSubmit, onSaveAsDraft, loading, showExtendedOptions, isEditMode, readOnly, onLabOrderClick, computedVisitType, hasConflict = false, isEditing, onEnterEdit, onToggleEdit, isRescheduling, createdBy, createdAt, onViewAuditHistory }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
+  return (
   <Box sx={{ flexShrink: 0, borderTop: '1px solid #e0e5eb' }}>
 
     {/* Lab Order + Reminder strip — only when opened from PatientCard Book button */}
@@ -80,7 +85,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
               </Box>
               {createdAt && (
                 <Box component="span" sx={{ color: '#9aa3ae' }}>
-                  {' '}on {dayjs(createdAt).format('MM/DD/YYYY')} at {dayjs(createdAt).format('h:mmA')}
+                  {' '}on {formatClinicInstant(createdAt, clinicTz, 'MM/DD/YYYY')} at {formatClinicInstant(createdAt, clinicTz, 'h:mmA')}
                 </Box>
               )}
             </Typography>
@@ -139,6 +144,7 @@ const AppointmentFooter = ({ patient, patientDisplayName, patientId, onCancel, o
       </Box>
     </Box>
   </Box>
-);
+  );
+};
 
 export default AppointmentFooter;

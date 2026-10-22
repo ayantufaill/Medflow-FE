@@ -29,7 +29,11 @@ import {
   isPastSlotInClinic,
   resolveClinicTimeZone,
   formatBranchDateLong,
+  formatBranchDate,
+  formatBranchTime,
   branchDateStr,
+  clinicCivilDate,
+  clinicCivilDayjs,
 } from "../../../utils/dateUtils";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight } from "../../../constants/styles";
@@ -134,8 +138,8 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
   // Safari strict parsing fix: append seconds if missing
   const safeStartTime = appt.startTime?.length === 5 ? `${appt.startTime}:00` : appt.startTime;
   const safeEndTime = appt.endTime?.length === 5 ? `${appt.endTime}:00` : appt.endTime;
-  const displayTime = dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A");
-  const displayEndTime = dayjs(`2000-01-01T${safeEndTime}`).format("h:mm A");
+  const displayTime = formatBranchTime(safeStartTime, "h:mm A");
+  const displayEndTime = formatBranchTime(safeEndTime, "h:mm A");
   const displayDate = appt.appointmentDate
     ? formatBranchDateLong(appt.appointmentDate)
     : "";
@@ -200,7 +204,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       patientData?.chartNumber ||
       "",
     patientDob: patientData?.dateOfBirth
-      ? dayjs(patientData.dateOfBirth).format("MMM D, YYYY")
+      ? formatBranchDate(patientData.dateOfBirth, "MMM D, YYYY")
       : "",
     patientPhone:
       patientData?.phonePrimary ||
@@ -432,7 +436,8 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
   const clinicTz = resolveClinicTimeZone(currentBranch);
   const rawAppointments = useSelector((state) => state.appointment.list);
   const loading = useSelector((state) => state.appointment.listLoading);
-  const dayjsDate = dayjs(selectedDate);
+  const dayjsDate = clinicCivilDayjs(selectedDate, clinicTz);
+  const clinicDate = clinicCivilDate(selectedDate, clinicTz);
   const viewUnit = calendarView === "day" ? "day" : calendarView;
   const startDate = dayjsDate.startOf(viewUnit).format("YYYY-MM-DD");
   const endDate = dayjsDate.endOf(viewUnit).add(1, 'day').format("YYYY-MM-DD");
@@ -466,7 +471,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
       cols.push({ id: d.format('YYYY-MM-DD'), label: d.format('ddd') });
     }
     return cols;
-  }, [isWeek, selectedDate]);
+  }, [isWeek, dayjsDate]);
 
   const activeColumns = isWeek ? weekColumns : rooms;
 
@@ -538,7 +543,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
     const blocks = scheduleBlocks.map(block => {
       if (!block.startTime || !block.endTime) return null;
 
-      const blockDate = dayjs(block.date).format("YYYY-MM-DD");
+      const blockDate = branchDateStr(block.date);
       const isBlockDateValid = isWeek
         ? (blockDate >= weekStart && blockDate <= weekEnd)
         : (blockDate === targetDate);
@@ -574,7 +579,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
     }).filter(Boolean);
 
     return [...appts, ...blocks];
-  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
+  }, [rawAppointments, dayjsDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
 
   // Total grid width grows with the number of active columns.
   const totalWidth = TIME_LABEL_WIDTH + (activeColumns.length || 1) * COLUMN_MIN_WIDTH;
@@ -621,7 +626,8 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           {/* One cell per column */}
           {activeColumns.map((col, idx) => {
             const roomId = `op${col._id || col.id}`;
-            const dateStr = dayjsDate.format('YYYY-MM-DD');
+            // In the week view each column is a day of the clinic's week.
+            const dateStr = isWeek && col.id ? col.id : dayjsDate.format('YYYY-MM-DD');
             const isClosed = closedOperatories[`${dateStr}:${roomId}`];
             const isPastDate = isPastDateInClinic(dateStr, clinicTz);
             const isToday = isTodayInClinic(dateStr, clinicTz);
@@ -641,7 +647,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 isWeek={isWeek}
                 isPastDate={isPastDate}
                 isToday={isToday}
-                selectedDate={selectedDate}
+                selectedDate={dateStr}
                 clinicTz={clinicTz}
               />
             );

@@ -4,7 +4,8 @@ import { Box, Typography, Collapse, Menu, MenuItem, IconButton } from '@mui/mate
 import { KeyboardArrowUp, KeyboardArrowDown, DragIndicator } from '@mui/icons-material';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, headingSecondarySx } from '../../../constants/styles';
-import dayjs from 'dayjs';
+import { formatClinicInstant, resolveClinicTimeZone } from '../../../utils/dateUtils';
+import { useBranch } from '../../../hooks/redux';
 import { selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { useDraggable } from '@dnd-kit/core';
 
@@ -39,6 +40,8 @@ const PROCEDURE_OPTIONS = [
 ];
 
 const ProcedureBlocks = ({ appointment }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const [open, setOpen] = useState(true);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const providers = useSelector(selectProviderDropdownList);
@@ -313,7 +316,7 @@ const ProcedureBlocks = ({ appointment }) => {
                   {/* Optional Date (only show if it has a created date) */}
                   {proc.createdAt && (
                     <Typography sx={{ fontSize: '12px', color: COLORS.TEXT_MUTED }}>
-                      {dayjs(proc.createdAt).format('MM/DD/YY')}
+                      {formatClinicInstant(proc.createdAt, clinicTz, 'MM/DD/YY')}
                     </Typography>
                   )}
 {/* Show only dates for recare appointments that include this specific procedure. */}

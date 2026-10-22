@@ -12,10 +12,17 @@ import DoctorPanel from "./DoctorPanel";
 import HygienistPanel from "./HygienistPanel";
 import SliderFooter from "./SliderFooter";
 import { usePatient } from "../../hooks/redux";
+import { useBranch } from "../../hooks/redux/useBranch";
 import { appointmentService } from "../../services/appointment.service";
 import { selectPracticeInfo, fetchCurrentPracticeInfo } from "../../store/slices/practiceInfoSlice";
 import { fetchPatientBalance, selectPatientBalanceCache } from "../../store/slices/patientSlice";
 import { resolveFlagColor } from "../patient-flags/constants";
+import {
+  computeAge,
+  formatBranchDate,
+  formatClinicInstant,
+  resolveClinicTimeZone,
+} from "../../utils/dateUtils";
 
 const EMPTY_APPT = { date: "", time: "", provider: "" };
 
@@ -113,7 +120,7 @@ const getUpcomingAppointments = (appointments = []) =>
       appointment,
       dateTime: getAppointmentDateTime(appointment),
     }))
-    .filter(({ dateTime }) => dateTime && dateTime.isAfter(dayjs()))
+    .filter(({ dateTime }) => dateTime && dateTime.isAfter(dayjs.utc()))
     .sort((a, b) => a.dateTime.valueOf() - b.dateTime.valueOf())
     .map(({ appointment }) => appointment);
 
@@ -146,13 +153,9 @@ const toSliderShape = (patient, globalFlags = []) => {
   const dob =
     patient.dob ||
     (patient.dateOfBirth
-      ? dayjs(patient.dateOfBirth).format("MM/DD/YYYY")
+      ? formatBranchDate(patient.dateOfBirth, "MM/DD/YYYY")
       : "--");
-  const age =
-    patient.age ??
-    (patient.dateOfBirth
-      ? dayjs().diff(dayjs(patient.dateOfBirth), "year")
-      : "--");
+  const age = patient.age ?? computeAge(patient.dateOfBirth) ?? "--";
   const email = patient.email || patient.patientEmail || "-";
   const phone =
     patient.phone ||
@@ -257,6 +260,8 @@ const dynamicTags = (patient.patientFlags || [])
 const PatientSlider = ({ open, onClose, patient }) => {
   const dispatch = useDispatch();
   const { currentPatient } = usePatient();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const sourcePatient = patient || currentPatient;
   const practiceInfo = useSelector(selectPracticeInfo);
   const globalFlags = practiceInfo?.patientFlags || [];
@@ -335,10 +340,10 @@ const PatientSlider = ({ open, onClose, patient }) => {
           familyBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           patientBalance: `$${(cachedBalance.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           lastPatientPay: cachedBalance.lastPaymentDate
-            ? dayjs(cachedBalance.lastPaymentDate).format('MM/DD/YYYY')
+            ? formatClinicInstant(cachedBalance.lastPaymentDate, clinicTz, 'MM/DD/YYYY')
             : 'No payment',
           lastInsPay: cachedBalance.lastInsPayDate
-            ? dayjs(cachedBalance.lastInsPayDate).format('MM/DD/YYYY')
+            ? formatClinicInstant(cachedBalance.lastInsPayDate, clinicTz, 'MM/DD/YYYY')
             : 'No payment',
         }
       : {};

@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { formatBranchDate } from '../../utils/dateUtils';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 import {
@@ -62,10 +63,10 @@ const PatientVitalsTab = ({ patientId }) => {
 
   const formatDateTime = (dateString, timeString) => {
     if (!dateString) return '-';
-    const date = dayjs(dateString).format('MMM DD, YYYY');
+    const date = formatBranchDate(dateString, 'MMM DD, YYYY');
     if (!timeString) return date;
     const [hours, minutes] = timeString.split(':');
-    const time = dayjs().hour(parseInt(hours)).minute(parseInt(minutes));
+    const time = dayjs.utc().hour(parseInt(hours)).minute(parseInt(minutes));
     return `${date} at ${time.format('h:mm A')}`;
   };
 
@@ -154,7 +155,7 @@ const PatientVitalsTab = ({ patientId }) => {
                       </Typography>
                       {vital.appointmentId && (
                         <Typography variant="caption" color="text.secondary">
-                          Appointment: {dayjs(vital.appointmentId.appointmentDate).format('MMM DD, YYYY')}
+                          Appointment: {formatBranchDate(vital.appointmentId.appointmentDate, 'MMM DD, YYYY')}
                         </Typography>
                       )}
                     </Box>

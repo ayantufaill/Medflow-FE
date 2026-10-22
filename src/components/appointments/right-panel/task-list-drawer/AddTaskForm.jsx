@@ -7,7 +7,7 @@ import {
 import { useCreateTask, useTaskLists } from "../../../../hooks/queries/useTasks";
 import { useUsers } from "../../../../hooks/queries/useUsers";
 import { useAuth } from "../../../../contexts/AuthContext";
-import dayjs from "dayjs";
+import { calendarDateStr } from '../../../../utils/dateUtils';
 
 /* ── atoms ─────────────────────────────────────────────────── */
 const FieldLabel = ({ children, required }) => (
@@ -129,7 +129,7 @@ const AddTaskForm = ({ onBack, onClose }) => {
       UserNum: assignedTo || null,
       TaskListNum: taskListNum || null,
       PriorityDefNum: priority || null,
-      DateTask: dueDate ? dayjs(dueDate).format('YYYY-MM-DD') : null,
+      DateTask: dueDate ? calendarDateStr(dueDate) : null,
       IsRepeating: 0,
       ReminderFrequency: 0,
       comment: '',

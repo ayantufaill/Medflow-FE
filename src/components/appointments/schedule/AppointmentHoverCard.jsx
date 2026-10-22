@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import dayjs from "dayjs";
+import { formatBranchDate } from '../../../utils/dateUtils';
 import { Box, Divider, Typography } from "@mui/material";
 import {
   CalendarTodayOutlined, AccessTimeOutlined, PersonOutline, EmailOutlined, PhoneOutlined,
@@ -21,7 +22,8 @@ const getPrivacyName = (fullName) => {
 
 const getAge = (dob) => {
   if (!dob) return "";
-  const age = dayjs().diff(dayjs(dob), 'year');
+  // A date of birth is a calendar day: it never drifts with the host's clock.
+  const age = dayjs.utc(dob).diff(dayjs.utc().endOf('day'), 'year');
   return Number.isNaN(age) ? "" : `(${age})`;
 };
 
@@ -143,7 +145,7 @@ const AppointmentHoverCard = ({
   const top = Math.max(8, Math.min(anchorRect.top, window.innerHeight - CARD_MAX_HEIGHT - 8));
 
   const noteText = appointment.description || appointment.notes || "";
-  const appointmentDate = appointment.date || (appointment.appointmentDate ? dayjs(appointment.appointmentDate).format("MMM D, YYYY") : "");
+  const appointmentDate = appointment.date || (appointment.appointmentDate ? formatBranchDate(appointment.appointmentDate, "MMM D, YYYY") : "");
   const tags = Array.isArray(appointment.tags) ? appointment.tags : [];
   const provider = providerDisplay(appointment.provider || appointment.providerId);
 

@@ -52,6 +52,7 @@ import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { useBranch } from '../../hooks/redux';
 import {
   clinicStartOfDay,
+  formatBranchDate,
   resolveClinicTimeZone,
   isPastDateInClinic,
 } from '../../utils/dateUtils';
@@ -765,7 +766,7 @@ const AppointmentForm = ({
             {availableSlots.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
-                  Available Time Slots for {conflictDate && dayjs(conflictDate).format('MMMM DD, YYYY')}:
+                  Available Time Slots for {conflictDate && formatBranchDate(conflictDate, 'MMMM DD, YYYY')}:
                 </Typography>
                 <Box
                   sx={{

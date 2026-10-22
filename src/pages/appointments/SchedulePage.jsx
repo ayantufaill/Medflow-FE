@@ -29,6 +29,15 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { appointmentService } from '../../services/appointment.service';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
+import { useBranch } from '../../hooks/redux';
+import {
+  branchDateStr,
+  calendarDateStr,
+  clinicDateOffset,
+  formatBranchDate,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from '../../utils/dateUtils';
 
 const SchedulePage = () => {
   const navigate = useNavigate();
@@ -43,6 +52,8 @@ const SchedulePage = () => {
   const [selectedProvider, setSelectedProvider] = useState('');
   const [startDate, setStartDate] = useState(dayjs());
   const [endDate, setEndDate] = useState(dayjs().add(7, 'day'));
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
 
   useEffect(() => {
     // Only fetch if dates are valid
@@ -65,12 +76,12 @@ const SchedulePage = () => {
       // Ensure dates are valid
       const start =
         startDate && dayjs(startDate).isValid()
-          ? dayjs(startDate).format('YYYY-MM-DD')
-          : dayjs().format('YYYY-MM-DD');
+          ? calendarDateStr(startDate)
+          : todayInBranch(clinicTz);
       const end =
         endDate && dayjs(endDate).isValid()
-          ? dayjs(endDate).format('YYYY-MM-DD')
-          : dayjs().add(7, 'day').format('YYYY-MM-DD');
+          ? calendarDateStr(endDate)
+          : clinicDateOffset(clinicTz, 7);
 
       const result = await appointmentService.getAllAppointments(
         1,
@@ -112,15 +123,6 @@ const SchedulePage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    try {
-      return dayjs(dateString).format('MMM DD, YYYY');
-    } catch {
-      return '-';
-    }
-  };
-
   const getStatusColor = (status) => {
     const statusColors = {
       scheduled: 'default',
@@ -137,7 +139,7 @@ const SchedulePage = () => {
   const appointmentsByDate = appointments.reduce((acc, appointment) => {
     if (!appointment || !appointment.appointmentDate) return acc;
     try {
-      const date = dayjs(appointment.appointmentDate).format('YYYY-MM-DD');
+      const date = branchDateStr(appointment.appointmentDate);
       if (date && date !== 'Invalid Date') {
         if (!acc[date]) {
           acc[date] = [];
@@ -294,7 +296,7 @@ const SchedulePage = () => {
                 gutterBottom
                 sx={{ mb: 2 }}
               >
-                {dayjs(date).format('dddd, MMMM DD, YYYY')}
+                {formatBranchDate(date, 'dddd, MMMM DD, YYYY')}
               </Typography>
               <Grid container spacing={2}>
                 {appointmentsByDate[date].map((appointment) => (

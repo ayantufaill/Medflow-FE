@@ -41,6 +41,8 @@ import { portalService } from "../../services/portal.service";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useAuth } from "../../contexts/AuthContext";
 import dayjs from "dayjs";
+import { formatBranchDate, formatClinicInstant, resolveClinicTimeZone } from "../../utils/dateUtils";
+import { useBranch } from "../../hooks/redux";
 import { useDispatch } from "react-redux";
 import { setSelectedAppointmentId } from "../../store/slices/appointmentSlice";
 import { setSelectedPatientId } from "../../store/slices/patientSlice";
@@ -181,6 +183,8 @@ const FormDataViewer = ({ data, depth = 0 }) => {
 const ViewAppointmentPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const { appointmentId } = useParams();
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
@@ -360,13 +364,22 @@ const ViewAppointmentPage = () => {
     window.history.back();
   };
 
+  // The appointment's own date is a clinic wall-clock (pseudo-instant); the
+  // audit stamps (check-in, completion, creation) are real instants and are
+  // shown in the clinic's zone.
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    try {
-      return dayjs(dateString).format("MMM DD, YYYY");
-    } catch {
-      return "-";
-    }
+    return formatBranchDate(dateString, "MMM DD, YYYY");
+  };
+
+  const formatAuditDate = (value) => {
+    if (!value) return "-";
+    return formatClinicInstant(value, clinicTz, "MMM DD, YYYY");
+  };
+
+  const formatAuditTime = (value) => {
+    if (!value) return "-";
+    return formatClinicInstant(value, clinicTz, "HH:mm");
   };
 
   const formatTime = (timeString) => {
@@ -1017,8 +1030,8 @@ const ViewAppointmentPage = () => {
                     Check-in Time
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {formatDate(appointment.checkInAt)} at{" "}
-                    {formatTime(dayjs(appointment.checkInAt).format("HH:mm"))}
+                    {formatAuditDate(appointment.checkInAt)} at{" "}
+                    {formatTime(formatAuditTime(appointment.checkInAt))}
                   </Typography>
                 </Grid>
               )}
@@ -1032,8 +1045,8 @@ const ViewAppointmentPage = () => {
                     Completed Time
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {formatDate(appointment.completedAt)} at{" "}
-                    {formatTime(dayjs(appointment.completedAt).format("HH:mm"))}
+                    {formatAuditDate(appointment.completedAt)} at{" "}
+                    {formatTime(formatAuditTime(appointment.completedAt))}
                   </Typography>
                 </Grid>
               )}
@@ -1062,7 +1075,7 @@ const ViewAppointmentPage = () => {
                     Created At
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
-                    {formatDate(appointment.createdAt)}
+                    {formatAuditDate(appointment.createdAt)}
                   </Typography>
                 </Grid>
               )}
@@ -1108,7 +1121,7 @@ const ViewAppointmentPage = () => {
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <Typography variant="body2" color="text.secondary">DOB</Typography>
                         <Typography variant="body1">
-                          {contextPatient.dateOfBirth ? dayjs(contextPatient.dateOfBirth).format("MMM DD, YYYY") : "N/A"}
+                          {contextPatient.dateOfBirth ? formatBranchDate(contextPatient.dateOfBirth, "MMM DD, YYYY") : "N/A"}
                         </Typography>
                       </Grid>
                     </Grid>
@@ -1189,7 +1202,7 @@ const ViewAppointmentPage = () => {
                             {item.appointmentCode || item._id}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
-                            {item.appointmentDate ? dayjs(item.appointmentDate).format("MMM DD, YYYY") : "N/A"} • {item.startTime || "--"} - {item.endTime || "--"}
+                            {item.appointmentDate ? formatBranchDate(item.appointmentDate, "MMM DD, YYYY") : "N/A"} • {item.startTime || "--"} - {item.endTime || "--"}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
                             Status: {item.status || "scheduled"}

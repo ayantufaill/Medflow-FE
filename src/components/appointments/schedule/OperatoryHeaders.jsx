@@ -1,18 +1,20 @@
 import { Box, Typography, Skeleton } from '@mui/material';
 import { TIME_LABEL_WIDTH, COLUMN_MIN_WIDTH, OPERATORY_COLORS } from './scheduleConstants';
-import { useDropdownData } from '../../../hooks/redux';
+import { useDropdownData, useBranch } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, headingSecondarySx } from '../../../constants/styles';
-import dayjs from 'dayjs';
+import { clinicCivilDate, resolveClinicTimeZone } from '../../../utils/dateUtils';
 
 // OperatoryHeaders renders one column header per room fetched from the API.
 // Colors cycle through OPERATORY_COLORS when there are more rooms than palette entries.
 
 const OperatoryHeaders = ({ rooms, isCloseOpenDayMode, closedOperatories = {}, onToggleOperatoryStatus, selectedDate }) => {
   const { roomsLoading } = useDropdownData({ rooms: true });
-  
-  // Format date once if we have selectedDate - use dayjs for consistent local date parsing
-  const dateStr = selectedDate ? dayjs(selectedDate).format('YYYY-MM-DD') : null;
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
+  // The column headers belong to the clinic's calendar day, not the host's.
+  const dateStr = selectedDate ? clinicCivilDate(selectedDate, clinicTz) : null;
 
   return (
     <Box

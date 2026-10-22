@@ -1,8 +1,11 @@
 import React from "react";
 import { Box, Typography, Chip } from "@mui/material";
 import { EventBusy as EventBusyIcon } from "@mui/icons-material";
-import dayjs from "dayjs";
-import { resolveClinicTimeZone, clinicNow } from "../../../../utils/dateUtils";
+import {
+  resolveClinicTimeZone,
+  formatBranchDate,
+  isPastDateInClinic,
+} from "../../../../utils/dateUtils";
 import { useBranch } from "../../../../hooks/redux";
 import { COLORS } from "../../../../constants/colors";
 import InitialsAvatar from "../../../shared/InitialsAvatar";
@@ -10,7 +13,6 @@ import InitialsAvatar from "../../../shared/InitialsAvatar";
 const FamilyAppointmentsDueTab = ({ recareDueDates, patientId, familyMembers, patient, schedulingDate, schedulingRoomId, allAppointments }) => {
   const { currentBranch } = useBranch();
   const clinicTz = resolveClinicTimeZone(currentBranch);
-  const clinicToday = clinicNow(clinicTz);
 
   const memberIds = [patientId, ...(familyMembers || []).map((m) => m.id || m._id)].filter(Boolean);
 
@@ -30,7 +32,7 @@ const FamilyAppointmentsDueTab = ({ recareDueDates, patientId, familyMembers, pa
   memberIds.forEach((mid) => {
     const codes = recareDueDates?.[mid] || {};
     const needSchedule = Object.entries(codes)
-      .filter(([code, v]) => v?.dueDate && dayjs(v.dueDate).isBefore(clinicToday.startOf('day')) && !isAlreadyCompleted(mid, code))
+      .filter(([code, v]) => v?.dueDate && isPastDateInClinic(v.dueDate, clinicTz) && !isAlreadyCompleted(mid, code))
       .map(([code, v]) => ({ code, ...v }));
     if (needSchedule.length > 0) dueByMember[mid] = needSchedule;
   });
@@ -60,7 +62,7 @@ const FamilyAppointmentsDueTab = ({ recareDueDates, patientId, familyMembers, pa
 
       {schedulingDate && (
         <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY, mb: "8px" }}>
-          Schedule on {dayjs(schedulingDate).format("MMM DD, YYYY")} · Room: {schedulingRoomId}
+          Schedule on {formatBranchDate(schedulingDate, "MMM DD, YYYY")} · Room: {schedulingRoomId}
         </Typography>
       )}
 
@@ -98,7 +100,7 @@ const FamilyAppointmentsDueTab = ({ recareDueDates, patientId, familyMembers, pa
                         {proc.procedureName || proc.code}
                       </Typography>
                       <Typography sx={{ fontSize: "12px", color: COLORS.TEXT_SECONDARY }}>
-                        Due {dayjs(proc.dueDate).format("MMM DD, YYYY")}
+                        Due {formatBranchDate(proc.dueDate, "MMM DD, YYYY")}
                       </Typography>
 </Box>
                      <Chip
