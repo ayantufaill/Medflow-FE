@@ -1,7 +1,7 @@
 import { Box, Typography, Checkbox, IconButton } from "@mui/material";
 import { Delete, KeyboardArrowDown } from "@mui/icons-material";
 import { useDraggable } from "@dnd-kit/core";
-import dayjs from "dayjs";
+import { formatBranchDate, formatBranchTime } from '../../../../utils/dateUtils';
 import { useDropdownData } from "../../../../hooks/redux";
 import { Cell, ColLabel, ProcChip } from "./helpers";
 import DeleteIconImg from "../../../../assets/operatory icons/delete.png";
@@ -77,18 +77,11 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
   const startTime = patient.StartTime || patient.startTime;
   
   const rawPrefDay = patient.PreferredDay || patient.prefDay || "Any";
-  const prefDay = apptDate ? dayjs(apptDate).format("ddd") : (rawPrefDay !== "Any" ? rawPrefDay.substring(0, 3) : "Any");
+  const prefDay = apptDate ? formatBranchDate(apptDate, "ddd") : (rawPrefDay !== "Any" ? rawPrefDay.substring(0, 3) : "Any");
   const rawPrefTime = startTime || patient.PreferredTime || patient.prefTime || "Any";
-  let prefTime = rawPrefTime;
-  if (rawPrefTime !== "Any") {
-    let parsed = dayjs(rawPrefTime);
-    if (!parsed.isValid() && typeof rawPrefTime === 'string' && rawPrefTime.includes(':')) {
-      parsed = dayjs(`2000-01-01T${rawPrefTime}`);
-    }
-    if (parsed.isValid()) {
-      prefTime = parsed.format("hh:mm A");
-    }
-  }
+  // The preferred time is a clinic wall clock ("09:30") or a stored
+  // pseudo-instant — both are read without the host machine's zone.
+  const prefTime = rawPrefTime === "Any" ? "Any" : formatBranchTime(rawPrefTime, "hh:mm A");
   let procs = [];
   const customFields = patient.CustomFields || patient.customFields || {};
   if (customFields.procedures && customFields.procedures.length > 0) {
@@ -104,8 +97,14 @@ const TableRow = ({ patient, checked, onToggle, providersList = [], onDelete }) 
   }
 
   const note = patient.Notes || patient.notes || patient.note || "-";
-  const aptDate = apptDate || patient.aptDate || "-";
-  const nextAptDate = patient.nextAptDate || "-";
+  const aptDate = apptDate
+    ? formatBranchDate(apptDate, "MM/DD/YYYY")
+    : patient.aptDate
+      ? formatBranchDate(patient.aptDate, "MM/DD/YYYY")
+      : "-";
+  const nextAptDate = patient.nextAptDate
+    ? formatBranchDate(patient.nextAptDate, "MM/DD/YYYY")
+    : "-";
 
   return (
     <Box 

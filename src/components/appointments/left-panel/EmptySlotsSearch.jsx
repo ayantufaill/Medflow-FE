@@ -10,15 +10,26 @@ import { fetchAvailableSlots } from '../../../store/slices/appointmentSlice';
 import { useDropdownData } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
+import {
+  formatBranchDate,
+  isPastSlotInClinic,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from '../../../utils/dateUtils';
+import { useBranch } from '../../../hooks/redux';
 import dayjs from 'dayjs';
 
 const EmptySlotsSearch = () => {
   const navigate = useNavigate();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  // The search starts on the clinic's today, not on the host machine's.
+  const clinicToday = todayInBranch(clinicTz);
   const [duration, setDuration] = useState(60);
   const [providerId, setProviderId] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [dateFrom, setDateFrom] = useState(dayjs());
-  const [dateTo, setDateTo] = useState(dayjs().add(1, 'month'));
+  const [dateFrom, setDateFrom] = useState(() => dayjs(clinicToday));
+  const [dateTo, setDateTo] = useState(() => dayjs(clinicToday).add(1, 'month'));
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -64,7 +75,6 @@ const EmptySlotsSearch = () => {
           duration
         })).unwrap().then(result => {
           const rawSlots = result?.availableSlots || [];
-           const now = dayjs();
            const mappedSlots = rawSlots.map(timeStr => {
              const start = dayjs(`${searchDate}T${timeStr}`);
              const end = start.add(duration, 'minute');
@@ -74,10 +84,7 @@ const EmptySlotsSearch = () => {
                endTime: end.format('h:mm A'),
                roomName: ''
              };
-           }).filter(slot => {
-             const slotStart = dayjs(`${slot.date} ${slot.startTime}`, 'YYYY-MM-DD h:mm A');
-             return !slotStart.isBefore(now, 'minute');
-           });
+            }).filter(slot => !isPastSlotInClinic(slot.date, slot.startTime, clinicTz));
           
           // Apply AM/PM filters
           return mappedSlots.filter(slot => {
@@ -134,7 +141,7 @@ const EmptySlotsSearch = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
           {slots.map((slot, idx) => {
             // Attempt to parse a date, defaulting to dateFrom if the API doesn't provide one
-            const slotDate = slot.date ? dayjs(slot.date).format('ddd MM/DD/YY') : dateFrom.format('ddd MM/DD/YY');
+            const slotDate = slot.date ? formatBranchDate(slot.date, 'ddd MM/DD/YY') : dateFrom.format('ddd MM/DD/YY');
             const roomName = slot.roomName || (roomId ? rooms.find(r => (r._id || r.id) === roomId)?.name : 'Op1');
             
             return (
@@ -377,7 +384,7 @@ const EmptySlotsSearch = () => {
                       setDateTo(v);
                     }
                   }}
-                  minDate={dayjs()}
+                  minDate={dayjs(clinicToday)}
                   slotProps={{
                     textField: {
                       size: 'small',
@@ -406,7 +413,7 @@ const EmptySlotsSearch = () => {
                   format="DD/MM/YYYY"
                   value={dateTo}
                   onChange={(v) => setDateTo(v)}
-                  minDate={dateFrom || dayjs()}
+                  minDate={dateFrom || dayjs(clinicToday)}
                   slotProps={{
                     textField: {
                       size: 'small',

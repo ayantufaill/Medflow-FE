@@ -1,17 +1,21 @@
 import { Box, Typography } from '@mui/material';
-import dayjs from 'dayjs';
 import { TIME_LABEL_WIDTH, COLUMN_MIN_WIDTH } from './scheduleConstants';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight } from '../../../constants/styles';
+import { useBranch } from '../../../hooks/redux';
+import { clinicCivilDayjs, clinicNow, resolveClinicTimeZone } from '../../../utils/dateUtils';
 
 const WeekHeaders = ({ selectedDate }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const days = [];
-  const baseDate = dayjs(selectedDate).startOf('week');
+  const baseDate = clinicCivilDayjs(selectedDate, clinicTz).startOf('week');
   for (let i = 0; i < 7; i++) {
     days.push(baseDate.add(i, 'day'));
   }
 
-  const today = dayjs();
+  const today = clinicNow(clinicTz);
 
   return (
     <Box

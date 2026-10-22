@@ -2,6 +2,14 @@ import React, { useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { COLORS } from '../../../constants/colors';
+import { useBranch } from '../../../hooks/redux';
+import {
+  branchDateStr,
+  clinicCivilDayjs,
+  clinicNow,
+  formatBranchTime,
+  resolveClinicTimeZone,
+} from '../../../utils/dateUtils';
 
 const STATUS_COLORS = {
   unconfirmed: "#9e9e9e",
@@ -23,11 +31,13 @@ const WeekMonthCalendarView = ({
   onSlotClick 
 }) => {
   const isMonth = calendarView === 'month';
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
 
   // Generate grid days
   const gridDays = useMemo(() => {
     const days = [];
-    const baseDate = dayjs(selectedDate);
+    const baseDate = clinicCivilDayjs(selectedDate, clinicTz);
     
     if (isMonth) {
       const startOfMonth = baseDate.startOf('month');
@@ -48,15 +58,16 @@ const WeekMonthCalendarView = ({
       }
     }
     return days;
-  }, [selectedDate, isMonth]);
+  }, [selectedDate, isMonth, clinicTz]);
 
   // Group appointments by date string (YYYY-MM-DD)
   const appointmentsByDate = useMemo(() => {
     const grouped = {};
     appointments.forEach(apt => {
-      const startObj = dayjs(apt.start || apt.appointmentDate);
-      if (startObj.isValid()) {
-        const dateStr = startObj.format('YYYY-MM-DD');
+      // Appointment datetimes are pseudo-instants: their UTC components are
+      // the clinic's wall clock, so the date is read in UTC.
+      const dateStr = branchDateStr(apt.start || apt.appointmentDate);
+      if (dateStr) {
         if (!grouped[dateStr]) grouped[dateStr] = [];
         grouped[dateStr].push(apt);
       }
@@ -87,8 +98,8 @@ const WeekMonthCalendarView = ({
         {gridDays.map((dateObj, idx) => {
           const dateStr = dateObj.format('YYYY-MM-DD');
           const dayAppointments = appointmentsByDate[dateStr] || [];
-          const isCurrentMonth = dateObj.month() === dayjs(selectedDate).month();
-          const isToday = dateObj.isSame(dayjs(), 'day');
+          const isCurrentMonth = dateObj.month() === clinicCivilDayjs(selectedDate, clinicTz).month();
+          const isToday = dateStr === clinicNow(clinicTz).format('YYYY-MM-DD');
 
           return (
             <Box 
@@ -154,7 +165,7 @@ const WeekMonthCalendarView = ({
                           fontWeight: 500
                         }}
                       >
-                        {dayjs(apt.start || apt.appointmentDate + 'T' + apt.startTime).format('h:mma').replace(':00', '')} {apt.patientName}
+                        {formatBranchTime(apt.start || apt.appointmentDate, 'h:mma').replace(':00', '')} {apt.patientName}
                       </Typography>
                     </Box>
                   );

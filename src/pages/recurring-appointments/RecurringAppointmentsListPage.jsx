@@ -47,7 +47,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { recurringAppointmentService } from '../../services/recurring-appointment.service';
-import dayjs from 'dayjs';
+import { calendarDateStr } from '../../utils/dateUtils';
 
 const RecurringAppointmentsListPage = () => {
   const navigate = useNavigate();
@@ -84,8 +84,8 @@ const RecurringAppointmentsListPage = () => {
           '',
           isActive,
           searchQuery || '',
-          startDateFilter ? dayjs(startDateFilter).format('YYYY-MM-DD') : '',
-          endDateFilter ? dayjs(endDateFilter).format('YYYY-MM-DD') : ''
+          startDateFilter ? calendarDateStr(startDateFilter) : '',
+          endDateFilter ? calendarDateStr(endDateFilter) : ''
         );
       setRecurringAppointments(result.recurringAppointments || []);
       setTotalEntries(result.pagination?.total || 0);
@@ -179,11 +179,7 @@ const RecurringAppointmentsListPage = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    try {
-      return dayjs(dateString).format('MMM DD, YYYY');
-    } catch {
-      return '-';
-    }
+    return calendarDateStr(dateString, 'MMM DD, YYYY') || '-';
   };
 
   const formatTime = (timeString) => {

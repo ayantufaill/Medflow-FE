@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchSystemSettings, selectSettingsMap } from '../../store/slices/clinicalManagementSlice';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../store/slices/providerSlice';
 import { fetchAllRoomsForDropdown, selectRoomDropdownList } from '../../store/slices/roomSlice';
-import dayjs from 'dayjs';
+import { formatBranchDate, formatBranchTime } from '../../utils/dateUtils';
 
 const parseMoney = (value) => {
   if (typeof value === 'number') return value;
@@ -134,14 +134,14 @@ export const DynamicRouteSlipRenderer = ({ patient, appointment, nextAppointment
   const patientFirst = patient?.firstName || patient?.FName || '';
   const patientLast = patient?.lastName || patient?.LName || '';
   const patientName = `${patientFirst} ${patientLast}`.trim() || patient?.name || '-';
-  const appointmentDate = appointment?.appointmentDate || appointment?.date ? dayjs(appointment?.appointmentDate || appointment?.date) : dayjs();
+  const appointmentDateValue = appointment?.appointmentDate || appointment?.date || null;
 
   let finalHtml = templateHtml;
-  finalHtml = finalHtml.replace(/>Appointment Date</g, `>${appointmentDate.format('dddd MMM DD, YYYY')}<`);
+  finalHtml = finalHtml.replace(/>Appointment Date</g, `>${formatBranchDate(appointmentDateValue, 'dddd MMM DD, YYYY')}<`);
   finalHtml = finalHtml.replace(/>Patient Full Name</g, `>${patientName}<`);
   finalHtml = finalHtml.replace(/>Patient Name</g, `>${patientName}<`);
   finalHtml = finalHtml.replace(/>Patient Address</g, `>${formatAddress(patient)}<`);
-  finalHtml = finalHtml.replace(/>Patient DOB</g, `>${patient?.dateOfBirth ? dayjs(patient.dateOfBirth).format('MM/DD/YYYY') : '-'}<`);
+  finalHtml = finalHtml.replace(/>Patient DOB</g, `>${patient?.dateOfBirth ? formatBranchDate(patient.dateOfBirth, 'MM/DD/YYYY') : '-'}<`);
   finalHtml = finalHtml.replace(/>Patient Email</g, `>${patient?.email || patient?.emailAddress || '-'}<`);
   finalHtml = finalHtml.replace(/>Patient Phone</g, `>${patient?.phonePrimary || patient?.mobileNumber || patient?.phone || '-'}<`);
 
@@ -157,7 +157,7 @@ export const DynamicRouteSlipRenderer = ({ patient, appointment, nextAppointment
   finalHtml = finalHtml.replace(/>Total Ins Est</g, `>${money(totals.ins)}<`);
   finalHtml = finalHtml.replace(/>Total Pt Est</g, `>${money(totals.pt)}<`);
 
-  finalHtml = finalHtml.replace(/>Appt Time</g, `>${appointment?.time || appointment?.startTime || appointmentDate.format('h:mm A')}<`);
+  finalHtml = finalHtml.replace(/>Appt Time</g, `>${appointment?.time || appointment?.startTime || formatBranchTime(appointmentDateValue, 'h:mm A')}<`);
   finalHtml = finalHtml.replace(/>Plan Title</g, `>${planTitle}<`);
 
   const apptProviderId = appointment?.provider || appointment?.providerId || appointment?.dentist || appointment?.dentistId;
@@ -176,7 +176,7 @@ export const DynamicRouteSlipRenderer = ({ patient, appointment, nextAppointment
     const nextDate = nextAppointment.appointmentDate || nextAppointment.date;
     const nextTime = nextAppointment.startTime || nextAppointment.time || '';
     const providerLabel = getProviderLabel(nextAppointment.provider || nextAppointment.providerId, providersList);
-    nextApptHtml = `${dayjs(nextDate).format('dddd MMM DD, YYYY')}${nextTime ? ` at ${nextTime}` : ''}${providerLabel !== '-' ? ` with ${providerLabel}` : ''}`;
+    nextApptHtml = `${formatBranchDate(nextDate, 'dddd MMM DD, YYYY')}${nextTime ? ` at ${nextTime}` : ''}${providerLabel !== '-' ? ` with ${providerLabel}` : ''}`;
   }
   finalHtml = finalHtml.replace(/>Next Appointment Info</g, `>${nextApptHtml}<`);
 

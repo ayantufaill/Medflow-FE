@@ -5,6 +5,8 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { calendarDateStr, clinicDateOffset, resolveClinicTimeZone } from '../../../utils/dateUtils';
+import { useBranch } from '../../../hooks/redux';
 import dayjs from 'dayjs';
 import { 
   Close, DeleteOutline, FormatBold, FormatItalic, FormatAlignLeft, 
@@ -53,10 +55,12 @@ const TEMPLATES = {
 };
 
 const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentId, onSave }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const [labs, setLabs] = useState(DEFAULT_LABS);
   const [selectedLab, setSelectedLab] = useState('1');
   const [template, setTemplate] = useState('none');
-  const [dueDate, setDueDate] = useState(dayjs().add(7, 'day'));
+  const [dueDate, setDueDate] = useState(() => dayjs.utc(clinicDateOffset(clinicTz, 7)));
   const [editorText, setEditorText] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const [notesList, setNotesList] = useState([]);
@@ -287,7 +291,7 @@ const LabOrderModal = ({ open, onClose, procedures = [], patientId, appointmentI
       patientId: String(patientId),
       laboratoryId: String(selectedLab && selectedLab !== 'none' ? selectedLab : (labs[0]?._id || '1')),
       appointmentId: appointmentId ? String(appointmentId) : undefined,
-      dueDate: dueDate ? dayjs(dueDate).format('YYYY-MM-DD') : dayjs().add(7, 'day').format('YYYY-MM-DD'),
+      dueDate: dueDate ? calendarDateStr(dueDate) : clinicDateOffset(clinicTz, 7),
       instructions: combinedNotes || 'Lab order slip created.',
       labFee: calculatedFee,
     };

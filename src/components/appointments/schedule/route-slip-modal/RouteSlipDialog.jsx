@@ -13,10 +13,18 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
+import {
+  branchDateStr,
+  clinicNow,
+  clinicWallClockOf,
+  formatBranchDate,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from '../../../../utils/dateUtils';
 import { COLORS } from '../../../../constants/colors';
 import DynamicRouteSlipRenderer from '../../../common/DynamicRouteSlipRenderer';
 
-import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail } from '../../../../hooks/redux';
+import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail, useBranch } from '../../../../hooks/redux';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectPatientHistoryList, fetchPatientHistory } from '../../../../store/slices/appointmentSlice';
 import {
@@ -41,6 +49,10 @@ const RouteSlipDialog = () => {
   const balanceCache = useSelector(selectPatientBalanceCache);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const dispatch = useDispatch();
+
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const clinicNowVal = clinicNow(clinicTz);
 
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
@@ -104,7 +116,7 @@ const RouteSlipDialog = () => {
 
   const patientName = fullName(currentPatient) || currentPatient?.patientName || 'No patient selected';
   const address = formatAddress(currentPatient?.address || currentPatient?.homeAddress || currentPatient?.contact?.address);
-  const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? dayjs(currentPatient.dateOfBirth || currentPatient.dob).format('MM/DD/YYYY') : '--';
+  const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? formatBranchDate(currentPatient.dateOfBirth || currentPatient.dob, 'MM/DD/YYYY') : '--';
   const email = currentPatient?.email || currentPatient?.emailAddress || currentPatient?.contact?.email || '--';
   const phone = currentPatient?.phonePrimary || currentPatient?.mobileNumber || currentPatient?.mobilePhone || currentPatient?.phone || currentPatient?.mobile || currentPatient?.contact?.phone || '--';
 
@@ -168,14 +180,14 @@ const RouteSlipDialog = () => {
     if (appt.appointmentDate) {
       dateStr = appt.appointmentDate.split('T')[0];
     } else if (appt.start) {
-      dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : branchDateStr(appt.start);
     } else {
-      dateStr = dayjs().format('YYYY-MM-DD');
+      dateStr = todayInBranch(clinicTz); // fallback: the clinic's current day
     }
 
     let timeStr = '00:00';
     if (appt.time) {
-      const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+      const timeObj = dayjs.utc(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
       if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
     } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
       timeStr = appt.startTime;
@@ -184,7 +196,7 @@ const RouteSlipDialog = () => {
       timeStr = appt.start.split('T')[1].substring(0, 8);
     }
 
-    return dayjs(`${dateStr}T${timeStr}`);
+    return dayjs.utc(`${dateStr}T${timeStr}`);
   };
 
   // If we have an active appointment in Redux and it belongs to this patient, use it
@@ -196,20 +208,27 @@ const RouteSlipDialog = () => {
     // Fallback: look for an appointment today
     const todayAppts = patientHistory.filter(appt => {
       const appointmentDateTime = getApptDateTime(appt);
-      return appointmentDateTime.isSame(dayjs(), 'day') && appointmentDateTime.isAfter(dayjs());
+      // The stored slot is a pseudo-instant; it is compared as the clinic's
+      // wall clock, never against the host machine's clock.
+      return (
+        branchDateStr(appointmentDateTime) === todayInBranch(clinicTz) &&
+        clinicWallClockOf(appointmentDateTime, clinicTz).isAfter(clinicNowVal)
+      );
     });
     if (todayAppts.length > 0) {
-      todayAppts.sort((a, b) => dayjs(a.appointmentDate || a.start).diff(dayjs(b.appointmentDate || b.start)));
+      todayAppts.sort((a, b) => dayjs.utc(a.appointmentDate || a.start).diff(dayjs.utc(b.appointmentDate || b.start)));
       routeSlipAppt = todayAppts[0];
     }
   }
 
-  const primaryDateStr = routeSlipAppt ? dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('dddd MMM DD, YYYY') : dayjs().format('dddd MMM DD, YYYY');
-  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('MM/DD/YYYY')}` : `APPOINTMENT OF ${dayjs().format('MM/DD/YYYY')}`;
+  const primaryDateStr = routeSlipAppt ? formatBranchDate(routeSlipAppt.appointmentDate || routeSlipAppt.start, 'dddd MMM DD, YYYY') : clinicNowVal.format('dddd MMM DD, YYYY');
+  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${formatBranchDate(routeSlipAppt.appointmentDate || routeSlipAppt.start, 'MM/DD/YYYY')}` : `APPOINTMENT OF ${clinicNowVal.format('MM/DD/YYYY')}`;
 
   // Next appointment is the first one strictly after the primary appointment
-  const referenceDateTime = routeSlipAppt ? getApptDateTime(routeSlipAppt) : dayjs();
-  const now = dayjs();
+  const referenceDateTime = routeSlipAppt
+    ? clinicWallClockOf(getApptDateTime(routeSlipAppt), clinicTz)
+    : clinicNowVal;
+  const now = clinicNowVal;
   const futureAppts = patientHistory.filter(appt => {
     // Exclude the primary appointment itself safely
     if (routeSlipAppt) {
@@ -217,7 +236,7 @@ const RouteSlipDialog = () => {
       const rId = routeSlipAppt._id || routeSlipAppt.id;
       if (aId && rId && String(aId) === String(rId)) return false;
     }
-    const appointmentDateTime = getApptDateTime(appt);
+    const appointmentDateTime = clinicWallClockOf(getApptDateTime(appt), clinicTz);
     return appointmentDateTime.isAfter(now) && appointmentDateTime.isAfter(referenceDateTime);
   });
   futureAppts.sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
@@ -245,7 +264,7 @@ const RouteSlipDialog = () => {
       return {
         ...p,
         status: p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete' ? 'Completed' : 'Scheduled',
-        scheduled: dayjs(appt.appointmentDate || appt.start || appt.date).format('MM/DD/YYYY'),
+        scheduled: formatBranchDate(appt.appointmentDate || appt.start || appt.date, 'MM/DD/YYYY'),
         site: p.site || p.tooth || '-',
         code,
         description,

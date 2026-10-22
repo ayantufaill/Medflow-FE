@@ -50,6 +50,12 @@ import { waitlistService } from '../../services/waitlist.service';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 import { useBranch } from '../../hooks/redux';
+import {
+  clinicStartOfDay,
+  formatBranchDate,
+  resolveClinicTimeZone,
+  isPastDateInClinic,
+} from '../../utils/dateUtils';
 import { useDispatch } from 'react-redux';
 import { fetchAppointments, fetchAvailableSlots } from '../../store/slices/appointmentSlice';
 import { fetchPatientInsurances } from '../../store/slices/patientSlice';
@@ -91,8 +97,10 @@ const AppointmentForm = ({
 }) => {
   // Branch picker — narrows the provider/room dropdowns below once selected.
   // Optional: omitted, the backend derives the appointment's branch from its room.
-  const { branches, fetchBranches: loadBranches } = useBranch();
+  const { branches, currentBranch, fetchBranches: loadBranches } = useBranch();
   const [selectedBranchId, setSelectedBranchId] = useState(initialData?.branchId || '');
+  const activeBranch = branches?.find((b) => String(b.id) === String(selectedBranchId)) || currentBranch;
+  const clinicTz = resolveClinicTimeZone(activeBranch);
 
   useEffect(() => {
     if (branches.length === 0) loadBranches();
@@ -632,9 +640,13 @@ const AppointmentForm = ({
       return timeValue.format('HH:mm');
     };
 
-    if (formData.appointmentDate && dayjs.isDayjs(formData.appointmentDate)) {
-      const today = dayjs().startOf('day');
-      if (formData.appointmentDate.isBefore(today)) {
+    if (formData.appointmentDate) {
+      const dateStr = typeof formData.appointmentDate === 'string'
+        ? formData.appointmentDate
+        : dayjs.isDayjs(formData.appointmentDate)
+          ? formData.appointmentDate.format('YYYY-MM-DD')
+          : '';
+      if (dateStr && isPastDateInClinic(dateStr, clinicTz)) {
         setError('appointmentDate', {
           type: 'manual',
           message: 'Appointment date cannot be in the past',
@@ -754,7 +766,7 @@ const AppointmentForm = ({
             {availableSlots.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
-                  Available Time Slots for {conflictDate && dayjs(conflictDate).format('MMMM DD, YYYY')}:
+                  Available Time Slots for {conflictDate && formatBranchDate(conflictDate, 'MMMM DD, YYYY')}:
                 </Typography>
                 <Box
                   sx={{
@@ -1133,7 +1145,7 @@ const AppointmentForm = ({
                 <DatePicker
                   {...field}
                   label="Appointment Date *"
-                  minDate={dayjs()}
+                  minDate={clinicStartOfDay(clinicTz)}
                   views={['year', 'month', 'day']}
                   slotProps={{
                     textField: {

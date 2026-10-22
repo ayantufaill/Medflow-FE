@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, Typography, InputBase, CircularProgress } from '@mui/material';
 import { Search, Clear } from '@mui/icons-material';
 import { useDebounce } from 'use-debounce';
-import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../utils/dateUtils';
 import { usePatients, usePatient } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
@@ -131,7 +131,7 @@ const PatientSearch = () => {
           {patients.map((patient) => {
             const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim();
             const patientId = patient.patientCode || patient.patientNumber || patient._id?.slice(-6);
-            const dobStr = patient.dateOfBirth ? dayjs(patient.dateOfBirth).format('MM/DD/YYYY') : '';
+            const dobStr = patient.dateOfBirth ? formatBranchDate(patient.dateOfBirth, 'MM/DD/YYYY') : '';
             const emailStr = patient.email || '';
             const infoLine = [dobStr ? `DOB: ${dobStr}` : '', emailStr].filter(Boolean).join(' • ');
 

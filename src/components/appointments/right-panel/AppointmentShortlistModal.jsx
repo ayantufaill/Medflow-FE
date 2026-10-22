@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, CircularProgress, Box } from "@mui/material";
-import dayjs from "dayjs";
 import { shortlistService } from "../../../services/shortlist.service";
+import { formatBranchDate } from "../../../utils/dateUtils";
 import { useDropdownData } from "../../../hooks/redux";
 import ShortlistModalHeader from "./shortlist-modal/ShortlistModalHeader";
 import ShortlistTabs from "./shortlist-modal/ShortlistTabs";
@@ -100,7 +100,7 @@ const AppointmentShortlistModal = ({ open, onClose }) => {
       if (filters.prefDay) {
         const apptDate = p.AppointmentDate || p.appointmentDate;
         const rawPrefDay = p.PreferredDay || p.prefDay || "Any";
-        const day = apptDate ? dayjs(apptDate).format("dddd") : rawPrefDay;
+        const day = apptDate ? formatBranchDate(apptDate, "dddd") : rawPrefDay;
         if (filters.prefDay !== "Any" && day !== filters.prefDay && day.substring(0, 3) !== filters.prefDay.substring(0, 3)) return false;
       }
 

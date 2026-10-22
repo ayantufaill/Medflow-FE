@@ -21,6 +21,16 @@ import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
+import {
+  clinicNow,
+  resolveClinicTimeZone,
+  isPastDateInClinic,
+  todayInBranch,
+  clinicDateOffset,
+  clinicWallClockAt,
+  clinicWallClockOf,
+  branchDateStr,
+} from "../../utils/dateUtils";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -59,11 +69,29 @@ const AddNewPatientAppointmentForm = ({
       : initialPatient || null,
   );
 
+  const [branchId, setBranchId] = useState(
+    initialShortlistData?.BranchId
+      ? String(initialShortlistData.BranchId)
+      : initialAppointment?.branchId
+        ? String(initialAppointment.branchId)
+        : "",
+  );
+  const { branches, currentBranch, fetchBranches: loadBranches } = useBranch();
+  const activeBranch = branches?.find((b) => String(b.id) === String(branchId)) || currentBranch;
+  const clinicTz = resolveClinicTimeZone(activeBranch);
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Parse shortlist date/time if available
-  const defaultInitialDateTime = initialDateTime || dayjs().add(30, "minute");
+  const defaultInitialDateTime = initialDateTime || clinicNow(clinicTz).add(30, "minute");
   let parsedDate = defaultInitialDateTime;
   if (initialShortlistData?.AppointmentDate) {
-    let d = dayjs(initialShortlistData.AppointmentDate);
+    // The stored datetime is a pseudo-instant: its UTC components are the
+    // clinic's wall clock, so it is re-anchored to the branch's zone.
+    let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
     if (initialShortlistData.StartTime) {
       const [h, m] = initialShortlistData.StartTime.split(":");
       d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -112,20 +140,6 @@ const AddNewPatientAppointmentForm = ({
     initialShortlistData?.DurationMins || 60,
   );
 
-  // Branch — optional, narrows the Operatory/Provider pickers below once picked.
-  // Omitted, the backend derives the appointment's branch from its room.
-  const [branchId, setBranchId] = useState(
-    initialShortlistData?.BranchId
-      ? String(initialShortlistData.BranchId)
-      : initialAppointment?.branchId
-        ? String(initialAppointment.branchId)
-        : "",
-  );
-  const { branches, fetchBranches: loadBranches } = useBranch();
-  useEffect(() => {
-    if (branches.length === 0) loadBranches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // Same global cache the page-level dropdown data uses (see OperatorySchedulePage) —
   // resolves to the same unfiltered lists when branchId is empty, or a freshly
   // fetched branch-filtered list once one is picked. Scoped to this modal only;
@@ -260,7 +274,7 @@ const AddNewPatientAppointmentForm = ({
   const isFuture = useMemo(() => {
     if (!isExistingAppointment) return false;
     if (!selectedStart || !selectedStart.isValid()) return false;
-    return dayjs().isBefore(selectedStart);
+    return clinicNow(clinicTz).isBefore(selectedStart);
   }, [isExistingAppointment, selectedStart]);
 
   const isStatusLocked = useMemo(() => {
@@ -514,7 +528,7 @@ const AddNewPatientAppointmentForm = ({
 
           setPatient(fullPatient || mockPatient);
 
-          let parsedDate = dayjs();
+          let parsedDate = clinicNow(clinicTz);
           const rawDate =
             sourceAppt.appointmentDate ||
             initialAppointment.date ||
@@ -524,7 +538,7 @@ const AddNewPatientAppointmentForm = ({
               typeof rawDate === "string" && rawDate.includes("T")
                 ? rawDate.split("T")[0]
                 : rawDate;
-            parsedDate = dayjs(dateStr);
+            parsedDate = clinicWallClockAt(dateStr, "00:00", clinicTz);
           }
 
           const timeStr =
@@ -902,9 +916,9 @@ const AddNewPatientAppointmentForm = ({
           }
         }
 
-        let parsedDate = dayjs().add(30, "minute");
+        let parsedDate = clinicNow(clinicTz).add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
-          let d = dayjs(initialShortlistData.AppointmentDate);
+          let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
           if (initialShortlistData.StartTime) {
             const [h, m] = initialShortlistData.StartTime.split(":");
             d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -1108,7 +1122,7 @@ const AddNewPatientAppointmentForm = ({
           setSelectedColorTags(new Set());
         }
       } else {
-        const defaultDate = initialDateTime || dayjs().add(30, "minute");
+        const defaultDate = initialDateTime || clinicNow(clinicTz).add(30, "minute");
         setPatient(initialPatient || null);
         setApptDate(defaultDate);
         setTimeHours(defaultDate.format("hh"));
@@ -1184,7 +1198,7 @@ const AddNewPatientAppointmentForm = ({
     const raw = appointment?.rawAppointment || appointment;
     const date = raw?.appointmentDate || raw?.date;
     const time = raw?.startTime || "00:00";
-    const parsed = date ? dayjs(`${dayjs(date).format("YYYY-MM-DD")}T${time}`) : null;
+    const parsed = date ? dayjs.utc(`${branchDateStr(date)}T${time}`) : null;
     return parsed?.isValid() ? parsed.valueOf() : 0;
   };
 
@@ -1328,8 +1342,8 @@ const AddNewPatientAppointmentForm = ({
     const h = parseInt(timeHours || "9", 10);
     const m = parseInt(timeMins || "0", 10);
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
-    return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
-  }, [apptDate, timeHours, timeMins, amPm]);
+    return (apptDate || clinicNow(clinicTz)).hour(hour24).minute(m).second(0);
+  }, [apptDate, timeHours, timeMins, amPm, clinicTz]);
 
   useEffect(() => {
     if (!open || isRecareTemplate || isExistingAppointment) return;
@@ -1615,8 +1629,9 @@ const AddNewPatientAppointmentForm = ({
       })
       .filter((tag) => tag.label);
 
-    const start = dateTime || dayjs();
-    if (!initialAppointment && start.isBefore(dayjs().startOf("day"))) {
+    const start = dateTime || clinicNow(clinicTz);
+    const dateStr = start.format("YYYY-MM-DD");
+    if (!initialAppointment && isPastDateInClinic(dateStr, clinicTz)) {
       setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }
@@ -2022,7 +2037,7 @@ const AddNewPatientAppointmentForm = ({
       patientId: String(patientId),
       laboratoryId: laboratoryId || "1",
       appointmentId: apptId ? String(apptId) : undefined,
-      dueDate: form.estReceiveDate || dayjs().add(7, "day").format("YYYY-MM-DD"),
+      dueDate: form.estReceiveDate || clinicDateOffset(clinicTz, 7),
       instructions,
       labFee: parseFloat(form.labFee) || 0,
       providerNum: form.provider ? String(form.provider) : undefined,

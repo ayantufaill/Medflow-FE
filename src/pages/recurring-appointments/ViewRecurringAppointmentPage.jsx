@@ -16,7 +16,7 @@ import {
 } from "@mui/icons-material";
 import { recurringAppointmentService } from "../../services/recurring-appointment.service";
 import { useSnackbar } from "../../contexts/SnackbarContext";
-import dayjs from "dayjs";
+import { calendarDateStr } from "../../utils/dateUtils";
 
 const ViewRecurringAppointmentPage = () => {
   const navigate = useNavigate();
@@ -110,11 +110,7 @@ const ViewRecurringAppointmentPage = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    try {
-      return dayjs(dateString).format("MMM DD, YYYY");
-    } catch {
-      return "-";
-    }
+    return calendarDateStr(dateString, "MMM DD, YYYY") || "-";
   };
 
   const formatTime = (timeString) => {

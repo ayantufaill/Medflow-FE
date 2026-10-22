@@ -19,6 +19,7 @@ import {
   EventBusy as EventBusyIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone, todayInBranch, branchDateStr, clinicDateOffset } from "../../../../utils/dateUtils";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchFamilyAppointments,
@@ -34,7 +35,7 @@ import {
 import { fetchCurrentPracticeInfo } from "../../../../store/slices/practiceInfoSlice";
 import { COLORS } from "../../../../constants/colors";
 import { fontWeight } from "../../../../constants/styles";
-import { usePatient, useScheduleState, useAppointmentDetail } from "../../../../hooks/redux";
+import { usePatient, useScheduleState, useAppointmentDetail, useBranch } from "../../../../hooks/redux";
 
 import FamilyAppointmentsScheduledTab from './FamilyAppointmentsScheduledTab';
 import FamilyAppointmentsDueTab from './FamilyAppointmentsDueTab';
@@ -42,6 +43,10 @@ import medflowLogo from '../../../../assets/medflow-logo.png';
 
 const FamilyAppointmentsDialog = () => {
   const [tabValue, setTabValue] = useState(0);
+
+  // ── Clinic timezone ────────────────────────────────────────────────────────
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const [selectedProcedures, setSelectedProcedures] = useState({});
 
   const dispatch = useDispatch();
@@ -88,7 +93,7 @@ const FamilyAppointmentsDialog = () => {
   const handleScheduleSubmit = () => {
     let slotOffset = 0;
     const dispatchPromises = [];
-    const dateStr = schedulingDate || dayjs().format("YYYY-MM-DD");
+    const dateStr = schedulingDate || todayInBranch(clinicTz);
     
     const sourceApptIdFallback = currentAppointment?.id || currentAppointment?._id || currentAppointment?.appointmentId || currentAppointment?.AptNum;
 
@@ -99,7 +104,8 @@ const FamilyAppointmentsDialog = () => {
       const startHour = schedulingTime ? schedulingTime.hour : 9;
       const startMins = schedulingTime ? schedulingTime.mins : 0;
       
-      const slotStart = dayjs(dateStr).hour(startHour).minute(startMins).add(slotOffset, 'minute');
+      // Build slot time using a plain date-string to keep it timezone-neutral
+      const slotStart = dayjs(`${dateStr}T${String(startHour).padStart(2,'0')}:${String(startMins).padStart(2,'0')}:00`).add(slotOffset, 'minute');
 
       const allMembers = [patient, ...(familyMembers || [])].filter(Boolean);
       const memberObj = allMembers.find(m => (m.id || m._id) === mid);
@@ -210,7 +216,9 @@ const FamilyAppointmentsDialog = () => {
           appointments: allAppointments.filter(
             (appt) =>
               getApptPatientId(appt) === memberId &&
-              dayjs(appt.appointmentDate).isAfter(dayjs().subtract(1, "day"), "day")
+              // From the clinic's yesterday onwards (appointment datetimes are
+              // pseudo-instants, so their UTC date is the clinic's date).
+              branchDateStr(appt.appointmentDate) >= clinicDateOffset(clinicTz, -1)
           ),
         };
       })

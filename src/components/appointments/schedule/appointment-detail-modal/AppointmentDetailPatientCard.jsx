@@ -6,12 +6,17 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
+import { formatBranchDate, resolveClinicTimeZone, todayInBranch } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 
 const AppointmentDetailPatientCard = ({ 
   initials, patientName, patientCode, phone, email, insurance, visitType,
   editDate, setEditDate, editTime, setEditTime, editAmPm, setEditAmPm,
   roomId, scheduledBy, isRescheduling
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   return (
     <Box sx={{ width: '835px', height: '188px', border: '1px solid #e2e8f0', borderRadius: '12px', p: '20px', flexShrink: 0, boxSizing: 'border-box', position: 'relative' }}>
       
@@ -64,7 +69,7 @@ const AppointmentDetailPatientCard = ({
               <Box sx={{ height: '36px', display: 'flex', alignItems: 'center' }}>
                 <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter', fontSize: '14px', fontWeight: 500, color: '#0f172a' }}>
                   <CalendarTodayOutlined sx={{ fontSize: '16px', color: '#64748b' }} />
-                  {editDate ? editDate.format('MMM D, YYYY') : dayjs().format('MMM D, YYYY')}
+                  {editDate ? editDate.format('MMM D, YYYY') : formatBranchDate(todayInBranch(clinicTz), 'MMM D, YYYY')}
                 </Typography>
               </Box>
             ) : (
@@ -153,7 +158,7 @@ const AppointmentDetailPatientCard = ({
           <Box sx={{ height: '36px', display: 'flex', alignItems: 'center' }}>
             <Typography sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter', fontSize: '14px', fontWeight: 500, color: '#0f172a', whiteSpace: 'nowrap' }}>
               <PersonOutline sx={{ fontSize: '16px', color: '#64748b' }} />
-              {scheduledBy || 'Front Desk'} · {dayjs().format('MM/DD/YYYY')}
+              {scheduledBy || 'Front Desk'} · {formatBranchDate(todayInBranch(clinicTz), 'MM/DD/YYYY')}
             </Typography>
           </Box>
         </Box>

@@ -21,7 +21,20 @@ import {
   useAppointmentList,
   useDropdownData,
   usePatient,
+  useBranch,
 } from "../../../hooks/redux";
+import {
+  isPastDateInClinic,
+  isTodayInClinic,
+  isPastSlotInClinic,
+  resolveClinicTimeZone,
+  formatBranchDateLong,
+  formatBranchDate,
+  formatBranchTime,
+  branchDateStr,
+  clinicCivilDate,
+  clinicCivilDayjs,
+} from "../../../utils/dateUtils";
 import { COLORS } from "../../../constants/colors";
 import { fontSize, fontWeight } from "../../../constants/styles";
 import CompactAppointmentPoint from "./CompactAppointmentPoint";
@@ -125,11 +138,13 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
   // Safari strict parsing fix: append seconds if missing
   const safeStartTime = appt.startTime?.length === 5 ? `${appt.startTime}:00` : appt.startTime;
   const safeEndTime = appt.endTime?.length === 5 ? `${appt.endTime}:00` : appt.endTime;
-  const displayTime = dayjs(`2000-01-01T${safeStartTime}`).format("h:mm A");
-  const displayEndTime = dayjs(`2000-01-01T${safeEndTime}`).format("h:mm A");
+  const displayTime = formatBranchTime(safeStartTime, "h:mm A");
+  const displayEndTime = formatBranchTime(safeEndTime, "h:mm A");
   const displayDate = appt.appointmentDate
-    ? dayjs(appt.appointmentDate).format("MMM D, YYYY")
+    ? formatBranchDateLong(appt.appointmentDate)
     : "";
+  // YYYY-MM-DD key used for week-view column lookup (separate from displayDate which is human-readable)
+  const dateStr = appt.appointmentDate ? branchDateStr(appt.appointmentDate) : "";
 
   const statusKey = (appt.status || "unconfirmed").toLowerCase();
 
@@ -191,7 +206,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
       patientData?.chartNumber ||
       "",
     patientDob: patientData?.dateOfBirth
-      ? dayjs(patientData.dateOfBirth).format("MMM D, YYYY")
+      ? formatBranchDate(patientData.dateOfBirth, "MMM D, YYYY")
       : "",
     patientPhone:
       patientData?.phonePrimary ||
@@ -202,6 +217,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     time: displayTime,
     endTime: displayEndTime,
     date: displayDate,
+    dateStr,  // YYYY-MM-DD – used for week-view column lookup
     status: statusKey.toUpperCase(),
     startHour,
     startMinute,
@@ -267,13 +283,11 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
     <Box
       ref={setNodeRef}
       onClick={(e) => {
-        if (isCloseOpenDayMode || isClosed || isPast) return;
+        // Week view (and month view) do not support click-to-create.
+        // Creating an appointment from those views requires using the + button.
+        if (isCloseOpenDayMode || isClosed || isPast || isWeek) return;
         e.stopPropagation();
-        if (isWeek) {
-          if (onSlotClick) onSlotClick(hour, mins, roomId);
-        } else {
-          setActiveCell({ hour, mins, roomId });
-        }
+        setActiveCell({ hour, mins, roomId });
       }}
       sx={{
         flex: 1,
@@ -288,14 +302,14 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
           borderBottom: mins !== 50 ? '1px dashed rgba(203, 213, 225, 0.8)' : 'none',
         },
         '&:hover': {
-          backgroundColor: (isCloseOpenDayMode || isClosed || isPast) ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
+          backgroundColor: (isCloseOpenDayMode || isClosed || isPast || isWeek) ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
         },
       }}
     />
   );
 };
 
-const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek, isPastDate, isToday, selectedDate }) => {
+const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick, onBlockClick, isClosed, isCloseOpenDayMode, isWeek, isPastDate, isToday, selectedDate, clinicTz }) => {
   const roomId = room._id || room.id || room.roomCode || `op${idx + 1}`;
 
   // For a past date, the entire cell is past
@@ -325,10 +339,8 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
       }}
     >
       {PORTION_MINUTES.map((mins) => {
-        // For today: check if this specific 10-min slot has passed
-        const slotIsPast = isPastDate || (isToday && dayjs().isAfter(
-          dayjs(selectedDate).startOf('day').hour(hour).minute(mins)
-        ));
+        const timeStr = `${String(hour).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        const slotIsPast = isPastDate || isPastSlotInClinic(selectedDate, timeStr, clinicTz);
 
         return (
           <PortionDroppableZone
@@ -347,7 +359,7 @@ const DroppableCell = ({ hour, room, idx, activeCell, setActiveCell, onSlotClick
       })}
 
       {/* Active cell options popup — hidden for past slots */}
-      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && !(isPastDate || (isToday && dayjs().isAfter(dayjs(selectedDate).startOf('day').hour(activeCell.hour).minute(activeCell.mins)))) && (
+      {activeCell && activeCell.hour === hour && activeCell.roomId === roomId && !(isPastDate || isPastSlotInClinic(selectedDate, `${String(activeCell.hour).padStart(2, '0')}:${String(activeCell.mins).padStart(2, '0')}`, clinicTz)) && (
         <Box
           sx={{
             position: 'absolute',
@@ -421,9 +433,12 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
   const dispatch = useDispatch();
   const [activeCell, setActiveCell] = useState(null);
   const { calendarView, selectedDate, frontendFilters } = useScheduleState();
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const rawAppointments = useSelector((state) => state.appointment.list);
   const loading = useSelector((state) => state.appointment.listLoading);
-  const dayjsDate = dayjs(selectedDate);
+  const dayjsDate = clinicCivilDayjs(selectedDate, clinicTz);
+  const clinicDate = clinicCivilDate(selectedDate, clinicTz);
   const viewUnit = calendarView === "day" ? "day" : calendarView;
   const startDate = dayjsDate.startOf(viewUnit).format("YYYY-MM-DD");
   const endDate = dayjsDate.endOf(viewUnit).add(1, 'day').format("YYYY-MM-DD");
@@ -457,7 +472,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
       cols.push({ id: d.format('YYYY-MM-DD'), label: d.format('ddd') });
     }
     return cols;
-  }, [isWeek, selectedDate]);
+  }, [isWeek, dayjsDate]);
 
   const activeColumns = isWeek ? weekColumns : rooms;
 
@@ -529,7 +544,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
     const blocks = scheduleBlocks.map(block => {
       if (!block.startTime || !block.endTime) return null;
 
-      const blockDate = dayjs(block.date).format("YYYY-MM-DD");
+      const blockDate = branchDateStr(block.date);
       const isBlockDateValid = isWeek
         ? (blockDate >= weekStart && blockDate <= weekEnd)
         : (blockDate === targetDate);
@@ -565,7 +580,7 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
     }).filter(Boolean);
 
     return [...appts, ...blocks];
-  }, [rawAppointments, selectedDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
+  }, [rawAppointments, dayjsDate, providerMap, scheduleBlocks, frontendFilters, isWeek]);
 
   // Total grid width grows with the number of active columns.
   const totalWidth = TIME_LABEL_WIDTH + (activeColumns.length || 1) * COLUMN_MIN_WIDTH;
@@ -612,10 +627,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
           {/* One cell per column */}
           {activeColumns.map((col, idx) => {
             const roomId = `op${col._id || col.id}`;
-            const dateStr = dayjsDate.format('YYYY-MM-DD');
+            // In the week view each column is a day of the clinic's week.
+            const dateStr = isWeek && col.id ? col.id : dayjsDate.format('YYYY-MM-DD');
             const isClosed = closedOperatories[`${dateStr}:${roomId}`];
-            const isPastDate = dayjs(dateStr).isBefore(dayjs(), 'day');
-            const isToday = dayjs(dateStr).isSame(dayjs(), 'day');
+            const isPastDate = isPastDateInClinic(dateStr, clinicTz);
+            const isToday = isTodayInClinic(dateStr, clinicTz);
 
             return (
               <DroppableCell
@@ -632,7 +648,8 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
                 isWeek={isWeek}
                 isPastDate={isPastDate}
                 isToday={isToday}
-                selectedDate={selectedDate}
+                selectedDate={dateStr}
+                clinicTz={clinicTz}
               />
             );
           })}
@@ -665,8 +682,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
         if (isWeek) {
           const weekGroups = {};
           visibleAppointments.forEach((gridItem) => {
-            const apptDateStr = dayjs(gridItem.date).format('YYYY-MM-DD');
-            const colIndex = colIndexMap[apptDateStr] ?? 0;
+            // gridItem.date is a display string ("Oct 22, 2026"); use the dedicated
+            // YYYY-MM-DD dateStr field for column lookup so it matches colIndexMap keys.
+            const apptDateStr = gridItem.dateStr || branchDateStr(gridItem.rawAppointment?.appointmentDate);
+            const colIndex = colIndexMap[apptDateStr] ?? -1;
+            if (colIndex === -1) return; // appointment doesn't belong to this week – skip
             const pos = getGridPosition(gridItem, colIndex);
 
             // Group by the exact top position (or 30 min block)

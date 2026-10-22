@@ -12,7 +12,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import ScienceIcon from '@mui/icons-material/Science';
 import { COLORS } from '../../../../constants/colors';
-import dayjs from 'dayjs';
+import { resolveClinicTimeZone, clinicNow, formatBranchDate } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 import { labCaseService } from '../../../../services/lab-case.service';
 
 import LabCasesFilters from './LabCasesFilters';
@@ -20,16 +21,19 @@ import LabCasesActions from './LabCasesActions';
 import LabCasesTable from './LabCasesTable';
 
 const LabCasesDialog = ({ open, onClose }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const [labCases, setLabCases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0 });
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     status: 'Select Status',
     includeInactive: false,
     dateRange: 'Range',
-    startDate: dayjs().subtract(30, 'day'),
-    endDate: dayjs().add(30, 'day')
-  });
+    startDate: clinicNow(clinicTz).subtract(30, 'day'),
+    endDate: clinicNow(clinicTz).add(30, 'day')
+  }));
   const [sortConfig, setSortConfig] = useState({ key: 'dueDate', order: 'asc' });
   const [expandedNotes, setExpandedNotes] = useState(false);
 
@@ -68,8 +72,8 @@ const LabCasesDialog = ({ open, onClose }) => {
         status: 'Select Status',
         includeInactive: false,
         dateRange: 'Range',
-        startDate: dayjs().subtract(30, 'day'),
-        endDate: dayjs().add(30, 'day')
+        startDate: clinicNow(clinicTz).subtract(30, 'day'),
+        endDate: clinicNow(clinicTz).add(30, 'day')
       });
       setSortConfig({ key: 'dueDate', order: 'asc' });
       setPagination({ page: 1, limit: 25, total: 0 });
@@ -96,9 +100,9 @@ const LabCasesDialog = ({ open, onClose }) => {
       ...labCases.map(lc => [
         `"${(lc.patient?.name || '').replace(/"/g, '""')}"`,
         `"${(lc.laboratory?.name || '').replace(/"/g, '""')}"`,
-        `"${lc.dueDate ? dayjs(lc.dueDate).format('MM/DD/YYYY') : ''}"`,
-        `"${lc.appointmentDate ? dayjs(lc.appointmentDate).format('MM/DD/YYYY') : ''}"`,
-        `"${lc.sentDate ? dayjs(lc.sentDate).format('MM/DD/YYYY') : ''}"`,
+        `"${lc.dueDate ? formatBranchDate(lc.dueDate, 'MM/DD/YYYY') : ''}"`,
+        `"${lc.appointmentDate ? formatBranchDate(lc.appointmentDate, 'MM/DD/YYYY') : ''}"`,
+        `"${lc.sentDate ? formatBranchDate(lc.sentDate, 'MM/DD/YYYY') : ''}"`,
         `"${(lc.status || '').replace(/"/g, '""')}"`,
         `"${(lc.instructions || '').replace(/<[^>]*>?/gm, '').replace(/"/g, '""')}"`
       ].join(','))
@@ -110,7 +114,7 @@ const LabCasesDialog = ({ open, onClose }) => {
 
     const a = document.createElement('a');
     a.setAttribute('href', url);
-    a.setAttribute('download', `lab-cases-${dayjs().format('YYYY-MM-DD')}.csv`);
+    a.setAttribute('download', `lab-cases-${clinicNow(clinicTz).format('YYYY-MM-DD')}.csv`);
     a.style.visibility = 'hidden';
     document.body.appendChild(a);
     a.click();

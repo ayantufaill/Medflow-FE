@@ -17,7 +17,7 @@ import {
   MoreVert,
   HistoryOutlined,
 } from '@mui/icons-material';
-import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../utils/dateUtils';
 import VerticalDivider from '../../common/VerticalDivider';
 import { COLORS } from '../../../constants/colors';
 import { radius } from '../../../constants/styles';
@@ -158,7 +158,7 @@ const ActionIconsBar = ({ onPrintClick, onMoreClick, privacyMode, onTogglePrivac
         </Box>
         {historyDates.map((dateStr) => (
           <MenuItem key={dateStr} onClick={() => handleHistoryClick(dateStr)}>
-            {dayjs(dateStr).format('MMM D, YYYY')}
+            {formatBranchDate(dateStr, 'MMM D, YYYY')}
           </MenuItem>
         ))}
         {historyDates.length === 0 && (

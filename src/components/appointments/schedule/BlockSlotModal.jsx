@@ -11,7 +11,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
-import dayjs from 'dayjs';
+import { clinicNow, resolveClinicTimeZone, todayInBranch } from '../../../utils/dateUtils';
+import { useBranch } from '../../../hooks/redux';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 
@@ -20,13 +21,17 @@ const BLOCK_COLORS = [
   '#7dd3fc', '#c4b5fd', '#f472b6', '#fb7185', '#cbd5e1', '#e2e8f0'
 ];
 
-const getDayjsTime = (timeStr) => {
-  if (!timeStr) return dayjs();
+const getDayjsTime = (timeStr, clinicTz) => {
+  const base = clinicNow(clinicTz);
+  if (!timeStr) return base;
   const [h, m] = timeStr.split(':');
-  return dayjs().hour(parseInt(h, 10)).minute(parseInt(m, 10)).second(0);
+  return base.hour(parseInt(h, 10)).minute(parseInt(m, 10)).second(0);
 };
 
 const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('08:30');
   const [notes, setNotes] = useState('');
@@ -50,7 +55,7 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
       notes,
       color: selectedColor,
       roomId: initialData?.roomId,
-      date: initialData?.date || dayjs().format('YYYY-MM-DD')
+      date: initialData?.date || todayInBranch(clinicTz)
     });
   };
 
@@ -97,7 +102,7 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <TimePicker
-                value={getDayjsTime(startTime)}
+                value={getDayjsTime(startTime, clinicTz)}
                 onChange={(v) => {
                   if (v) setStartTime(v.format('HH:mm'));
                 }}
@@ -126,7 +131,7 @@ const BlockSlotModal = ({ open, onClose, onSave, onDelete, initialData }) => {
             </Typography>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <TimePicker
-                value={getDayjsTime(endTime)}
+                value={getDayjsTime(endTime, clinicTz)}
                 onChange={(v) => {
                   if (v) setEndTime(v.format('HH:mm'));
                 }}

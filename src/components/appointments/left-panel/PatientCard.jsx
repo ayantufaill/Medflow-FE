@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../utils/dateUtils';
 import {
   PhoneOutlined, EmailOutlined, AccessTimeOutlined, ContentCopyOutlined,
   CalendarMonthOutlined, PendingOutlined, Autorenew, LocalHospitalOutlined
@@ -154,7 +155,7 @@ const PatientCard = () => {
     ? dayjs().diff(dayjs(currentPatient.dateOfBirth), 'year')
     : null;
   const dobDisplay = currentPatient.dateOfBirth
-    ? dayjs(currentPatient.dateOfBirth).format('MM/DD/YYYY')
+    ? formatBranchDate(currentPatient.dateOfBirth, 'MM/DD/YYYY')
     : '--';
   const phone      = currentPatient.mobilePhone || currentPatient.phonePrimary || '--';
   const email      = currentPatient.email || '--';

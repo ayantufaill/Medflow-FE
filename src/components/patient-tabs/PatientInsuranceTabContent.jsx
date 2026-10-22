@@ -63,7 +63,7 @@ const formatCoverageAddress = (address) => {
 const getRenewalMonthLabel = (value) => {
   const month = Number(value);
   return Number.isInteger(month) && month >= 1 && month <= 12
-    ? dayjs().month(month - 1).format('MMMM') : '-';
+    ? dayjs.utc().month(month - 1).format('MMMM') : '-';
 };
 
 const CoverageRow = ({
@@ -439,10 +439,10 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
         groupNumber: planData.groupNumber,
         groupName: planData.groupName,
         subscriberName: planData.subscriberName || 'Subscriber',
-        subscriberDateOfBirth: formatDateForPayload(planData.subscriberDateOfBirth) || dayjs().subtract(25, 'year').format('YYYY-MM-DD'),
+        subscriberDateOfBirth: formatDateForPayload(planData.subscriberDateOfBirth) || dayjs.utc().subtract(25, 'year').format('YYYY-MM-DD'),
         relationshipToPatient: planData.relationshipToPatient || 'self',
 
-        effectiveDate: formatDateForPayload(planData.effectiveDate) || dayjs().format('YYYY-MM-DD'),
+        effectiveDate: formatDateForPayload(planData.effectiveDate) || dayjs.utc().format('YYYY-MM-DD'),
         expirationDate: formatDateForPayload(planData.expirationDate),
         copayAmount: 0,
         deductibleAmount: planData.individualAnnualMax ?? 1500,

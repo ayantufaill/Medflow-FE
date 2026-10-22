@@ -19,6 +19,15 @@ import { radius, fontWeight } from "../../../constants/styles";
 import { appointmentService } from "../../../services/appointment.service";
 import { DUMMY_PROCEDURE_OPTIONS } from "./constants";
 import dayjs from "dayjs";
+import {
+  branchDateStr,
+  formatBranchDate,
+  formatClinicInstant,
+  isPastSlotInClinic,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from "../../../utils/dateUtils";
+import { useBranch } from "../../../hooks/redux";
 
 const PastVisitProceduresSelector = ({
   patient,
@@ -28,6 +37,8 @@ const PastVisitProceduresSelector = ({
   onAdd,
   onClose,
 }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
   const [visits, setVisits] = useState([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [selectedVisitId, setSelectedVisitId] = useState("");
@@ -54,20 +65,34 @@ const PastVisitProceduresSelector = ({
         );
         const allAppointments = data.appointments || [];
 
+        // "Past" is decided in the clinic's zone: a visit counts as past when
+        // its slot is before the clinic's now, not the host machine's clock.
+        const visitValue = (v) => {
+          const dateStr = v.appointmentDate || v.date;
+          if (dateStr) {
+            return dayjs
+              .utc(`${branchDateStr(dateStr)}T${v.startTime || "00:00"}`)
+              .valueOf();
+          }
+          return dayjs(v.createdAt).valueOf();
+        };
+
         const pastAppointments = allAppointments
           .filter((v) => {
-            const dateStr = v.appointmentDate || v.date || v.createdAt;
-            return dateStr && dayjs(dateStr).isBefore(dayjs().endOf("day"));
+            const dateStr = v.appointmentDate || v.date;
+            if (dateStr && v.startTime) {
+              return isPastSlotInClinic(
+                branchDateStr(dateStr),
+                v.startTime,
+                clinicTz,
+              );
+            }
+            if (dateStr) {
+              return branchDateStr(dateStr) <= todayInBranch(clinicTz);
+            }
+            return v.createdAt ? dayjs(v.createdAt).isBefore(dayjs()) : false;
           })
-          .sort((a, b) => {
-            const dateA = dayjs(
-              a.appointmentDate || a.date || a.createdAt,
-            ).valueOf();
-            const dateB = dayjs(
-              b.appointmentDate || b.date || b.createdAt,
-            ).valueOf();
-            return dateB - dateA;
-          });
+          .sort((a, b) => visitValue(b) - visitValue(a));
 
         setVisits(pastAppointments);
       } catch (err) {
@@ -195,9 +220,9 @@ const PastVisitProceduresSelector = ({
                     pb: "4px",
                   }}
                 >
-                  {dayjs(v.appointmentDate || v.date || v.createdAt).format(
-                    "MMM DD, YYYY",
-                  )}{" "}
+                  {v.appointmentDate || v.date
+                    ? formatBranchDate(v.appointmentDate || v.date, "MMM DD, YYYY")
+                    : formatClinicInstant(v.createdAt, clinicTz, "MMM DD, YYYY")}{" "}
                   -{" "}
                   {v.appointmentTypeId?.name ||
                     v.appointmentType?.name ||

@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
+import { formatBranchDate } from '../../utils/dateUtils';
 import dayjs from 'dayjs';
 import { useDispatch } from 'react-redux';
 import { fetchPatientInsurances } from '../../store/slices/patientSlice';
@@ -176,7 +177,7 @@ const PatientRouteSlipDialog = ({ open, onClose, patient, patientDetails, patien
                   return {
                     ...p,
                     status: p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete' ? 'Completed' : 'Scheduled',
-                    scheduled: dayjs(appt.appointmentDate || appt.start || appt.date || new Date()).format('MM/DD/YYYY'),
+                    scheduled: formatBranchDate(appt.appointmentDate || appt.start || appt.date, 'MM/DD/YYYY'),
                     site: p.site || p.tooth || '-',
                     code,
                     description,
