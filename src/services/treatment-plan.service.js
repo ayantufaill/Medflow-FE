@@ -11,13 +11,13 @@ export const treatmentPlanService = {
     return response.data.data ? response.data.data : response.data;
   },
 
-  async create(data) {
-    const response = await apiClient.post('/treatment-plans', data);
+  async create(data, config = {}) {
+    const response = await apiClient.post('/treatment-plans', data, config);
     return response.data.data ? response.data.data : response.data;
   },
 
-  async update(id, data) {
-    const response = await apiClient.patch(`/treatment-plans/${id}`, data);
+  async update(id, data, config = {}) {
+    const response = await apiClient.patch(`/treatment-plans/${id}`, data, config);
     return response.data.data ? response.data.data : response.data;
   },
 

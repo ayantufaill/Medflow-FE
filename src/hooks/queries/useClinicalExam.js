@@ -38,6 +38,9 @@ export const useUpsertClinicalExam = (examType, appointmentId) => {
       queryClient.invalidateQueries({
         queryKey: clinicalExamKeys.histories(),
       });
+      queryClient.invalidateQueries({
+        queryKey: ['patientReport'],
+      });
     },
   });
 };
@@ -55,6 +58,9 @@ export const useSignClinicalExam = (examType, appointmentId) => {
       });
       queryClient.invalidateQueries({
         queryKey: clinicalExamKeys.histories(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['patientReport'],
       });
     },
   });
@@ -86,6 +92,9 @@ export const useDeleteClinicalExam = (examType, appointmentId) => {
       });
       queryClient.invalidateQueries({
         queryKey: clinicalExamKeys.histories(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['patientReport'],
       });
     },
   });

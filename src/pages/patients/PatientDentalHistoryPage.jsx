@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -21,11 +21,11 @@ import {
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import { useDentalHistory } from "../../hooks/redux/useDentalHistory";
 import { usePatient } from "../../hooks/redux/usePatient";
-import { usePatientAppointments } from "../../hooks/queries/usePatientAppointments";
+import { usePatientHistoryTimeline } from "../../hooks/queries/usePatientHistoryTimeline";
 import PatientSectionTabs from "../../components/patients/PatientSectionTabs";
 import medflowLogo from "../../assets/medflow-logo.png";
 import PatientSignatureCard from "../../components/patients/PatientSignatureCard";
-import VisitDatesTimeline from "../../components/patients/VisitDatesTimeline";
+import PatientHistoryTimeline from "../../components/patients/PatientHistoryTimeline";
 import {
   DentalGeneralInfo,
   DentalHistorySummaryTab,
@@ -37,6 +37,7 @@ import SectionCard from "../../components/shared/SectionCard";
 import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { printDentalHistoryFromData } from "../../utils/printDentalHistory";
 
 const EMPTY_HISTORY = {
   generalInfo: {
@@ -76,23 +77,6 @@ const formatDate = (value) => {
   }
 };
 
-// Matches PatientMedicalHistoryPage's timeline date format ("Dec 08, 2025")
-// so the History Timeline reads identically on both pages.
-const formatVisitDate = (dateStr) => {
-  if (!dateStr) return "";
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "";
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
-};
-
 const dateInputValue = (value) => {
   if (!value) return "";
   try {
@@ -121,25 +105,10 @@ const PatientDentalHistoryPage = () => {
 
   const { dentalHistory, loading, error, fetch, update } = useDentalHistory();
   const { currentPatient: patient, fetchById } = usePatient();
-  const { data: patientAppointments = [] } = usePatientAppointments(
-    patientId,
-    20,
-  );
+  const historyTimeline = usePatientHistoryTimeline(patientId, "dental_history");
 
   const [saving, setSaving] = useState(false);
   const [signature, setSignature] = useState(null);
-
-  // History Timeline nodes — the patient's actual appointment history
-  // (oldest to newest; backend returns most-recent-first), same source as
-  // the Medical History page's timeline.
-  const visitDates = useMemo(
-    () =>
-      [...patientAppointments]
-        .reverse()
-        .map((apt) => formatVisitDate(apt.date))
-        .filter(Boolean),
-    [patientAppointments],
-  );
 
   // Local draft state to prevent UI freezing
   const [localGeneralInfo, setLocalGeneralInfo] = useState(
@@ -319,6 +288,8 @@ const PatientDentalHistoryPage = () => {
         review,
       }).unwrap();
 
+      void historyTimeline.refresh();
+
       setLocalGeneralInfo({
         ...EMPTY_HISTORY.generalInfo,
         ...(data?.generalInfo || {}),
@@ -365,7 +336,25 @@ const PatientDentalHistoryPage = () => {
   const showContent = !isActuallyLoading || patient;
 
   const handlePrint = () => {
-    window.print();
+    const matchesPatient = [patient?._id, patient?.id, patient?.PatNum]
+      .some((id) => id != null && String(id) === String(patientId));
+    if (!dentalHistory || !matchesPatient) {
+      showSnackbar("The patient history is still loading. Please try again.", "warning");
+      return;
+    }
+    const currentHistory = {
+      ...dentalHistory,
+      generalInfo: localGeneralInfo,
+      personalHistory: localPersonalHistory,
+      gumAndBone: localGumAndBone,
+      biteAndJawJoint: localBiteAndJawJoint,
+      toothStructure: localToothStructure,
+      smileCharacteristics: localSmileCharacteristics,
+      sectionSummaries: localSectionSummaries,
+      review: { ...dentalHistory.review, signatureDataUrl: signature },
+    };
+    printDentalHistoryFromData(currentHistory, patient, false, { unsaved: hasUnsavedChanges })
+      .catch((printError) => showSnackbar(printError.message, "error"));
   };
 
   const handleUpdateItem = (section, id, field, value) => {
@@ -670,13 +659,7 @@ const PatientDentalHistoryPage = () => {
           >
             <Box sx={{ minWidth: 0 }}>
               <SectionCard icon={HistoryTimelineIcon} title="History Timeline">
-                {visitDates.length ? (
-                  <VisitDatesTimeline visitDates={visitDates} />
-                ) : (
-                  <Typography variant="body2" sx={{ color: "#9e9e9e" }}>
-                    No appointment history recorded yet.
-                  </Typography>
-                )}
+                <PatientHistoryTimeline key={patientId} timeline={historyTimeline} historyLabel="Dental" />
               </SectionCard>
 
               <DentalGeneralInfo
@@ -791,7 +774,10 @@ const PatientDentalHistoryPage = () => {
               <PatientSignatureCard
                 patient={patient}
                 value={signature}
-                onChange={setSignature}
+                onChange={(value) => {
+                  setSignature(value);
+                  setHasUnsavedChanges(true);
+                }}
                 reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
               />
             </Box>

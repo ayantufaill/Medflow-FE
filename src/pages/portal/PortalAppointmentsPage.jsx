@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
+import { calendarDateStr } from '../../utils/dateUtils';
 import { portalService } from '../../services/portal.service';
 import {
   PortalEmptyState,
@@ -39,7 +40,7 @@ const addMinutes = (time, minutesToAdd) => {
 
 const defaultBooking = {
   providerId: '',
-  appointmentDate: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+  appointmentDate: calendarDateStr(dayjs.utc().add(1, 'day')),
   startTime: '',
   chiefComplaint: '',
   notes: '',
@@ -64,7 +65,7 @@ const PortalAppointmentsPage = () => {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [reschedule, setReschedule] = useState({
-    newDate: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    newDate: calendarDateStr(dayjs.utc().add(1, 'day')),
     newStartTime: '',
   });
   const [cancelReason, setCancelReason] = useState('');
@@ -164,7 +165,7 @@ const PortalAppointmentsPage = () => {
       typeof appointment.providerId === 'string'
         ? appointment.providerId
         : appointment.providerId?._id;
-    const newDate = dayjs(appointment.appointmentDate).format('YYYY-MM-DD');
+    const newDate = calendarDateStr(appointment.appointmentDate);
     setSelectedAppointment(appointment);
     setCancelReason('');
     setReschedule({
@@ -372,7 +373,7 @@ const PortalAppointmentsPage = () => {
                   >
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                        {dayjs(appointment.appointmentDate).format('ddd, MMM D, YYYY')} •{' '}
+                        {calendarDateStr(appointment.appointmentDate, 'ddd, MMM D, YYYY')} •{' '}
                         {appointment.startTime}-{appointment.endTime}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">

@@ -6,7 +6,7 @@ import TaskListDrawer from './TaskListDrawer';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius } from '../../../constants/styles';
 import { useTasks, useUpdateTaskStatus } from '../../../hooks/queries/useTasks';
-import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../utils/dateUtils';
 
 const TaskList = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -44,7 +44,7 @@ const TaskList = () => {
             const title = descriptLines[0] || "No description";
             const dateStr = task.DateTask || task.DateTimeEntry;
             const assignedName = task.assignedUser?.firstName || task.assignedUser?.lastName ? `${task.assignedUser.firstName || ''} ${task.assignedUser.lastName || ''}`.trim() : task.assignedUser?.UserName || 'Unassigned';
-            const sub = dateStr ? `${dayjs(dateStr).format('MM/DD/YYYY')} · ${assignedName}` : 'No date';
+            const sub = dateStr ? `${formatBranchDate(dateStr, 'MM/DD/YYYY')} · ${assignedName}` : 'No date';
             
             return (
               <Box

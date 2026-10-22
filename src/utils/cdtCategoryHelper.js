@@ -76,6 +76,24 @@ export const getPatientCategoryCoverage = (categoryKey, coverageTable) => {
 };
 
 /**
+ * Human-readable labels for the server's `coverageBlockedReason`. The backend
+ * tags a priced line with one of these when the patient's coverage book blocks
+ * it (not covered, waiting period, age, frequency, or lifetime limit), and pays
+ * $0 on it. Everything here is display-only — never fed back into pricing.
+ */
+export const COVERAGE_BLOCKED_REASON_LABELS = {
+  'not-covered': 'Not covered',
+  'waiting-period': 'Waiting period',
+  'age': 'Age limit',
+  'frequency': 'Frequency limit',
+  'lifetime-limit': 'Lifetime limit reached',
+  'teeth-limit': 'Teeth limit',
+};
+
+export const getCoverageBlockedReasonLabel = (reason) =>
+  reason ? COVERAGE_BLOCKED_REASON_LABELS[reason] || String(reason) : '';
+
+/**
  * Calculate Insurance Portion, Patient Portion, and Total Balance
  */
 export const calculatePortionsForCategory = ({

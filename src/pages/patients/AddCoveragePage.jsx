@@ -30,7 +30,12 @@ import AddCoverageHeader from '../../components/insurance/components/AddCoverage
 import { COVERAGE_DATA } from '../../components/insurance';
 import { useCoverageData } from './hooks/useCoverageData';
 import { ASSIGNMENT_OF_BENEFITS_OPTIONS, COVERAGE_TYPES, STYLE_CONSTANTS } from './utils/coverageConstants';
+import { sanitizeCoverageForType } from './utils/coveragePayloadBuilder';
 import { MOCK_COVERAGE_TEMPLATES } from '../../components/insurance/utils/mockCoverageTemplates';
+import { getPayerIdError, normalizePayerId } from './utils/payerIdValidation';
+import { getGroupNameError, getGroupNumberError, normalizeGroupName, normalizeGroupNumber } from './utils/groupValidation';
+import { updateDeductibleSelection } from './utils/deductibleStandardSelection';
+import { buildExistingPlanOptions, extractPlanBenefits } from './utils/existingPlanHelpers';
 
 const ActionText = ({ icon: Icon, text, color = "#4db6ac" }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', ml: 1 }}>
@@ -54,9 +59,12 @@ const AddCoveragePage = () => {
 
   const [errors, setErrors] = useState({});
   const [coverageBookData, setCoverageBookData] = useState([]);
-  const [coverageCategoryData, setCoverageCategoryData] = useState(insuranceId ? {} : COVERAGE_DATA);
+  const [coverageCategoryData, setCoverageCategoryData] = useState(COVERAGE_DATA);
   const [templateToApply, setTemplateToApply] = useState(null);
   const [isTemplateConfirmOpen, setIsTemplateConfirmOpen] = useState(false);
+  // Raw coverages across all patients — the only place plan benefits (deductibles,
+  // coverages, downgrades) are stored, so the carrier search can reuse them by group.
+  const [allCoverages, setAllCoverages] = useState([]);
 
   const [formData, setFormData] = useState({
     carrierName: '',
@@ -107,7 +115,6 @@ const AddCoveragePage = () => {
   const {
     loading,
     feeGuides,
-    allCompanies,
     coverageTemplates,
     createTemplate,
     handleCancel
@@ -122,6 +129,20 @@ const AddCoveragePage = () => {
     setCoverageCategoryData,
     coverageBookData,
     coverageCategoryData
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    // Best-effort: if this fails the carrier search still works against carriers only.
+    patientService.getAllPatientInsurances()
+      .then((list) => { if (!cancelled) setAllCoverages(list); })
+      .catch((err) => console.error('Failed to load existing plans for carrier search', err));
+    return () => { cancelled = true; };
+  }, []);
+
+  const existingPlans = React.useMemo(
+    () => buildExistingPlanOptions(allCoverages, [], insuranceId),
+    [allCoverages, insuranceId]
   );
 
   const seenLabels = new Set();
@@ -176,9 +197,9 @@ const AddCoveragePage = () => {
         ...prev,
         subscriber: {
           ...prev.subscriber,
-          name: fullName || prev.subscriber.name,
-          dateOfBirth: dateOfBirth ? dateOfBirth.split('T')[0] : prev.subscriber.dateOfBirth,
-          ssn: ssn || prev.subscriber.ssn
+          name: prev.subscriber.name || fullName,
+          dateOfBirth: prev.subscriber.dateOfBirth || (dateOfBirth ? dateOfBirth.split('T')[0] : ''),
+          ssn: prev.subscriber.ssn || ssn || ''
         }
       }));
     }
@@ -194,23 +215,24 @@ const AddCoveragePage = () => {
 
       const newErrors = {};
 
-      if ((!formData.insuranceCompanyId && !formData.carrierName?.trim()) || !formData.payerId?.trim()) {
-        newErrors.insuranceCompanyId = 'Carrier Name and Payer ID are required';
+      if (!formData.insuranceCompanyId) {
+        newErrors.insuranceCompanyId = 'Select a carrier from Search Carrier';
       }
+
+      const payerId = normalizePayerId(formData.payerId);
+      const payerIdError = getPayerIdError(payerId);
+      if (payerIdError) newErrors.payerId = payerIdError;
 
       if (!formData.insurancePlan?.trim()) {
         newErrors.insurancePlan = 'Insurance Plan is required';
       }
 
-      if (!formData.groupName?.trim()) {
-        newErrors.groupName = 'Group Name is required';
-      }
-
-      if (!formData.groupNumber?.trim()) {
-        newErrors.groupNumber = 'Group Number is required';
-      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.groupNumber)) {
-        newErrors.groupNumber = 'Group Number must be alphanumeric, and can contain spaces or hyphens';
-      }
+      const groupNumber = normalizeGroupNumber(formData.groupNumber);
+      const groupName = normalizeGroupName(formData.groupName);
+      const groupNumberError = getGroupNumberError(groupNumber);
+      const groupNameError = getGroupNameError(groupName);
+      if (groupNumberError) newErrors.groupNumber = groupNumberError;
+      if (groupNameError) newErrors.groupName = groupNameError;
 
       if (!formData.subscriber.name?.trim()) {
         newErrors.subscriberName = 'Subscriber Name is required';
@@ -220,10 +242,27 @@ const AddCoveragePage = () => {
 
       if (!formData.subscriber.subscriberId?.trim()) {
         newErrors.subscriberId = 'Subscriber ID is required';
-      } else if (formData.subscriber.subscriberId.length < 5 || formData.subscriber.subscriberId.length > 30) {
-        newErrors.subscriberId = 'Subscriber ID must be between 5 and 30 characters';
-      } else if (!/^[A-Za-z0-9\s-]+$/.test(formData.subscriber.subscriberId)) {
-        newErrors.subscriberId = 'Subscriber ID must be alphanumeric, and can contain spaces or hyphens';
+      } else if (formData.subscriber.subscriberId.length < 4 || formData.subscriber.subscriberId.length > 17) {
+        newErrors.subscriberId = 'Subscriber ID must be between 4 and 17 characters';
+      } else if (!/^[A-Z0-9-]+$/.test(formData.subscriber.subscriberId)) {
+        newErrors.subscriberId = 'Subscriber ID can only contain alphanumeric characters and hyphens';
+      }
+
+      if (formData.subscriber.ssn) {
+        const rawSsn = formData.subscriber.ssn.replace(/\D/g, ''); // Temporarily strip hyphens
+        const areaNumber = rawSsn.substring(0, 3);
+        const groupNumber = rawSsn.substring(3, 5);
+        const serialNumber = rawSsn.substring(5, 9);
+        
+        if (rawSsn.length !== 9) {
+          newErrors.ssn = 'SSN must be exactly 9 digits';
+        } else if (areaNumber === '000' || areaNumber === '666' || parseInt(areaNumber, 10) >= 900) {
+          newErrors.ssn = 'Invalid SSN (Invalid Area Number)';
+        } else if (groupNumber === '00') {
+          newErrors.ssn = 'Invalid SSN (Invalid Group Number)';
+        } else if (serialNumber === '0000') {
+          newErrors.ssn = 'Invalid SSN (Invalid Serial Number)';
+        }
       }
 
       if (!formData.subscriber.dateOfBirth) {
@@ -247,6 +286,10 @@ const AddCoveragePage = () => {
 
       if (!formData.policyStarted) {
         newErrors.policyStarted = 'Policy Started date is required';
+      }
+
+      if (!formData.renewalMonth) {
+        newErrors.renewalMonth = 'Renewal Month is required';
       }
 
       if (formData.policyEnds && formData.policyStarted) {
@@ -287,7 +330,7 @@ const AddCoveragePage = () => {
 
       let hasInvalidDeductibleDate = false;
       formData.deductibles?.forEach((ded) => {
-        if (ded.metDate && !isValidDeductibleDate(ded.metDate)) {
+        if (!(ded.standard && String(ded.type || '').toLowerCase() !== 'standard') && ded.metDate && !isValidDeductibleDate(ded.metDate)) {
           hasInvalidDeductibleDate = true;
         }
       });
@@ -301,6 +344,15 @@ const AddCoveragePage = () => {
         setErrors(newErrors);
         const errorFields = Object.keys(newErrors).join(', ');
         showSnackbar(`Please correct the highlighted errors: ${errorFields}`, 'error');
+        
+        // Auto-scroll to the first highlighted error field
+        setTimeout(() => {
+          const firstErrorElement = document.querySelector('.Mui-error');
+          if (firstErrorElement) {
+            firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+
         console.error('Validation errors:', newErrors);
         return;
       }
@@ -324,17 +376,28 @@ const AddCoveragePage = () => {
       const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
       const renewalMonthNum = monthMap[formData.renewalMonth] || 1;
 
+      // A Copay/Fixed Plan prices each code off its flat plan portion, so its
+      // coverage tables must not persist coverage percentages.
+      const sanitizedCoverage = sanitizeCoverageForType(
+        coverageCategoryData,
+        coverageBookData,
+        formData.coverageType,
+      );
+
       const indMaxVal = formData.coverage?.individual?.annualMax;
       const indUsedVal = formData.coverage?.individual?.usedAmount;
       const parsedIndMax = indMaxVal != null && indMaxVal !== '' ? parseFloat(String(indMaxVal).replace(/[^0-9.-]+/g, "")) : undefined;
       const parsedIndUsed = indUsedVal != null && indUsedVal !== '' ? parseFloat(String(indUsedVal).replace(/[^0-9.-]+/g, "")) : undefined;
 
       const payload = {
-        insuranceCompanyId: String(formData.insuranceCompanyId || '1'),
-        payerId: formData.payerId || undefined,
+        insuranceCompanyId: String(formData.insuranceCompanyId),
+        payerId,
         policyNumber: formData.subscriber.subscriberId,
-        groupNumber: formData.groupNumber || undefined,
-        groupName: formData.groupName || undefined,
+        groupNumber: groupNumber || undefined,
+        groupName: groupName || undefined,
+        insurancePlanName: formData.insurancePlan?.trim() || undefined,
+        employerName: formData.employerName?.trim() || null,
+        employerId: formData.employerId || null,
         subscriberName: formData.subscriber.name,
         subscriberDateOfBirth: formatDateForPayload(formData.subscriber.dateOfBirth),
         relationshipToPatient: formData.subscriber.relationship.toLowerCase(),
@@ -357,11 +420,11 @@ const AddCoveragePage = () => {
               : val
           ])
         ),
-        coverageCategoryTable: Object.entries(coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
-        coverageBookData: coverageBookData,
+        coverageCategoryTable: Object.entries(sanitizedCoverage.coverageCategoryData || {}).map(([key, items]) => ({ category: key, items })),
+        coverageBookData: sanitizedCoverage.coverageBookData,
         planFeeGuide: formData.planFeeGuide,
         coverageType: formData.coverageType,
-        subscriberSsn: formData.subscriber.ssn || undefined,
+        subscriberSsn: formData.subscriber.ssn ? formData.subscriber.ssn.replace(/\D/g, '') : undefined,
         renewalMonth: renewalMonthNum,
         assignmentOfBenefits: formData.assignmentOfBenefits.toString(),
         honorWriteOff: formData.honorWriteOff,
@@ -391,9 +454,16 @@ const AddCoveragePage = () => {
             name: formData.insurancePlan,
             description: [formData.carrierName, formData.groupName].filter(Boolean).join(' — ') || undefined,
             benefits: [{
+              // Carrier details are stored too so applying the template restores the
+              // whole billing block, not just the plan rows.
+              insuranceCompanyId: formData.insuranceCompanyId,
+              carrierName: formData.carrierName,
+              payerId,
+              carrierPhone: formData.carrierPhone,
+              payerAddress: formData.payerAddress,
               insurancePlan: formData.insurancePlan,
-              groupName: formData.groupName,
-              groupNumber: formData.groupNumber,
+              groupName,
+              groupNumber,
               phoneNumber: formData.phoneNumber,
               healthPlan: formData.healthPlan,
               assignmentOfBenefits: formData.assignmentOfBenefits
@@ -414,6 +484,9 @@ const AddCoveragePage = () => {
       const backendErrors = err?.data?.error?.errors;
       if (backendErrors && typeof backendErrors === 'object') {
         const mappedErrors = {};
+        if (backendErrors.payerId) {
+          mappedErrors.payerId = Array.isArray(backendErrors.payerId) ? backendErrors.payerId[0] : backendErrors.payerId;
+        }
         if (backendErrors.policyNumber) {
           mappedErrors.subscriberId = Array.isArray(backendErrors.policyNumber) ? backendErrors.policyNumber[0] : backendErrors.policyNumber;
         }
@@ -468,15 +541,60 @@ const AddCoveragePage = () => {
     // "Save as Template") nest them inside benefits[0] since the backend's
     // coverage-template model only stores { name, description, benefits }.
     const source = template.benefits?.[0] || template;
+    // Use the template's value whenever it has one — the user already confirmed the
+    // overwrite, so keeping stale values from `prev` would leave a mixed-up plan.
+    const pick = (key, fallback) => (source[key] !== undefined && source[key] !== null && source[key] !== '' ? source[key] : fallback);
     setFormData(prev => ({
       ...prev,
-      insurancePlan: source.insurancePlan || template.name || prev.insurancePlan,
-      groupName: source.groupName || prev.groupName,
-      groupNumber: source.groupNumber || prev.groupNumber,
-      phoneNumber: source.phoneNumber || prev.phoneNumber,
+      // Carrier details are only present on templates saved after carrier info was
+      // added to the template payload; older templates fall back to current values.
+      insuranceCompanyId: pick('insuranceCompanyId', prev.insuranceCompanyId),
+      carrierName: pick('carrierName', prev.carrierName),
+      payerId: source.payerId ? normalizePayerId(source.payerId) : prev.payerId,
+      carrierPhone: pick('carrierPhone', prev.carrierPhone),
+      payerAddress: pick('payerAddress', prev.payerAddress),
+      insurancePlan: pick('insurancePlan', template.name || prev.insurancePlan),
+      groupName: pick('groupName', prev.groupName),
+      groupNumber: pick('groupNumber', prev.groupNumber),
+      phoneNumber: pick('phoneNumber', prev.phoneNumber),
       healthPlan: source.healthPlan ?? prev.healthPlan,
-      assignmentOfBenefits: source.assignmentOfBenefits || prev.assignmentOfBenefits,
+      assignmentOfBenefits: parseInt(source.assignmentOfBenefits, 10) || prev.assignmentOfBenefits,
     }));
+    // Filled fields are now valid; drop the red "required" errors left from a failed save.
+    setErrors(prev => ({ ...prev, insuranceCompanyId: null, payerId: null, insurancePlan: null, groupName: null, groupNumber: null }));
+  };
+
+  /**
+   * Called when the carrier search row is an existing plan (matched by group).
+   * Copies the plan-level benefits that the other patient's coverage already has
+   * set up so staff don't re-key deductibles, maximums, percentages and downgrades.
+   */
+  const applyExistingPlanBenefits = (sourceCoverage) => {
+    const { formFields, coverageCategoryData: categories, coverageBookData: book } = extractPlanBenefits(sourceCoverage);
+    setFormData(prev => {
+      const next = { ...prev, ...formFields };
+      // Renewal month drives the policy end date, so keep them consistent.
+      if (formFields.renewalMonth) {
+        const calculatedEnd = calculatePolicyEndDate(next.policyStarted, next.renewalMonth);
+        if (calculatedEnd) next.policyEnds = calculatedEnd;
+      }
+      return next;
+    });
+    if (categories) setCoverageCategoryData(categories);
+    if (book) setCoverageBookData(book);
+
+    const copied = [
+      formFields.deductibles && 'deductibles',
+      formFields.coverage && 'maximums',
+      categories && 'coverages & downgrades',
+      book && 'coverage book',
+    ].filter(Boolean);
+    showSnackbar(
+      copied.length
+        ? `Copied ${copied.join(', ')} from the existing plan`
+        : 'Existing plan selected, but it has no saved benefits to copy',
+      copied.length ? 'success' : 'info'
+    );
   };
 
   const handleApplyTemplate = (template) => {
@@ -558,9 +676,34 @@ const AddCoveragePage = () => {
 
   const handleSubscriberChange = (field, value) => {
     setFormData(prev => {
+      let sanitizedValue = value;
+      if (field === 'subscriberId') {
+        sanitizedValue = value.toUpperCase().replace(/\s+/g, '');
+        // Physically prevent typing more than 17 characters
+        if (sanitizedValue.length > 17) {
+          sanitizedValue = sanitizedValue.slice(0, 17);
+        }
+      }
+      
+      if (field === 'ssn') {
+        let numbers = value.replace(/\D/g, ''); // Strip everything to get raw digits
+        if (numbers.length > 9) {
+          numbers = numbers.slice(0, 9); // Enforce max 9 digits
+        }
+        
+        // Add hyphens based on length
+        if (numbers.length > 5) {
+          sanitizedValue = `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`;
+        } else if (numbers.length > 3) {
+          sanitizedValue = `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+        } else {
+          sanitizedValue = numbers;
+        }
+      }
+
       const newSubscriber = {
         ...prev.subscriber,
-        [field]: value
+        [field]: sanitizedValue
       };
       
       if (field === 'relationship') {
@@ -603,22 +746,89 @@ const AddCoveragePage = () => {
     }
   };
 
+  const calculatePolicyEndDate = (startDateStr, renewalMonthStr) => {
+    if (!startDateStr || !renewalMonthStr) return '';
+    const monthMap = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+    const rm = monthMap[renewalMonthStr];
+    if (!rm) return '';
+
+    // Parse the YYYY-MM-DD manually to avoid timezone shifting
+    const parts = startDateStr.split('-');
+    if (parts.length !== 3) return '';
+    
+    const startYear = parseInt(parts[0], 10);
+    const startMonth = parseInt(parts[1], 10);
+    if (isNaN(startYear) || isNaN(startMonth)) return '';
+
+    const renewalYear = startMonth >= rm ? startYear + 1 : startYear;
+    
+    // Day 0 of the renewal month yields the final day of the preceding month
+    const end = new Date(renewalYear, rm - 1, 0);
+    if (isNaN(end.getTime())) return '';
+
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, '0');
+    const day = String(end.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleRenewalChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    if (field === 'policyStarted' || field === 'policyEnds') {
-      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      if (field === 'policyStarted' || field === 'renewalMonth') {
+        const calculatedEnd = calculatePolicyEndDate(newData.policyStarted, newData.renewalMonth);
+        if (calculatedEnd) {
+          newData.policyEnds = calculatedEnd;
+        }
+      }
+      
+      return newData;
+    });
+
+    if (field === 'policyStarted' || field === 'policyEnds' || field === 'renewalMonth') {
+      setErrors(prev => ({ ...prev, policyStarted: null, policyEnds: null, renewalMonth: null }));
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field, value, { rejectInvalid = false } = {}) => {
+    if (field === 'payerId') {
+      const payerId = normalizePayerId(value);
+      const payerIdError = getPayerIdError(payerId, { allowIncomplete: rejectInvalid });
+      setErrors(prev => ({ ...prev, payerId: payerIdError }));
+      // Reject invalid typing/pastes in full, without stripping or truncating IDs.
+      // Selected carrier IDs stay visible and must pass validation before saving.
+      if (!rejectInvalid || !payerIdError) {
+        setFormData(prev => ({ ...prev, payerId }));
+      }
+      return;
+    }
+
+    if (field === 'groupNumber') {
+      value = normalizeGroupNumber(value);
+      if (value.length > 20 || !/^[A-Z0-9-]*$/.test(value) ||
+          value.startsWith('-') || value.includes('--')) {
+        setErrors(prev => ({ ...prev, groupNumber: 'Group Number contains unsupported characters or exceeds 20 characters' }));
+        return;
+      }
+    }
+    if (field === 'groupName' && (String(value).length > 50 || !/^[A-Za-z0-9 .&,-]*$/.test(String(value)))) {
+      setErrors(prev => ({ ...prev, groupName: 'Group Name contains unsupported characters or exceeds 50 characters' }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      ...(field === 'carrierName' ? { insuranceCompanyId: '' } : {})
     }));
-    if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
+    
+    if (field === 'saveAsTemplate' && value === true) {
+      showSnackbar("Save as template", 'info');
+    }
+
+    if (field === 'carrierName') {
+      setErrors(prev => ({ ...prev, insuranceCompanyId: null }));
+    } else if (field === 'insurancePlan' || field === 'insuranceCompanyId') {
       setErrors(prev => ({ ...prev, insurancePlan: null, insuranceCompanyId: null }));
     } else if (field === 'groupName') {
       setErrors(prev => ({ ...prev, groupName: null }));
@@ -630,9 +840,7 @@ const AddCoveragePage = () => {
   const handleDeductibleChange = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      deductibles: prev.deductibles.map((deductible, i) => 
-        i === index ? { ...deductible, [field]: value } : deductible
-      )
+      deductibles: updateDeductibleSelection(prev.deductibles, index, field, value)
     }));
   };
 
@@ -683,7 +891,8 @@ const AddCoveragePage = () => {
                   handleApplyTemplate: (t) => handleApplyTemplate(t)
                 }}
                 handleInputChange={handleInputChange}
-                insuranceCompanies={allCompanies?.companies || allCompanies || []}
+                existingPlans={existingPlans}
+                onSelectExistingPlan={applyExistingPlanBenefits}
                 ASSIGNMENT_OF_BENEFITS_OPTIONS={ASSIGNMENT_OF_BENEFITS_OPTIONS}
                 tinyText={STYLE_CONSTANTS.tinyText}
                 blueHeader={STYLE_CONSTANTS.blueHeader}
@@ -838,6 +1047,7 @@ const AddCoveragePage = () => {
         coverageData={coverageBookData}
         setCoverageData={setCoverageBookData}
         feeGuideId={formData.planFeeGuide}
+        coverageType={formData.coverageType}
       />
 
       <ConfirmationDialog

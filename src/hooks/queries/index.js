@@ -8,4 +8,5 @@ export * from './useUsers';
 export * from './useVitalSigns';
 export * from './useTreatmentPlans';
 export * from './useProgressNotes';
+export * from './useCob';
 export * from './useTeamAccess';

@@ -13,7 +13,9 @@ import {
   ArrowRight as ArrowRightIcon,
   ArrowDropDown as ArrowDropDownIcon,
   DeleteOutline as DeleteOutlineIcon,
-  AttachFile as AttachFileIcon
+  AttachFile as AttachFileIcon,
+  PictureAsPdf as PdfIcon,
+  Print as PrintIcon,
 } from '@mui/icons-material';
 
 

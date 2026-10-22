@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import dayjs from 'dayjs';
+import { formatBranchTime } from '../../../../utils/dateUtils';
 import { InfoRow } from './RouteSlipShared';
 import { providerLabel } from '../../new-appointment/helpers';
 
@@ -16,7 +16,7 @@ export const RouteSlipApptDisplay = ({ appt, OPERATORY_COLUMNS, getProviderName 
       hour = hour % 12 || 12;
       return `${hour}:${m || '00'} ${ampm}`;
     }
-    return dayjs(a.appointmentDate || a.start).format('h:mm A');
+    return formatBranchTime(a.appointmentDate || a.start, 'h:mm A');
   };
 
   const time = formatTime(appt);

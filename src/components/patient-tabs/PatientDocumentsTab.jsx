@@ -88,7 +88,7 @@ const PatientDocumentsTab = ({ patientId }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return dayjs(dateString).format('MMM DD, YYYY');
+    return formatBranchDate(dateString, 'MMM DD, YYYY');
   };
 
   const handleDownload = (doc) => {

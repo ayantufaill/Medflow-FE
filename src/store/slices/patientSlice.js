@@ -65,7 +65,7 @@ export const fetchPatientInsurances = createAsyncThunk(
     condition: ({ patientId, force }, { getState }) => {
       if (force) return true;
       const { patient } = getState();
-      if (patient.patientInsurancesLoading) {
+      if (patient.patientInsurancesRequestIds?.[patientId]) {
         return false;
       }
       if (patient.insurancesCache && patient.insurancesCache[patientId]) {
@@ -131,7 +131,8 @@ export const fetchPatientBalance = createAsyncThunk(
 
 export const fetchInsuranceUsage = createAsyncThunk(
   'patient/fetchInsuranceUsage',
-  async (patientId, { rejectWithValue }) => {
+  async (request, { rejectWithValue }) => {
+    const patientId = typeof request === 'object' ? request.patientId : request;
     try {
       const data = await patientService.getInsuranceUsage(patientId);
       return { patientId, data };
@@ -144,9 +145,12 @@ export const fetchInsuranceUsage = createAsyncThunk(
     }
   },
   {
-    condition: (patientId, { getState }) => {
+    condition: (request, { getState }) => {
+      const patientId = typeof request === 'object' ? request.patientId : request;
+      const force = typeof request === 'object' && request.force;
       const { patient } = getState();
-      if (patient.insuranceUsageLoading) return false;
+      if (force) return true;
+      if (patient.insuranceUsageRequestIds?.[patientId]) return false;
       const cached = patient.insuranceUsageCache?.[patientId];
       if (cached && (Date.now() - cached.timestamp) < 5 * 60 * 1000) return false;
       return true;
@@ -161,6 +165,8 @@ export const createPatientInsuranceThunk = createAsyncThunk(
       const data = await patientService.createPatientInsurance(patientId, payload);
       dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
       dispatch(fetchPatientInsurances({ patientId, force: true }));
+      dispatch({ type: 'patient/invalidateInsuranceUsage', payload: patientId });
+      dispatch(fetchInsuranceUsage({ patientId, force: true }));
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to create insurance');
@@ -174,7 +180,12 @@ export const updatePatientInsuranceThunk = createAsyncThunk(
     try {
       const data = await patientService.updatePatientInsurance(patientId, insuranceId, payload);
       dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
-      dispatch(fetchPatientInsurances({ patientId, force: true }));
+      dispatch({ type: 'patient/invalidateInsuranceUsage', payload: patientId });
+      dispatch(fetchInsuranceUsage({ patientId, force: true }));
+      const refreshed = await dispatch(fetchPatientInsurances({ patientId, force: true }));
+      if (fetchPatientInsurances.rejected.match(refreshed)) {
+        return rejectWithValue('Coverage was saved, but the latest data could not be loaded. Please refresh the page.');
+      }
       return data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to update insurance');
@@ -189,6 +200,8 @@ export const deletePatientInsuranceThunk = createAsyncThunk(
       await patientService.deletePatientInsurance(patientId, insuranceId);
       dispatch({ type: 'patient/invalidatePatientInsurances', payload: patientId });
       dispatch(fetchPatientInsurances({ patientId, force: true }));
+      dispatch({ type: 'patient/invalidateInsuranceUsage', payload: patientId });
+      dispatch(fetchInsuranceUsage({ patientId, force: true }));
       return { patientId, insuranceId };
     } catch (err) {
       return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to delete insurance');
@@ -327,6 +340,32 @@ export const updateDentalHistoryThunk = createAsyncThunk(
   }
 );
 
+// ─── Rx (Prescriptions) Thunks ───────────────────────────────
+
+export const fetchPatientRxThunk = createAsyncThunk(
+  'patient/fetchPatientRx',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      const data = await patientService.getPatientPrescriptions(patientId);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to fetch prescriptions');
+    }
+  }
+);
+
+export const addPatientRxThunk = createAsyncThunk(
+  'patient/addPatientRx',
+  async ({ patientId, rxData }, { rejectWithValue }) => {
+    try {
+      const data = await patientService.createPatientPrescription(patientId, rxData);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to add prescription');
+    }
+  }
+);
+
 // ─── Slice ───────────────────────────────────────────────────
 
 const initialState = {
@@ -363,6 +402,7 @@ const initialState = {
   // Insurances cache
   insurancesCache: {}, // { [patientId]: { data, timestamp } }
   patientInsurancesLoading: false,
+  patientInsurancesRequestIds: {},
 
   // Balance state & cache
   patientBalance: { balance: 0, overdueAmount: 0, lastPaymentDate: null, loading: false },
@@ -372,11 +412,16 @@ const initialState = {
   // Insurance usage state & cache
   insuranceUsage: { primaryInsurance: null, secondaryInsurance: null, loading: false },
   insuranceUsageCache: {}, // { [patientId]: { data, timestamp } }
+  insuranceUsageRequestIds: {},
   insuranceUsageLoading: false,
 
   // Global Insurances
   globalInsurances: [],
   globalInsurancesLoading: false,
+
+  // Prescriptions
+  prescriptions: [],
+  prescriptionsLoading: false,
 };
 
 // Cache disabled - always fetch fresh data from backend
@@ -431,9 +476,12 @@ const patientSlice = createSlice({
       const patientId = action.payload;
       if (patientId) {
         delete state.insurancesCache[patientId];
+        delete state.patientInsurancesRequestIds[patientId];
       } else {
         state.insurancesCache = {};
+        state.patientInsurancesRequestIds = {};
       }
+      state.patientInsurancesLoading = Object.keys(state.patientInsurancesRequestIds).length > 0;
     },
     invalidatePatientBalance: (state, action) => {
       const patientId = action.payload;
@@ -447,9 +495,13 @@ const patientSlice = createSlice({
       const patientId = action.payload;
       if (patientId) {
         delete state.insuranceUsageCache[patientId];
+        delete state.insuranceUsageRequestIds[patientId];
       } else {
         state.insuranceUsageCache = {};
+        state.insuranceUsageRequestIds = {};
       }
+      state.insuranceUsageLoading = Object.keys(state.insuranceUsageRequestIds).length > 0;
+      state.insuranceUsage.loading = state.insuranceUsageLoading;
     },
     // Update a patient in the list after edit
     updatePatientInList: (state, action) => {
@@ -508,16 +560,22 @@ const patientSlice = createSlice({
         state.detailError = action.payload;
       })
       // fetchPatientInsurances
-      .addCase(fetchPatientInsurances.pending, (state) => {
+      .addCase(fetchPatientInsurances.pending, (state, action) => {
+        state.patientInsurancesRequestIds[action.meta.arg.patientId] = action.meta.requestId;
         state.patientInsurancesLoading = true;
       })
       .addCase(fetchPatientInsurances.fulfilled, (state, action) => {
         const { patientId, insurances } = action.payload;
+        if (state.patientInsurancesRequestIds[patientId] !== action.meta.requestId) return;
         state.insurancesCache[patientId] = { data: insurances, timestamp: Date.now() };
-        state.patientInsurancesLoading = false;
+        delete state.patientInsurancesRequestIds[patientId];
+        state.patientInsurancesLoading = Object.keys(state.patientInsurancesRequestIds).length > 0;
       })
-      .addCase(fetchPatientInsurances.rejected, (state) => {
-        state.patientInsurancesLoading = false;
+      .addCase(fetchPatientInsurances.rejected, (state, action) => {
+        const patientId = action.meta.arg.patientId;
+        if (state.patientInsurancesRequestIds[patientId] !== action.meta.requestId) return;
+        delete state.patientInsurancesRequestIds[patientId];
+        state.patientInsurancesLoading = Object.keys(state.patientInsurancesRequestIds).length > 0;
       })
       // fetchAllPatientInsurances
       .addCase(fetchAllPatientInsurances.pending, (state) => {
@@ -554,12 +612,17 @@ const patientSlice = createSlice({
         state.patientBalance.loading = false;
       })
       // Fetch Insurance Usage
-      .addCase(fetchInsuranceUsage.pending, (state) => {
+      .addCase(fetchInsuranceUsage.pending, (state, action) => {
+        const request = action.meta.arg;
+        const patientId = typeof request === 'object' ? request.patientId : request;
+        state.insuranceUsageRequestIds[patientId] = action.meta.requestId;
         state.insuranceUsageLoading = true;
         state.insuranceUsage.loading = true;
       })
       .addCase(fetchInsuranceUsage.fulfilled, (state, action) => {
         const { patientId, data } = action.payload;
+        if (state.insuranceUsageRequestIds[patientId] !== action.meta.requestId) return;
+        delete state.insuranceUsageRequestIds[patientId];
         state.insuranceUsageCache[patientId] = {
           data,
           timestamp: Date.now(),
@@ -567,13 +630,17 @@ const patientSlice = createSlice({
         state.insuranceUsage = {
           primaryInsurance: data?.primaryInsurance ?? null,
           secondaryInsurance: data?.secondaryInsurance ?? null,
-          loading: false,
+          loading: Object.keys(state.insuranceUsageRequestIds).length > 0,
         };
-        state.insuranceUsageLoading = false;
+        state.insuranceUsageLoading = Object.keys(state.insuranceUsageRequestIds).length > 0;
       })
-      .addCase(fetchInsuranceUsage.rejected, (state) => {
-        state.insuranceUsageLoading = false;
-        state.insuranceUsage.loading = false;
+      .addCase(fetchInsuranceUsage.rejected, (state, action) => {
+        const request = action.meta.arg;
+        const patientId = typeof request === 'object' ? request.patientId : request;
+        if (state.insuranceUsageRequestIds[patientId] !== action.meta.requestId) return;
+        delete state.insuranceUsageRequestIds[patientId];
+        state.insuranceUsageLoading = Object.keys(state.insuranceUsageRequestIds).length > 0;
+        state.insuranceUsage.loading = state.insuranceUsageLoading;
       })
       // fetchMedicalHistoryThunk
       .addCase(fetchMedicalHistoryThunk.pending, (state) => {
@@ -600,6 +667,20 @@ const patientSlice = createSlice({
       .addCase(fetchDentalHistoryThunk.rejected, (state, action) => {
         state.dentalHistoryLoading = false;
         state.dentalHistoryError = action.payload;
+      })
+      // Prescriptions
+      .addCase(fetchPatientRxThunk.pending, (state) => {
+        state.prescriptionsLoading = true;
+      })
+      .addCase(fetchPatientRxThunk.fulfilled, (state, action) => {
+        state.prescriptionsLoading = false;
+        state.prescriptions = action.payload || [];
+      })
+      .addCase(fetchPatientRxThunk.rejected, (state) => {
+        state.prescriptionsLoading = false;
+      })
+      .addCase(addPatientRxThunk.fulfilled, (state, action) => {
+        state.prescriptions.push(action.payload);
       });
   },
 });
@@ -647,6 +728,8 @@ export const selectPatientBalanceLoading = (state) => state.patient.balanceLoadi
 export const selectInsuranceUsage = (state) => state.patient.insuranceUsage;
 export const selectInsuranceUsageCache = (state) => state.patient.insuranceUsageCache;
 export const selectInsuranceUsageLoading = (state) => state.patient.insuranceUsageLoading;
+export const selectPatientPrescriptions = (state) => state.patient.prescriptions;
+export const selectPatientPrescriptionsLoading = (state) => state.patient.prescriptionsLoading;
 
 // Check if cache is valid
 export const selectIsCacheValid = (state) => {

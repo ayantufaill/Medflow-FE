@@ -33,7 +33,8 @@ import {
   KeyboardArrowDown as ExpandMoreIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   ContentCopy as ContentCopyIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Receipt as ReceiptIcon
 } from '@mui/icons-material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { OutlinedSelect } from '../../components/patients/form-components/formInputs';
@@ -61,21 +62,26 @@ import ChartTable from '../../components/clinical/new-treatment-plan/ChartTable'
 import UnplannedProceduresSidebar from '../../components/clinical/new-treatment-plan/UnplannedProceduresSidebar';
 import ArchiveDrawer from '../../components/clinical/new-treatment-plan/ArchiveDrawer';
 import NotesDrawer from '../../components/clinical/new-treatment-plan/NotesDrawer';
+import RxDrawer from '../../components/clinical/new-treatment-plan/RxDrawer';
 import PeriodontalExamPage from './PeriodontalExamPage';
+import { useClinicalExamQuery } from '../../hooks/queries/useClinicalExam';
 import { useSelector, useDispatch } from 'react-redux';
 import { useDropdownData } from '../../hooks/redux/useDropdownData';
 // AFTER
-import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById } from '../../store/slices/patientSlice';
+import { selectCurrentPatient, selectPatientInsurancesCache, fetchPatientInsurances, fetchPatientById, invalidatePatientBalance } from '../../store/slices/patientSlice';
 import { selectProviderDropdownList } from '../../store/slices/providerSlice';
-import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment } from '../../store/slices/appointmentSlice';
+import { setSelectedAppointmentId, fetchAppointmentById, selectCurrentAppointment, fetchPatientHistory } from '../../store/slices/appointmentSlice';
 import { treatmentPlanService } from '../../services/treatment-plan.service';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranch } from '../../hooks/redux/useBranch';
 import { hasRequiredPermission } from '../../config/navMenuItems';
 import { appointmentService } from '../../services/appointment.service';
 import { invoiceService } from '../../services/invoice.service';
+import { invalidateLedger, invalidatePaymentInvoices, fetchLedgerItems } from '../../store/slices/billingSlice';
 import { authorizationService } from '../../services/authorization.service';
 import { calculatePortionsForCategory } from '../../utils/cdtCategoryHelper';
+import { mapProcedureToPayloadItem, statusLabelToCode } from '../../utils/treatmentPlanPayload';
+import { getProcedureIcd, findAppointmentProcedureIndex } from '../../utils/icd10';
 
 const formatMoney = (val, fallback = '-') => {
   if (typeof val === 'number') return `$${val.toFixed(2)}`;
@@ -128,38 +134,6 @@ const mergePlanItemsIntoDrafts = (drafts, planId, items, extraFields = {}) => {
   ));
 };
 
-const mapProcedureToPayloadItem = (item) => {
-  const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
-  const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
-  const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
-  return {
-    id: item.id,
-    procedureCode: item.code,
-    description: item.description,
-    tooth: item.tooth || '',
-    site: item.site,
-    fee: itemFee,
-    charge: itemFee,
-    priority: item.priority,
-    status: statusLabelToCode(item.status),
-    icd: item.icd,
-    provider: item.provider || null,
-    prognosis: item.prognosis || '',
-    creditToPractice: Boolean(item.creditToPractice),
-    siteSelection: item.siteSelection || '',
-    scheduled: item.scheduled,
-    preAuth: item.preAuth,
-    preAuthId: item.preAuthId || null,
-    labCase: item.labCase,
-    insEst: item.insEst,
-    ptEst: item.ptEst,
-    insPortion: itemIns,
-    ptPortion: itemPt,
-    insuranceAmount: `$${itemIns.toFixed(2)}`,
-    patientAmount: `$${itemPt.toFixed(2)}`,
-  };
-};
-
 const STATUS_CODE_TO_LABEL = {
   P: 'Planned',
   S: 'Scheduled',
@@ -172,29 +146,6 @@ const STATUS_CODE_TO_LABEL = {
 
 const normalizeStatusLabel = (status) => STATUS_CODE_TO_LABEL[status] || status || 'Planned';
 
-const statusLabelToCode = (status) => {
-  switch (status) {
-    case 'Scheduled':
-      return 'S';
-    case 'Unplanned':
-      return 'U';
-    case 'Rejected':
-      return 'R';
-    case 'Referred':
-      return 'R';
-    case 'Completed':
-      return 'C';
-    case 'Existing Current':
-      return 'EC';
-    case 'Existing Other':
-    case 'Existing':
-      return 'EO';
-    case 'Planned':
-    default:
-      return 'P';
-  }
-};
-
 const mapPlanItems = (items, createdAt) => {
   if (!items || !Array.isArray(items)) return [];
   return items.map((item, idx) => {
@@ -204,6 +155,8 @@ const mapPlanItems = (items, createdAt) => {
 
     return {
       id: item.id || idx + 1,
+      providerId: item.providerId || null,
+      clinicId: item.clinicId || null,
       priority: item.priority || '- -',
       status: normalizeStatusLabel(item.status),
       created: item.created || (createdAt ? dayjs(createdAt).format('MM/DD/YYYY') : dayjs().format('MM/DD/YYYY')),
@@ -230,6 +183,7 @@ const mapPlanItems = (items, createdAt) => {
       preAuthNumber: item.preAuthNumber || '',
       downgradedCode: item.downgradedCode || '',
       estimateSource: item.estimateSource || 'Auto',
+      coverageBlockedReason: item.coverageBlockedReason || '',
       preAuth: item.preAuth || '-',
       preAuthId: item.preAuthId || null,
       labCase: item.labCase || '-'
@@ -268,7 +222,7 @@ const normalizeAppointmentProcedures = (appointment) => {
 
       return {
         ...procedure,
-        id: procedure.id || procedure._id || idx,
+        id: procedure.id ?? procedure._id ?? idx,
         code,
         description:
           procedure.treatment ||
@@ -303,7 +257,7 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
           tooth: p.tooth || p.site || '',
           code: p.code,
           description: p.description || '-',
-          icd: '-',
+          icd: getProcedureIcd(p) || '-',
           provider: (() => {
             const getProvStr = (val) => (typeof val === 'object' && val !== null ? (val.providerCode || val._id || val.name) : val);
             return getProvStr(p.provider) || getProvStr(appt.providerId) || getProvStr(appt.provider) || '-';
@@ -331,6 +285,7 @@ const mapAppointmentsToTreatmentRows = (appointments = []) => {
               preAuthNumber: p.preAuthNumber || '',
               downgradedCode: p.downgradedCode || '',
               estimateSource: p.estimateSource || 'Auto',
+              coverageBlockedReason: p.coverageBlockedReason || '',
             };
           })(),
           preAuth: '-',
@@ -393,7 +348,39 @@ const NewTreatmentPlanPage = () => {
   const [treatmentPlanDrafts, setTreatmentPlanDrafts] = useState([]);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [appointmentProcedures, setAppointmentProcedures] = useState([]);
-  const allProcedures = [...treatmentPlans, ...appointmentProcedures].sort((a, b) => {
+  const [patientAppointments, setPatientAppointments] = useState([]);
+
+  const storedPatient = useSelector(selectCurrentPatient);
+  const storedAppointment = useSelector(selectCurrentAppointment);
+  const appointmentDetailError = useSelector(state => state.appointment.detailError);
+  const patientDetailError = useSelector(state => state.patient.detailError);
+  const routeAppointmentId = searchParams.get('appointmentId');
+  const routePatientId = searchParams.get('patientId');
+  const storedAppointmentId = storedAppointment?._id || storedAppointment?.id || storedAppointment?.AptNum;
+  const activeAppointmentId = routeAppointmentId || storedAppointmentId;
+  const currentAppointment = storedAppointment && String(storedAppointmentId) === String(activeAppointmentId)
+    ? storedAppointment : null;
+  const appointmentPatient = currentAppointment?.patientId;
+  const appointmentPatientId = (typeof appointmentPatient === 'object'
+    ? appointmentPatient?._id || appointmentPatient?.id : appointmentPatient) || currentAppointment?.PatNum;
+  const currentPatientId = routePatientId || appointmentPatientId || (!activeAppointmentId && (storedPatient?._id || storedPatient?.id));
+  const currentPatient = storedPatient && String(storedPatient._id || storedPatient.id) === String(currentPatientId)
+    ? storedPatient : null;
+  const appointmentPatientMismatch = !!(currentAppointment && routePatientId && appointmentPatientId &&
+    String(routePatientId) !== String(appointmentPatientId));
+  const perioContextReady = !!(currentAppointment && currentPatient && appointmentPatientId && !appointmentPatientMismatch);
+
+  // Appointment-only links must resolve their patient from that appointment.
+  useEffect(() => {
+    if (!routePatientId && appointmentPatientId) dispatch(fetchPatientById(String(appointmentPatientId)));
+  }, [routePatientId, appointmentPatientId, dispatch]);
+
+  // Filter out procedures that belong to OTHER appointments
+  const filteredAppointmentProcedures = activeAppointmentId 
+    ? appointmentProcedures.filter(proc => String(proc.appointmentId || proc._appointmentId) === String(activeAppointmentId))
+    : appointmentProcedures;
+
+  const allProcedures = [...treatmentPlans, ...filteredAppointmentProcedures].sort((a, b) => {
     const dateA = dayjs(a.scheduled !== '-' ? a.scheduled : a.created, ['MM/DD/YYYY']);
     const dateB = dayjs(b.scheduled !== '-' ? b.scheduled : b.created, ['MM/DD/YYYY']);
     return dateB.valueOf() - dateA.valueOf();
@@ -411,9 +398,6 @@ const NewTreatmentPlanPage = () => {
   const [activeGroupPlanId, setActiveGroupPlanId] = useState(null);
   const [isSubmittingGroups, setIsSubmittingGroups] = useState(false);
 
-  const currentPatient = useSelector(selectCurrentPatient);
-  const currentAppointment = useSelector(selectCurrentAppointment);
-  const currentPatientId = currentPatient?._id || currentPatient?.id;
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const providersList = useSelector(selectProviderDropdownList) || [];
   const { providers: appointmentProviders, rooms: appointmentRooms, appointmentTypes } = useDropdownData({
@@ -423,10 +407,25 @@ const NewTreatmentPlanPage = () => {
   });
 
 
+  // Extract downgrade codes from the patient's primary insurance coverage book
+  const downgradeCodes = useMemo(() => {
+    const insurances = insurancesCache?.[currentPatientId]?.data || [];
+    const primary = insurances.find((ins) => ins.insuranceType === 'primary') || insurances[0];
+    const coverageBook = primary?.coverageBookData || [];
+    return coverageBook
+      .filter((row) => row.hasDowngrade === true && row.downgrade)
+      .map((row) => ({
+        code: row.downgrade,
+        fromCode: row.code,
+        description: row.description || row.Descript || '',
+      }));
+  }, [insurancesCache, currentPatientId]);
+
   const [activePlanId, setActivePlanId] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
   const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false);
+  const [isRxDrawerOpen, setIsRxDrawerOpen] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState(null);
   const [editingFeesProcedure, setEditingFeesProcedure] = useState(null);
   const [isEstimatePrintOpen, setIsEstimatePrintOpen] = useState(false);
@@ -442,7 +441,11 @@ const NewTreatmentPlanPage = () => {
   const [toast, setToast] = useState({ open: false, message: '', type: 'success' });
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(1); // 0: Charts, 1: Treatment Plan, 2: Perio Charts
-  const [showPerioChart, setShowPerioChart] = useState(false);
+  const perioContextKey = `${currentPatientId}:${activeAppointmentId}`;
+  const [openedPerioContext, setOpenedPerioContext] = useState(null);
+  const { data: existingPerioExam, isLoading: perioExamLoading, isError: perioExamError, refetch: reloadPerioExam } =
+    useClinicalExamQuery('periodontal', perioContextReady ? activeAppointmentId : null);
+  const showPerioChart = openedPerioContext === perioContextKey || !!existingPerioExam?.examData;
 
   const [shareMenuAnchorEl, setShareMenuAnchorEl] = useState(null);
   const handleShareMenuClose = () => setShareMenuAnchorEl(null);
@@ -454,8 +457,55 @@ const NewTreatmentPlanPage = () => {
   const activeDraft = treatmentPlanDrafts.find((plan) => getPlanId(plan) === String(activePlanId));
   const activeDraftTitle = activeDraft ? getPlanTitle(activeDraft) : 'Active Treatment Plan';
   const treatmentPlanTotals = useMemo(() => calculateTreatmentPlanTotals(allProcedures), [allProcedures]);
-  const activeAppointmentId = currentAppointment?._id || currentAppointment?.id || searchParams.get('appointmentId');
   const activeAppointmentForHistory = currentAppointment || (activeAppointmentId ? { _id: activeAppointmentId } : null);
+
+  const nextAppointment = useMemo(() => {
+    if (!patientAppointments || patientAppointments.length === 0) return null;
+
+    const getApptDateTime = (appt) => {
+      let dateStr;
+      if (appt.appointmentDate) {
+        dateStr = appt.appointmentDate.split('T')[0];
+      } else if (appt.start) {
+        dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      } else if (appt.date) {
+        dateStr = appt.date.split('T')[0];
+      } else if (appt.AptDateTime) {
+        dateStr = appt.AptDateTime.split('T')[0];
+      } else {
+        dateStr = dayjs().format('YYYY-MM-DD');
+      }
+
+      let timeStr = '00:00';
+      if (appt.time) {
+        const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+        if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
+      } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
+        timeStr = appt.startTime;
+        if (timeStr.split(':').length === 2) timeStr += ':00';
+      } else if (appt.start && typeof appt.start === 'string' && appt.start.includes('T')) {
+        timeStr = appt.start.split('T')[1].substring(0, 8);
+      }
+
+      return dayjs(`${dateStr}T${timeStr}`);
+    };
+
+    const referenceDateTime = currentAppointment ? getApptDateTime(currentAppointment) : dayjs();
+
+    const futureAppts = patientAppointments
+      .filter(a => {
+        if (currentAppointment) {
+          const aId = a._id || a.id;
+          const rId = currentAppointment._id || currentAppointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        const appointmentDateTime = getApptDateTime(a);
+        return appointmentDateTime.isAfter(dayjs()) && appointmentDateTime.isAfter(referenceDateTime);
+      })
+      .sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
+    return futureAppts[0] || null;
+  }, [patientAppointments, currentAppointment]);
+
   const activeScheduledProcedure = allProcedures.find((procedure) => procedure.appointmentId || procedure._appointmentId);
   const activeScheduleDate =
     currentAppointment?.appointmentDate ||
@@ -467,6 +517,49 @@ const NewTreatmentPlanPage = () => {
     currentAppointment?.time ||
     activeScheduledProcedure?.startTime ||
     activeScheduledProcedure?.time;
+
+  const headerDates = useMemo(() => {
+    const current = activeScheduleDate ? dayjs(activeScheduleDate) : dayjs();
+    
+    if (!patientAppointments || patientAppointments.length === 0) {
+      return { pastDates: [], currentDate: current };
+    }
+
+    const getApptDate = (appt) => {
+      if (appt.appointmentDate) return dayjs(appt.appointmentDate);
+      if (appt.date) return dayjs(appt.date);
+      if (appt.start) return dayjs(appt.start);
+      if (appt.AptDateTime) return dayjs(appt.AptDateTime);
+      return dayjs();
+    };
+
+    const pastAppts = patientAppointments
+      .filter(a => {
+        if (currentAppointment) {
+          const aId = a._id || a.id;
+          const rId = currentAppointment._id || currentAppointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        return getApptDate(a).isBefore(current, 'day');
+      });
+
+    // Extract unique dates and sort them chronologically (oldest to newest)
+    const uniqueDatesMap = new Map();
+    pastAppts.forEach(a => {
+      const dateObj = getApptDate(a);
+      const formatted = dateObj.format('MM/DD/YYYY');
+      if (!uniqueDatesMap.has(formatted)) {
+        uniqueDatesMap.set(formatted, dateObj);
+      }
+    });
+
+    const pastDates = Array.from(uniqueDatesMap.values()).sort((a, b) => a.diff(b));
+
+    return {
+      pastDates,
+      currentDate: current
+    };
+  }, [patientAppointments, currentAppointment, activeScheduleDate]);
 
   const getLinkedAppointmentId = () => (
     activeAppointmentId || activeScheduledProcedure?.appointmentId || activeScheduledProcedure?._appointmentId
@@ -620,7 +713,7 @@ const NewTreatmentPlanPage = () => {
           // Ask for a large page: the API defaults to 10, and a newly created
           // plan can otherwise fall outside the first page and never be read.
           treatmentPlanService.getAll({ patientId, limit: 100 }),
-          appointmentService.getPatientAppointments(patientId, 100).catch(() => ({ data: [] }))
+          dispatch(fetchPatientHistory(patientId)).unwrap().catch(() => ([]))
         ]);
         // getAll already unwraps response.data.data -> { treatmentPlans, pagination }
         const plans = tpRes?.data?.treatmentPlans || tpRes?.treatmentPlans || [];
@@ -649,6 +742,7 @@ const NewTreatmentPlanPage = () => {
         }
 
         const appointments = Array.isArray(apptRes) ? apptRes : (Array.isArray(apptRes?.data) ? apptRes.data : (apptRes?.data?.appointments || []));
+        setPatientAppointments(appointments);
         const apptProcs = mapAppointmentsToTreatmentRows(appointments);
         setAppointmentProcedures(apptProcs);
 
@@ -658,6 +752,7 @@ const NewTreatmentPlanPage = () => {
             const itemsForEstimate = apptProcs.map(proc => ({
               code: proc.code,
               charge: Number(String(proc.negRate || '0').replace(/[^0-9.-]+/g, '')) || 0,
+              site: proc.site ?? proc.tooth ?? undefined,
             }));
             const estimates = await invoiceService.estimateInvoiceItems(patientId, itemsForEstimate);
             if (Array.isArray(estimates) && estimates.length) {
@@ -694,6 +789,15 @@ const NewTreatmentPlanPage = () => {
       setSelectedTeeth(selectedTeeth.filter(n => n !== num));
     } else {
       setSelectedTeeth([...selectedTeeth, num]);
+    }
+  };
+
+  const handleToggleTeethGroup = (teethArray) => {
+    const allSelected = teethArray.every(t => selectedTeeth.includes(t));
+    if (allSelected) {
+      setSelectedTeeth(selectedTeeth.filter(t => !teethArray.includes(t)));
+    } else {
+      setSelectedTeeth([...new Set([...selectedTeeth, ...teethArray])]);
     }
   };
 
@@ -936,7 +1040,27 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const refreshPatientBilling = () => {
+    const patientId = currentPatient?._id || currentPatient?.id;
+    if (!patientId) return;
+    dispatch(invalidateLedger(patientId));
+    dispatch(invalidatePaymentInvoices(patientId));
+    dispatch(invalidatePatientBalance(patientId));
+    dispatch(fetchLedgerItems(patientId));
+  };
+
+  const billingSaveMessage = (result, fallback) => {
+    const plan = result?.treatmentPlan || result;
+    const created = result?.createdInvoice || plan?.createdInvoice;
+    const existing = plan?.existingInvoices || [];
+    if (created || existing.length) refreshPatientBilling();
+    if (created) return `${fallback} Invoice ${created.invoiceNumber} created.`;
+    if (existing.length) return `${fallback} Linked invoice ${existing.map((invoice) => invoice.invoiceNumber).join(', ')} available in Billing.`;
+    return fallback;
+  };
+
   const handleAddProcedure = async (procedure) => {
+    if (isSaving) return;
     if (!currentPatient) {
       setToast({ open: true, message: 'Please select a patient first.', type: 'error' });
       return;
@@ -947,7 +1071,7 @@ const NewTreatmentPlanPage = () => {
       return;
     }
 
-    const newId = treatmentPlans.length > 0 ? Math.max(...treatmentPlans.map(p => p.id)) + 1 : 1;
+    const newId = `new-${crypto.randomUUID()}`;
     const surfaceStr = selectedSurfaces.length > 0 ? ' ' + selectedSurfaces.join(' ') : '';
     const formattedSite = selectedTeeth.length > 0 ? selectedTeeth.map(t => `#${t}${surfaceStr}`).join(', ') : (selectedSurfaces.join(' ') || '-');
     const procedureCode = procedure.code || procedure.procedureCode || `D${Math.floor(1000 + Math.random() * 9000)}`;
@@ -991,32 +1115,7 @@ const NewTreatmentPlanPage = () => {
         patientId: currentPatient._id || currentPatient.id,
         title: `Treatment Plan - ${dayjs().format('MM/DD/YYYY')}`,
         status: TREATMENT_PLAN_STATUS_ACTIVE,
-        items: newTreatmentPlans.map(item => {
-          const itemFee = item.negRate !== '-' && item.negRate ? Number(String(item.negRate).replace(/[^0-9.-]+/g, "")) : 0;
-          const itemIns = item.insEst !== '-' && item.insEst ? Number(String(item.insEst).replace(/[^0-9.-]+/g, "")) : 0;
-          const itemPt = item.ptEst !== '-' && item.ptEst ? Number(String(item.ptEst).replace(/[^0-9.-]+/g, "")) : 0;
-          return {
-            procedureCode: item.code,
-            description: item.description,
-            tooth: item.tooth || '',
-            site: item.site,
-            fee: itemFee,
-            charge: itemFee,
-            priority: item.priority,
-            status: statusLabelToCode(item.status),
-            icd: item.icd,
-            provider: item.provider || null,
-            preAuth: item.preAuth,
-            preAuthId: item.preAuthId || null,
-            labCase: item.labCase,
-            insEst: item.insEst,
-            ptEst: item.ptEst,
-            insPortion: itemIns,
-            ptPortion: itemPt,
-            insuranceAmount: `$${itemIns.toFixed(2)}`,
-            patientAmount: `$${itemPt.toFixed(2)}`,
-          };
-        })
+        items: newTreatmentPlans.map(mapProcedureToPayloadItem)
       };
       Object.assign(payload, buildTreatmentPlanTotalsPayload(payload.items));
 
@@ -1027,7 +1126,7 @@ const NewTreatmentPlanPage = () => {
           ...buildTreatmentPlanTotalsPayload(payload.items),
         });
         const updatedPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data;
-        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payload.items, buildTreatmentPlanTotalsPayload(payload.items)));
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, updatedPlan?.items || payload.items, updatedPlan || buildTreatmentPlanTotalsPayload(payload.items)));
         if (updatedPlan?.items && Array.isArray(updatedPlan.items)) {
           const updatedItems = mapPlanItems(updatedPlan.items, updatedPlan.createdAt).map((item) => ({
             ...item,
@@ -1035,7 +1134,7 @@ const NewTreatmentPlanPage = () => {
           }));
           setTreatmentPlans(updatedItems);
         }
-        setToast({ open: true, message: 'Treatment plan auto-saved!', type: 'success' });
+        setToast({ open: true, message: billingSaveMessage(res, 'Treatment plan auto-saved!'), type: 'success' });
       } else {
         // Create initial plan
         const res = await treatmentPlanService.create(payload);
@@ -1052,7 +1151,7 @@ const NewTreatmentPlanPage = () => {
           setTreatmentPlans(newItems);
         }
         setTreatmentPlanDrafts((prev) => [createdPlan, ...prev.filter((plan) => getPlanId(plan) !== String(createdId))]);
-        setToast({ open: true, message: 'Treatment plan created and saved!', type: 'success' });
+        setToast({ open: true, message: billingSaveMessage(res, 'Treatment plan created and saved!'), type: 'success' });
       }
     } catch (error) {
       console.error('Failed to auto-save treatment plan:', error);
@@ -1236,7 +1335,119 @@ const NewTreatmentPlanPage = () => {
     }
   };
 
+  const handleBulkUpdateItemStatus = async (selectedIds, newStatus) => {
+    if (isSaving) return;
+    if (!currentPatient || !selectedIds?.length) return;
+    const ids = new Set(selectedIds.map(String));
+    const selectedItems = allProcedures.filter((item) => ids.has(String(item.id || item._id)));
+    const selectedAppointmentItems = selectedItems.filter((item) => String(item.id).startsWith('appt-'));
+    const selectedPlanItems = selectedItems.filter((item) => !String(item.id).startsWith('appt-'));
+    const newTreatmentPlans = treatmentPlans.map((item) =>
+      ids.has(String(item.id)) ? { ...item, status: newStatus } : item
+    );
+    setTreatmentPlans(newTreatmentPlans);
+    setAppointmentProcedures((previous) => previous.map((item) =>
+      ids.has(String(item.id)) ? { ...item, status: newStatus } : item
+    ));
+    try {
+      setIsSaving(true);
+      const invoiceNumbers = [];
+      const linkedInvoiceNumbers = [];
+
+      if (selectedPlanItems.length) {
+        if (!activePlanId) throw new Error('No active treatment plan is selected.');
+        const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
+        const totals = buildTreatmentPlanTotalsPayload(payloadItems);
+        const result = await treatmentPlanService.update(activePlanId, { items: payloadItems, ...totals });
+        const savedItems = result?.treatmentPlan?.items
+          ? mapPlanItems(result.treatmentPlan.items, result.treatmentPlan.createdAt)
+          : newTreatmentPlans;
+        setTreatmentPlans(savedItems);
+        setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, result?.treatmentPlan?.items || payloadItems, totals));
+        const invoiceNumber = result?.createdInvoice?.invoiceNumber || result?.treatmentPlan?.createdInvoice?.invoiceNumber;
+        if (invoiceNumber) invoiceNumbers.push(invoiceNumber);
+        (result?.treatmentPlan?.existingInvoices || []).forEach((invoice) => linkedInvoiceNumbers.push(invoice.invoiceNumber));
+      }
+
+      // Appointment-backed rows are saved together per appointment, so one
+      // backend request creates one invoice for the selected procedures.
+      const appointmentGroups = new Map();
+      selectedAppointmentItems.forEach((item) => {
+        const appointmentId = String(item.appointmentId || item._appointmentId || '').trim();
+        if (!appointmentId) return;
+        if (!appointmentGroups.has(appointmentId)) appointmentGroups.set(appointmentId, []);
+        appointmentGroups.get(appointmentId).push(item);
+      });
+      for (const [appointmentId, group] of appointmentGroups) {
+        const appointment = await appointmentService.getAppointmentById(appointmentId);
+        const procedures = [...(appointment?.customFields?.procedures || appointment?.procedures || [])];
+        group.forEach((row) => {
+          const procId = String(row.id).split('-').slice(2).join('-');
+          const index = procedures.findIndex((procedure, idx) => String(procedure?.id ?? idx) === procId);
+          if (index >= 0) {
+            procedures[index] = { ...procedures[index], completed: newStatus === 'Completed', status: newStatus };
+          }
+        });
+        const updatedAppointment = await appointmentService.updateAppointment(appointmentId, {
+          customFields: { ...appointment.customFields, procedures },
+          procedures,
+        });
+        if (updatedAppointment?.createdInvoice?.invoiceNumber) {
+          invoiceNumbers.push(updatedAppointment.createdInvoice.invoiceNumber);
+        }
+        setAppointmentProcedures((previous) => [
+          ...previous.filter((row) => String(row.appointmentId || row._appointmentId) !== appointmentId),
+          ...mapAppointmentsToTreatmentRows([updatedAppointment]),
+        ]);
+      }
+
+      setSelectedRows([]);
+      if (invoiceNumbers.length || linkedInvoiceNumbers.length) refreshPatientBilling();
+      const billingMessage = invoiceNumbers.length
+        ? `Invoice ${invoiceNumbers.join(', ')} created.`
+        : linkedInvoiceNumbers.length
+          ? `Linked invoice ${[...new Set(linkedInvoiceNumbers)].join(', ')} available in Billing.`
+          : '';
+      setToast({ open: true, message: billingMessage
+        ? `Status updated. ${billingMessage}`
+        : newStatus === 'Completed'
+          ? 'Status saved, but no invoice was returned. Reload the plan and check Billing.'
+          : 'Status updated successfully!', type: newStatus === 'Completed' && !billingMessage ? 'warning' : 'success' });
+    } catch (error) {
+      console.error('Failed to update item status:', error);
+      const errData = error.response?.data?.error;
+      setToast({ open: true, message: typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update status.'), type: 'error' });
+      setTreatmentPlans(treatmentPlans);
+      setAppointmentProcedures(appointmentProcedures);
+      // A mixed selection can save one group before another fails. Reconcile
+      // persisted records instead of leaving successful saves visually undone.
+      const appointmentIds = [...new Set(selectedAppointmentItems.map((item) => item.appointmentId || item._appointmentId).filter(Boolean))];
+      const refreshed = await Promise.allSettled([
+        ...(selectedPlanItems.length && activePlanId
+          ? [treatmentPlanService.getById(activePlanId).then((result) => ({ plan: result.treatmentPlan }))]
+          : []),
+        ...appointmentIds.map((id) => appointmentService.getAppointmentById(id).then((appointment) => ({ appointment, id }))),
+      ]);
+      refreshed.forEach((result) => {
+        if (result.status !== 'fulfilled') return;
+        const { plan, appointment, id } = result.value;
+        if (plan) {
+          setTreatmentPlans(mapPlanItems(plan.items, plan.createdAt));
+          setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, plan.items, plan));
+        }
+        if (appointment) setAppointmentProcedures((prev) => [
+          ...prev.filter((row) => String(row.appointmentId || row._appointmentId) !== String(id)),
+          ...mapAppointmentsToTreatmentRows([appointment]),
+        ]);
+      });
+      refreshPatientBilling();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleUpdateItemStatus = async (itemId, newStatus) => {
+    if (isSaving) return;
     if (!currentPatient) return;
 
     if (String(itemId).startsWith('appt-')) {
@@ -1263,11 +1474,18 @@ const NewTreatmentPlanPage = () => {
 
           if (targetIdx >= 0 && targetIdx < procs.length) {
             procs[targetIdx].completed = (newStatus === 'Completed');
-            await appointmentService.updateAppointment(apptId, { 
+            const updatedAppointment = await appointmentService.updateAppointment(apptId, {
               customFields: { ...appt.customFields, procedures: procs },
               procedures: procs 
             });
-            setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
+            if (updatedAppointment?.createdInvoice) refreshPatientBilling();
+            setToast({
+              open: true,
+              message: updatedAppointment?.createdInvoice?.invoiceNumber
+                ? `Procedure completed and invoice ${updatedAppointment.createdInvoice.invoiceNumber} created successfully.`
+                : 'Status updated successfully!',
+              type: 'success',
+            });
           }
         }
       } catch (error) {
@@ -1280,37 +1498,7 @@ const NewTreatmentPlanPage = () => {
       return;
     }
 
-    if (!activePlanId) return;
-
-    const newTreatmentPlans = treatmentPlans.map(item =>
-      item.id === itemId ? { ...item, status: newStatus } : item
-    );
-
-    // Optimistic UI update
-    setTreatmentPlans(newTreatmentPlans);
-
-    // Auto-save logic
-    try {
-      setIsSaving(true);
-
-      const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
-
-      await treatmentPlanService.update(activePlanId, {
-        items: payloadItems,
-        ...buildTreatmentPlanTotalsPayload(payloadItems),
-      });
-      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
-      setToast({ open: true, message: 'Status updated successfully!', type: 'success' });
-    } catch (error) {
-      console.error('Failed to update item status:', error);
-      const errData = error.response?.data?.error;
-      const errMsg = typeof errData === 'string' ? errData : (errData?.message || error.message || 'Failed to update status.');
-      setToast({ open: true, message: errMsg, type: 'error' });
-      // Revert optimistic update
-      setTreatmentPlans(treatmentPlans);
-    } finally {
-      setIsSaving(false);
-    }
+    await handleBulkUpdateItemStatus([itemId], newStatus);
   };
 
   const handleSelectTreatmentPlan = (event) => {
@@ -1436,8 +1624,8 @@ const NewTreatmentPlanPage = () => {
 
     try {
       setIsCreatingDraft(true);
+      const currentItems = treatmentPlans.map(mapProcedureToPayloadItem);
       if (activePlanId) {
-        const currentItems = treatmentPlans.map(mapProcedureToPayloadItem);
         await treatmentPlanService.update(activePlanId, {
           items: currentItems,
           ...buildTreatmentPlanTotalsPayload(currentItems),
@@ -1445,12 +1633,18 @@ const NewTreatmentPlanPage = () => {
         setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, currentItems, buildTreatmentPlanTotalsPayload(currentItems)));
       }
 
+      // Strip IDs so the backend generates new ones and doesn't hang on duplicate key errors
+      const itemsForNewDraft = currentItems.map(item => {
+        const { id, _id, ...rest } = item;
+        return rest;
+      });
+
       const res = await treatmentPlanService.create({
         patientId: currentPatient._id || currentPatient.id,
         title: name,
         status: TREATMENT_PLAN_STATUS_ACTIVE,
-        ...buildTreatmentPlanTotalsPayload([]),
-        items: []
+        ...buildTreatmentPlanTotalsPayload(itemsForNewDraft),
+        items: itemsForNewDraft
       });
       const createdPlan = res?.data?.treatmentPlan || res?.treatmentPlan || res?.data || res;
       const createdId = getPlanId(createdPlan);
@@ -1568,9 +1762,7 @@ const NewTreatmentPlanPage = () => {
         setIsSaving(true);
         const appt = await appointmentService.getAppointmentById(apptId);
         const procs = appt?.customFields?.procedures || appt?.procedures || [];
-        const targetIdx = procs.some((p) => String(p.id) === procIdOrIdx)
-          ? procs.findIndex((p) => String(p.id) === procIdOrIdx)
-          : parseInt(procIdOrIdx, 10);
+        const targetIdx = findAppointmentProcedureIndex(procs, procIdOrIdx);
 
         if (targetIdx >= 0 && targetIdx < procs.length) {
           const updatedProcs = [...procs];
@@ -1588,11 +1780,16 @@ const NewTreatmentPlanPage = () => {
             creditToPractice: updatedProcedure.creditToPractice,
             siteSelection: updatedProcedure.siteSelection
           };
-          await appointmentService.updateAppointment(apptId, {
+          const saved = await appointmentService.updateAppointment(apptId, {
             customFields: { ...appt.customFields, procedures: updatedProcs },
             procedures: updatedProcs
           });
+          const refreshed = await appointmentService.getAppointmentById(apptId).catch(() => saved);
+          const refreshedRows = mapAppointmentsToTreatmentRows([refreshed]);
+          setAppointmentProcedures(previous => previous.map(row => refreshedRows.find(next => next.id === row.id) || row));
           setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+        } else {
+          throw new Error('The selected appointment procedure could not be found.');
         }
       } catch (error) {
         console.error('Failed to update appointment procedure:', error);
@@ -1616,12 +1813,14 @@ const NewTreatmentPlanPage = () => {
     try {
       setIsSaving(true);
       const payloadItems = newTreatmentPlans.map(mapProcedureToPayloadItem);
-      await treatmentPlanService.update(activePlanId, {
+      const result = await treatmentPlanService.update(activePlanId, {
         items: payloadItems,
         ...buildTreatmentPlanTotalsPayload(payloadItems),
       });
-      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, payloadItems, buildTreatmentPlanTotalsPayload(payloadItems)));
-      setToast({ open: true, message: 'Procedure updated successfully!', type: 'success' });
+      const savedPlan = result.treatmentPlan;
+      setTreatmentPlans(mapPlanItems(savedPlan.items, savedPlan.createdAt));
+      setTreatmentPlanDrafts((prev) => mergePlanItemsIntoDrafts(prev, activePlanId, savedPlan.items, savedPlan));
+      setToast({ open: true, message: billingSaveMessage(result, 'Procedure updated successfully!'), type: 'success' });
     } catch (error) {
       console.error('Failed to update treatment plan procedure:', error);
       const errData = error.response?.data?.error;
@@ -1672,18 +1871,21 @@ const NewTreatmentPlanPage = () => {
           '.MuiBox-root, .MuiPaper-root': { backgroundColor: 'transparent !important', boxShadow: 'none !important', border: 'none !important' },
           '@page': { margin: '10mm' },
           '.MuiTableContainer-root': { overflow: 'visible !important' },
-          'table': { width: '100% !important', zoom: '0.65' },
+          'table': { width: '100% !important', borderCollapse: 'collapse' },
           '.MuiTableCell-root': {
-            padding: '2px 4px !important',
-            fontSize: '9px !important',
-            lineHeight: '1.1 !important',
+            padding: '4px 6px !important',
+            fontSize: '10px !important',
+            lineHeight: '1.2 !important',
             whiteSpace: 'normal !important',
             minWidth: '0 !important',
-            wordBreak: 'break-word'
+            wordBreak: 'break-word',
+            borderBottom: '1px solid #e2e8f0 !important'
           },
           '.MuiTableCell-head': {
             fontSize: '9px !important',
-            fontWeight: 'bold !important'
+            fontWeight: 'bold !important',
+            color: '#64748b !important',
+            textTransform: 'uppercase'
           },
           '.MuiSelect-select': {
             fontSize: '9px !important'
@@ -1703,6 +1905,9 @@ const NewTreatmentPlanPage = () => {
           showOdontogram={showOdontogram}
           setShowOdontogram={setShowOdontogram}
           onNotesClick={() => setIsNotesDrawerOpen(true)}
+          onRxClick={() => setIsRxDrawerOpen(true)}
+          pastDates={headerDates.pastDates}
+          currentDate={headerDates.currentDate}
         />
       </Box>
 
@@ -1711,12 +1916,13 @@ const NewTreatmentPlanPage = () => {
 
         {/* Left Pane - Odontogram */}
         {showOdontogram && (
-          <Box className={activeTab === 2 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
+          <Box className={activeTab !== 0 ? 'print-hide' : ''} sx={{ flex: 7.5, minWidth: 0 }}>
             <NewTreatmentPlanOdontogram
               selectedTeeth={selectedTeeth}
               onToothClick={handleToothClick}
               selectedSurfaces={selectedSurfaces}
               onSidebarSurfaceClick={handleSidebarSurfaceClick}
+              onToggleTeethGroup={handleToggleTeethGroup}
             />
           </Box>
         )}
@@ -1750,8 +1956,8 @@ const NewTreatmentPlanPage = () => {
           </Box>
         )}
         {activeTab === 1 && (
-          <Box sx={{ p: 2, overflowX: 'auto' }}>
-            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900 }}>
+          <Box sx={{ p: 2, overflowX: 'auto', '@media print': { p: 0, overflowX: 'visible', overflow: 'visible' } }}>
+            <Paper elevation={0} sx={{ borderRadius: '8px', border: '1px solid #e2e8f0', p: 3, minWidth: 900, '@media print': { minWidth: 0, width: '100%', border: 'none', p: 0, m: 0, boxShadow: 'none' } }}>
               {/* Top Toolbar matching screenshot */}
               <Box className="print-hide" sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ width: 260 }}>
@@ -1958,6 +2164,8 @@ const NewTreatmentPlanPage = () => {
                     onEditAppointment={handleEditAppointmentFromPlan}
                     onSendPreAuth={handleOpenPreAuth}
                     onUpdateItemStatus={handleUpdateItemStatus}
+                    onBulkUpdateItemStatus={handleBulkUpdateItemStatus}
+                    isSaving={isSaving}
                     onSaveAsHold={handleSaveAsHold}
                     onDeleteDraft={handleDeleteDraft}
                     selectedRows={selectedRows}
@@ -1976,9 +2184,34 @@ const NewTreatmentPlanPage = () => {
         )}
         {activeTab === 2 && (
           <Box sx={{ p: 0, height: '800px', backgroundColor: '#f9fafb', borderRadius: 1, overflow: 'hidden', '@media print': { height: 'auto', overflow: 'visible' } }}>
-            {showPerioChart ? (
+            {!perioContextReady ? (
+              <Box sx={{ p: 3 }}>
+                {appointmentPatientMismatch || appointmentDetailError || patientDetailError || !activeAppointmentId ? (
+                  <Alert severity="error" action={activeAppointmentId && !appointmentPatientMismatch ? (
+                    <Button color="inherit" onClick={() => {
+                      dispatch(fetchAppointmentById(activeAppointmentId));
+                      if (currentPatientId) dispatch(fetchPatientById(String(currentPatientId)));
+                    }}>Retry</Button>
+                  ) : undefined}>
+                    {appointmentPatientMismatch ? 'This appointment belongs to a different patient. Open the appointment again.'
+                      : !activeAppointmentId ? 'Select an appointment to create a periodontal chart.'
+                        : 'Unable to load the appointment and patient details. Please retry.'}
+                  </Alert>
+                ) : <CircularProgress aria-label="Loading appointment details" />}
+              </Box>
+            ) : perioExamLoading ? (
+              <Box sx={{ p: 3 }}><CircularProgress aria-label="Loading periodontal exam" /></Box>
+            ) : perioExamError ? (
+              <Alert severity="error" action={<Button color="inherit" onClick={() => reloadPerioExam()}>Retry</Button>}>
+                Unable to load this appointment's periodontal exam.
+              </Alert>
+            ) : showPerioChart ? (
               <PeriodontalExamPage
+                key={perioContextKey}
                 embedded={true}
+                patientId={currentPatientId}
+                appointmentId={activeAppointmentId}
+                appointment={currentAppointment}
                 selectedTeethFromParent={selectedTeeth}
                 onToothClickFromParent={handleToothClick}
               />
@@ -1986,7 +2219,7 @@ const NewTreatmentPlanPage = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                 <Button
                   variant="contained"
-                  onClick={() => setShowPerioChart(true)}
+                  onClick={() => setOpenedPerioContext(perioContextKey)}
                   sx={{
                     textTransform: 'none',
                     fontFamily: 'Inter, sans-serif',
@@ -2029,6 +2262,7 @@ const NewTreatmentPlanPage = () => {
         onClose={() => setIsRouteSlipOpen(false)}
         patient={currentPatient}
         appointment={currentAppointment}
+        nextAppointment={nextAppointment}
         procedures={allProcedures}
         planTitle={activeDraftTitle}
       />
@@ -2065,24 +2299,47 @@ const NewTreatmentPlanPage = () => {
         sx={{ zIndex: 10000 }}
         PaperProps={{
           sx: {
-            borderRadius: '8px',
-            boxShadow: '0 24px 64px rgba(15, 23, 42, 0.24)',
-            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
             overflow: 'hidden'
           }
         }}
       >
-        <DialogTitle sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
-          <Typography sx={{ fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            p: '12px 16px',
+            gap: '8px',
+            borderBottom: `1px solid ${COLORS.BORDER}`,
+            backgroundColor: COLORS.SURFACE_TINT,
+            m: 0,
+            flexShrink: 0,
+          }}
+        >
+          <ReceiptIcon sx={{ fontSize: '20px', color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
             Create draft
           </Typography>
-          <IconButton onClick={closeCreateDraftDialog} disabled={isCreatingDraft} sx={{ width: 30, height: 30, color: '#2563eb' }}>
-            <CloseIcon sx={{ fontSize: 20 }} />
+          <IconButton
+            onClick={closeCreateDraftDialog}
+            disabled={isCreatingDraft}
+            size="small"
+            sx={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            <CloseIcon sx={{ fontSize: '18px' }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ px: 3, py: 2.25, bgcolor: '#fff' }}>
-          <Typography sx={{ mb: 1, fontFamily: 'Inter, sans-serif', fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }}>
-            Treatment Plan Name <Box component="span" sx={{ color: '#ef4444' }}>*</Box>
+        <DialogContent sx={{ p: 2, pt: '16px !important' }}>
+          <Typography sx={{ mb: 1, fontSize: '13px', fontWeight: 500, color: COLORS.TEXT_PRIMARY }}>
+            Treatment Plan Name <Box component="span" sx={{ color: COLORS.STATUS_ERROR }}>*</Box>
           </Typography>
           <TextField
             autoFocus
@@ -2092,6 +2349,7 @@ const NewTreatmentPlanPage = () => {
             disabled={isCreatingDraft}
             error={Boolean(draftNameError)}
             helperText={draftNameError}
+            placeholder="e.g. Phase 1 Treatment"
             onChange={(event) => {
               setDraftName(event.target.value);
               if (draftNameError) setDraftNameError('');
@@ -2104,25 +2362,31 @@ const NewTreatmentPlanPage = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                height: 34,
-                borderRadius: '4px',
-                fontFamily: 'Inter, sans-serif',
-                bgcolor: '#fff',
-                '& fieldset': { borderColor: '#d8dee8' },
+                fontSize: '13px',
+                borderRadius: '8px',
+                '& fieldset': { borderColor: COLORS.BORDER },
                 '&:hover fieldset': { borderColor: '#94a3b8' },
-                '&.Mui-focused fieldset': { borderColor: '#2563eb', borderWidth: '1.2px' },
+                '&.Mui-focused fieldset': { borderColor: COLORS.ACCENT, borderWidth: '1px' },
               },
-              '& .MuiOutlinedInput-input': { py: 0.75, px: 1.25, fontSize: '0.8125rem' },
               '& .MuiFormHelperText-root': { mx: 0, fontSize: '0.75rem' }
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 1.5, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', gap: 1 }}>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>
           <Button
             onClick={closeCreateDraftDialog}
             disabled={isCreatingDraft}
             variant="outlined"
-            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', borderColor: '#d8dee8', color: '#2563eb', fontWeight: 600, boxShadow: 'none' }}
+            size="small"
+            sx={{
+              color: '#64748b',
+              borderColor: '#cbd5e1',
+              borderRadius: '8px',
+              '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+              textTransform: 'none',
+              px: 2,
+              fontWeight: 600,
+            }}
           >
             Cancel
           </Button>
@@ -2130,7 +2394,21 @@ const NewTreatmentPlanPage = () => {
             onClick={handleCreateDraft}
             disabled={isCreatingDraft}
             variant="contained"
-            sx={{ minWidth: 64, height: 34, borderRadius: '4px', textTransform: 'none', bgcolor: '#2563eb', fontWeight: 600, boxShadow: 'none', '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' } }}
+            size="small"
+            sx={{
+              bgcolor: COLORS.ACCENT,
+              color: '#fff',
+              textTransform: 'none',
+              boxShadow: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              px: 2,
+              '&:hover': { bgcolor: '#1565c0' },
+              '&.Mui-disabled': {
+                bgcolor: '#cbd5e1',
+                color: '#fff',
+              },
+            }}
           >
             {isCreatingDraft ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : 'Save'}
           </Button>
@@ -2150,15 +2428,21 @@ const NewTreatmentPlanPage = () => {
         onSave={handleSaveEditedFees}
         onRevert={String(editingFeesProcedure?.id || '').startsWith('appt-') ? undefined : handleRevertFees}
         saving={isSaving}
+        downgradeCodes={downgradeCodes}
       />
       <NotesDrawer
         open={isNotesDrawerOpen}
         onClose={() => setIsNotesDrawerOpen(false)}
         patientName={currentPatient ? `${currentPatient.firstName || ''} ${currentPatient.lastName || ''}`.trim() : ''}
-        patientId={currentPatient ? (currentPatient._id || currentPatient.id) : undefined}
-        appointmentId={searchParams.get('appointmentId')}
+        patientId={currentPatientId || (currentPatient ? (currentPatient.PatNum || currentPatient._id || currentPatient.id) : undefined)}
+        appointmentId={activeAppointmentId}
+        providerId={currentAppointment?.providerId || currentAppointment?.provider || currentPatient?.PriProv || user?.providerId || null}
         currentPatient={currentPatient}
         selectedProcedures={allProcedures}
+      />
+      <RxDrawer 
+        open={isRxDrawerOpen} 
+        onClose={() => setIsRxDrawerOpen(false)} 
       />
 
       {/* Summary dialog — shown when multiple providers are detected */}

@@ -73,7 +73,7 @@ const FinanceDialogManager = ({
       )}
 
       {showInsurancePayment && (
-        <DialogWrapper onClose={() => setShowInsurancePayment(false)} maxWidth="1300px">
+        <DialogWrapper onClose={() => setShowInsurancePayment(false)} maxWidth="calc(100vw - 48px)">
           <InsurancePaymentDialog patient={patient} onClose={() => setShowInsurancePayment(false)} onSave={handleInsurancePaymentSave} />
         </DialogWrapper>
       )}
@@ -94,7 +94,7 @@ const FinanceDialogManager = ({
 
       {showLateFee && (
         <DialogWrapper onClose={() => setShowLateFee(false)}>
-          <LateFeeDialog onClose={() => setShowLateFee(false)} adjustmentType={selectedAdjustment?.label} onAddFee={handleAddLateFee} />
+          <LateFeeDialog onClose={() => setShowLateFee(false)} adjustmentType={selectedAdjustment?.label} onAddFee={handleAddLateFee} patientId={patient?._id || patient?.id} tier={selectedAdjustment?.tier} />
         </DialogWrapper>
       )}
 

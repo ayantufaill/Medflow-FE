@@ -74,6 +74,8 @@ const adminRoutes = [
   <Route key="/admin/finance-management/payment-presentation" path="/admin/finance-management/payment-presentation" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/coverage-book-shortcut" path="/admin/finance-management/coverage-book-shortcut" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/finance-management/ar-automation" path="/admin/finance-management/ar-automation" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/late-fee-policy" path="/admin/finance-management/late-fee-policy" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/finance-management/late-fee-waivers" path="/admin/finance-management/late-fee-waivers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management" path="/admin/insurance-management" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication" path="/admin/patient-communication" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/patient-communication/settings" path="/admin/patient-communication/settings" element={adminOnly(<AdminPage />)} />,
@@ -92,6 +94,9 @@ const adminRoutes = [
   <Route key="/admin/insurance-management/carriers" path="/admin/insurance-management/carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/plans" path="/admin/insurance-management/plans" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/membership-plans" path="/admin/insurance-management/membership-plans" element={adminOnly(<AdminPage />)} />,
+  // Plan coordination (COB) master data. Read access follows the admin area;
+  // the edit action inside is gated on insurance.plan_master.edit.
+  <Route key="/admin/insurance-management/plan-coordination" path="/admin/insurance-management/plan-coordination" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-converted-carriers" path="/admin/insurance-management/match-converted-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/insurance-management/match-vyne-carriers" path="/admin/insurance-management/match-vyne-carriers" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/practice-setup/onboarding" path="/admin/practice-setup/onboarding" element={adminOnly(<PracticeOnboardingPage />, true)} />,
@@ -110,6 +115,7 @@ const adminRoutes = [
 
   <Route key="/admin/clinical-management/products" path="/admin/clinical-management/products" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/procedure-codes" path="/admin/clinical-management/procedure-codes" element={adminOnly(<AdminPage />)} />,
+  <Route key="/admin/clinical-management/route-slip" path="/admin/clinical-management/route-slip" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/checklists" path="/admin/clinical-management/checklists" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/prescription-templates" path="/admin/clinical-management/prescription-templates" element={adminOnly(<AdminPage />)} />,
   <Route key="/admin/clinical-management/system-settings" path="/admin/clinical-management/system-settings" element={adminOnly(<AdminPage />)} />,

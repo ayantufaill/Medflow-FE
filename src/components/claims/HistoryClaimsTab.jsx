@@ -1,100 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography } from '@mui/material';
 import ClaimFilterPanel from './ClaimFilterPanel';
 import ClaimAlertBar from './ClaimAlertBar';
 import { StandardClaimsTable } from './StandardClaimsTable';
 import { useClaimActions } from '../../hooks/useClaimActions';
 import { claimService } from '../../services/claim.service';
 import { CARRIERS, CLAIM_TYPES, CLAIM_STATUSES, SORT_REPORT_OPTIONS, FILTER_DATE_OPTIONS } from '../../pages/claims/claimsConstants';
-import { mapClaimFields } from './claimUtils';
-import { applyDateFilter } from './claimFilterUtils';
+
+import { useFilteredClaimTab } from './useFilteredClaimTab';
+
+const DEFAULT_FILTERS = {
+    sort: 'none', attachment: 'all', status: 'all', carrier: 'all',
+    claimType: 'all', filterDate: 'all', search: '',
+};
 
 const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
-  const [claims, setClaims] = useState([]);
-  const [filteredClaims, setFilteredClaims] = useState([]);
-  const [loadingClaims, setLoadingClaims] = useState(true);
-  
-  const [filters, setFilters] = useState({
-    sort: 'none',
-    attachment: 'all',
-    status: 'all',
-    carrier: 'all',
-    claimType: 'all',
-    filterDate: 'all',
-    search: '',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
-
   const [showHidden, setShowHidden] = useState(false);
   const [selectedClaims, setSelectedClaims] = useState({});
   const [expandedProcedures, setExpandedProcedures] = useState({});
   const [selectAllAnchorEl, setSelectAllAnchorEl] = useState(null);
-  
-  const {
-    loading, changeStatus, voidAndRecreate, toggleHide, printPage, exportCSV
-  } = useClaimActions(loadData);
-
-  useEffect(() => {
-    loadData();
-    const handleRefresh = () => loadData();
-    window.addEventListener('refresh-claims', handleRefresh);
-    return () => window.removeEventListener('refresh-claims', handleRefresh);
-  }, []);
-
-  async function loadData() {
-    setLoadingClaims(true);
-    try {
-      const data = await claimService.getAllClaims({ tab: 'history' });
-      const claimsData = (data.claims || []).map(c => mapClaimFields(c, 'history'));
-      setClaims(claimsData);
-      applyFilters(claimsData, filters, showHidden);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingClaims(false);
-    }
-  }
-
-  const applyFilters = (data, currentFilters, hidden, dateRange = customDateRange) => {
-    let result = applyDateFilter([...data], currentFilters.filterDate, dateRange, 'createdDate');
-
-    if (!hidden) {
-      result = result.filter(c => !c.isHidden);
-    }
-
-    if (currentFilters.attachment === 'yes') result = result.filter(c => c.attachments?.length > 0 || c.redAttachment || c.attachmentColor);
-    if (currentFilters.attachment === 'no') result = result.filter(c => !c.attachments?.length && !c.redAttachment && !c.attachmentColor);
-    if (currentFilters.status !== 'all') result = result.filter(c => c.status === currentFilters.status);
-    if (currentFilters.carrier !== 'all') result = result.filter(c => c.carrier === currentFilters.carrier);
-    if (currentFilters.claimType !== 'all') result = result.filter(c => c.claimType && c.claimType.includes(currentFilters.claimType));
-    
-    if (currentFilters.search) {
-      const q = currentFilters.search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.patientName?.toLowerCase().includes(q) ||
-          c.claimNumber?.toLowerCase().includes(q)
-      );
-    }
-
-    if (currentFilters.sort === 'date') {
-      result.sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
-    } else if (currentFilters.sort === 'name') {
-      result.sort((a, b) => (a.patientName || '').localeCompare(b.patientName || ''));
-    }
-
-    setFilteredClaims(result);
-  };
+  const { filteredClaims, loadingClaims, loadError, loadData } =
+    useFilteredClaimTab('history', filters, customDateRange, showHidden, false);
+  const {    changeStatus, voidAndRecreate, toggleHide, printPage, exportCSV} = useClaimActions(loadData);
 
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    applyFilters(claims, newFilters, showHidden, customDateRange);
+    setFilters((current) => ({ ...current, [key]: value }));
+    setSelectedClaims({});
   };
-
   const handleCustomDateRangeChange = (range) => {
     setCustomDateRange(range);
-    applyFilters(claims, filters, showHidden, range);
+    setSelectedClaims({});
+  };
+  const handleClearAll = () => {
+    setFilters(DEFAULT_FILTERS);
+    setCustomDateRange({ start: null, end: null });
+    setShowHidden(false);
+    setSelectedClaims({});
+  };
+  const handleToggleHidden = (value) => {
+    setShowHidden(value);
+    setSelectedClaims({});
   };
 
   const handleRowStatusChange = async (claimId, newStatus) => {
@@ -105,25 +52,6 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
       console.error("Failed to update status:", err);
       alert("Error updating status: " + (err.message || err));
     }
-  };
-
-  const handleClearAll = () => {
-    const defaultFilters = {
-      carrier: 'all',
-      claimType: 'all',
-      attachment: 'all',
-      status: 'all',
-      filterDate: 'all',
-      search: '',
-    };
-    setFilters(defaultFilters);
-    setCustomDateRange({ start: null, end: null });
-    applyFilters(claims, defaultFilters, showHidden, { start: null, end: null });
-  };
-
-  const handleToggleHidden = (val) => {
-    setShowHidden(val);
-    applyFilters(claims, filters, val);
   };
 
   // Selection
@@ -147,6 +75,18 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
   };
 
   const selectedIds = Object.keys(selectedClaims).filter((id) => selectedClaims[id]);
+
+  const handlePrint = () => {
+    const claimsToPrint = selectedIds.length > 0
+      ? filteredClaims.filter((c) => selectedClaims[c.id])
+      : filteredClaims;
+    printPage({
+      claims: claimsToPrint,
+      tabTitle: 'Claim History',
+      filters,
+      customDateRange,
+    });
+  };
 
   const panelFilters = [
     {
@@ -208,6 +148,8 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
 
   return (
     <Box>
+      {loadingClaims && <Typography sx={{ py: 1 }}>Loading claims...</Typography>}
+      {loadError && <Typography color="error" sx={{ py: 1 }}>{loadError}</Typography>}
       <ClaimFilterPanel
         filters={panelFilters}
         searchValue={filters.search}
@@ -253,7 +195,7 @@ const HistoryClaimsTab = ({ onOpenEdit, onOpenAttach, onOpenPreview }) => {
             label: 'Print',
             variant: 'print',
             icon: 'print',
-            onClick: () => printPage(),
+            onClick: handlePrint,
             disabled: false,
           },
         ]}

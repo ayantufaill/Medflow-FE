@@ -14,11 +14,23 @@ import AppointmentModalHeader from "./new-appointment/AppointmentModalHeader";
 import AppointmentFooter from "./new-appointment/AppointmentFooter";
 import AppointmentLeftPanel from "./new-appointment/AppointmentLeftPanel";
 import AppointmentRightPanel from "./new-appointment/AppointmentRightPanel";
-import LabOrderModal from "./new-appointment/LabOrderModal";
+import NewLabCaseDialog from "../labcases/NewLabCaseDialog";
+import { providerLabel } from "./new-appointment/helpers";
+import { labCaseService } from "../../services/lab-case.service";
 import AddNewProcedureDialog from "../finance/AddNewProcedureDialog";
 import { isCheckedOutStatus } from "../../utils/statusRules";
 import { useSnackbar } from "../../contexts/SnackbarContext";
 import AuditScheduleHistoryDialog from "./schedule/appointment-history-modal/AuditScheduleHistoryDialog";
+import {
+  clinicNow,
+  resolveClinicTimeZone,
+  isPastDateInClinic,
+  todayInBranch,
+  clinicDateOffset,
+  clinicWallClockAt,
+  clinicWallClockOf,
+  branchDateStr,
+} from "../../utils/dateUtils";
 
 const AddNewPatientAppointmentForm = ({
   patients = [],
@@ -57,11 +69,29 @@ const AddNewPatientAppointmentForm = ({
       : initialPatient || null,
   );
 
+  const [branchId, setBranchId] = useState(
+    initialShortlistData?.BranchId
+      ? String(initialShortlistData.BranchId)
+      : initialAppointment?.branchId
+        ? String(initialAppointment.branchId)
+        : "",
+  );
+  const { branches, currentBranch, fetchBranches: loadBranches } = useBranch();
+  const activeBranch = branches?.find((b) => String(b.id) === String(branchId)) || currentBranch;
+  const clinicTz = resolveClinicTimeZone(activeBranch);
+
+  useEffect(() => {
+    if (branches.length === 0) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Parse shortlist date/time if available
-  const defaultInitialDateTime = initialDateTime || dayjs().add(30, "minute");
+  const defaultInitialDateTime = initialDateTime || clinicNow(clinicTz).add(30, "minute");
   let parsedDate = defaultInitialDateTime;
   if (initialShortlistData?.AppointmentDate) {
-    let d = dayjs(initialShortlistData.AppointmentDate);
+    // The stored datetime is a pseudo-instant: its UTC components are the
+    // clinic's wall clock, so it is re-anchored to the branch's zone.
+    let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
     if (initialShortlistData.StartTime) {
       const [h, m] = initialShortlistData.StartTime.split(":");
       d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -110,20 +140,6 @@ const AddNewPatientAppointmentForm = ({
     initialShortlistData?.DurationMins || 60,
   );
 
-  // Branch — optional, narrows the Operatory/Provider pickers below once picked.
-  // Omitted, the backend derives the appointment's branch from its room.
-  const [branchId, setBranchId] = useState(
-    initialShortlistData?.BranchId
-      ? String(initialShortlistData.BranchId)
-      : initialAppointment?.branchId
-        ? String(initialAppointment.branchId)
-        : "",
-  );
-  const { branches, fetchBranches: loadBranches } = useBranch();
-  useEffect(() => {
-    if (branches.length === 0) loadBranches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // Same global cache the page-level dropdown data uses (see OperatorySchedulePage) —
   // resolves to the same unfiltered lists when branchId is empty, or a freshly
   // fetched branch-filtered list once one is picked. Scoped to this modal only;
@@ -179,6 +195,7 @@ const AddNewPatientAppointmentForm = ({
 
   const { showSnackbar } = useSnackbar();
   const [isLabOrderOpen, setIsLabOrderOpen] = useState(false);
+  const [labCaseForm, setLabCaseForm] = useState(null);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
 
   // Auto-revert status from "completed" when any checked procedure becomes incomplete.
@@ -257,7 +274,7 @@ const AddNewPatientAppointmentForm = ({
   const isFuture = useMemo(() => {
     if (!isExistingAppointment) return false;
     if (!selectedStart || !selectedStart.isValid()) return false;
-    return dayjs().isBefore(selectedStart);
+    return clinicNow(clinicTz).isBefore(selectedStart);
   }, [isExistingAppointment, selectedStart]);
 
   const isStatusLocked = useMemo(() => {
@@ -511,7 +528,7 @@ const AddNewPatientAppointmentForm = ({
 
           setPatient(fullPatient || mockPatient);
 
-          let parsedDate = dayjs();
+          let parsedDate = clinicNow(clinicTz);
           const rawDate =
             sourceAppt.appointmentDate ||
             initialAppointment.date ||
@@ -521,7 +538,7 @@ const AddNewPatientAppointmentForm = ({
               typeof rawDate === "string" && rawDate.includes("T")
                 ? rawDate.split("T")[0]
                 : rawDate;
-            parsedDate = dayjs(dateStr);
+            parsedDate = clinicWallClockAt(dateStr, "00:00", clinicTz);
           }
 
           const timeStr =
@@ -899,9 +916,9 @@ const AddNewPatientAppointmentForm = ({
           }
         }
 
-        let parsedDate = dayjs().add(30, "minute");
+        let parsedDate = clinicNow(clinicTz).add(30, "minute");
         if (initialShortlistData.AppointmentDate) {
-          let d = dayjs(initialShortlistData.AppointmentDate);
+          let d = clinicWallClockOf(initialShortlistData.AppointmentDate, clinicTz);
           if (initialShortlistData.StartTime) {
             const [h, m] = initialShortlistData.StartTime.split(":");
             d = d.hour(parseInt(h) || 0).minute(parseInt(m) || 0);
@@ -1105,7 +1122,7 @@ const AddNewPatientAppointmentForm = ({
           setSelectedColorTags(new Set());
         }
       } else {
-        const defaultDate = initialDateTime || dayjs().add(30, "minute");
+        const defaultDate = initialDateTime || clinicNow(clinicTz).add(30, "minute");
         setPatient(initialPatient || null);
         setApptDate(defaultDate);
         setTimeHours(defaultDate.format("hh"));
@@ -1181,7 +1198,7 @@ const AddNewPatientAppointmentForm = ({
     const raw = appointment?.rawAppointment || appointment;
     const date = raw?.appointmentDate || raw?.date;
     const time = raw?.startTime || "00:00";
-    const parsed = date ? dayjs(`${dayjs(date).format("YYYY-MM-DD")}T${time}`) : null;
+    const parsed = date ? dayjs.utc(`${branchDateStr(date)}T${time}`) : null;
     return parsed?.isValid() ? parsed.valueOf() : 0;
   };
 
@@ -1325,8 +1342,8 @@ const AddNewPatientAppointmentForm = ({
     const h = parseInt(timeHours || "9", 10);
     const m = parseInt(timeMins || "0", 10);
     const hour24 = amPm === "PM" ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
-    return (apptDate || dayjs()).hour(hour24).minute(m).second(0);
-  }, [apptDate, timeHours, timeMins, amPm]);
+    return (apptDate || clinicNow(clinicTz)).hour(hour24).minute(m).second(0);
+  }, [apptDate, timeHours, timeMins, amPm, clinicTz]);
 
   useEffect(() => {
     if (!open || isRecareTemplate || isExistingAppointment) return;
@@ -1612,8 +1629,9 @@ const AddNewPatientAppointmentForm = ({
       })
       .filter((tag) => tag.label);
 
-    const start = dateTime || dayjs();
-    if (!initialAppointment && start.isBefore(dayjs().startOf("day"))) {
+    const start = dateTime || clinicNow(clinicTz);
+    const dateStr = start.format("YYYY-MM-DD");
+    if (!initialAppointment && isPastDateInClinic(dateStr, clinicTz)) {
       setErrorMessage("Appointment date cannot be in the past.");
       return null;
     }
@@ -1934,6 +1952,112 @@ const AddNewPatientAppointmentForm = ({
     patient?._id ||
     "";
 
+  // Provider options for the lab case dialog (union of the lists the panels use).
+  const labProviderOptions = (() => {
+    const seen = new Set();
+    const opts = [];
+    for (const p of [...(branchProviders || []), ...(providers || [])]) {
+      if (!p) continue;
+      const id = String(p.ProvNum || p.providerId || p._id || p.id || "");
+      if (!id || id === "undefined" || seen.has(id)) continue;
+      seen.add(id);
+      opts.push({ value: id, label: providerLabel(p) || id });
+    }
+    const selectedId = String(providerRows[0]?.providerId || "");
+    if (selectedId && selectedId !== "undefined" && !seen.has(selectedId)) {
+      opts.unshift({ value: selectedId, label: selectedId });
+    }
+    return opts;
+  })();
+
+  const buildLabCaseForm = () => ({
+    patient: patientDisplayName,
+    date: apptDate ? apptDate.format("YYYY-MM-DD") : "",
+    procedures: procedures.map((p) => p?.code).filter(Boolean),
+    provider: String(providerRows[0]?.providerId || ""),
+    type: visitType,
+    lab: "",
+    trackingNumber: "",
+    estReceiveDate: "",
+    notes: "",
+    shipping: "",
+    labFee: "",
+    status: "Draft",
+  });
+
+  const handleCreateLabCase = async () => {
+    const form = labCaseForm;
+    if (!form) return;
+
+    const procCodes = (form.procedures || [])
+      .map((code) => String(code || "").trim())
+      .filter(Boolean);
+    if (procCodes.length === 0) {
+      showSnackbar(
+        "Add at least one procedure to the appointment before creating a lab order.",
+        "warning",
+      );
+      return;
+    }
+    if (!patientId) {
+      showSnackbar("Please select a patient before creating a lab order.", "warning");
+      return;
+    }
+
+    const providerName =
+      labProviderOptions.find((o) => o.value === String(form.provider || ""))?.label || "";
+
+    const instructions = [
+      `Type: ${form.type || visitType}`,
+      providerName ? `Provider: ${providerName}` : "",
+      `Procedures: ${procCodes.join(", ")}`,
+      form.shipping !== "" && form.shipping != null
+        ? `Shipping: ${parseFloat(form.shipping) || 0}`
+        : "",
+      form.notes ? `Notes: ${form.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    let laboratoryId = "";
+    try {
+      const result = await labCaseService.getAllLaboratories(1, 100);
+      const list = result?.data?.laboratories || result?.laboratories || [];
+      const match =
+        list.find((l) => (l.name || l.description) === form.lab) || list[0];
+      laboratoryId = String(match?._id || match?.id || "");
+    } catch (err) {
+      console.warn("Could not load laboratories for lab order:", err);
+    }
+
+    const apptId =
+      initialAppointment?.id || initialAppointment?._id || initialAppointment?.AptNum;
+
+    const payload = {
+      patientId: String(patientId),
+      laboratoryId: laboratoryId || "1",
+      appointmentId: apptId ? String(apptId) : undefined,
+      dueDate: form.estReceiveDate || clinicDateOffset(clinicTz, 7),
+      instructions,
+      labFee: parseFloat(form.labFee) || 0,
+      providerNum: form.provider ? String(form.provider) : undefined,
+    };
+
+    try {
+      await labCaseService.createLabCase(payload);
+      showSnackbar("Lab order created successfully!", "success");
+      setIsLabOrderOpen(false);
+      setLabCaseForm(null);
+    } catch (err) {
+      console.warn("Failed to create lab case:", err);
+      showSnackbar(
+        "Failed to create lab order: " +
+          (err?.response?.data?.message || err?.message || err),
+        "error",
+      );
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -2103,7 +2227,10 @@ const AddNewPatientAppointmentForm = ({
           onEnterEdit={() => setIsEditing(true)}
           onToggleEdit={() => setIsEditing((v) => !v)}
           isRescheduling={isRescheduling}
-          onLabOrderClick={() => setIsLabOrderOpen(true)}
+          onLabOrderClick={() => {
+            setLabCaseForm(buildLabCaseForm());
+            setIsLabOrderOpen(true);
+          }}
           computedVisitType={computedVisitType}
           hasConflict={hasOccupancyConflict}
           createdBy={initialAppointment?.createdBy ?? null}
@@ -2142,25 +2269,22 @@ const AddNewPatientAppointmentForm = ({
         </Dialog>
       )}
 
-      {isLabOrderOpen && (
-        <LabOrderModal
+      {isLabOrderOpen && labCaseForm && (
+        <NewLabCaseDialog
+          scheduleStyle
           open={isLabOrderOpen}
-          onClose={() => setIsLabOrderOpen(false)}
-          procedures={procedures}
-          patientId={
-            patient?.patientId ||
-            patient?.chartNumber ||
-            patient?.id ||
-            patient?._id ||
-            ""
-          }
-          appointmentId={
-            initialAppointment?._id || initialAppointment?.id || ""
-          }
-          onSave={(labCase) => {
-            console.log("Lab Case created:", labCase);
-            setToastMessage("Lab order slip created and saved successfully!");
+          onClose={() => {
+            setIsLabOrderOpen(false);
+            setLabCaseForm(null);
           }}
+          title={patientDisplayName || "Patient"}
+          heading="New Lab Case"
+          submitLabel="Create Lab Order"
+          formData={labCaseForm}
+          onFormChange={setLabCaseForm}
+          onSubmit={handleCreateLabCase}
+          providerOptions={labProviderOptions}
+          typeOptions={["treatment", "recare"]}
         />
       )}
 

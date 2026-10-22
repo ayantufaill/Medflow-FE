@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Stack,
@@ -17,11 +17,15 @@ import {
 import { Print } from '@mui/icons-material';
 import apiClient from '../../config/api';
 import dayjs from 'dayjs';
+import { printLedgerReport } from '../../utils/printLedgerReport';
 
 const FamilyLedgerTable = ({ patient }) => {
   const [ledgerItems, setLedgerItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [printing, setPrinting] = useState(false);
+  const [printError, setPrintError] = useState('');
+  const tableRef = useRef(null);
 
   const patientId = patient?._id || patient?.id;
   const household = patient?.household || [];
@@ -89,34 +93,21 @@ const FamilyLedgerTable = ({ patient }) => {
     fetchFamilyLedger();
   }, [patientId, household.length]);
 
-  const handlePrint = () => {
-    const tableEl = document.getElementById('family-ledger-table');
-    if (!tableEl) {
-      alert("Ledger table not found to print.");
-      return;
+  const handlePrint = async () => {
+    if (loading || error || printing || !ledgerItems.length) return;
+    setPrintError('');
+    setPrinting(true);
+    try {
+      await printLedgerReport({
+        table: tableRef.current,
+        title: 'Family Ledger Report',
+        subtitle: patient?.lastName ? `${patient.lastName} Family` : 'Family',
+      });
+    } catch (err) {
+      setPrintError(err.message);
+    } finally {
+      setPrinting(false);
     }
-    const htmlToPrint = tableEl.outerHTML;
-
-    const familyName = patient ? `${patient.lastName} Family` : 'Family';
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write('<html><head><title>Family Ledger - ' + familyName + '</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 10px; margin-bottom: 20px; }');
-    printWindow.document.write('th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f8f9fa; font-weight: bold; }');
-    printWindow.document.write('tfoot td, tfoot th { border: none !important; font-weight: bold; background-color: #f8f9fa; border-top: 2px solid #ddd !important; }');
-    printWindow.document.write('.MuiCheckbox-root, input[type="checkbox"], button, .hide-on-print, .no-print { display: none !important; }');
-    printWindow.document.write('h6, h5, h2 { font-family: sans-serif; color: #333; }');
-    printWindow.document.write('</style></head><body>');
-    printWindow.document.write(`<h2>Family Ledger Report - ${familyName}</h2>`);
-    printWindow.document.write(htmlToPrint);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
 
   return (
@@ -127,12 +118,14 @@ const FamilyLedgerTable = ({ patient }) => {
           size="small" 
           variant="outlined" 
           onClick={handlePrint}
-          disabled={loading || ledgerItems.length === 0}
+          disabled={loading || Boolean(error) || printing || ledgerItems.length === 0}
           sx={{ textTransform: 'none', borderColor: '#3b82f6', color: '#3b82f6', borderRadius: '8px', px: 2, fontWeight: 600 }}
         >
           Print
         </Button>
       </Stack>
+
+      {printError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPrintError('')}>{printError}</Alert>}
 
       {loading ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, gap: 1 }}>
@@ -150,7 +143,7 @@ const FamilyLedgerTable = ({ patient }) => {
       ) : (
         <Box sx={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
           <TableContainer component={Paper} elevation={0} id="family-ledger-table">
-            <Table size="small">
+            <Table size="small" ref={tableRef}>
               <TableHead>
                 <TableRow sx={{ '& th': { fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#f8f9fa', py: 1, borderBottom: '1px solid #e2e8f0', color: '#1e293b' } }}>
                   {['Date', 'Patient', 'Description', 'Amount', 'Balance', 'User'].map((head) => (
@@ -175,7 +168,7 @@ const FamilyLedgerTable = ({ patient }) => {
                       {amtStr}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>{balStr}</TableCell>
-                    <TableCell>STAFF</TableCell>
+                    <TableCell>{row.createdByName || 'STAFF'}</TableCell>
                   </TableRow>
                 );
               })}

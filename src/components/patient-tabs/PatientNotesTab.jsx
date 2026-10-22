@@ -25,7 +25,7 @@ import {
   Event as FollowUpIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
+import { formatBranchDate, formatBranchDateTime } from '../../utils/dateUtils';
 import { clinicalNoteService } from '../../services/clinical-note.service';
 
 const NOTE_TYPE_LABELS = {
@@ -77,7 +77,7 @@ const PatientNotesTab = ({ patientId }) => {
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '-';
-    return dayjs(dateString).format('MMM DD, YYYY h:mm A');
+    return formatBranchDateTime(dateString, 'MMM DD, YYYY h:mm A');
   };
 
   const getProviderName = (note) => {
@@ -215,7 +215,7 @@ const PatientNotesTab = ({ patientId }) => {
                         Appointment
                       </Typography>
                       <Typography variant="body2" fontWeight="medium">
-                        {dayjs(note.appointmentId.appointmentDate).format('MMM DD, YYYY')}
+                        {formatBranchDate(note.appointmentId.appointmentDate, 'MMM DD, YYYY')}
                       </Typography>
                     </Grid>
                   )}
@@ -236,7 +236,7 @@ const PatientNotesTab = ({ patientId }) => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                     <FollowUpIcon fontSize="small" color="warning" />
                     <Typography variant="body2" color="text.secondary">
-                      Follow-up: <strong>{dayjs(note.followUpDate).format('MMM DD, YYYY')}</strong>
+                      Follow-up: <strong>{formatBranchDate(note.followUpDate, 'MMM DD, YYYY')}</strong>
                     </Typography>
                   </Box>
                 )}

@@ -29,13 +29,14 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import AddNewProcedureDialog from "./AddNewProcedureDialog";
-import { calculatePortionsForCategory } from "../../utils/cdtCategoryHelper";
+import { calculatePortionsForCategory, getCoverageBlockedReasonLabel } from "../../utils/cdtCategoryHelper";
 import {
   Close as CloseIcon,
   Receipt as ReceiptIcon,
 } from "@mui/icons-material";
 import { COLORS } from "../../constants/colors";
 import { invoiceService } from "../../services/invoice.service";
+import apiClient from "../../config/api";
 
 // Shared empty list so the effects below can depend on a value that never
 // changes identity when there are no procedures to render.
@@ -52,6 +53,9 @@ const toEstimateItem = (p) => ({
   allowedFee: p.allowedFee !== undefined ? Number(p.allowedFee) : undefined,
   originalFee: p.originalFee !== undefined ? Number(p.originalFee) : undefined,
   dbi: Boolean(p.dbi),
+  // The estimator needs the tooth so a code with a coverage-book teeth limit is
+  // priced on this line's tooth rather than being blocked as "tooth unknown".
+  site: p.site ?? p.tooth ?? undefined,
 });
 
 // Draft rows carry the client-generated id assigned when they were added, so a
@@ -97,6 +101,16 @@ const InvoiceModal = ({
     () => draft?.description || "",
   );
   const [showDescription, setShowDescription] = useState(false);
+  const [nextInvoiceNumber, setNextInvoiceNumber] = useState("INV000000");
+  
+  // Fetch next invoice number on mount (only for new invoices)
+  useEffect(() => {
+    if (!invoiceData?.invoiceId && !invoiceData?._id && !invoiceData?.id) {
+      apiClient.get('/invoices/next-invoice-number')
+        .then(res => setNextInvoiceNumber(res.data.data?.nextInvoiceNumber || 'INV000000'))
+        .catch(() => setNextInvoiceNumber('INV000000'));
+    }
+  }, [invoiceData]);
   // handleAmountChange fires on every keystroke, and each call re-prices the whole
   // invoice server-side. Debounce so typing a charge is one request, not one per
   // character. The local calculatePortionsForCategory pass below still runs
@@ -179,6 +193,7 @@ const InvoiceModal = ({
             ptPortion: `$${localPt.toFixed(2)}`,
             balance: `$${portions.balance.toFixed(2)}`,
             coveragePct: portions.coveragePct,
+            coverageBlockedReason: null,
           };
         });
         console.log(
@@ -198,7 +213,8 @@ const InvoiceModal = ({
             charge: parseFloat((p.charge || "").toString().replace(/[^0-9.-]+/g, "")) || 0,
             allowedFee: p.allowedFee,
             originalFee: p.originalFee,
-            dbi: Boolean(p.dbi)
+            dbi: Boolean(p.dbi),
+            site: p.site ?? p.tooth ?? undefined,
           }));
           
           invoiceService.estimateInvoiceItems(activePatientId, payload)
@@ -221,6 +237,7 @@ const InvoiceModal = ({
                     totalInsPortion: totalIns,
                     ptPortion: `$${pt.toFixed(2)}`,
                     writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
+                    coverageBlockedReason: est.coverageBlockedReason ?? null,
                   };
                 }));
               }
@@ -346,6 +363,7 @@ const InvoiceModal = ({
               charge: fee,
               allowedFee: fee,
               originalFee: fee,
+              site: newProcedure.site,
             },
           ],
         );
@@ -362,6 +380,7 @@ const InvoiceModal = ({
           newProcedure.totalInsPortion = totalIns;
           newProcedure.ptPortion = `$${pt.toFixed(2)}`;
           newProcedure.writeoff = `$${Number(est.writeoff || 0).toFixed(2)}`;
+          newProcedure.coverageBlockedReason = est.coverageBlockedReason ?? null;
           newProcedure.balance = `$${fee.toFixed(2)}`;
           if (est.allowedFee !== undefined) {
             newProcedure.allowedFee = Number(est.allowedFee);
@@ -467,6 +486,7 @@ const InvoiceModal = ({
           updated.ptPortion = `$${portions.ptPortion.toFixed(2)}`;
           updated.balance = `$${portions.balance.toFixed(2)}`;
           updated.coveragePct = portions.coveragePct;
+          updated.coverageBlockedReason = null;
         } else if (["ptPortion", "insPortion"].includes(field)) {
           updated.balance = `$${numCharge.toFixed(2)}`;
         } else if (field === "charge") {
@@ -504,6 +524,7 @@ const InvoiceModal = ({
                 allowedFee: baseFee,
                 originalFee: baseFee,
                 dbi: Boolean(updatedProcedure.dbi),
+                site: updatedProcedure.site,
               }
             : toEstimateItem(p),
         );
@@ -530,9 +551,10 @@ const InvoiceModal = ({
                 primaryInsPortion: prim,
                 secondaryInsPortion: sec,
                 totalInsPortion: totalIns,
-                ptPortion: `$${pt.toFixed(2)}`,
-                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-                balance: `$${numCharge.toFixed(2)}`,
+                ptPortion: `${pt.toFixed(2)}`,
+                writeoff: `${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `${numCharge.toFixed(2)}`,
+                coverageBlockedReason: est.coverageBlockedReason ?? null,
                 allowedFee:
                   est.allowedFee !== undefined
                     ? Number(est.allowedFee)
@@ -589,6 +611,7 @@ const InvoiceModal = ({
           ptPortion: `$${portions.ptPortion.toFixed(2)}`,
           balance: `$${portions.balance.toFixed(2)}`,
           coveragePct: portions.coveragePct,
+          coverageBlockedReason: null,
         };
       }),
     );
@@ -607,6 +630,7 @@ const InvoiceModal = ({
             allowedFee: baseFee,
             originalFee: baseFee,
             dbi: Boolean(p.dbi),
+            site: p.site ?? p.tooth ?? undefined,
           };
         });
         const estimates = await invoiceService.estimateInvoiceItems(
@@ -632,9 +656,10 @@ const InvoiceModal = ({
                 primaryInsPortion: prim,
                 secondaryInsPortion: sec,
                 totalInsPortion: totalIns,
-                ptPortion: `$${pt.toFixed(2)}`,
-                writeoff: `$${Number(est.writeoff || 0).toFixed(2)}`,
-                balance: `$${numCharge.toFixed(2)}`,
+                ptPortion: `${pt.toFixed(2)}`,
+                writeoff: `${Number(est.writeoff || 0).toFixed(2)}`,
+                balance: `${numCharge.toFixed(2)}`,
+                coverageBlockedReason: est.coverageBlockedReason ?? null,
                 allowedFee:
                   est.allowedFee !== undefined
                     ? Number(est.allowedFee)
@@ -755,7 +780,7 @@ const InvoiceModal = ({
         >
           {invoiceData?.invoiceId
             ? `Invoice #${invoiceData.invoiceId}`
-            : "New Invoice"}
+            : nextInvoiceNumber}
         </Typography>
         <IconButton
           onClick={onClose || onCancel}
@@ -1018,6 +1043,19 @@ const InvoiceModal = ({
                       </TableCell>
                       <TableCell sx={{ color: COLORS.TEXT_PRIMARY, py: 1 }}>
                         {row.insPortion}
+                        {row.coverageBlockedReason && (
+                          <Typography
+                            sx={{
+                              fontSize: "10px",
+                              color: "#b45309",
+                              fontStyle: "italic",
+                              lineHeight: 1.2,
+                              mt: 0.25,
+                            }}
+                          >
+                            {getCoverageBlockedReasonLabel(row.coverageBlockedReason)}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell sx={{ py: 1 }}>
                         <TextField

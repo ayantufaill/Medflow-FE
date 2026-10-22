@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from "react";
 import { useDispatch } from "react-redux";
 import { appointmentService } from "../../services/appointment.service";
 import { paymentService } from "../../services/payment.service";
@@ -63,6 +63,7 @@ const PatientFinanceInfo = forwardRef(
       onRefreshCoinClick,
       onAddFlagsClick,
       onOpenDepositMenu,
+      onSelectFamilyMember,
     },
     ref,
   ) => {
@@ -338,6 +339,9 @@ const PatientFinanceInfo = forwardRef(
               status: "completed",
               notes: paymentData.description || "Patient payment",
               isAccountCredit: paymentData.paymentMethod === "Account Credit",
+              addFamilyCredit: Boolean(paymentData.addFamilyCredit),
+              useFamilyCredit: Boolean(paymentData.addFamilyCredit),
+              isPartialPayment: Boolean(paymentData.isPartialPayment),
             };
             await paymentService.recordPayment(payload);
           }
@@ -476,6 +480,38 @@ const PatientFinanceInfo = forwardRef(
       }
     };
 
+    // Family tabs: the BE's `household` lists every family member EXCEPT the
+    // patient being viewed, so merge the current patient back in. Guarantor
+    // goes first and the rest are name-sorted so the tab order stays the same
+    // no matter which member is selected (otherwise tabs would jump around on
+    // every switch, since each member's household excludes themselves).
+    const currentPatientId = patient?._id || patient?.id;
+    const familyTabs = useMemo(() => {
+      if (!patient) return [];
+      const household = Array.isArray(patient.household) ? patient.household : [];
+      // The current patient is the guarantor when no household member is tagged as one
+      const someoneElseIsGuarantor = household.some(
+        (m) => m.relationship === "Guarantor",
+      );
+      const members = [
+        { ...patient, id: currentPatientId, isGuarantor: !someoneElseIsGuarantor },
+        ...household.map((m) => ({
+          ...m,
+          id: m._id || m.id,
+          isGuarantor: m.relationship === "Guarantor",
+        })),
+      ].map((m) => ({
+        id: String(m.id),
+        name: `${m.firstName || ""} ${m.lastName || ""}`.trim() || "Unknown",
+        isGuarantor: m.isGuarantor,
+      }));
+      return members.sort(
+        (a, b) =>
+          Number(b.isGuarantor) - Number(a.isGuarantor) ||
+          a.name.localeCompare(b.name),
+      );
+    }, [patient, currentPatientId]);
+
     const pixelIcons = [
       { Icon: IconBill, onClick: openNewInvoice },
       { Icon: IconUserWallet, onClick: handleUserWalletClick },
@@ -575,35 +611,63 @@ const PatientFinanceInfo = forwardRef(
             />
           </RadioGroup>
 
+          {/* One tab per family member; clicking a tab switches the whole
+              finance page to that member (same as the header patient switch). */}
           <Box
-            sx={{ mb: 3, borderBottom: "1px solid #DFE5EC", display: "flex" }}
+            sx={{
+              mb: 3,
+              borderBottom: "1px solid #DFE5EC",
+              display: "flex",
+              // Large families shouldn't push the card wider — scroll the tabs instead
+              overflowX: "auto",
+              overflowY: "hidden",
+            }}
           >
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "146px",
-                height: "37px",
-                border: "1px solid #DFE5EC",
-                borderBottom: "4px solid #2362EF",
-                borderTopLeftRadius: "6px",
-                borderTopRightRadius: "6px",
-                bgcolor: "#FFFFFF",
-                cursor: "pointer",
-                position: "relative",
-                top: "1px",
-              }}
-            >
-              <Typography
-                fontWeight="bold"
-                sx={{ fontSize: "14px", color: "#1A1A1A" }}
-              >
-                {patient
-                  ? `${patient.firstName || ""} ${patient.lastName || ""}`.trim()
-                  : "Amanda Wilson"}
-              </Typography>
-            </Box>
+            {familyTabs.map((member) => {
+              const isActive = member.id === String(currentPatientId);
+              return (
+                <Box
+                  key={member.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => {
+                    // Re-fetching the already-selected patient would just flash the page
+                    if (!isActive) onSelectFamilyMember?.(member.id);
+                  }}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    minWidth: "146px",
+                    px: 2,
+                    height: "37px",
+                    border: isActive ? "1px solid #DFE5EC" : "1px solid transparent",
+                    borderBottom: isActive
+                      ? "4px solid #2362EF"
+                      : "4px solid transparent",
+                    borderTopLeftRadius: "6px",
+                    borderTopRightRadius: "6px",
+                    bgcolor: "#FFFFFF",
+                    cursor: isActive ? "default" : "pointer",
+                    position: "relative",
+                    top: "1px",
+                    "&:hover": isActive ? {} : { bgcolor: "#F5F8FF" },
+                  }}
+                >
+                  <Typography
+                    fontWeight={isActive ? "bold" : 500}
+                    sx={{
+                      fontSize: "14px",
+                      color: isActive ? "#1A1A1A" : "#6B7280",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {member.name}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
@@ -715,33 +779,52 @@ const PatientFinanceInfo = forwardRef(
           showLateFee={showLateFee}
           setShowLateFee={setShowLateFee}
           selectedAdjustment={selectedAdjustment}
-          handleAddLateFee={async (selected, flatRate) => {
-            console.log("Adding fee for:", selected, "Rate:", flatRate);
-            setShowLateFee(false);
-            const isLatePayment =
-              selectedAdjustment?.id?.startsWith("late-payment");
-            const amountVal = flatRate ? parseFloat(flatRate) : 100.0;
-            const notesText = selectedAdjustment?.label || "Adjustment Fee";
-            const invoiceResult = await createInvoiceForAdjustment(
-              amountVal,
-              notesText,
-            );
-            const createdInvoiceId =
-              invoiceResult?.invoice?._id ||
-              invoiceResult?.invoice?.id ||
-              invoiceResult?._id ||
-              invoiceResult?.id ||
-              "new";
-            const event = new CustomEvent("add-ledger-item", {
-              detail: {
-                title: `${notesText} (Invoice #${createdInvoiceId})`,
-                amount: `$${amountVal.toFixed(2)}`,
-                ptBal: `$${amountVal.toFixed(2)}`,
-                invBal: `$${amountVal.toFixed(2)}`,
-                useCheckmark: isLatePayment,
-              },
-            });
-            window.dispatchEvent(event);
+          handleAddLateFee={async ({ invoiceIds, basis, mode, rate }) => {
+            const patientId = patient?._id || patient?.id;
+            const tier = selectedAdjustment?.tier ?? null;
+            if (!patientId || !invoiceIds?.length) return;
+            try {
+              // No amount is computed here: the fee is sent straight through when
+              // a policy defines it, otherwise the tier decides it server-side.
+              // Ages, buckets, balances and the duplicate rule are all recomputed
+              // on the backend too, so this is a request, not a calculation.
+              const result = await invoiceService.applyLateFee({
+                patientId: parseInt(patientId, 10) || patientId,
+                tier,
+                invoiceIds,
+                basis,
+                mode,
+                rate,
+                branchId: currentBranchId,
+              });
+
+              setShowLateFee(false);
+              dispatch(invalidatePaymentInvoices(patientId));
+              dispatch(fetchLedgerItems(patientId));
+              window.dispatchEvent(
+                new CustomEvent("appointment-financials-updated", {
+                  detail: { patientId },
+                }),
+              );
+              window.dispatchEvent(new CustomEvent("add-ledger-item"));
+
+              if (result?.rejected?.length) {
+                const chargedSummary =
+                  result.totalFee != null ? `$${Number(result.totalFee).toFixed(2)}` : "";
+                alert(
+                  `Adjustment applied to ${result.charged.length} invoice(s)` +
+                    `${chargedSummary ? ` for a total of ${chargedSummary}` : ""}.\n\n` +
+                    "Skipped:\n" +
+                    result.rejected.map((r) => `• Invoice #${r.invoiceId}: ${r.reason}`).join("\n"),
+                );
+              }
+            } catch (err) {
+              console.error("Failed to apply adjustment:", err);
+              alert(
+                err?.response?.data?.error?.message ||
+                  "Failed to apply the adjustment.",
+              );
+            }
           }}
           showAccountNotes={showAccountNotes}
           setShowAccountNotes={setShowAccountNotes}

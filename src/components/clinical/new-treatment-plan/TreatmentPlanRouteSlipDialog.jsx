@@ -23,6 +23,8 @@ import { fetchPatientInsurances, selectPatientInsurancesCache } from '../../../s
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { COLORS } from '../../../constants/colors';
 import medflowLogo from '../../../assets/medflow-logo.png';
+import DynamicRouteSlipRenderer from '../../common/DynamicRouteSlipRenderer';
+import { fetchPatientHistory } from '../../../store/slices/appointmentSlice';
 
 const sectionHeaderSx = {
   bgcolor: '#f3f8fd',
@@ -112,6 +114,7 @@ const TreatmentPlanRouteSlipDialog = ({
   onClose,
   patient,
   appointment,
+  nextAppointment,
   procedures = [],
   planTitle = 'Treatment Plan'
 }) => {
@@ -122,16 +125,71 @@ const TreatmentPlanRouteSlipDialog = ({
   const providersList = useSelector(selectProviderDropdownList) || [];
   const patientName = getPatientName(patient);
   const appointmentDate = getAppointmentDate(appointment, procedures);
+  const [localAppointments, setLocalAppointments] = React.useState([]);
 
   useEffect(() => {
     if (!open) return;
     if (providersList.length === 0) {
       dispatch(fetchAllProvidersForDropdown());
     }
-    if (patientId && !insurancesCache?.[patientId]?.data) {
-      dispatch(fetchPatientInsurances({ patientId })).catch(() => {});
+    if (patientId) {
+      if (!insurancesCache?.[patientId]?.data) {
+        dispatch(fetchPatientInsurances({ patientId })).catch(() => {});
+      }
+      dispatch(fetchPatientHistory(patientId))
+        .unwrap()
+        .then(data => setLocalAppointments(data))
+        .catch(() => setLocalAppointments([]));
     }
   }, [dispatch, open, patientId, providersList.length, insurancesCache]);
+
+  const computedNextAppointment = useMemo(() => {
+    if (nextAppointment) return nextAppointment; // Fallback to prop if explicitly provided and valid
+    if (!localAppointments || localAppointments.length === 0) return null;
+
+    const getApptDateTime = (appt) => {
+      let dateStr;
+      if (appt.appointmentDate) {
+        dateStr = appt.appointmentDate.split('T')[0];
+      } else if (appt.start) {
+        dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      } else if (appt.date) {
+        dateStr = appt.date.split('T')[0];
+      } else if (appt.AptDateTime) {
+        dateStr = appt.AptDateTime.split('T')[0];
+      } else {
+        dateStr = dayjs().format('YYYY-MM-DD');
+      }
+
+      let timeStr = '00:00';
+      if (appt.time) {
+        const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+        if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
+      } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
+        timeStr = appt.startTime;
+        if (timeStr.split(':').length === 2) timeStr += ':00';
+      } else if (appt.start && typeof appt.start === 'string' && appt.start.includes('T')) {
+        timeStr = appt.start.split('T')[1].substring(0, 8);
+      }
+
+      return dayjs(`${dateStr}T${timeStr}`);
+    };
+
+    const referenceDateTime = appointment ? getApptDateTime(appointment) : dayjs();
+
+    const futureAppts = localAppointments
+      .filter(a => {
+        if (appointment) {
+          const aId = a._id || a.id;
+          const rId = appointment._id || appointment.id;
+          if (aId && rId && String(aId) === String(rId)) return false;
+        }
+        const appointmentDateTime = getApptDateTime(a);
+        return appointmentDateTime.isAfter(dayjs()) && appointmentDateTime.isAfter(referenceDateTime);
+      })
+      .sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
+    return futureAppts[0] || null;
+  }, [localAppointments, nextAppointment, appointment]);
 
   const insurances = useMemo(() => {
     const cached = patientId ? insurancesCache?.[patientId]?.data : null;
@@ -235,136 +293,14 @@ const TreatmentPlanRouteSlipDialog = ({
       </DialogTitle>
 
       <DialogContent id="treatment-route-slip-print" ref={printRef} sx={{ p: 3, bgcolor: '#fff' }}>
-        <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>
-          <Box component="img" src={medflowLogo} alt="Medflow Logo" sx={{ height: 45, objectFit: 'contain' }} />
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.85rem', color: '#334155' }}>
-            {appointmentDate.format('dddd MMM DD, YYYY')}
-          </Typography>
-          <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: '#1e3a8a', letterSpacing: 0 }}>
-            PATIENT ROUTE SLIP
-          </Typography>
-          <Typography sx={{ fontSize: '0.85rem', color: '#334155', textAlign: 'right' }}>
-            {patientName}
-          </Typography>
-        </Box>
-
-        <Box sx={{ mb: 2 }}>
-          <Box sx={sectionHeaderSx}>PATIENT</Box>
-          <Box sx={sectionBodySx}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <InfoRow label="Name" value={patientName} />
-                <InfoRow label="Address" value={formatAddress(patient)} />
-                <InfoRow label="Date of Birth" value={patient?.dateOfBirth || patient?.dob ? dayjs(patient.dateOfBirth || patient.dob).format('MM/DD/YYYY') : '-'} />
-                <InfoRow label="Email" value={patient?.email || patient?.emailAddress || '-'} />
-                <InfoRow label="Phone Number" value={patient?.phonePrimary || patient?.mobileNumber || patient?.mobile || patient?.phone || '-'} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <InfoRow label="Preferred Dentist" value={getProviderLabel(patient?.preferredDentist || patient?.preferredProvider || patient?.preferredDentistId, providersList)} />
-                <InfoRow label="Preferred Hygienist" value={getProviderLabel(patient?.preferredHygienist || patient?.preferredHygienistId, providersList)} />
-                <InfoRow label="Referring Sources" value={patient?.referralSource || patient?.referringSource || '-'} />
-              </Grid>
-            </Grid>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={sectionHeaderSx}>ACCOUNT</Box>
-            <Box sx={{ ...sectionBodySx, minHeight: 98 }}>
-              <InfoRow label="Treatment Total" value={money(totals.fee)} align="right" />
-              <InfoRow label="Insurance Est" value={money(totals.ins)} align="right" />
-              <InfoRow label="Patient Est" value={money(totals.pt)} align="right" />
-            </Box>
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={sectionHeaderSx}>INSURANCE</Box>
-            <Box sx={{ ...sectionBodySx, minHeight: 98 }}>
-              {insurances.length > 0 ? (
-                insurances.slice(0, 3).map((insurance, index) => (
-                  <Box key={insurance._id || insurance.id || index} sx={{ mb: index === insurances.length - 1 ? 0 : 0.75 }}>
-                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#1f2937' }}>
-                      {insurance.insuranceCompany?.name || insurance.companyName || insurance.name || insurance.planName || 'Insurance'}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.72rem', color: '#64748b' }}>
-                      ID: {insurance.subscriberId || insurance.memberId || '-'} | Group: {insurance.groupNumber || insurance.group || '-'}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>No active insurance</Typography>
-              )}
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ mb: 2 }}>
-          <Box sx={sectionHeaderSx}>{`APPOINTMENT OF ${appointmentDate.format('MM/DD/YYYY')}`}</Box>
-          <Box sx={sectionBodySx}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <InfoRow label="Time" value={appointment?.time || (appointment?.startTime ? dayjs(`1970-01-01 ${appointment.startTime}`).format('h:mm A') : appointmentDate.format('h:mm A'))} />
-                <InfoRow label="Plan" value={planTitle} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <InfoRow label="Provider" value={getProviderLabel(appointment?.provider || appointment?.providerId || procedures[0]?.provider, providersList)} />
-                <InfoRow label="Room" value={appointment?.room?.name || appointment?.roomName || appointment?.operatory || '-'} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <InfoRow label="Procedures" value={procedures.length ? String(procedures.length) : '0'} />
-                <InfoRow label="Status" value={appointment?.status || '-'} />
-              </Grid>
-            </Grid>
-          </Box>
-        </Box>
-
-        <Box sx={{ mb: 2 }}>
-          <Box sx={sectionHeaderSx}>TREATMENT PLAN PROCEDURES</Box>
-          <Box sx={{ border: '1px solid #d9e2ef', borderTop: 'none' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                  {['Status', 'Date', 'Site', 'Code', 'Description', 'Provider', 'Fee', 'Ins Est', 'Pt Est'].map((heading) => (
-                    <TableCell key={heading} sx={{ py: 0.75, fontSize: '0.68rem', fontWeight: 800, color: '#52637a', borderColor: '#d9e2ef' }}>
-                      {heading}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {procedures.length > 0 ? procedures.map((procedure) => (
-                  <TableRow key={procedure.id || `${procedure.code}-${procedure.site}`}>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.status || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.scheduled && procedure.scheduled !== '-' ? procedure.scheduled : procedure.created || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.site || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7', fontWeight: 700 }}>{procedure.code || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.description || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{getProviderLabel(procedure.provider, providersList)}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.negRate || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.insEst || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.72rem', borderColor: '#edf2f7' }}>{procedure.ptEst || '-'}</TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={9} sx={{ py: 3, textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
-                      No procedures in this treatment plan.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Box>
-        </Box>
-
-        <Box>
-          <Box sx={sectionHeaderSx}>NEXT APPOINTMENT</Box>
-          <Box sx={{ ...sectionBodySx, textAlign: 'center', color: '#64748b', fontSize: '0.8rem' }}>
-            No future appointments scheduled.
-          </Box>
-        </Box>
+        <DynamicRouteSlipRenderer 
+          patient={patient} 
+          appointment={appointment} 
+          nextAppointment={computedNextAppointment}
+          procedures={procedures} 
+          planTitle={planTitle} 
+          insurances={insurances} 
+        />
       </DialogContent>
 
       <DialogActions className="treatment-route-slip-no-print" sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, gap: 1 }}>

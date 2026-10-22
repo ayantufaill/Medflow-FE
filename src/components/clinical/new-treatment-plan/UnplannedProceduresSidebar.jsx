@@ -16,7 +16,7 @@ const UnplannedProceduresSidebar = ({ procedures = [] }) => {
       const status = p.status === 'P' ? 'Planned' 
                     : p.status === 'R' ? 'Referred' 
                     : p.status === 'EO' ? 'Existing'
-                    : p.status === 'D' ? 'Completed'
+                    : p.status === 'C' ? 'Completed'
                     : p.status;
       return status === tab;
     });

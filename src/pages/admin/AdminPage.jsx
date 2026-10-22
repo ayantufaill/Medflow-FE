@@ -29,6 +29,7 @@ import PracticeSettings from './PracticeSettings';
 import PracticeInformation from './PracticeInformation';
 import ProductsManagement from './ProductsManagement';
 import ProcedureCodesManagement from './ProcedureCodesManagement';
+import RouteSlipManagement from './RouteSlipManagement';
 import ChecklistsManagement from './ChecklistsManagement';
 import PrescriptionTemplates from './PrescriptionTemplates';
 import ClinicalSystemSettings from './ClinicalSystemSettings';
@@ -37,6 +38,7 @@ import TreatmentPlanPresentation from './TreatmentPlanPresentation';
 import InsuranceCarriers from './InsuranceCarriers';
 import InsurancePlans from './InsurancePlans';
 import MembershipPlans from './MembershipPlans';
+import CobPlanMaster from './CobPlanMaster';
 import MatchConvertedCarriers from './MatchConvertedCarriers';
 import MatchVyneCarriers from './MatchVyneCarriers';
 import PatientCommunicationSettings from './PatientCommunicationSettings';
@@ -54,6 +56,8 @@ import FeeGuideDetail from './FeeGuideDetail';
 import BillingConfiguration from './BillingConfiguration';
 import PaymentTypes from './PaymentTypes';
 import ARAutomation from './ARAutomation';
+import LateFeePolicyAdmin from './LateFeePolicyAdmin';
+import LateFeeWaiversAdmin from './LateFeeWaiversAdmin';
 import CoverageBookShortcuts from './CoverageBookShortcuts';
 import DashboardGoals from './DashboardGoals';
 import PaymentPresentation from './PaymentPresentation';
@@ -115,11 +119,14 @@ const FINANCIAL_MANAGEMENT_SUB_TABS = [
   { label: 'Payment Presentation', path: '/admin/finance-management/payment-presentation' },
   { label: 'Coverage Book Shortcut', path: '/admin/finance-management/coverage-book-shortcut' },
   { label: 'AR Automation', path: '/admin/finance-management/ar-automation' },
+  { label: 'Late Fee Policy', path: '/admin/finance-management/late-fee-policy' },
+  { label: 'Late Fee Waivers', path: '/admin/finance-management/late-fee-waivers' },
 ];
 
 const CLINICAL_MANAGEMENT_SUB_TABS = [
   { label: 'Products', path: '/admin/clinical-management/products' },
   { label: 'Procedure Codes', path: '/admin/clinical-management/procedure-codes' },
+  { label: 'Route Slip', path: '/admin/clinical-management/route-slip' },
   { label: 'Checklists', path: '/admin/clinical-management/checklists' },
   { label: 'Prescription Templates', path: '/admin/clinical-management/prescription-templates' },
   { label: 'System Settings', path: '/admin/clinical-management/system-settings' },
@@ -133,6 +140,7 @@ const INSURANCE_MANAGEMENT_SUB_TABS = [
   { label: 'Insurance Carriers', path: '/admin/insurance-management/carriers' },
   { label: 'Insurance Plans', path: '/admin/insurance-management/plans' },
   { label: 'Membership Plans', path: '/admin/insurance-management/membership-plans' },
+  { label: 'Plan Coordination', path: '/admin/insurance-management/plan-coordination' },
   { label: 'Match Converted Carriers', path: '/admin/insurance-management/match-converted-carriers' },
   { label: 'Match Vyne Carriers', path: '/admin/insurance-management/match-vyne-carriers' },
 ];
@@ -462,6 +470,8 @@ const AdminPage = () => {
               <ProductsManagement />
             ) : location.pathname === '/admin/clinical-management/procedure-codes' ? (
               <ProcedureCodesManagement />
+            ) : location.pathname === '/admin/clinical-management/route-slip' ? (
+              <RouteSlipManagement />
             ) : location.pathname === '/admin/clinical-management/checklists' ? (
               <ChecklistsManagement />
             ) : location.pathname === '/admin/clinical-management/prescription-templates' ? (
@@ -509,6 +519,10 @@ const AdminPage = () => {
               <PaymentPresentation />
             ) : location.pathname === '/admin/finance-management/ar-automation' ? (
               <ARAutomation />
+            ) : location.pathname === '/admin/finance-management/late-fee-policy' ? (
+              <LateFeePolicyAdmin />
+            ) : location.pathname === '/admin/finance-management/late-fee-waivers' ? (
+              <LateFeeWaiversAdmin />
             ) : location.pathname === '/admin/finance-management/coverage-book-shortcut' ? (
               <CoverageBookShortcuts />
             ) : (
@@ -529,6 +543,8 @@ const AdminPage = () => {
             <InsurancePlans />
           ) : location.pathname === '/admin/insurance-management/membership-plans' ? (
             <MembershipPlans />
+          ) : location.pathname === '/admin/insurance-management/plan-coordination' ? (
+            <CobPlanMaster />
           ) : location.pathname === '/admin/insurance-management/match-converted-carriers' ? (
             <MatchConvertedCarriers />
           ) : location.pathname === '/admin/insurance-management/match-vyne-carriers' ? (

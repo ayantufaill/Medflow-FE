@@ -145,6 +145,9 @@ const PatientDetailPage = () => {
         dataToSave.address = { ...dataToSave.address };
         delete dataToSave.address.postalCode;
       }
+      if (dataToSave.address && !dataToSave.address.country) {
+        dataToSave.address = { ...dataToSave.address, country: 'United States' };
+      }
       if (dataToSave.workAddress && !dataToSave.workAddress.postalCode) {
         dataToSave.workAddress = { ...dataToSave.workAddress };
         delete dataToSave.workAddress.postalCode;
@@ -210,6 +213,14 @@ const PatientDetailPage = () => {
         const emergencyValidation = validateUSPhoneNumber(dataToSave.emergencyContact.phone);
         if (!emergencyValidation.valid) {
           validationErrors.push(`Emergency Contact Phone: ${emergencyValidation.message}`);
+        }
+      }
+
+      // Validate SSN
+      if (dataToSave.ssn) {
+        const ssnValidation = patientValidations.ssn.validate(dataToSave.ssn);
+        if (ssnValidation !== true) {
+          validationErrors.push(ssnValidation);
         }
       }
       

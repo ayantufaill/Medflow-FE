@@ -66,15 +66,20 @@ const clinicalReportSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Recare
-      .addCase(fetchRecareReport.pending, (state) => {
+      .addCase(fetchRecareReport.pending, (state, action) => {
+        state.recareRequestId = action.meta.requestId;
+        state.recareData = [];
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchRecareReport.fulfilled, (state, action) => {
+        if (state.recareRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.recareData = action.payload || [];
       })
       .addCase(fetchRecareReport.rejected, (state, action) => {
+        if (state.recareRequestId !== action.meta.requestId) return;
+        state.recareData = [];
         state.loading = false;
         state.error = action.payload || 'Failed to load recare report';
       })

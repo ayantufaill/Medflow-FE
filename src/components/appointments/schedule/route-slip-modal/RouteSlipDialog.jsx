@@ -13,9 +13,18 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
+import {
+  branchDateStr,
+  clinicNow,
+  clinicWallClockOf,
+  formatBranchDate,
+  resolveClinicTimeZone,
+  todayInBranch,
+} from '../../../../utils/dateUtils';
 import { COLORS } from '../../../../constants/colors';
+import DynamicRouteSlipRenderer from '../../../common/DynamicRouteSlipRenderer';
 
-import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail } from '../../../../hooks/redux';
+import { usePatient, useScheduleState, useDropdownData, useAppointmentDetail, useBranch } from '../../../../hooks/redux';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectPatientHistoryList, fetchPatientHistory } from '../../../../store/slices/appointmentSlice';
 import {
@@ -40,6 +49,10 @@ const RouteSlipDialog = () => {
   const balanceCache = useSelector(selectPatientBalanceCache);
   const insurancesCache = useSelector(selectPatientInsurancesCache);
   const dispatch = useDispatch();
+
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const clinicNowVal = clinicNow(clinicTz);
 
   const OPERATORY_COLUMNS = useMemo(() => {
     if (!rooms || rooms.length === 0) {
@@ -103,7 +116,7 @@ const RouteSlipDialog = () => {
 
   const patientName = fullName(currentPatient) || currentPatient?.patientName || 'No patient selected';
   const address = formatAddress(currentPatient?.address || currentPatient?.homeAddress || currentPatient?.contact?.address);
-  const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? dayjs(currentPatient.dateOfBirth || currentPatient.dob).format('MM/DD/YYYY') : '--';
+  const dob = currentPatient?.dateOfBirth || currentPatient?.dob ? formatBranchDate(currentPatient.dateOfBirth || currentPatient.dob, 'MM/DD/YYYY') : '--';
   const email = currentPatient?.email || currentPatient?.emailAddress || currentPatient?.contact?.email || '--';
   const phone = currentPatient?.phonePrimary || currentPatient?.mobileNumber || currentPatient?.mobilePhone || currentPatient?.phone || currentPatient?.mobile || currentPatient?.contact?.phone || '--';
 
@@ -167,14 +180,14 @@ const RouteSlipDialog = () => {
     if (appt.appointmentDate) {
       dateStr = appt.appointmentDate.split('T')[0];
     } else if (appt.start) {
-      dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : dayjs(appt.start).format('YYYY-MM-DD');
+      dateStr = typeof appt.start === 'string' ? appt.start.split('T')[0] : branchDateStr(appt.start);
     } else {
-      dateStr = dayjs().format('YYYY-MM-DD');
+      dateStr = todayInBranch(clinicTz); // fallback: the clinic's current day
     }
 
     let timeStr = '00:00';
     if (appt.time) {
-      const timeObj = dayjs(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
+      const timeObj = dayjs.utc(`1970-01-01 ${appt.time}`, 'YYYY-MM-DD h:mm A');
       if (timeObj.isValid()) timeStr = timeObj.format('HH:mm');
     } else if (appt.startTime && typeof appt.startTime === 'string' && appt.startTime.includes(':')) {
       timeStr = appt.startTime;
@@ -183,7 +196,7 @@ const RouteSlipDialog = () => {
       timeStr = appt.start.split('T')[1].substring(0, 8);
     }
 
-    return dayjs(`${dateStr}T${timeStr}`);
+    return dayjs.utc(`${dateStr}T${timeStr}`);
   };
 
   // If we have an active appointment in Redux and it belongs to this patient, use it
@@ -195,20 +208,27 @@ const RouteSlipDialog = () => {
     // Fallback: look for an appointment today
     const todayAppts = patientHistory.filter(appt => {
       const appointmentDateTime = getApptDateTime(appt);
-      return appointmentDateTime.isSame(dayjs(), 'day') && appointmentDateTime.isAfter(dayjs());
+      // The stored slot is a pseudo-instant; it is compared as the clinic's
+      // wall clock, never against the host machine's clock.
+      return (
+        branchDateStr(appointmentDateTime) === todayInBranch(clinicTz) &&
+        clinicWallClockOf(appointmentDateTime, clinicTz).isAfter(clinicNowVal)
+      );
     });
     if (todayAppts.length > 0) {
-      todayAppts.sort((a, b) => dayjs(a.appointmentDate || a.start).diff(dayjs(b.appointmentDate || b.start)));
+      todayAppts.sort((a, b) => dayjs.utc(a.appointmentDate || a.start).diff(dayjs.utc(b.appointmentDate || b.start)));
       routeSlipAppt = todayAppts[0];
     }
   }
 
-  const primaryDateStr = routeSlipAppt ? dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('dddd MMM DD, YYYY') : dayjs().format('dddd MMM DD, YYYY');
-  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${dayjs(routeSlipAppt.appointmentDate || routeSlipAppt.start).format('MM/DD/YYYY')}` : `APPOINTMENT OF ${dayjs().format('MM/DD/YYYY')}`;
+  const primaryDateStr = routeSlipAppt ? formatBranchDate(routeSlipAppt.appointmentDate || routeSlipAppt.start, 'dddd MMM DD, YYYY') : clinicNowVal.format('dddd MMM DD, YYYY');
+  const primaryApptTitle = routeSlipAppt ? `APPOINTMENT OF ${formatBranchDate(routeSlipAppt.appointmentDate || routeSlipAppt.start, 'MM/DD/YYYY')}` : `APPOINTMENT OF ${clinicNowVal.format('MM/DD/YYYY')}`;
 
   // Next appointment is the first one strictly after the primary appointment
-  const referenceDateTime = routeSlipAppt ? getApptDateTime(routeSlipAppt) : dayjs();
-  const now = dayjs();
+  const referenceDateTime = routeSlipAppt
+    ? clinicWallClockOf(getApptDateTime(routeSlipAppt), clinicTz)
+    : clinicNowVal;
+  const now = clinicNowVal;
   const futureAppts = patientHistory.filter(appt => {
     // Exclude the primary appointment itself safely
     if (routeSlipAppt) {
@@ -216,11 +236,45 @@ const RouteSlipDialog = () => {
       const rId = routeSlipAppt._id || routeSlipAppt.id;
       if (aId && rId && String(aId) === String(rId)) return false;
     }
-    const appointmentDateTime = getApptDateTime(appt);
+    const appointmentDateTime = clinicWallClockOf(getApptDateTime(appt), clinicTz);
     return appointmentDateTime.isAfter(now) && appointmentDateTime.isAfter(referenceDateTime);
   });
   futureAppts.sort((a, b) => getApptDateTime(a).diff(getApptDateTime(b)));
   const nextAppt = futureAppts.length > 0 ? futureAppts[0] : null;
+
+  const getProcedures = (appt) => {
+    if (!appt) return [];
+    const candidates = [
+      appt.customFields?.procedures,
+      appt.workspace?.procedures,
+      appt.procedures,
+      appt.procedureCodes
+    ];
+    let procs = candidates.find(arr => Array.isArray(arr) && arr.length > 0) || [];
+    
+    return procs.map((p) => {
+      if (typeof p === 'string') return { code: p, description: p };
+      
+      const code = p.code || p.procedureCode || p.ProcCode || p.cdtCode || p.id || '-';
+      const description = p.treatment || p.description || p.name || p.Descript || p.label || code;
+      const rawCharge = Number(String(p.charge || p.fee || p.negRate || 0).replace(/[^0-9.-]+/g, ''));
+      const insEst = Number(String(p.insPortion || p.insuranceAmount || p.insEst || 0).replace(/[^0-9.-]+/g, ''));
+      const ptEst = Number(String(p.ptPart || p.ptPortion || p.patientAmount || p.ptEst || 0).replace(/[^0-9.-]+/g, ''));
+      
+      return {
+        ...p,
+        status: p.completed || appt.status === 'completed' || appt.status === 'checked_out_complete' ? 'Completed' : 'Scheduled',
+        scheduled: formatBranchDate(appt.appointmentDate || appt.start || appt.date, 'MM/DD/YYYY'),
+        site: p.site || p.tooth || '-',
+        code,
+        description,
+        provider: p.provider || appt.provider || appt.providerId,
+        negRate: rawCharge,
+        insEst: insEst,
+        ptEst: ptEst
+      };
+    });
+  };
 
   return (
     <Dialog
@@ -337,127 +391,14 @@ const RouteSlipDialog = () => {
 
       {/* MODAL BODY (Print Target) */}
       <DialogContent id="route-slip-print-content" sx={{ p: '25px', pt: '25px', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
-
-        {/* Print-only Medflow Logo at Top Center */}
-        <Box sx={{ display: 'none', '@media print': { display: 'flex', justifyContent: 'center', width: '100%', mb: 3 } }}>
-          <img src={medflowLogo} alt="Medflow Logo" style={{ height: 45, objectFit: 'contain' }} />
-        </Box>
-
-        {/* Print Layout Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 3 }}>
-          <Typography sx={{ fontSize: '14px', color: '#334155' }}>
-            {primaryDateStr}
-          </Typography>
-          <Typography sx={{ fontSize: '18px', fontWeight: 'bold', color: '#1e3a8a' }}>
-            PATIENT ROUTE SLIP
-          </Typography>
-          <Typography sx={{ fontSize: '14px', color: '#334155' }}>
-            {patientName}
-          </Typography>
-        </Box>
-
-        {/* PATIENT SECTION */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title="PATIENT" />
-          <SectionContainer>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <InfoRow label="Name" value={patientName} />
-                <InfoRow label="Address" value={address} />
-                <InfoRow label="Date of Birth" value={dob} />
-                <InfoRow label="Email" value={email} />
-                <InfoRow label="Phone Number" value={phone} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ pl: { sm: 6, md: 10 } }}>
-                  <InfoRow label="Preferred Dentist" value={preferredDentistName} />
-                  <InfoRow label="Preferred Hygienist" value={preferredHygienistName} />
-                  <InfoRow label="Referring Sources" value={referringSource} />
-
-                </Box>
-              </Grid>
-            </Grid>
-          </SectionContainer>
-        </Box>
-
-        {/* ACCOUNT & INSURANCE SECTIONS */}
-        <Box sx={{ display: 'flex', gap: '16px', mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <SectionHeader title="ACCOUNT" />
-            <SectionContainer sx={{ height: '100px' }}>
-              <InfoRow label="Total Outstanding" value={formatMoney(totalOutstanding)} alignValue="right" />
-              <InfoRow label="Individual Outstanding" value={formatMoney(individualOutstanding)} alignValue="right" />
-              <InfoRow label="Insurance Outstanding" value={formatMoney(insuranceOutstanding)} alignValue="right" />
-            </SectionContainer>
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <SectionHeader title="INSURANCE" />
-            <SectionContainer sx={{ minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {activeInsuranceRows.length > 0 ? (
-                activeInsuranceRows.map((insurance, index) => (
-                  <Box key={insurance._id || insurance.id || index} sx={{ mb: index === activeInsuranceRows.length - 1 ? 0 : 1 }}>
-                    <Typography sx={{ color: '#334155', fontSize: '13px', fontWeight: 600 }}>
-                      {getInsuranceName(insurance)}
-                    </Typography>
-                    <Typography sx={{ color: '#64748b', fontSize: '12px' }}>
-                      ID: {insurance.subscriberId || insurance.memberId || insurance.policyNumber || '--'}
-                      {' | '}
-                      Group: {insurance.groupNumber || insurance.groupId || '--'}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography sx={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
-                  No active insurance
-                </Typography>
-              )}
-            </SectionContainer>
-          </Box>
-        </Box>
-
-        {/* PRIMARY APPOINTMENT */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title={primaryApptTitle} />
-          <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
-            {routeSlipAppt ? (
-              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
-                <RouteSlipApptDisplay
-                  appt={routeSlipAppt}
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-                  getProviderName={getProviderName}
-                />
-              </Box>
-            ) : (
-              <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>
-                No appointments for this day!
-              </Typography>
-            )}
-          </SectionContainer>
-        </Box>
-
-        {/* NEXT APPOINTMENT */}
-        <Box sx={{ mb: 2 }}>
-          <SectionHeader title="NEXT APPOINTMENT" />
-          <SectionContainer sx={{ minHeight: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', py: 2 }}>
-            {nextAppt ? (
-              <Box sx={{ width: '100%', boxSizing: 'border-box' }}>
-                <Box sx={{ px: 2, boxSizing: 'border-box', width: '100%' }}>
-                  <InfoRow label="Date" value={dayjs(nextAppt.appointmentDate || nextAppt.start).format('MM/DD/YYYY')} />
-                </Box>
-                <RouteSlipApptDisplay
-                  appt={nextAppt}
-                  OPERATORY_COLUMNS={OPERATORY_COLUMNS}
-                  getProviderName={getProviderName}
-                />
-              </Box>
-            ) : (
-              <Typography sx={{ color: '#475569', fontSize: '13px', alignSelf: 'center' }}>
-                No future appointments scheduled.
-              </Typography>
-            )}
-          </SectionContainer>
-        </Box>
-
+        <DynamicRouteSlipRenderer 
+          patient={currentPatient} 
+          appointment={routeSlipAppt} 
+          nextAppointment={nextAppt}
+          procedures={getProcedures(routeSlipAppt)} 
+          insurances={activeInsuranceRows} 
+          planTitle={routeSlipAppt?.planTitle || 'Treatment Plan'}
+        />
       </DialogContent>
 
       <DialogActions className="no-print-in-modal" sx={{ p: '12px 24px', borderTop: `1px solid ${COLORS.BORDER_LIGHT}`, backgroundColor: COLORS.WHITE, justifyContent: 'flex-end', gap: 1, flexShrink: 0 }}>

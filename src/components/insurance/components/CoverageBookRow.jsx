@@ -1,7 +1,7 @@
 import React from 'react';
 import { TableRow, TableCell, TextField, InputAdornment, Typography, Select, MenuItem, Box, Checkbox } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { inputFieldSx, deliveryPatternSx, bodyCellSx } from '../styles/coverageStyles';
+import { inputFieldSx, bodyCellSx } from '../styles/coverageStyles';
 import { getDowngradeCode } from '../utils/insuranceHelpers';
 
 import DeliveryPatternInput from './DeliveryPatternInput';
@@ -61,20 +61,41 @@ const CoverageBookRow = ({ row, index, handleFieldChange, setActiveToothSelectio
           sx={inputFieldSx}
         />
       </TableCell>
-      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '50px', fontSize: '0.8rem', fontWeight: 500, color: '#333' }}>
-        {row.age || '—'}
+      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '95px' }}>
+        <TextField
+          size="small"
+          value={row.age || ''}
+          onChange={(e) => handleFieldChange(index, 'age', e.target.value)}
+          sx={{ ...inputFieldSx, width: '100%' }}
+        />
       </TableCell>
-      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '80px' }}>
-        <Box 
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }} 
-          onClick={() => setActiveToothSelection(row.code || index)}
-        >
-          <EditIcon sx={{ fontSize: 16, color: row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0) ? '#2362EF' : '#94a3b8' }} />
-          {(row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0)) ? (
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#2362EF', bgcolor: '#e6f0fd', px: 0.8, py: 0.2, borderRadius: '10px' }}>
-              {Array.isArray(row.teeth) ? row.teeth.join(', ') : row.teethLimit}
-            </Typography>
-          ) : null}
+      <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '95px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <TextField
+            size="small"
+            value={
+              row.teethLimit ||
+              (Array.isArray(row.teeth) ? row.teeth.join(', ') : '') ||
+              ''
+            }
+            onChange={(e) => {
+              // Keep the `teeth` array in step with the text field: the backend
+              // prefers `teethLimit` but falls back to `teeth`, so a stale array
+              // would resurrect a limit the user just cleared (or typed over).
+              const value = e.target.value;
+              handleFieldChange(index, 'teethLimit', value);
+              handleFieldChange(
+                index,
+                'teeth',
+                value.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean)
+              );
+            }}
+            sx={{ ...inputFieldSx, width: '100%' }}
+          />
+          <EditIcon
+            sx={{ fontSize: 16, cursor: 'pointer', color: row.teethLimit || (Array.isArray(row.teeth) && row.teeth.length > 0) ? '#2362EF' : '#94a3b8' }}
+            onClick={() => setActiveToothSelection(row.code || index)}
+          />
         </Box>
       </TableCell>
       <TableCell align="center" sx={{ ...bodyCellSx, minWidth: '80px' }}>

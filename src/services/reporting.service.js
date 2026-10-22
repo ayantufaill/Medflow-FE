@@ -5,6 +5,10 @@ import apiClient from '../config/api';
  * Handles dynamic report execution and definition management
  */
 export const reportingService = {
+  async getFields() {
+    const response = await apiClient.get('/reports/fields');
+    return response.data.data;
+  },
   /**
    * Get all saved report definitions
    */
@@ -79,6 +83,16 @@ export const reportingService = {
   async getClinicalReport(reportName, params = {}) {
     const response = await apiClient.get(`/reports/clinical/${reportName}`, { params });
     return response.data.data;
+  },
+
+  /**
+   * Reset recare reminder and save row details (note, contact-again, follow-up)
+   * @param {string|number} patientId
+   * @param {Object} data - { note, contactAgain, followUp }
+   */
+  async resetRecareReminder(patientId, data = {}) {
+    const response = await apiClient.post(`/reports/clinical/recare/${patientId}/reset`, data);
+    return response.data;
   },
 
   /**

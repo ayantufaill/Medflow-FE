@@ -312,7 +312,6 @@ const DepositSlips = () => {
 
     try {
       const res = await dispatch(createDepositSlip({
-        bankAccountInfo: 'Main Bank Account',
         memo: depositNote || `Deposit Slip - ${new Date().toLocaleDateString()}`,
         date: new Date().toISOString(),
         patientPaymentIds,

@@ -50,6 +50,7 @@ import {
   invalidatePatientBalance,
 } from "../../store/slices/patientSlice";
 import { paymentService } from "../../services/payment.service";
+import apiClient from "../../config/api";
 
 import LedgerItemCard from "./LedgerItemCard";
 import { invoiceService } from "../../services/invoice.service";
@@ -68,6 +69,35 @@ import EditClaimDialog from "../claims/EditClaimDialog";
 import ModifyClaimStatusDialog from "./ModifyClaimStatusDialog";
 import VoidConfirmationDialog from "./VoidConfirmationDialog";
 import { useSnackbar } from "../../contexts/SnackbarContext";
+
+// An invoice whose procedures have all been removed or voided has nothing left
+// to show, so the row is dropped instead of rendering an empty invoice card.
+//
+// Only the invoice's OWN procedures count here — the grouped detail built from
+// its line items (plus any array hung directly on the item). Claim / payment /
+// adjustment details each carry their own `procedures` list too, but those are
+// not the invoice's procedures. Voided line items are skipped unless the user
+// has opted into seeing voided transactions, since an all-voided invoice reads
+// as empty otherwise.
+const invoiceHasNoProcedures = (item, includeVoided) => {
+  if (!item || item.method !== "Invoice") return false;
+  const isVoidedProcedure = (proc) => {
+    if (!proc) return false;
+    if (proc.isVoided || proc.isVoid) return true;
+    const status = String(proc.status || "").toLowerCase();
+    return status === "void" || status === "voided";
+  };
+  const groupedProcedures = (Array.isArray(item.details) ? item.details : [])
+    .filter((detail) => detail?.isGrouped && Array.isArray(detail.procedures))
+    .flatMap((detail) => detail.procedures);
+  const directProcedures = Array.isArray(item.procedures)
+    ? item.procedures
+    : [];
+  const procedures = [...groupedProcedures, ...directProcedures];
+  return !procedures.some(
+    (proc) => includeVoided || !isVoidedProcedure(proc),
+  );
+};
 
 const LedgerList = ({ patient, expanded, filters }) => {
   const dispatch = useDispatch();
@@ -93,9 +123,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [showWriteOffDialog, setShowWriteOffDialog] = useState(false);
   const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [showVoidProceduresDialog, setShowVoidProceduresDialog] =
+    useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
   const [showCourtesyCredit, setShowCourtesyCredit] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [showEditPayment, setShowEditPayment] = useState(false);
+  const [editPaymentTarget, setEditPaymentTarget] = useState(null);
   const [showUndoDialog, setShowUndoDialog] = useState(false);
   const [undoTarget, setUndoTarget] = useState(null);
   const [showSimpleStatement, setShowSimpleStatement] = useState(false);
@@ -152,7 +186,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
   }) => {
     const claimId = modifyClaimTarget?.id || modifyClaimTarget?._id;
     if (!claimId) {
-      showSnackbar('No claim selected to update', 'error');
+      showSnackbar("No claim selected to update", "error");
       return;
     }
     try {
@@ -163,13 +197,16 @@ const LedgerList = ({ patient, expanded, filters }) => {
       if (remittanceDate) {
         updates.remittanceDate = remittanceDate;
       }
-      if (insurancePaymentAmount !== null && insurancePaymentAmount !== undefined) {
+      if (
+        insurancePaymentAmount !== null &&
+        insurancePaymentAmount !== undefined
+      ) {
         updates.insurancePaymentAmount = insurancePaymentAmount;
         // Keep the claim's paid amount in step with the insurance remittance.
         updates.paidAmount = insurancePaymentAmount;
       }
       await claimService.updateClaim(claimId, updates);
-      showSnackbar(`Claim status changed to ${label}`, 'success');
+      showSnackbar(`Claim status changed to ${label}`, "success");
       setShowModifyClaimStatus(false);
       setModifyClaimTarget(null);
       refreshLedger();
@@ -178,8 +215,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
         err.response?.data?.error?.message ||
           err.response?.data?.message ||
           err.message ||
-          'Failed to change claim status',
-        'error',
+          "Failed to change claim status",
+        "error",
       );
     }
   };
@@ -251,7 +288,12 @@ const LedgerList = ({ patient, expanded, filters }) => {
   // ── Fetch on mount / patientId change ────────────────────────────────────
   const refreshLedger = useCallback(() => {
     if (patientId) {
-      dispatch(fetchLedgerItems(patientId));
+      dispatch(
+        fetchLedgerItems({
+          patientId,
+          includeVoided: Boolean(filters?.includeVoided),
+        }),
+      );
       dispatch(fetchMedicalHistoryThunk(patientId));
       dispatch(fetchDentalHistoryThunk(patientId));
 
@@ -264,12 +306,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
         if (currentExpanded[idx]) {
           const item = currentLedger[idx];
           if (item && item.method === "Invoice") {
-            dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
+            dispatch(
+              fetchInvoiceDetails({
+                patientId,
+                invoiceId: item.id,
+                includeVoided: Boolean(filters?.includeVoided),
+              }),
+            );
           }
         }
       });
     }
-  }, [dispatch, patientId]);
+  }, [dispatch, patientId, filters?.includeVoided]);
 
   useEffect(() => {
     refreshLedger();
@@ -291,12 +339,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
         all[idx] = expanded;
         // If expanding all, automatically fetch details for any invoices missing them
         if (expanded && item.method === "Invoice" && !item.details) {
-          dispatch(fetchInvoiceDetails({ patientId, invoiceId: item.id }));
+          dispatch(
+            fetchInvoiceDetails({
+              patientId,
+              invoiceId: item.id,
+              includeVoided: Boolean(filters?.includeVoided),
+            }),
+          );
         }
       });
       setExpandedItems(all);
     }
-  }, [expanded, ledgerItems, dispatch, patientId]);
+  }, [expanded, ledgerItems, dispatch, patientId, filters?.includeVoided]);
 
   useEffect(() => {
     if (location.state?.invoiceId && ledgerItems.length > 0) {
@@ -313,7 +367,11 @@ const LedgerList = ({ patient, expanded, filters }) => {
             const targetItem = ledgerItems[idx];
             if (targetItem?.method === "Invoice") {
               dispatch(
-                fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }),
+                fetchInvoiceDetails({
+                  patientId,
+                  invoiceId: targetItem.id,
+                  includeVoided: Boolean(filters?.includeVoided),
+                }),
               );
             }
             return { ...prev, [idx]: true };
@@ -335,7 +393,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
         }, 300);
       }
     }
-  }, [location.state?.invoiceId, ledgerItems, patientId, dispatch]);
+  }, [
+    location.state?.invoiceId,
+    ledgerItems,
+    patientId,
+    dispatch,
+    filters?.includeVoided,
+  ]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleItemClick = (idx) => {
@@ -343,7 +407,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
     const targetItem = ledgerItems[idx];
     // condition() in the thunk guards against duplicate/in-flight fetches
     if (targetItem?.method === "Invoice") {
-      dispatch(fetchInvoiceDetails({ patientId, invoiceId: targetItem.id }));
+      dispatch(
+        fetchInvoiceDetails({
+          patientId,
+          invoiceId: targetItem.id,
+          includeVoided: Boolean(filters?.includeVoided),
+        }),
+      );
     }
   };
 
@@ -394,10 +464,63 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
   const handleVoidClick = (item) => {
     setVoidTarget(item);
-    setShowVoidDialog(true);
+    // A void on an invoice row is a per-procedure decision: ask which ones
+    // rather than dropping the whole invoice in one shot.
+    if (item?.isGrouped && !item?.isAdjustment) {
+      setShowVoidProceduresDialog(true);
+    } else {
+      setShowVoidDialog(true);
+    }
   };
   const handleVoidCancel = () => {
     setShowVoidDialog(false);
+    setVoidTarget(null);
+  };
+  const handleVoidProceduresCancel = () => {
+    setShowVoidProceduresDialog(false);
+    setVoidTarget(null);
+  };
+  // Void only the chosen procedures; each one is removed from the invoice and
+  // the invoice is recalculated, so the untouched rows survive intact.
+  const handleVoidProceduresConfirm = async (selectedIds) => {
+    if (!voidTarget || !selectedIds || selectedIds.length === 0) return;
+
+    const failed = [];
+    let firstError = null;
+    for (const itemId of selectedIds) {
+      try {
+        await dispatch(
+          voidTransaction({
+            patientId,
+            invoiceId: voidTarget.invoiceId,
+            itemId,
+            isAdjustment: false,
+            isGrouped: false,
+            isPayment: false,
+          }),
+        ).unwrap();
+      } catch (err) {
+        // The thunk rejects with the server's message, which for a finalized
+        // invoice explains that the whole invoice has to be voided instead.
+        if (firstError === null) firstError = err;
+        failed.push(itemId);
+      }
+    }
+
+    if (failed.length > 0) {
+      showSnackbar(
+        firstError?.message ||
+          `Could not void ${failed.length} ${failed.length === 1 ? "procedure" : "procedures"}.`,
+        "error",
+      );
+    } else {
+      showSnackbar(
+        `${selectedIds.length} ${selectedIds.length === 1 ? "procedure" : "procedures"} voided`,
+        "success",
+      );
+    }
+
+    setShowVoidProceduresDialog(false);
     setVoidTarget(null);
   };
   const handleVoidConfirm = async () => {
@@ -428,8 +551,31 @@ const LedgerList = ({ patient, expanded, filters }) => {
   };
 
   const handleEditClick = (item) => {
-    setEditTarget(item);
-    setShowCourtesyCredit(true);
+    setEditPaymentTarget(item);
+    setShowEditPayment(true);
+  };
+
+  const handleEditPaymentCancel = () => {
+    setShowEditPayment(false);
+    setEditPaymentTarget(null);
+  };
+
+  const handleEditPaymentSave = async (data) => {
+    const target = editPaymentTarget;
+    setShowEditPayment(false);
+    setEditPaymentTarget(null);
+    if (!target?.id) return;
+    try {
+      await paymentService.updatePayment(target.id, data);
+      showSnackbar("Payment updated", "success");
+      refreshLedger();
+    } catch (err) {
+      console.error("updatePayment failed:", err);
+      showSnackbar(
+        err?.response?.data?.error?.message || "Failed to update payment",
+        "error",
+      );
+    }
   };
 
   const handleCourtesyCreditSave = async (data) => {
@@ -528,15 +674,23 @@ const LedgerList = ({ patient, expanded, filters }) => {
 
     // How much is actually available to move in the chosen direction.
     const getTransferableAmount = (row) => {
-      const raw = toInsurance
-        ? (row.ptPortion ?? row.patientAmount ?? row.patient ?? row.ptAmt ?? 0)
-        : (row.insuranceAmount ??
-          row.insPortion ??
-          row.insurancePortion ??
-          row.insAmt ??
-          row.insurance ??
-          0);
-      return Number(String(raw).replace(/[^0-9.-]+/g, "")) || 0;
+      const candidates = toInsurance
+        ? [row.ptPortion, row.patientAmount, row.patient, row.ptAmt]
+        : [
+            row.insuranceAmount,
+            row.insPortion,
+            row.totalInsPortion,
+            row.primaryInsPortion,
+            row.insurancePortion,
+            row.insAmt,
+            row.insurance,
+          ];
+      return candidates.reduce((amount, raw) => {
+        if (amount > 0) return amount;
+        const parsed =
+          Number(String(raw ?? "").replace(/[^0-9.-]+/g, "")) || 0;
+        return parsed > 0 ? parsed : amount;
+      }, 0);
     };
 
     try {
@@ -594,10 +748,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
       } else {
         const amount = getTransferableAmount(target);
         if (amount <= 0) {
-          console.warn(
-            `No ${noAmountLabel} to transfer for item:`,
-            target,
-          );
+          console.warn(`No ${noAmountLabel} to transfer for item:`, target);
           showSnackbar(
             `No ${noAmountLabel} to transfer for this item`,
             "warning",
@@ -661,6 +812,49 @@ const LedgerList = ({ patient, expanded, filters }) => {
   const handleAttachClick = (data) => {
     setAttachTarget({ ...data, patientId: patientId || 1 });
     setShowAttachDialog(true);
+  };
+
+  const handleLedgerDescriptionSave = async ({
+    detail,
+    displayItem,
+    description,
+    options,
+  }) => {
+    const notes = description || "";
+    const detailId = detail?.id;
+    if (!detailId) {
+      showSnackbar("No ledger item selected to update", "error");
+      return;
+    }
+
+    try {
+      if (detail?.isClaim) {
+        await claimService.updateClaim(detailId, { notes });
+      } else if (detail?.isAdjustment || displayItem?.isAdjustment) {
+        await apiClient.patch(`/adjustments/${detailId}`, { notes });
+      } else if (detail?.isPayment) {
+        await apiClient.patch(`/payments/${detailId}`, { notes });
+      } else if (displayItem?.method === "Invoice") {
+        await invoiceService.updateInvoice(displayItem.id, { notes });
+      } else {
+        showSnackbar("This ledger item does not support descriptions yet", "warning");
+        return;
+      }
+
+      if (!options?.silent) {
+        showSnackbar("Description saved", "success");
+        refreshLedger();
+      }
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to save description",
+        "error",
+      );
+      throw err;
+    }
   };
 
   // Re-open whatever the user left mid-edit. Keyed on the patient rather than a
@@ -762,10 +956,20 @@ const LedgerList = ({ patient, expanded, filters }) => {
             parseFloat(
               String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
             ) || 0,
-          primaryInsPortion:
-            Number(row.primaryInsPortion ?? (Number(row.secondaryInsPortion || 0) > 0 && parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) > Number(row.secondaryInsPortion || 0) ? parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")) - Number(row.secondaryInsPortion || 0) : parseFloat(String(row.insPortion || "").replace(/[^0-9.-]+/g, "")))),
-          secondaryInsPortion:
-            Number(row.secondaryInsPortion || 0),
+          primaryInsPortion: Number(
+            row.primaryInsPortion ??
+              (Number(row.secondaryInsPortion || 0) > 0 &&
+              parseFloat(
+                String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+              ) > Number(row.secondaryInsPortion || 0)
+                ? parseFloat(
+                    String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+                  ) - Number(row.secondaryInsPortion || 0)
+                : parseFloat(
+                    String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
+                  )),
+          ),
+          secondaryInsPortion: Number(row.secondaryInsPortion || 0),
           totalInsPortion:
             parseFloat(
               String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
@@ -838,7 +1042,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
                   parseFloat(
                     String(row.insPortion || "").replace(/[^0-9.-]+/g, ""),
                   ) || 0,
-                dbi: false,
+                dbi: Boolean(row.dbi),
               })),
             });
           } catch (claimErr) {
@@ -849,8 +1053,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
             showSnackbar(
               claimErr.response?.data?.error?.message ||
                 claimErr.response?.data?.message ||
-                'Invoice saved, but the claim could not be created.',
-              'error',
+                "Invoice saved, but the claim could not be created.",
+              "error",
             );
           }
         }
@@ -867,12 +1071,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
       const claimId = claimData?.id || claimData?._id;
       const invoiceId = claimData?.invoiceId;
       if (!claimId) {
-        showSnackbar('No claim selected to reject', 'error');
+        showSnackbar("No claim selected to reject", "error");
         return;
       }
-      const result = await invoiceService.transferRejectedClaim(invoiceId, claimId);
-      showSnackbar(result?.message || 'Claim rejected and balance transferred to patient', 'success');
-      
+      const result = await invoiceService.transferRejectedClaim(
+        invoiceId,
+        claimId,
+      );
+      showSnackbar(
+        result?.message || "Claim rejected and balance transferred to patient",
+        "success",
+      );
+
       const patientId = patient?._id || patient?.id;
       if (patientId) {
         dispatch(invalidatePatientBalance(patientId));
@@ -880,7 +1090,13 @@ const LedgerList = ({ patient, expanded, filters }) => {
       }
       refreshLedger();
     } catch (err) {
-      showSnackbar(err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to reject claim', 'error');
+      showSnackbar(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to reject claim",
+        "error",
+      );
     }
   };
 
@@ -892,9 +1108,9 @@ const LedgerList = ({ patient, expanded, filters }) => {
       await claimService.setClaimLock(claimId, nextLocked);
       showSnackbar(
         nextLocked
-          ? 'Claim locked. No further claim can be built for this invoice until it is paid.'
-          : 'Claim unlocked',
-        'success',
+          ? "Claim locked. No further claim can be built for this invoice until it is paid."
+          : "Claim unlocked",
+        "success",
       );
       refreshLedger();
     } catch (err) {
@@ -902,8 +1118,8 @@ const LedgerList = ({ patient, expanded, filters }) => {
         err.response?.data?.error?.message ||
           err.response?.data?.message ||
           err.message ||
-          'Failed to update claim lock',
-        'error',
+          "Failed to update claim lock",
+        "error",
       );
     }
   };
@@ -924,16 +1140,16 @@ const LedgerList = ({ patient, expanded, filters }) => {
     setVoidClaimTarget(null);
     if (!claimId) return;
     try {
-      await claimService.voidClaim(claimId, 'Claim voided from patient ledger');
-      showSnackbar('Claim voided', 'success');
+      await claimService.voidClaim(claimId, "Claim voided from patient ledger");
+      showSnackbar("Claim voided", "success");
       refreshLedger();
     } catch (err) {
       showSnackbar(
         err.response?.data?.error?.message ||
           err.response?.data?.message ||
           err.message ||
-          'Failed to void claim',
-        'error',
+          "Failed to void claim",
+        "error",
       );
     }
   };
@@ -991,13 +1207,25 @@ const LedgerList = ({ patient, expanded, filters }) => {
         </Box>
       )}
       {ledgerItems.map((item, idx) => {
+        const isVoidedRecord = (record) => {
+          if (!record) return false;
+          if (record.isVoided || record.isVoid) return true;
+          const status = String(record.status || "").toLowerCase();
+          return status === "void" || status === "voided";
+        };
+
         // Apply voided filter
-        if (item.isVoided && !filters?.includeVoided) {
+        if (isVoidedRecord(item) && !filters?.includeVoided) {
           return null;
         }
 
         // Apply transfer filter
         if (item.isTransfer && filters?.hideBillingTransfers) {
+          return null;
+        }
+
+        // Hide invoices that no longer carry any procedure.
+        if (invoiceHasNoProcedures(item, filters?.includeVoided)) {
           return null;
         }
 
@@ -1013,11 +1241,111 @@ const LedgerList = ({ patient, expanded, filters }) => {
         if (displayItem.details) {
           displayItem = {
             ...displayItem,
-            details: displayItem.details.filter((d) => {
-              if (d.isVoided && !filters?.includeVoided) return false;
-              if (d.isTransfer && filters?.hideBillingTransfers) return false;
-              return true;
-            }),
+            details: displayItem.details
+              .filter((d) => {
+                const detailIsVoided = isVoidedRecord(d);
+                if (detailIsVoided && !filters?.includeVoided) return false;
+                if (d.isTransfer && filters?.hideBillingTransfers) return false;
+                return true;
+              })
+              .map((d) => {
+                if (d.isGrouped && d.procedures) {
+                  let unallocatedCourtesy = 0;
+                  const invoiceLevelAdjs = displayItem.details.filter(
+                    (adj) =>
+                      adj.isAdjustment &&
+                      adj.isCourtesy &&
+                      !adj.isVoided &&
+                      !adj.procedureId,
+                  );
+                  invoiceLevelAdjs.forEach((adj) => {
+                    unallocatedCourtesy += adj.rawAmount || 0;
+                  });
+
+                  let proceduresWithBalance = d.procedures
+                    .map((p) => {
+                      const procedureId = p.ProcNum || p._id || p.id;
+                      const courtesyAdjs = displayItem.details.filter(
+                        (adj) =>
+                          adj.isAdjustment &&
+                          adj.isCourtesy &&
+                          !adj.isVoided &&
+                          String(adj.procedureId) === String(procedureId),
+                      );
+                      let totalCourtesy = courtesyAdjs.reduce(
+                        (sum, adj) => sum + (adj.rawAmount || 0),
+                        0,
+                      );
+
+                      const ptPortion = Number(
+                        p.patientPortion ?? p.ptPortion ?? 0,
+                      );
+                      if (unallocatedCourtesy > 0 && ptPortion > 0) {
+                        const amountToApply = Math.min(
+                          unallocatedCourtesy,
+                          ptPortion,
+                        );
+                        totalCourtesy += amountToApply;
+                        unallocatedCourtesy -= amountToApply;
+                      }
+
+                      return {
+                        ...p,
+                        ptPortion: Math.max(
+                          0,
+                          Number(p.ptPortion ?? p.patientPortion ?? 0) -
+                            totalCourtesy,
+                        ),
+                      };
+                    })
+                    // Hide procedures whose remaining patient portion is $0.00.
+                    // Voided ones are an exception when "include voided
+                    // transactions" is on — they are shown for audit regardless
+                    // of their (now irrelevant) patient portion.
+                    .filter((p) => {
+                      const procIsVoided = isVoidedRecord(p);
+                      const remainingPtPortion = Number(
+                        Number(p.ptPortion ?? p.patientPortion ?? 0).toFixed(2),
+                      );
+                      return (
+                        remainingPtPortion > 0 ||
+                        (filters?.includeVoided && procIsVoided)
+                      );
+                    });
+
+                  // If all procedures have $0 patient portion, fall back to showing all
+                  // rather than dropping the row. Otherwise, keep procedures
+                  // with $0 balance so they remain visible alongside those with balances.
+                  if (proceduresWithBalance.length === 0) {
+                    if (!d.procedures || d.procedures.length === 0) return null;
+                    return { ...d };
+                  }
+
+                  const zeroBalanceProcedures = d.procedures.filter((p) => {
+                    const procIsVoided = isVoidedRecord(p);
+                    const remainingPtPortion = Number(
+                      Number(p.ptPortion ?? p.patientPortion ?? 0).toFixed(2),
+                    );
+                    return (
+                      remainingPtPortion === 0 &&
+                      (!filters?.includeVoided || !procIsVoided)
+                    );
+                  });
+                  if (zeroBalanceProcedures.length > 0) {
+                    proceduresWithBalance = [
+                      ...proceduresWithBalance,
+                      ...zeroBalanceProcedures,
+                    ];
+                  }
+
+                  return {
+                    ...d,
+                    procedures: proceduresWithBalance,
+                  };
+                }
+                return d;
+              })
+              .filter(Boolean),
           };
         }
 
@@ -1054,6 +1382,7 @@ const LedgerList = ({ patient, expanded, filters }) => {
             onChangeClaimStatusClick={handleOpenModifyClaimStatus}
             handleAddProcedureClick={handleAddProcedureClick}
             handleAttachClick={handleAttachClick}
+            onDescriptionSave={handleLedgerDescriptionSave}
           />
         );
       })}
@@ -1081,11 +1410,18 @@ const LedgerList = ({ patient, expanded, filters }) => {
         showVoidDialog={showVoidDialog}
         handleVoidCancel={handleVoidCancel}
         handleVoidConfirm={handleVoidConfirm}
+        showVoidProceduresDialog={showVoidProceduresDialog}
+        handleVoidProceduresCancel={handleVoidProceduresCancel}
+        handleVoidProceduresConfirm={handleVoidProceduresConfirm}
         voidTarget={voidTarget}
         showCourtesyCredit={showCourtesyCredit}
         handleCourtesyCreditCancel={handleCourtesyCreditCancel}
         handleCourtesyCreditSave={handleCourtesyCreditSave}
         editTarget={editTarget}
+        showEditPayment={showEditPayment}
+        handleEditPaymentCancel={handleEditPaymentCancel}
+        handleEditPaymentSave={handleEditPaymentSave}
+        editPaymentTarget={editPaymentTarget}
         showUndoDialog={showUndoDialog}
         handleUndoCancel={handleUndoCancel}
         handleUndoConfirm={handleUndoConfirm}

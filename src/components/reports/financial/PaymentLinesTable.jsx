@@ -40,7 +40,7 @@ const PaymentLinesTable = ({ data = [] }) => {
                 <TableCell>{row.dueDate}</TableCell>
                 <TableCell>{row.chargedOn || '-'}</TableCell>
                 <TableCell>{row.failedOn || '-'}</TableCell>
-                <TableCell>{row.failedAttempts ?? 0}</TableCell>
+                <TableCell>{row.failedAttempts ?? '\u2014'}</TableCell>
                 <TableCell sx={{ 
                   color: row.status === 'Failed' ? '#d93025' : row.status === 'Paid' ? '#166534' : '#1e293b', 
                   fontWeight: 500 

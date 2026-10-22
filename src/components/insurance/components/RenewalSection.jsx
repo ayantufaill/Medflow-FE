@@ -108,6 +108,8 @@ const RenewalSection = ({
           required
           value={formData.renewalMonth || ''}
           onChange={(e) => handleRenewalChange('renewalMonth', e.target.value)}
+          error={!!errors.renewalMonth}
+          helperText={errors.renewalMonth}
         >
           {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
             <MenuItem key={month} value={month} sx={{ fontSize: '14px' }}>{month}</MenuItem>

@@ -53,10 +53,22 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteIt
 
   const filteredPlans = treatmentPlans.filter(row => {
     // Filter by Type
-    if (activeFilters.type !== 'All Types' && activeFilters.type !== 'Procedure') return false; 
+    if (activeFilters.type && activeFilters.type !== 'All Types') {
+      const isCondition = ['Existing Current', 'Existing Other'].includes(row.status);
+      if (activeFilters.type === 'Procedure' && isCondition) return false;
+      if (activeFilters.type === 'Condition' && !isCondition) return false;
+    }
     
     // Filter by Tooth State
-    if (activeFilters.toothState !== 'All Tooth States') return false; 
+    if (activeFilters.toothState && activeFilters.toothState !== 'All Tooth States') {
+      const siteStr = (row.site || '').toUpperCase();
+      const hasNumbers = /[1-9]|1[0-9]|2[0-9]|3[0-2]/.test(siteStr);
+      const hasLetters = /[A-T]/.test(siteStr);
+      
+      if (activeFilters.toothState === 'Primary' && !hasLetters) return false;
+      if (activeFilters.toothState === 'Permanent' && !hasNumbers) return false;
+      if (activeFilters.toothState === 'Missing' && row.status !== 'Missing') return false; // assuming 'Missing' status
+    }
 
     // Filter by Site (teeth)
     if (activeFilters.teeth && activeFilters.teeth.length > 0) {
@@ -68,8 +80,10 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteIt
       const hasMatch = activeFilters.teeth.some(tooth => {
         if (tooth === 'Supernumerary') return siteStr.includes('SUPERNUMERARY');
         const pLabel = primaryMap[tooth];
-        const toothRegex = new RegExp(`\\b${tooth}\\b`);
-        const labelRegex = pLabel ? new RegExp(`\\b${pLabel}\\b`) : null;
+        // Use word boundaries to avoid '1' matching '11' or '21'
+        const toothRegex = new RegExp(`(^|[^0-9A-Z])${tooth}([^0-9A-Z]|$)`);
+        const labelRegex = pLabel ? new RegExp(`(^|[^0-9A-Z])${pLabel}([^0-9A-Z]|$)`) : null;
+        
         return toothRegex.test(siteStr) || (labelRegex && labelRegex.test(siteStr));
       });
       
@@ -125,16 +139,34 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteIt
 
   const getStatusStyles = (status) => {
     const s = status?.toLowerCase() || '';
-    if (s === 'scheduled' || s === 'rejected') {
-      return { bgcolor: '#fecaca', color: '#b91c1c' };
+    if (s === 'scheduled') {
+      return { bgcolor: '#dbeafe', color: '#1d4ed8' }; // blue
+    }
+    if (s === 'rejected') {
+      return { bgcolor: '#fecaca', color: '#b91c1c' }; // red
     }
     if (s === 'completed') {
-      return { bgcolor: '#bbf7d0', color: '#15803d' };
+      return { bgcolor: '#bbf7d0', color: '#15803d' }; // green
     }
     if (s === 'unplanned') {
-      return { bgcolor: '#fef3c7', color: '#b45309' };
+      return { bgcolor: '#fef3c7', color: '#b45309' }; // yellow
     }
     return { bgcolor: '#f1f5f9', color: '#475569' };
+  };
+
+  const getDisplayStatus = (status) => {
+    if (!status) return 'Planned';
+    const sMap = {
+      'planned': 'Planned',
+      'scheduled': 'Scheduled',
+      'unplanned': 'Unplanned',
+      'rejected': 'Rejected',
+      'existing current': 'Existing Current',
+      'existing other': 'Existing Other',
+      'referred': 'Referred',
+      'completed': 'Completed'
+    };
+    return sMap[status.toLowerCase()] || status;
   };
 
   const handleDownload = () => {
@@ -280,7 +312,7 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteIt
                     }}
                   >
                     <Select
-                      value={row.status}
+                      value={getDisplayStatus(row.status)}
                       onChange={(e) => onUpdateItemStatus && onUpdateItemStatus(row.id, e.target.value)}
                       variant="standard"
                       disableUnderline
@@ -293,6 +325,7 @@ const ChartTable = ({ treatmentPlans, onUpdateItemStatus, onEditItem, onDeleteIt
                       }}
                     >
                       <MenuItem value="Planned" sx={{ fontSize: '0.8rem' }}>Planned</MenuItem>
+                      <MenuItem value="Scheduled" sx={{ fontSize: '0.8rem' }}>Scheduled</MenuItem>
                       <MenuItem value="Unplanned" sx={{ fontSize: '0.8rem' }}>Unplanned</MenuItem>
                       <MenuItem value="Rejected" sx={{ fontSize: '0.8rem' }}>Rejected</MenuItem>
                       <MenuItem value="Existing Current" sx={{ fontSize: '0.8rem' }}>Existing Current</MenuItem>

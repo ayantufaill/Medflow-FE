@@ -9,8 +9,11 @@ import {
   selectFeeGuidesLoading,
 } from "../../../store/slices/feeGuideSlice";
 import { buildCoveragePayload } from "../utils/coveragePayloadBuilder";
+import { COVERAGE_DATA } from "../../../components/insurance/utils/insuranceConstants";
 import { monthMapReverse } from "../utils/coverageConstants";
 import { useNavigate } from "react-router-dom";
+import { normalizePayerId } from "../utils/payerIdValidation";
+import { expandStandardSelection } from "../utils/deductibleStandardSelection";
 
 /** Normalise any stored date (ISO or MM/DD/YYYY) to the MM-DD-YYYY display form. */
 const isoToDisplayDate = (value) => {
@@ -44,11 +47,8 @@ export const useCoverageData = (
   const [loading, setLoading] = useState(false);
 
   const {
-    companies: allCompanies,
-    companiesLoading,
     templates: coverageTemplates,
     templatesLoading,
-    fetchCompanies,
     fetchTemplates,
     createTemplate,
   } = useInsuranceCatalog();
@@ -63,7 +63,6 @@ export const useCoverageData = (
   const feeGuidesLoading = useSelector(selectFeeGuidesLoading);
 
   const initialFetchRef = useRef({
-    companies: false,
     templates: false,
     feeGuides: false,
   });
@@ -76,14 +75,6 @@ export const useCoverageData = (
 
   useEffect(() => {
     if (
-      (!allCompanies || allCompanies.length === 0) &&
-      !companiesLoading &&
-      !initialFetchRef.current.companies
-    ) {
-      initialFetchRef.current.companies = true;
-      fetchCompanies();
-    }
-    if (
       (!coverageTemplates || coverageTemplates.length === 0) &&
       !templatesLoading &&
       !initialFetchRef.current.templates
@@ -92,11 +83,8 @@ export const useCoverageData = (
       fetchTemplates();
     }
   }, [
-    allCompanies,
     coverageTemplates,
-    companiesLoading,
     templatesLoading,
-    fetchCompanies,
     fetchTemplates,
   ]);
 
@@ -121,21 +109,20 @@ export const useCoverageData = (
         if (
           patientId &&
           insuranceId &&
-          insurances.length > 0 &&
-          allCompanies &&
-          allCompanies.length > 0
+          insurances.length > 0
         ) {
           const editTarget = insurances.find(
             (ins) => (ins._id || ins.id) === insuranceId,
           );
 
           if (editTarget) {
-            const fullCompany = allCompanies.find(
-              (c) =>
-                (c._id || c.id) ===
-                (editTarget.insuranceCompanyId?._id ||
-                  editTarget.insuranceCompanyId),
-            );
+            const fullCompany = editTarget.insuranceCompanyId;
+            const address = fullCompany?.address;
+            const cityState = [address?.city, address?.state].filter(Boolean).join(', ');
+            const payerAddress = [
+              [address?.street, address?.street2].filter(Boolean).join(', '),
+              [cityState, address?.zipCode].filter(Boolean).join(' '),
+            ].filter(Boolean).join(', ');
 
             setFormData((prev) => ({
               ...prev,
@@ -143,26 +130,26 @@ export const useCoverageData = (
                 editTarget.insuranceCompanyId?._id ||
                 editTarget.insuranceCompanyId,
               carrierName: editTarget.insuranceCompanyId?.name || "",
-              payerId: editTarget.insuranceCompanyId?.payerId || "",
+              payerId: normalizePayerId(editTarget.insuranceCompanyId?.payerId),
               carrierPhone:
                 fullCompany?.phone ||
                 editTarget.insuranceCompanyId?.phone ||
                 "",
-              payerAddress:
-                fullCompany?.addressLine1 ||
-                editTarget.insuranceCompanyId?.addressLine1 ||
-                fullCompany?.city ||
-                editTarget.insuranceCompanyId?.city ||
-                "",
+              payerAddress,
               phoneNumber:
                 fullCompany?.phone ||
                 editTarget.insuranceCompanyId?.phone ||
                 "",
               groupNumber: editTarget.groupNumber || "",
               groupName: editTarget.groupName || "",
+              employerName: editTarget.employerName || "",
+              employerId: editTarget.employerId || "",
               insurancePlan:
+                editTarget.insurancePlanName ||
                 editTarget.insurancePlan?.name ||
                 editTarget.insurancePlan ||
+                editTarget.groupName ||
+                editTarget.employerName ||
                 fullCompany?.name ||
                 editTarget.insuranceCompanyId?.name ||
                 "",
@@ -189,7 +176,14 @@ export const useCoverageData = (
                     editTarget.relationshipToPatient?.slice(1) || "Self",
                 name: editTarget.subscriberName || "",
                 subscriberId: editTarget.policyNumber || "",
-                ssn: editTarget.subscriberSsn || "",
+                ssn: editTarget.subscriberSsn 
+                  ? (() => {
+                      let nums = editTarget.subscriberSsn.replace(/\D/g, '');
+                      if (nums.length > 5) return `${nums.slice(0, 3)}-${nums.slice(3, 5)}-${nums.slice(5, 9)}`;
+                      if (nums.length > 3) return `${nums.slice(0, 3)}-${nums.slice(3)}`;
+                      return nums;
+                    })()
+                  : "",
                 dateOfBirth: editTarget.subscriberDateOfBirth
                   ? new Date(editTarget.subscriberDateOfBirth)
                       .toISOString()
@@ -197,7 +191,7 @@ export const useCoverageData = (
                   : "",
               },
               deductibles: editTarget.deductiblesGrid?.length
-                ? editTarget.deductiblesGrid.map((d) => ({
+                ? expandStandardSelection(editTarget.deductiblesGrid).map((d) => ({
                     ...d,
                     metDate: isoToDisplayDate(d.metDate),
                   }))
@@ -216,7 +210,13 @@ export const useCoverageData = (
               setCoverageBookData(editTarget.coverageBookData);
             }
 
-            if (editTarget.coverageCategoryTable) {
+            if (
+              editTarget.coverageCategoryTable &&
+              ((Array.isArray(editTarget.coverageCategoryTable) &&
+                editTarget.coverageCategoryTable.length > 0) ||
+                (!Array.isArray(editTarget.coverageCategoryTable) &&
+                  Object.keys(editTarget.coverageCategoryTable).length > 0))
+            ) {
               const covDataArray = editTarget.coverageCategoryTable;
 
               if (
@@ -233,6 +233,8 @@ export const useCoverageData = (
               } else if (covDataArray && !Array.isArray(covDataArray)) {
                 setCoverageCategoryData(covDataArray);
               }
+            } else {
+              setCoverageCategoryData(COVERAGE_DATA);
             }
           }
         }
@@ -245,7 +247,7 @@ export const useCoverageData = (
     };
 
     loadData();
-  }, [patientId, insuranceId, insurances, allCompanies]);
+  }, [patientId, insuranceId, insurances]);
 
   const handleSave = async () => {
     try {
@@ -311,7 +313,6 @@ export const useCoverageData = (
   return {
     loading,
     feeGuides,
-    allCompanies,
     coverageTemplates,
     createTemplate,
     handleSave,

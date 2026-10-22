@@ -104,7 +104,7 @@ export const authorizationService = {
    * @returns {Promise<Blob>} PDF file
    */
   async printAuthorizationForm(authorizationId) {
-    const response = await apiClient.get(`/authorizations/${authorizationId}/print`, {
+    const response = await apiClient.get(`/authorizations/${authorizationId}/print?t=${Date.now()}`, {
       responseType: 'blob',
     });
     return response.data;

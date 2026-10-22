@@ -15,6 +15,8 @@ import {
   History as HistoryIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
+import { resolveClinicTimeZone, clinicNow, isPastSlotInClinic, branchDateStr, formatBranchTime } from "../../../../utils/dateUtils";
+import { useBranch } from "../../../../hooks/redux";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPatientHistory, selectPatientHistoryList, selectPatientHistoryLoading } from "../../../../store/slices/appointmentSlice";
 import { selectCurrentPatient } from "../../../../store/slices/patientSlice";
@@ -32,6 +34,11 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const appointments = useSelector(selectPatientHistoryList);
   const loading = useSelector(selectPatientHistoryLoading);
   const currentPatient = useSelector(selectCurrentPatient);
+
+  // ── Clinic timezone ─────────────────────────────────────────────────────────
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+  const clinicNowVal = clinicNow(clinicTz);
 
   // Enrich patient name: if caller only passed { _id, id }, pull name from Redux
   const patientName = patient?.firstName
@@ -68,18 +75,15 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
   const filteredAndSortedAppointments = useMemo(() => {
     let result = [...appointments];
 
-    // Filter by type
-    if (filterType === "past") {
+    // Filter by type. Appointment datetimes are pseudo-instants (their UTC
+    // components are the clinic's wall clock), so the slot is compared against
+    // the clinic's clock, never the host machine's.
+    if (filterType === "past" || filterType === "future") {
       result = result.filter(a => {
-        const d = dayjs(a.date || a.appointmentDate);
-        const time = a.startTime ? a.startTime.split(':') : [0,0];
-        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isBefore(dayjs());
-      });
-    } else if (filterType === "future") {
-      result = result.filter(a => {
-        const d = dayjs(a.date || a.appointmentDate);
-        const time = a.startTime ? a.startTime.split(':') : [0,0];
-        return d.hour(parseInt(time[0])).minute(parseInt(time[1])).isAfter(dayjs());
+        const dateStr = branchDateStr(a.date || a.appointmentDate);
+        const timeStr = a.startTime || formatBranchTime(a.date || a.appointmentDate, "HH:mm");
+        const isPast = isPastSlotInClinic(dateStr, timeStr, clinicTz);
+        return filterType === "past" ? isPast : !isPast;
       });
     }
 
@@ -116,8 +120,8 @@ const AppointmentHistoryDialog = ({ open, onClose, patient }) => {
           // However, if updatedAt is virtually identical to createdAt (or missing), it means the appointment 
           // was never updated since creation. In that case, we fall back to the actual appointment date.
           // This prevents newly created appointments from artificially bubbling to the top of the status change sort.
-          const created = dayjs(apt.createdAt || apt.date || dayjs().toISOString());
-          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || dayjs().toISOString());
+          const created = dayjs(apt.createdAt || apt.date || clinicNowVal.toISOString());
+          const updated = dayjs(apt.updatedAt || apt.createdAt || apt.date || clinicNowVal.toISOString());
           
           if (apt.updatedAt && updated.diff(created, 'second') > 60) {
             // It has been updated at least 1 minute after creation! Use the updatedAt time.

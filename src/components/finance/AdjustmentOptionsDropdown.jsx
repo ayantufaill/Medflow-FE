@@ -1,13 +1,15 @@
 import { Menu, MenuItem, Typography } from '@mui/material';
 
-const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {
-  const options = [
-    "Credit (subtraction)",
-    "Debit (addition)",
-    "Insurance Write-Off",
-    "Membership Adjustment"
-  ];
+// Temporarily disabled entries stay in the list but render greyed out and
+// unclickable — flip `disabled` back to false to re-enable one.
+const options = [
+  { label: "Credit (subtraction)", disabled: false },
+  { label: "Debit (addition)", disabled: false },
+  { label: "Insurance Write-Off", disabled: false },
+  { label: "Membership Adjustment", disabled: true },
+];
 
+const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {
   return (
     <Menu
       anchorEl={anchorEl}
@@ -31,16 +33,23 @@ const AdjustmentOptionsDropdown = ({ anchorEl, open, onClose, onSelect }) => {
       }}
     >
       {options.map((option, index) => (
-        <MenuItem 
-          key={index} 
+        <MenuItem
+          key={index}
+          disabled={option.disabled}
           onClick={() => {
-            onSelect(option);
+            onSelect(option.label);
             onClose();
-          }} 
+          }}
           sx={{ py: 1 }}
         >
-          <Typography variant="caption" sx={{ fontWeight: 500, color: '#333' }}>
-            {option}
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 500,
+              color: option.disabled ? '#b0b0b0' : '#333',
+            }}
+          >
+            {option.label}
           </Typography>
         </MenuItem>
       ))}

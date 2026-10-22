@@ -53,6 +53,7 @@ import dayjs from 'dayjs';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { claimService } from '../../services/claim.service';
 import SignaturePad from '../../components/shared/SignaturePad';
+import ClaimCobSection from '../../components/cob/ClaimCobSection';
 
 const STATUS_COLORS = {
   draft: 'default',
@@ -337,6 +338,21 @@ const ViewClaimPage = () => {
           )}
         </Alert>
       )}
+
+      {/* Coordination of benefits: the injury question, the coverage order
+          effective on this claim's DATE OF SERVICE (not today's), and the
+          balance split by responsible party. */}
+      <ClaimCobSection
+        claimId={claimId}
+        patientId={claim.patientId || claim.patient?._id || claim.patient?.id}
+        invoiceId={claim.invoiceId || claim.invoice?._id || claim.invoice?.id}
+        dateOfService={
+          claim.serviceDate || claim.service?.date || claim.submissionDate || claim.createdAt
+        }
+        initialInjuryRelated={claim.injuryRelated ?? null}
+        initialInjuryType={claim.injuryType ?? null}
+        onOpenClaim={(id) => navigate(`/claims/${id}`)}
+      />
 
       <Grid container spacing={3}>
         {/* Row 1: Claim Information | Patient Information */}

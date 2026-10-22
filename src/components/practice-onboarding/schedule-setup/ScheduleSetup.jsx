@@ -20,6 +20,7 @@ import {
 import { updateScheduleConfig } from "../../../store/slices/practiceInfoSlice";
 import { roomService } from "../../../services/room.service";
 import { fontSize, fontWeight } from "../../../constants/styles";
+import dayjs from "dayjs";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ const APPT_TYPES = {
 };
 
 const formatDayLabel = (date) =>
-  date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  dayjs.utc(date).format('dddd, MMMM D, YYYY');
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

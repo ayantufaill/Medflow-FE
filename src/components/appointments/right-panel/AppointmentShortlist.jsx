@@ -7,7 +7,7 @@ import AppointmentShortlistModal from './AppointmentShortlistModal';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, avatarSize } from '../../../constants/styles';
 import { shortlistService } from '../../../services/shortlist.service';
-import dayjs from 'dayjs';
+import { formatBranchDate, formatBranchTime } from '../../../utils/dateUtils';
 
 /** Normalize ALL-CAPS names to Title Case */
 const toTitleCase = (str) => str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -19,11 +19,11 @@ const DraggableShortlistItem = ({ item }) => {
   const startTime = item.startTime || item.StartTime;
   const durationMins = item.durationMinutes || item.DurationMins;
   
-  const slotDay = apptDate ? dayjs(apptDate).format("ddd") : "Any";
-  const slotTime = startTime ? dayjs(`2000-01-01T${startTime}`).format("hh:mm A") : "Any Time";
+  const slotDay = apptDate ? formatBranchDate(apptDate, "ddd") : "Any";
+  const slotTime = startTime ? formatBranchTime(startTime, "hh:mm A") : "Any Time";
   const slotDuration = durationMins ? `${durationMins}m` : "";
   const slotStr = `${slotDay} · ${slotTime}${slotDuration ? ` · ${slotDuration}` : ''}`;
-  const dateStr = apptDate ? dayjs(apptDate).format("MMM DD, YYYY") : "No Date";
+  const dateStr = apptDate ? formatBranchDate(apptDate, "MMM DD, YYYY") : "No Date";
 
   // Implementing drag functionality
   const itemId = item._id || item.id || item.ShortlistNum || item.PatNum;

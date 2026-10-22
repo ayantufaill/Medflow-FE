@@ -1,5 +1,5 @@
 import { useState } from "react";
-import dayjs from "dayjs";
+import { formatBranchDate, formatBranchTime } from "../../utils/dateUtils";
 import { Box, Paper, Typography, IconButton, Popover, Divider } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EventNoteIcon from "@mui/icons-material/EventNote";
@@ -10,6 +10,30 @@ import EmergencyIcon from "@mui/icons-material/Emergency";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import PersonIcon from "@mui/icons-material/Person";
 import linkedIconSrc from "../../assets/Tags/linked-icon.svg";
+
+// The card's date and times come from the appointment's own clinic wall
+// clock. The grid hands over preformatted labels ("9:30 AM"), the API hands
+// over pseudo-instants; both are read without the host's local zone.
+const appointmentDateLabel = (appointment) => {
+  if (appointment?.date) return appointment.date;
+  if (appointment?.appointmentDate)
+    return formatBranchDate(appointment.appointmentDate, "dddd, MMM D");
+  if (appointment?.start) return formatBranchDate(appointment.start, "dddd, MMM D");
+  return "";
+};
+
+const appointmentStartLabel = (appointment) => {
+  if (appointment?.time) return appointment.time;
+  if (appointment?.startTime) return formatBranchTime(appointment.startTime, "h:mm A");
+  if (appointment?.start) return formatBranchTime(appointment.start, "h:mm A");
+  return "";
+};
+
+const appointmentEndLabel = (appointment) => {
+  if (appointment?.endTime) return formatBranchTime(appointment.endTime, "h:mm A");
+  if (appointment?.end) return formatBranchTime(appointment.end, "h:mm A");
+  return "";
+};
 
 // Converts "checked_out_complete" → "Checked Out Complete"
 const formatStatus = (status) => {
@@ -319,7 +343,7 @@ const AppointmentCard = ({
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <AccessTimeIcon sx={{ fontSize: 16, color: "#64748b" }} />
               <Typography sx={{ fontSize: "12px", color: "#334155", fontWeight: 600 }}>
-                {dayjs(appointment.start).format("dddd, MMM D")} @ {dayjs(appointment.start).format("h:mm A")} - {dayjs(appointment.end).format("h:mm A")} ({appointment.durationMinutes || 60} mins)
+                {appointmentDateLabel(appointment)} @ {appointmentStartLabel(appointment)} - {appointmentEndLabel(appointment)} ({appointment.durationMinutes || 60} mins)
               </Typography>
             </Box>
 
@@ -445,7 +469,7 @@ const AppointmentHeader = ({
             color: "#ffffff",
           }}
         >
-          {dayjs(appointment.start).format("h:mm A")}
+          {appointmentStartLabel(appointment)}
         </Typography>
       </Box>
     </Box>

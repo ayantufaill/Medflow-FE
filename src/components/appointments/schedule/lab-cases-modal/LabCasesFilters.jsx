@@ -1,25 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
+import { resolveClinicTimeZone, clinicNow } from '../../../../utils/dateUtils';
+import { useBranch } from '../../../../hooks/redux';
 
 import { ReportFilterBar, ReportSelect, ReportCheckbox } from '../../../reports/ui';
 import DateNavigation from '../DateNavigation';
 
 const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
+  const { currentBranch } = useBranch();
+  const clinicTz = resolveClinicTimeZone(currentBranch);
+
   const handleDateRangeChange = (e) => {
     const val = e.target.value;
-    let newStart = dayjs();
-    let newEnd = dayjs();
+    const now = clinicNow(clinicTz);
+    let newStart = now;
+    let newEnd = now;
 
     if (val === 'Today') {
-      newStart = dayjs();
-      newEnd = dayjs();
+      newStart = now;
+      newEnd = now;
     } else if (val === 'This Week') {
-      newStart = dayjs().startOf('week');
-      newEnd = dayjs().endOf('week');
+      newStart = now.startOf('week');
+      newEnd = now.endOf('week');
     } else if (val === 'This Month') {
-      newStart = dayjs().startOf('month');
-      newEnd = dayjs().endOf('month');
+      newStart = now.startOf('month');
+      newEnd = now.endOf('month');
     }
 
     onFiltersChange({
@@ -40,7 +46,7 @@ const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
       <ReportSelect 
         value={filters.status} 
         onChange={handleStatusChange} 
-        options={['Select Status', 'New', 'Printed', 'Completed']} 
+        options={['Select Status', 'Draft', 'Sent', 'Received', 'Complete']} 
         sx={{ width: 160 }} 
       />
       <Box sx={{ ml: 2 }}>
@@ -98,6 +104,7 @@ const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
 
   return (
     <ReportFilterBar 
+      wrapFilters
       topRowFilters={topFilters}
       bottomRowFilters={bottomFilters}
       onApplyFilters={onApplyFilters}

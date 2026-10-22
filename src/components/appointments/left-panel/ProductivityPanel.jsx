@@ -1,3 +1,4 @@
+import { useBranch } from '../../../hooks/redux/useBranch';
 import { useState, useEffect } from 'react';
 import { Box, Typography, Select, MenuItem, Button, CircularProgress, Alert } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -12,6 +13,7 @@ import api from '../../../config/api';
 import DateNavigation from '../schedule/DateNavigation';
 
 const ProductivityPanel = () => {
+  const { currentBranchId } = useBranch();
   const [providerId, setProviderId] = useState("all");
   const [date, setDate] = useState(dayjs());
   const [panelData, setPanelData] = useState(null);
@@ -25,6 +27,7 @@ const ProductivityPanel = () => {
       const response = await api.get('/productivity/panel-summary', {
         params: {
           date: date.format('YYYY-MM-DD'),
+          branchId: currentBranchId || 'All',
           ...(providerId !== 'all' && { providerId })
         }
       });
@@ -45,19 +48,7 @@ const ProductivityPanel = () => {
       }
       setError(errorMsg);
 
-      // Fallback empty data structure if the API fails
-      const emptyRows = [
-        { id: 'P', label: 'P', value: 0, goal: 0, color: '#7cb342' },
-        { id: 'C', label: 'C', value: 0, goal: 0, color: '#7cb342' },
-        { id: 'GP', label: 'GP', value: 0, color: '#545454' },
-        { id: 'GC', label: 'GC', value: 0, color: '#a8a8a8' },
-      ];
-
-      setPanelData({
-        total: { title: 'Total', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 },
-        dentist: { title: 'Dentist', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 },
-        hygienist: { title: 'Hygienist', scheduled: 0, rows: emptyRows, perHour: 0, perHourGoal: 0, perVisit: 0, perVisitGoal: 0 }
-      });
+      setPanelData(null);
     } finally {
       setLoading(false);
     }
@@ -65,7 +56,7 @@ const ProductivityPanel = () => {
 
   useEffect(() => {
     fetchPanelData();
-  }, [date, providerId]);
+  }, [date, providerId, currentBranchId]);
 
   const handlePrevDay = () => setDate(d => d.subtract(1, 'day'));
   const handleNextDay = () => setDate(d => d.add(1, 'day'));

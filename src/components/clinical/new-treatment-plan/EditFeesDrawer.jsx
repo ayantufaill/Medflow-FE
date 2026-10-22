@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react';
 import { Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, MenuItem, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../../store/slices/feeGuideSlice';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, roundedSelectMenuProps, standardFieldSx } from '../../../constants/styles';
+import { getCoverageBlockedReasonLabel } from '../../../utils/cdtCategoryHelper';
 
 const amount = (value) => {
   if (value === null || value === undefined || value === '-') return '';
@@ -36,15 +36,9 @@ const initialForm = (procedure) => ({
   downgradedCode: procedure?.downgradedCode || '',
 });
 
-const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) => {
-  const dispatch = useDispatch();
-  const procedureCodes = useSelector(selectProcedureCodes) || [];
-  const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
+const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving, downgradeCodes = [] }) => {
   const [form, setForm] = useState(() => initialForm(procedure));
   const [error, setError] = useState('');
-  useEffect(() => {
-    if (open && !procedureCodes.length && !procedureCodesLoading) dispatch(fetchProcedureCodes({ limit: 2000 }));
-  }, [dispatch, open, procedureCodes.length, procedureCodesLoading]);
 
   const change = (name, value) => setForm((previous) => ({ ...previous, [name]: value }));
   const save = () => {
@@ -82,14 +76,34 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
 
   return (
     <Drawer anchor="right" open={open} onClose={saving ? undefined : onClose} sx={{ zIndex: 1400 }}
-      PaperProps={{ sx: { width: { xs: '100%', md: 860 }, maxWidth: '100%', bgcolor: COLORS.SURFACE_PAGE } }}>
+      PaperProps={{ sx: { width: { xs: '100%', md: 860 }, maxWidth: '100%' } }}>
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>Edit Fees</Typography>
-            <Typography sx={{ color: COLORS.TEXT_SECONDARY, fontSize: fontSize.base }}>Update this procedure's fees and insurance estimates</Typography>
-          </Box>
-          <IconButton onClick={onClose} disabled={saving} aria-label="Close Edit Fees"><CloseIcon /></IconButton>
+        <Box sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}>
+          <PaymentsOutlinedIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: "15px",
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
+            Edit Fees
+          </Typography>
+          <IconButton onClick={onClose} size="small" disabled={saving} sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
+          </IconButton>
         </Box>
         <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={sectionSx}>
@@ -131,10 +145,10 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
                 SelectProps={{ MenuProps: drawerMenuProps }}
                 onChange={(event) => change('downgradedCode', event.target.value)} sx={moneySx} disabled={saving}>
                 <MenuItem value="">None</MenuItem>
-                {form?.downgradedCode && !procedureCodes.some((code) => String(code.ProcCode || code.code) === form.downgradedCode) &&
+                {form?.downgradedCode && !downgradeCodes.some((dg) => dg.code === form.downgradedCode) &&
                   <MenuItem value={form.downgradedCode}>{form.downgradedCode}</MenuItem>}
-                {procedureCodes.map((code) => <MenuItem key={code.ProcCode || code.code} value={code.ProcCode || code.code}>
-                  {code.ProcCode || code.code} · {code.Descript || code.description || ''}
+                {downgradeCodes.map((dg) => <MenuItem key={dg.code} value={dg.code}>
+                  {dg.code} · Downgrade from {dg.fromCode}
                 </MenuItem>)}
               </TextField></Box>
               {moneyField('Insurance Estimate', 'insuranceEstimate', true)}
@@ -148,15 +162,20 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
             <Typography sx={{ mb: 1.5 }}>{form?.patientEstimate === '' ? 'Unavailable' : `$${Number(form?.patientEstimate || 0).toFixed(2)}`}</Typography>
             <Typography sx={labelSx}>Estimate By</Typography>
             <Typography>{procedure?.estimateSource || 'Auto'}</Typography>
+            {procedure?.coverageBlockedReason && (
+              <Typography sx={{ mt: 0.5, fontSize: fontSize.base, color: '#b45309', fontWeight: fontWeight.semibold }}>
+                ⚠ Insurance not applied — {getCoverageBlockedReasonLabel(procedure.coverageBlockedReason)}
+              </Typography>
+            )}
             {onRevert && procedure?.estimateSource === 'Manual' && (
               <Button onClick={onRevert} disabled={saving} sx={{ mt: 1, textTransform: 'none' }}>Revert to Auto-Estimates</Button>
             )}
           </Box>
           {error && <Typography role="alert" sx={{ color: COLORS.ERROR || '#dc2626' }}>{error}</Typography>}
         </Box>
-        <Box sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_FOOTER, display: 'flex', justifyContent: 'flex-end', gap: 1.25 }}>
-          <Button onClick={onClose} disabled={saving} variant="outlined" sx={{ borderRadius: radius.md, textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={save} disabled={saving || !form} variant="contained" sx={{ bgcolor: COLORS.ACCENT, borderRadius: radius.md, textTransform: 'none' }}>{saving ? 'Saving…' : 'Save'}</Button>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', borderTop: `1px solid ${COLORS.BORDER}`, flexShrink: 0 }}>
+          <Button onClick={onClose} disabled={saving} variant="outlined" sx={{ minWidth: 112, height: 38, borderRadius: '6px', borderColor: COLORS.BORDER, color: COLORS.ACCENT, textTransform: 'none', fontWeight: 400, '&:hover': { borderColor: COLORS.BORDER, bgcolor: COLORS.SURFACE_HOVER } }}>Cancel</Button>
+          <Button onClick={save} disabled={saving || !form} variant="contained" sx={{ minWidth: 112, height: 38, borderRadius: '6px', bgcolor: COLORS.ACCENT, boxShadow: 'none', textTransform: 'none', fontWeight: 400, '&:hover': { bgcolor: COLORS.ACCENT_HOVER, boxShadow: 'none' } }}>{saving ? 'Saving…' : 'Save'}</Button>
         </Box>
       </Box>
     </Drawer>
@@ -164,3 +183,4 @@ const EditFeesDrawer = ({ open, procedure, onClose, onSave, onRevert, saving }) 
 };
 
 export default EditFeesDrawer;
+

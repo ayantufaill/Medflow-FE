@@ -53,7 +53,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import dayjs from 'dayjs';
+import { formatBranchDate, wallClockStr } from '../../utils/dateUtils';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { appointmentService } from '../../services/appointment.service';
@@ -107,8 +107,8 @@ const AppointmentsListPage = () => {
       page: page + 1,
       limit: rowsPerPage,
       status: statusFilter || '',
-      startDate: startDate ? dayjs(startDate).format('YYYY-MM-DDTHH:mm') : '',
-      endDate: endDate ? dayjs(endDate).format('YYYY-MM-DDTHH:mm') : '',
+      startDate: startDate ? wallClockStr(startDate, 'YYYY-MM-DDTHH:mm') : '',
+      endDate: endDate ? wallClockStr(endDate, 'YYYY-MM-DDTHH:mm') : '',
       search: debouncedSearch || '',
     });
   }, [fetchAppointmentsRedux, page, rowsPerPage, statusFilter, startDate, endDate, debouncedSearch]);
@@ -230,7 +230,7 @@ const AppointmentsListPage = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    try { return dayjs(dateString).format('MMM DD, YYYY'); } catch { return '-'; }
+    return formatBranchDate(dateString, 'MMM DD, YYYY');
   };
 
   const formatTime = (timeString) => {

@@ -24,12 +24,15 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { fetchAllProvidersForDropdown, selectProviderDropdownList } from '../../../store/slices/providerSlice';
 import { fetchProcedureCodes, selectProcedureCodes, selectProcedureCodesLoading } from '../../../store/slices/feeGuideSlice';
+import { icd10Service } from '../../../services/icd10.service';
+import { normalizeIcd10Code } from '../../../utils/icd10';
 import { COLORS } from '../../../constants/colors';
 import { fontSize, fontWeight, radius, roundedAutocompletePaperSx, roundedSelectMenuProps, standardFieldSx } from '../../../constants/styles';
 
 const STATUS_OPTIONS = ['Planned', 'Scheduled', 'Unplanned', 'Rejected', 'Existing Current', 'Existing Other', 'Referred', 'Completed'];
 const PROGNOSIS_OPTIONS = ['Excellent', 'Good', 'Fair', 'Poor', 'Questionable', 'Hopeless'];
 const SITE_OPTIONS = ['Tooth/Surface', 'Arch', 'Quadrant', 'Mouth', 'None'];
+const EMPTY_OPTIONS = [];
 
 const fieldSx = {
   ...standardFieldSx,
@@ -104,10 +107,15 @@ const inferSiteSelection = (procedure) => {
 
 const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
   const dispatch = useDispatch();
-  const providersList = useSelector(selectProviderDropdownList) || [];
-  const procedureCodes = useSelector(selectProcedureCodes) || [];
+  const providersList = useSelector(selectProviderDropdownList) || EMPTY_OPTIONS;
+  const procedureCodes = useSelector(selectProcedureCodes) || EMPTY_OPTIONS;
   const procedureCodesLoading = useSelector(selectProcedureCodesLoading);
   const [isHeaderEditing, setIsHeaderEditing] = useState(false);
+  const [icdCodes, setIcdCodes] = useState([]);
+  const [icdSearch, setIcdSearch] = useState('');
+  const [icdLoading, setIcdLoading] = useState(false);
+  const [icdError, setIcdError] = useState('');
+  const [savedIcdOption, setSavedIcdOption] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -126,14 +134,6 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       ? providersList
       : [{ _id: currentProvider, providerCode: currentProvider }, ...providersList];
   }, [providersList, procedure?.provider]);
-
-  const procedureCodeOptions = useMemo(() => {
-    const currentCode = procedure?.icd && procedure.icd !== '-' ? String(procedure.icd) : '';
-    const hasCurrent = procedureCodes.some((code) => String(code.ProcCode || code.code) === currentCode);
-    return hasCurrent || !currentCode
-      ? procedureCodes
-      : [{ ProcCode: currentCode, Descript: currentCode }, ...procedureCodes];
-  }, [procedureCodes, procedure?.icd]);
 
   const [form, setForm] = useState({
     code: '',
@@ -155,13 +155,55 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       status: procedure.status || 'Planned',
       provider: getProviderValue(procedure.provider),
       prognosis: procedure.prognosis || '',
-      icd: procedure.icd && procedure.icd !== '-' ? procedure.icd : '',
+      icd: procedure.icd && procedure.icd !== '-' ? String(procedure.icd) : '',
       dateOfProcedure: procedure.scheduled && procedure.scheduled !== '-' ? procedure.scheduled : (procedure.created || ''),
       creditToPractice: Boolean(procedure.creditToPractice),
       siteSelection: procedure.siteSelection || inferSiteSelection(procedure)
     });
     setIsHeaderEditing(false);
+    setIcdSearch('');
   }, [procedure]);
+
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    setIcdLoading(true);
+    setIcdError('');
+    const timer = setTimeout(async () => {
+      try {
+        const result = await icd10Service.search({ search: icdSearch, signal: controller.signal });
+        if (!controller.signal.aborted) setIcdCodes(result.data || []);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setIcdCodes([]);
+          setIcdError(error.response?.data?.message || 'Could not load ICD codes. Reopen the drawer to retry.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setIcdLoading(false);
+      }
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [open, icdSearch]);
+
+  useEffect(() => {
+    setSavedIcdOption(null);
+    const code = normalizeIcd10Code(procedure?.icd);
+    if (!open || !code) return;
+    const controller = new AbortController();
+    icd10Service.search({ code, signal: controller.signal }).then(result => {
+      if (!controller.signal.aborted) setSavedIcdOption(result.data?.[0] || null);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [open, procedure?.icd]);
+
+  const selectedIcdOption = useMemo(() => {
+    if (!form.icd) return null;
+    return icdCodes.find(item => item.code === form.icd)
+      || (savedIcdOption?.code === form.icd ? savedIcdOption : null)
+      || { code: form.icd, description: '' };
+  }, [form.icd, icdCodes, savedIcdOption]);
+  const icdOptions = useMemo(() => selectedIcdOption && !icdCodes.some(item => item.code === selectedIcdOption.code)
+    ? [selectedIcdOption, ...icdCodes] : icdCodes, [icdCodes, selectedIcdOption]);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -176,7 +218,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       status: form.status,
       provider: form.provider || null,
       prognosis: form.prognosis,
-      icd: form.icd || '-',
+      icd: form.icd || null,
       scheduled: form.dateOfProcedure || '-',
       creditToPractice: form.creditToPractice,
       siteSelection: form.siteSelection
@@ -204,26 +246,36 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
       PaperProps={{
         sx: {
           width: { xs: '100%', md: 860 },
-          maxWidth: '100%',
-          bgcolor: COLORS.SURFACE_PAGE
+          maxWidth: '100%'
         }
       }}
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_TINT, flexShrink: 0 }}>
-          <Box sx={{ width: 34, height: 34, borderRadius: radius.md, bgcolor: COLORS.ACCENT_BG, color: COLORS.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <EditOutlinedIcon sx={{ fontSize: 18 }} />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
-              Edit Procedure
-            </Typography>
-            <Typography sx={{ fontSize: fontSize.base, color: COLORS.TEXT_SECONDARY, mt: 0.25 }}>
-              Update treatment details and clinical metadata
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} sx={{ width: 32, height: 32, borderRadius: radius.md, color: COLORS.TEXT_SECONDARY, '&:hover': { bgcolor: COLORS.SURFACE_INPUT, color: COLORS.TEXT_PRIMARY } }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
+        <Box sx={{
+          boxSizing: "border-box",
+          px: "25px",
+          py: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          borderBottom: `1px solid ${COLORS.BORDER}`,
+          backgroundColor: COLORS.SURFACE_TINT,
+          m: 0,
+          flexShrink: 0,
+        }}>
+          <EditOutlinedIcon sx={{ fontSize: "20px", color: COLORS.ACCENT }} />
+          <Typography
+            sx={{
+              fontSize: "15px",
+              fontWeight: 600,
+              color: COLORS.TEXT_PRIMARY,
+              flex: 1,
+            }}
+          >
+            Edit Procedure
+          </Typography>
+          <IconButton onClick={onClose} size="small" sx={{ color: COLORS.TEXT_SECONDARY }}>
+            <CloseIcon sx={{ fontSize: "18px" }} />
           </IconButton>
         </Box>
 
@@ -361,26 +413,29 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
                 <Autocomplete
                   openOnFocus
                   popupIcon={<KeyboardArrowDownIcon sx={{ color: COLORS.TEXT_SECONDARY }} />}
-                  options={procedureCodeOptions}
-                  loading={procedureCodesLoading}
-                  value={procedureCodeOptions.find((code) => String(code.ProcCode || code.code) === form.icd) || null}
-                  onChange={(_, value) => handleChange('icd', value ? String(value.ProcCode || value.code || '') : '')}
+                  options={icdOptions}
+                  loading={icdLoading}
+                  value={selectedIcdOption}
+                  filterOptions={(options) => options}
+                  onInputChange={(_, value, reason) => { if (reason === 'input' || reason === 'clear') setIcdSearch(value); }}
+                  onChange={(_, value) => { setSavedIcdOption(value); setIcdSearch(''); handleChange('icd', value?.code || ''); }}
+                  noOptionsText={icdError || 'No ICD codes found'}
                   getOptionLabel={(option) => {
                     if (!option) return '';
-                    const code = option.ProcCode || option.code || '';
-                    const description = option.Descript || option.description || option.name || option.AbbrDesc || '';
+                    const code = option.code || '';
+                    const description = option.description || '';
                     return description ? `${code} - ${description}` : String(code);
                   }}
-                  isOptionEqualToValue={(option, value) => String(option.ProcCode || option.code) === String(value.ProcCode || value.code)}
+                  isOptionEqualToValue={(option, value) => option.code === value.code}
                   renderOption={(props, option) => {
                     const { key, ...restProps } = props;
                     return (
                       <Box component="li" key={key} {...restProps} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: '6px !important' }}>
                         <Typography sx={{ minWidth: 72, fontSize: fontSize.md, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
-                          {option.ProcCode || option.code}
+                          {option.code}
                         </Typography>
                         <Typography sx={{ fontSize: fontSize.md, color: COLORS.TEXT_SECONDARY }}>
-                          {option.Descript || option.description || option.name || option.AbbrDesc || ''}
+                          {option.description || ''}
                         </Typography>
                       </Box>
                     );
@@ -389,13 +444,15 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select"
+                      placeholder="Search ICD code or description"
+                      error={Boolean(icdError)}
+                      helperText={icdError || 'Search the complete ICD-10 catalogue'}
                       sx={fieldSx}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
                           <>
-                            {procedureCodesLoading ? <CircularProgress color="inherit" size={14} sx={{ mr: 0.75 }} /> : null}
+                            {icdLoading ? <CircularProgress color="inherit" size={14} sx={{ mr: 0.75 }} /> : null}
                             {params.InputProps.endAdornment}
                           </>
                         ),
@@ -455,7 +512,7 @@ const EditProcedureDrawer = ({ open, procedure, onClose, onSave }) => {
           </Box>
         </Box>
 
-        <Box sx={{ px: 2.5, py: 1.5, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_FOOTER, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1.25, flexShrink: 0 }}>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5, bgcolor: '#fff', borderTop: `1px solid ${COLORS.BORDER}`, flexShrink: 0 }}>
           <Button onClick={onClose} variant="outlined" sx={{ minWidth: 112, height: 38, borderRadius: radius.md, borderColor: COLORS.BORDER, color: COLORS.TEXT_BODY, textTransform: 'none', fontWeight: fontWeight.semibold, '&:hover': { borderColor: COLORS.TEXT_MUTED, bgcolor: COLORS.SURFACE_HOVER } }}>
             Cancel
           </Button>

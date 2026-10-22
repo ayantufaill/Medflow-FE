@@ -14,7 +14,36 @@ import {
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import dayjs from 'dayjs';
+import { formatBranchDate } from '../../../../utils/dateUtils';
+
+// Same status vocabulary as the clinical LabCasesPage (useLabCasesPage.js),
+// so both views label the same backend state identically.
+const BACKEND_STATUS_TO_FE = {
+  New: 'Draft',
+  Sent: 'Sent',
+  Received: 'Received',
+  'Quality Checked': 'Complete',
+  Completed: 'Complete',
+  'In Progress': 'Received',
+};
+
+// instructions is a labeled multi-line blob, e.g.:
+//   Type: treatment
+//   Procedures: D0330
+//   Notes: Apply the tests...
+// Pull out the fields so Procedures and Notes columns show their own values.
+const parseInstructions = (raw) => {
+  const text = String(raw || '');
+  if (!text.trim()) return { procedures: '', notes: '' };
+  const get = (label) => {
+    const m = text.match(new RegExp(`^${label}:\\s*(.*)$`, 'mi'));
+    return m ? m[1].trim() : '';
+  };
+  const procedures = get('Procedures');
+  const notes = get('Notes');
+  if (!procedures && !notes) return { procedures: '', notes: text.trim() };
+  return { procedures, notes };
+};
 
 const LabCasesTable = ({ 
   labCases = [], 
@@ -95,36 +124,30 @@ const LabCasesTable = ({
                 </TableCell>
               </TableRow>
             ) : (
-              labCases.map((row) => (
+              labCases.map((row) => {
+                const { procedures, notes } = parseInstructions(row.instructions);
+                return (
                 <TableRow key={row._id}>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.patient?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.laboratory?.name || 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{procedures || 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.dueDate ? formatBranchDate(row.dueDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.appointmentDate ? formatBranchDate(row.appointmentDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.sentDate ? formatBranchDate(row.sentDate, 'MM/DD/YYYY') : 'N/A'}</TableCell>
+                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{BACKEND_STATUS_TO_FE[row.status] || row.status || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>
-                    <div dangerouslySetInnerHTML={{ __html: row.instructions || 'N/A' }} style={{
+                     <div style={{
                       maxHeight: expandedNotes ? 'none' : '40px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       display: expandedNotes ? 'block' : '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical'
-                    }} />
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.dueDate ? dayjs(row.dueDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.appointmentDate ? dayjs(row.appointmentDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.sentDate ? dayjs(row.sentDate).format('MM/DD/YYYY') : 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>{row.status}</TableCell>
-                  <TableCell sx={{ fontSize: '0.8rem', color: '#334155' }}>
-                     <div dangerouslySetInnerHTML={{ __html: row.instructions || 'N/A' }} style={{
-                      maxHeight: expandedNotes ? 'none' : '40px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: expandedNotes ? 'block' : '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical'
-                    }} />
+                    }}>{notes || 'N/A'}</div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

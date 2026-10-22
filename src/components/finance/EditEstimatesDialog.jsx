@@ -11,8 +11,8 @@ import {
   TableHead,
   TableRow,
   Link,
-  TextField,
   CircularProgress,
+  Checkbox,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -21,6 +21,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import { invoiceService } from '../../services/invoice.service';
+import CurrencyInput from './CurrencyInput';
 import { COLORS } from '../../constants/colors';
 import { radius, fontWeight } from '../../constants/styles';
 
@@ -28,6 +29,8 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [invoice, setInvoice] = useState(null);
+  const [primaryInsName, setPrimaryInsName] = useState('');
+  const [secondaryInsName, setSecondaryInsName] = useState('');
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -41,14 +44,32 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
       setLoading(true);
       const data = await invoiceService.getInvoiceById(invoiceId);
       setInvoice(data);
+      // Prefer the patient's active coverages (what the estimator priced
+      // against), keyed by ordinal. Fall back to the invoice's own recorded
+      // carriers, which are only populated for some creation paths.
+      const coverages = data?.coverages || [];
+      const byType = (type) =>
+        coverages.find((c) => String(c.insuranceType || '').toLowerCase() === type)?.name || '';
+      setPrimaryInsName(
+        byType('primary') || data?.insuranceCompany?.name || ''
+      );
+      setSecondaryInsName(
+        byType('secondary') || data?.secondaryInsuranceCompany?.name || ''
+      );
       // Map line items to local state for editing
       const initialItems = (data.lineItems || []).map(item => ({
         ...item,
         editWriteoff: Number(item.writeoff || 0).toFixed(2),
         editPtPortion: Number(item.ptPortion || 0).toFixed(2),
-        editInsPortion: Number(item.insPortion || 0).toFixed(2),
+        editPrimaryInsPortion: Number(item.primaryInsPortion || 0).toFixed(2),
+        editSecondaryInsPortion: Number(item.secondaryInsPortion || 0).toFixed(2),
+        // Deductible is a real calculated value on the line (deductibleApplied);
+        // it was previously hardcoded to 0.00 and never surfaced.
+        editDeductible: Number(item.deductibleApplied || 0).toFixed(2),
         editTotalCharge: Number(item.totalPrice || item.total || 0).toFixed(2),
-        editDeductible: '0.00' // No backend field exists yet — rendered disabled, never sent on save
+        // Write-off starts applied. Unticking it zeroes the stored write-off on
+        // save rather than merely hiding it, so the toggle means something.
+        applyInsWriteoff: true
       }));
       setItems(initialItems);
     } catch (err) {
@@ -59,8 +80,9 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
   };
 
   const handleFieldChange = (itemId, field, value) => {
-    // Strip non-numeric except dot and minus for clean state update if desired, but we can just let user type
-    const val = value.replace(/[^0-9.-]/g, '');
+    // Booleans (the Apply Ins Writeoff toggle) pass through untouched; only the
+    // currency fields get the non-numeric strip.
+    const val = typeof value === 'boolean' ? value : value.replace(/[^0-9.-]/g, '');
     setItems(prev => prev.map(item => {
       if (item.id === itemId || item._id === itemId) {
         return { ...item, [field]: val };
@@ -79,9 +101,14 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
         if (!itemId) continue;
 
         const updates = {
-          writeoff: Number(item.editWriteoff) || 0,
+          // Unticking "Apply Ins Writeoff" writes a zero write-off rather than
+          // leaving the previous one in place.
+          writeoff: item.applyInsWriteoff ? Number(item.editWriteoff) || 0 : 0,
           ptPortion: Number(item.editPtPortion) || 0,
-          insPortion: Number(item.editInsPortion) || 0,
+          // The two coverages are stored as separate portions, matching how the
+          // rows are now displayed and how EditInvoiceDetailsDialog saves.
+          insPortion: Number(item.editPrimaryInsPortion) || 0,
+          secondaryInsPortion: Number(item.editSecondaryInsPortion) || 0,
           unitPrice: Number(item.editTotalCharge) || 0, // In backend unitPrice * qty = total, assuming qty=1
         };
 
@@ -99,9 +126,54 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
     }
   };
 
+
+  /**
+   * The coverage rows to render for one procedure.
+   *
+   * A procedure is split into one row per coverage that actually applied to it,
+   * primary first. Insurance amounts decide this: a line with no secondary
+   * portion gets a single primary row (which also covers a self-pay line, where
+   * the insurance name simply shows as a dash), and a secondary portion adds a
+   * second row. A line where only the secondary paid gets just that row.
+   */
+  const coverageRowsFor = (item) => {
+    const primary = Number(item.editPrimaryInsPortion || 0);
+    const secondary = Number(item.editSecondaryInsPortion || 0);
+    const hasSecondary = secondary > 0;
+    const hasPrimary = primary > 0 || !hasSecondary;
+
+    // A line that no insurance actually paid for must not be labelled with a
+    // carrier name, even on an invoice that has one — otherwise a self-pay
+    // procedure reads as if coverage applied.
+    const isSelfPay = primary + secondary <= 0;
+
+    const rows = [];
+    if (hasPrimary) {
+      rows.push({
+        key: 'primary',
+        label: isSelfPay ? 'No insurance applied' : 'Primary',
+        name: isSelfPay ? 'Self-Pay' : (primaryInsName || '—'),
+        insPortion: primary,
+        // Procedure-level figures are attributed to the primary coverage and
+        // left blank on the secondary row, so nothing is double-counted.
+        showProcedureFields: true,
+      });
+    }
+    if (hasSecondary) {
+      rows.push({
+        key: 'secondary',
+        label: 'Secondary',
+        name: secondaryInsName || '—',
+        insPortion: secondary,
+        showProcedureFields: false,
+      });
+    }
+    return rows;
+  };
+
   if (loading) {
     return (
-      <Box sx={{ width: '1200px', height: '400px', bgcolor: COLORS.WHITE, borderRadius: radius.md, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ width: '1600px', maxWidth: '95vw', height: '400px', bgcolor: COLORS.WHITE, borderRadius: radius.md, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CircularProgress />
       </Box>
     );
@@ -111,7 +183,7 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
   const patientName = invoice?.patient ? `${invoice.patient.firstName || ''} ${invoice.patient.lastName || ''}` : 'Patient';
 
   return (
-    <Box sx={{ width: '1200px', bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ width: '1600px', maxWidth: '95vw', bgcolor: COLORS.WHITE, borderRadius: radius.md, overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <DialogTitle
         sx={{
@@ -161,76 +233,122 @@ const EditEstimatesDialog = ({ onClose, invoiceId }) => {
                 <TableCell>Code</TableCell>
                 <TableCell>Treatment</TableCell>
                 <TableCell>Provider</TableCell>
-                <TableCell align="center">Insurance</TableCell>
+                <TableCell>Insurance</TableCell>
                 <TableCell>Ins Writeoff</TableCell>
+                <TableCell align="center">Apply Ins Writeoff</TableCell>
                 <TableCell>Pt. Portion</TableCell>
                 <TableCell>Deductible</TableCell>
                 <TableCell>In. Portion</TableCell>
-                <TableCell align="right">Total Charge</TableCell>
+                {/* Divider separating the per-coverage money columns from the
+                    procedure-level total. */}
+                <TableCell align="right" sx={{ borderLeft: `1px solid ${COLORS.BORDER}` }}>
+                  Total Charge
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
+                  <TableCell colSpan={11} align="center" sx={{ py: 4, color: COLORS.TEXT_SECONDARY }}>
                     No items found on this invoice.
                   </TableCell>
                 </TableRow>
-              ) : items.map((item, index) => (
-                <TableRow key={item.id || item._id} sx={{ '& td': { borderBottom: index === items.length - 1 ? 'none' : `1px solid ${COLORS.BORDER_LIGHT}`, py: 1.5, fontSize: '13px' } }}>
-                  <TableCell>{date}</TableCell>
-                  <TableCell>{item.cptCode || '-'}</TableCell>
-                  <TableCell>{item.description || 'Service'}</TableCell>
-                  <TableCell>{item.provider || '-'}</TableCell>
-                  <TableCell align="center">()</TableCell>
-                  <TableCell>
-                    <TextField 
-                      variant="outlined" 
-                      size="small"
-                      value={`$${item.editWriteoff}`}
-                      onChange={(e) => handleFieldChange(item.id || item._id, 'editWriteoff', e.target.value)}
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }} 
+              ) : items.flatMap((item, index) => {
+                const itemId = item.id || item._id;
+                const rows = coverageRowsFor(item);
+                const isLastItem = index === items.length - 1;
+
+                return rows.map((row, rowIdx) => {
+                  const isLastRowOfItem = rowIdx === rows.length - 1;
+                  const editField = (field, value) => handleFieldChange(itemId, field, value);
+                  const moneyInput = (field) => (
+                    <CurrencyInput
+                      value={item[field]}
+                      onChange={(v) => editField(field, v)}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <TextField 
-                      variant="outlined" 
-                      size="small" 
-                      value={`$${item.editPtPortion}`}
-                      onChange={(e) => handleFieldChange(item.id || item._id, 'editPtPortion', e.target.value)}
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', color: COLORS.TEXT_PRIMARY, fontWeight: fontWeight.medium, bgcolor: COLORS.SURFACE_TINT } }} 
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      variant="outlined"
-                      size="small"
-                      disabled
-                      value={`$${item.editDeductible}`}
-                      title="Not yet supported — the backend has no deductible field on invoice line items"
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField 
-                      variant="outlined" 
-                      size="small" 
-                      value={`$${item.editInsPortion}`}
-                      onChange={(e) => handleFieldChange(item.id || item._id, 'editInsPortion', e.target.value)}
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', bgcolor: COLORS.SURFACE_TINT } }} 
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <TextField 
-                      variant="outlined" 
-                      size="small" 
-                      value={`$${item.editTotalCharge}`}
-                      onChange={(e) => handleFieldChange(item.id || item._id, 'editTotalCharge', e.target.value)}
-                      sx={{ width: '80px', '& .MuiInputBase-root': { height: '32px', fontSize: '13px', textAlign: 'right', fontWeight: fontWeight.semiBold, bgcolor: COLORS.SURFACE_TINT } }} 
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
+                  );
+                  // Placeholder dash occupying the same box as a real input, so
+                  // a column holding an input on one row and a dash on the next
+                  // stays aligned.
+                  const blank = <CurrencyInput blank />;
+
+                  return (
+                    <TableRow
+                      key={`${itemId}-${row.key}`}
+                      sx={{
+                        '& td': {
+                          borderBottom:
+                            isLastItem && isLastRowOfItem ? 'none' : `1px solid ${COLORS.BORDER_LIGHT}`,
+                          py: 1.5,
+                          fontSize: '13px',
+                        },
+                      }}
+                    >
+                      {/* DOS / Code / Treatment / Provider identify the
+                          PROCEDURE, so they are printed once, on the first
+                          coverage row. Keying off rowIdx rather than
+                          row.key === 'primary' matters: a procedure where only
+                          the secondary paid has no primary row, and would
+                          otherwise show no identity at all. */}
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY }}>{rowIdx === 0 ? date : ''}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY }}>{rowIdx === 0 ? (item.cptCode || '-') : ''}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY }}>{rowIdx === 0 ? (item.description || 'Service') : ''}</TableCell>
+                      <TableCell sx={{ color: COLORS.TEXT_PRIMARY }}>{rowIdx === 0 ? (item.provider || '-') : ''}</TableCell>
+
+                      <TableCell>
+                        <Typography sx={{ fontSize: '13px', color: COLORS.TEXT_PRIMARY }}>{row.name}</Typography>
+                        <Typography sx={{ fontSize: '11px', color: COLORS.TEXT_SECONDARY }}>{row.label}</Typography>
+                      </TableCell>
+
+                      <TableCell>
+                        {row.showProcedureFields ? (
+                          <CurrencyInput
+                            value={item.editWriteoff}
+                            onChange={(v) => editField('editWriteoff', v)}
+                            disabled={!item.applyInsWriteoff}
+                          />
+                        ) : blank}
+                      </TableCell>
+
+                      <TableCell align="center">
+                        {row.showProcedureFields ? (
+                          <Checkbox
+                            size="small"
+                            checked={Boolean(item.applyInsWriteoff)}
+                            onChange={(e) => editField('applyInsWriteoff', e.target.checked)}
+                            sx={{ color: COLORS.TEXT_SECONDARY, '&.Mui-checked': { color: COLORS.ACCENT } }}
+                          />
+                        ) : null}
+                      </TableCell>
+
+                      <TableCell>{row.showProcedureFields ? moneyInput('editPtPortion') : blank}</TableCell>
+
+                      <TableCell>
+                        {row.showProcedureFields ? (
+                          <CurrencyInput value={item.editDeductible} disabled />
+                        ) : blank}
+                      </TableCell>
+
+                      <TableCell>
+                        {row.key === 'primary'
+                          ? moneyInput('editPrimaryInsPortion')
+                          : moneyInput('editSecondaryInsPortion')}
+                      </TableCell>
+
+                      {/* Total Charge belongs to the procedure, not to a
+                          coverage, so it appears once on the final row. */}
+                      <TableCell align="right" sx={{ borderLeft: `1px solid ${COLORS.BORDER}` }}>
+                        {isLastRowOfItem ? (
+                          <CurrencyInput
+                            value={item.editTotalCharge}
+                            onChange={(v) => editField('editTotalCharge', v)}
+                          />
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                });
+              })}
             </TableBody>
           </Table>
         </TableContainer>

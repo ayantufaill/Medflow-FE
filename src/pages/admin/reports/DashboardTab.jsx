@@ -1,9 +1,11 @@
+import { recareCategories } from '../../../constants/recareCategories';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Grid,
   Paper,
   Typography,
+  CircularProgress,
   IconButton,
   Select,
   MenuItem
@@ -57,7 +59,6 @@ const DonutChart = ({ slices }) => {
     );
   }
 
-  let offset = 0;
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', my: 2.5 }}>
       <svg width="155px" height="155px" viewBox="-3 -3 42 42">
@@ -67,8 +68,7 @@ const DonutChart = ({ slices }) => {
           if (val === 0) return null;
           const pct = (val / total) * 100;
           const dashArray = `${pct} ${100 - pct}`;
-          const dashOffset = -offset;
-          offset += pct;
+          const dashOffset = -slices.slice(0, idx).reduce((sum, item) => sum + (Number(item.value) || 0) / total * 100, 0);
           return (
             <circle
               key={idx}
@@ -97,6 +97,7 @@ const DashboardTab = () => {
   const centerDateRef = useRef(null);
   const [metrics, setMetrics] = useState(defaultMetrics);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const { currentBranchId } = useBranch();
 
@@ -104,6 +105,7 @@ const DashboardTab = () => {
     const fetchMetrics = async () => {
       try {
         setLoading(true);
+        setError('');
         const validDate = currentDate && currentDate.isValid() ? currentDate.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
         const data = await reportingService.getDashboardMetrics({
           date: validDate,
@@ -122,7 +124,7 @@ const DashboardTab = () => {
           }));
         }
       } catch (err) {
-        console.error("Error fetching dashboard metrics:", err);
+        setError(err.response?.data?.message || "Unable to load dashboard metrics.");
       } finally {
         setLoading(false);
       }
@@ -193,7 +195,7 @@ const DashboardTab = () => {
           {label} ${currentVal}
         </Typography>
 
-        {goalVal ? (
+        {goalVal != null && goalVal !== '' ? (
           <Typography
             sx={{
               fontFamily: "'Inter', sans-serif",
@@ -207,10 +209,13 @@ const DashboardTab = () => {
           >
             | ${goalVal}
           </Typography>
-        ) : null}
+        ) : <Typography variant="caption">No active goal</Typography>}
       </Box>
     );
   };
+
+  if (error) return <Typography color="error" sx={{ p: 3 }}>{error}</Typography>;
+  if (loading) return <Box sx={{ p: 3 }}><CircularProgress size={28} /></Box>;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', p: '8px', backgroundColor: '#f8f9fa', height: 'calc(100vh - 65px)', overflow: 'hidden', boxSizing: 'border-box', '@media print': { height: 'auto', overflow: 'visible', display: 'block' } }}>
@@ -315,26 +320,26 @@ const DashboardTab = () => {
             {[
               {
                 title: 'Total', titleColor: '#0F172B', value: `$${metrics.total?.pVal ?? 0}`,
-                pVal: metrics.total?.pVal ?? 0, pGoal: metrics.total?.pGoal || '', pPercent: metrics.total?.pPercent ?? 0,
-                cVal: metrics.total?.cVal ?? 0, cGoal: metrics.total?.cGoal || '', cPercent: metrics.total?.cPercent ?? 0,
-                gpVal: metrics.total?.gpVal ?? 0, gpGoal: metrics.total?.gpGoal || '', gpPercent: metrics.total?.gpPercent ?? 0,
-                gcVal: metrics.total?.gcVal ?? 0, gcGoal: metrics.total?.gcGoal || '', gcPercent: metrics.total?.gcPercent ?? 0,
+                pVal: metrics.total?.pVal ?? 0, pGoal: metrics.total?.pGoal || '', pPercent: metrics.total?.pPercent ?? null,
+                cVal: metrics.total?.cVal ?? 0, cGoal: metrics.total?.cGoal || '', cPercent: metrics.total?.cPercent ?? null,
+                gpVal: metrics.total?.gpVal ?? 0, gpGoal: metrics.total?.gpGoal || '', gpPercent: metrics.total?.gpPercent ?? null,
+                gcVal: metrics.total?.gcVal ?? 0, gcGoal: metrics.total?.gcGoal || '', gcPercent: metrics.total?.gcPercent ?? null,
                 perHour: metrics.total?.perHourStr || '$0 / $0', perVisit: metrics.total?.perVisitStr || '$0 / $0'
               },
               {
                 title: 'Dentist', titleColor: '#00786F', value: `$${metrics.dentist?.pVal ?? 0}`,
-                pVal: metrics.dentist?.pVal ?? 0, pGoal: metrics.dentist?.pGoal || '', pPercent: metrics.dentist?.pPercent ?? 0,
-                cVal: metrics.dentist?.cVal ?? 0, cGoal: metrics.dentist?.cGoal || '', cPercent: metrics.dentist?.cPercent ?? 0,
-                gpVal: metrics.dentist?.gpVal ?? 0, gpGoal: metrics.dentist?.gpGoal || '', gpPercent: metrics.dentist?.gpPercent ?? 0,
-                gcVal: metrics.dentist?.gcVal ?? 0, gcGoal: metrics.dentist?.gcGoal || '', gcPercent: metrics.dentist?.gcPercent ?? 0,
+                pVal: metrics.dentist?.pVal ?? 0, pGoal: metrics.dentist?.pGoal || '', pPercent: metrics.dentist?.pPercent ?? null,
+                cVal: metrics.dentist?.cVal ?? 0, cGoal: metrics.dentist?.cGoal || '', cPercent: metrics.dentist?.cPercent ?? null,
+                gpVal: metrics.dentist?.gpVal ?? 0, gpGoal: metrics.dentist?.gpGoal || '', gpPercent: metrics.dentist?.gpPercent ?? null,
+                gcVal: metrics.dentist?.gcVal ?? 0, gcGoal: metrics.dentist?.gcGoal || '', gcPercent: metrics.dentist?.gcPercent ?? null,
                 perHour: metrics.dentist?.perHourStr || '$0 / $0', perVisit: metrics.dentist?.perVisitStr || '$0 / $0'
               },
               {
                 title: 'Hygienist', titleColor: '#7008E7', value: `$${metrics.hygienist?.pVal ?? 0}`,
-                pVal: metrics.hygienist?.pVal ?? 0, pGoal: metrics.hygienist?.pGoal || '', pPercent: metrics.hygienist?.pPercent ?? 0,
-                cVal: metrics.hygienist?.cVal ?? 0, cGoal: metrics.hygienist?.cGoal || '', cPercent: metrics.hygienist?.cPercent ?? 0,
-                gpVal: metrics.hygienist?.gpVal ?? 0, gpGoal: metrics.hygienist?.gpGoal || '', gpPercent: metrics.hygienist?.gpPercent ?? 0,
-                gcVal: metrics.hygienist?.gcVal ?? 0, gcGoal: metrics.hygienist?.gcGoal || '', gcPercent: metrics.hygienist?.gcPercent ?? 0,
+                pVal: metrics.hygienist?.pVal ?? 0, pGoal: metrics.hygienist?.pGoal || '', pPercent: metrics.hygienist?.pPercent ?? null,
+                cVal: metrics.hygienist?.cVal ?? 0, cGoal: metrics.hygienist?.cGoal || '', cPercent: metrics.hygienist?.cPercent ?? null,
+                gpVal: metrics.hygienist?.gpVal ?? 0, gpGoal: metrics.hygienist?.gpGoal || '', gpPercent: metrics.hygienist?.gpPercent ?? null,
+                gcVal: metrics.hygienist?.gcVal ?? 0, gcGoal: metrics.hygienist?.gcGoal || '', gcPercent: metrics.hygienist?.gcPercent ?? null,
                 perHour: metrics.hygienist?.perHourStr || '$0 / $0', perVisit: metrics.hygienist?.perVisitStr || '$0 / $0'
               }
             ].map((card, idx) => (
@@ -590,23 +595,12 @@ const DashboardTab = () => {
                 </Box>
 
                 <DonutChart
-                  slices={[
-                    { value: metrics.hygienePotential?.onTimeNoPreAppt ?? 0, color: '#a855f7' },
-                    { value: metrics.hygienePotential?.onTimePreAppt ?? 0, color: '#d8b4fe' },
-                    { value: metrics.hygienePotential?.noRecare ?? 0, color: '#3b82f6' },
-                    { value: metrics.hygienePotential?.flaggedNoRecare ?? 0, color: '#93c5fd' },
-                    { value: metrics.hygienePotential?.late12mAppt ?? 0, color: '#64748b' },
-                    { value: metrics.hygienePotential?.late12mBroken ?? 0, color: '#1e293b' }
-                  ]}
+                  slices={recareCategories.map(c => ({ value: metrics.hygienePotential?.[c.key] ?? 0, color: c.color }))}
                 />
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
-                    {[
-                      { label: `On-Time No Pre-appt (${metrics.hygienePotential?.onTimeNoPreAppt ?? 0})`, color: '#a855f7' },
-                      { label: `On-Time Pre-appt (${metrics.hygienePotential?.onTimePreAppt ?? 0})`, color: '#d8b4fe' },
-                      { label: `No Recare (${metrics.hygienePotential?.noRecare ?? 0})`, color: '#3b82f6' }
-                    ].map((item, idx) => (
+                    {recareCategories.slice(0, 5).map(c => ({ label: c.name + ' (' + (metrics.hygienePotential?.[c.key] ?? 0) + ')', color: c.color })).map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
                         <Typography sx={{ fontSize: '0.76rem', color: '#475569', fontWeight: 500, lineHeight: 1.25, wordBreak: 'break-word' }}>
@@ -616,11 +610,7 @@ const DashboardTab = () => {
                     ))}
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8, flex: 1, minWidth: 0 }}>
-                    {[
-                      { label: `Flagged No-Recare (${metrics.hygienePotential?.flaggedNoRecare ?? 0})`, color: '#93c5fd' },
-                      { label: `Late >12 months Appt (${metrics.hygienePotential?.late12mAppt ?? 0})`, color: '#64748b' },
-                      { label: `Late >12 months Broken (${metrics.hygienePotential?.late12mBroken ?? 0})`, color: '#1e293b' }
-                    ].map((item, idx) => (
+                    {recareCategories.slice(5).map(c => ({ label: c.name + ' (' + (metrics.hygienePotential?.[c.key] ?? 0) + ')', color: c.color })).map((item, idx) => (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, minWidth: 0 }}>
                         <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }} />
                         <Typography sx={{ fontSize: '0.76rem', color: '#475569', fontWeight: 500, lineHeight: 1.25, wordBreak: 'break-word' }}>

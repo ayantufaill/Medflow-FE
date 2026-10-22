@@ -7,7 +7,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import dayjs from "dayjs";
+import { formatBranchDate } from "../../../utils/dateUtils";
 import { Label, SquareCheckbox } from "./helpers";
 import { providerLabel } from "./helpers";
 import DeleteIconImg from "../../../assets/operatory icons/delete.png";
@@ -138,13 +138,13 @@ const ProcedureRow = memo(({ row, isLast, providers, setProcedures, showExtended
                 ? row.scheduledDates
                 : [];
             const tooltipText = scheduledDates
-              .map((d) => dayjs(d).format("MM/DD/YYYY"))
+              .map((d) => formatBranchDate(d, "MM/DD/YYYY"))
               .join(", ");
             return (
               <Box sx={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 {row.dueDate && (
                   <Typography sx={{ fontFamily: "Inter", fontSize: "12px", color: "#374151", whiteSpace: "nowrap" }}>
-                    {dayjs(row.dueDate).format("MM/DD/YYYY")}
+                    {formatBranchDate(row.dueDate, "MM/DD/YYYY")}
                   </Typography>
                 )}
                 {scheduledDates.length > 0 && (

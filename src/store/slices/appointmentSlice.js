@@ -4,6 +4,10 @@ import { appointmentService } from '../../services/appointment.service';
 // Appointments change frequently (drag-reschedule, status updates), so the
 // detail cache expires quickly to avoid showing stale data on the schedule grid.
 const DETAIL_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const appointmentIdOf = (appointment) => {
+  const id = appointment?._id ?? appointment?.id ?? appointment?.AptNum;
+  return id == null ? null : String(id);
+};
 
 // ─── Thunks ───────────────────────────────────────────────────────────────────
 
@@ -45,12 +49,15 @@ export const fetchAppointments = createAsyncThunk(
 );
 
 // Fetches a single appointment by ID.
-// The TTL condition prevents redundant network calls when navigating between
-// clinical sub-pages that all read the same appointment — each re-mounts and
-// would otherwise dispatch independently.
+// Cached details still pass through fulfillment so selecting a cached visit
+// activates it. Only duplicate requests for the same active visit are skipped.
 export const fetchAppointmentById = createAsyncThunk(
   'appointment/fetchAppointmentById',
-  async (appointmentId, { rejectWithValue }) => {
+  async (appointmentId, { getState, rejectWithValue, fulfillWithValue }) => {
+    const cached = getState().appointment.cache[appointmentId];
+    if (cached && Date.now() - cached.timestamp < DETAIL_CACHE_TTL) {
+      return fulfillWithValue(cached.data, { cachedAt: cached.timestamp });
+    }
     try {
       return await appointmentService.getAppointmentById(appointmentId);
     } catch (err) {
@@ -60,12 +67,8 @@ export const fetchAppointmentById = createAsyncThunk(
   {
     condition: (appointmentId, { getState }) => {
       const { appointment } = getState();
-      // Skip if a fetch is already running for any appointment
-      if (appointment.detailLoading) return false;
-      const cached = appointment.cache[appointmentId];
-      // Skip if we have a fresh cache entry — caller can use invalidateAppointmentDetail
-      // to force a re-fetch when they know the data is stale (e.g. after a status change).
-      return !cached || (Date.now() - cached.timestamp) >= DETAIL_CACHE_TTL;
+      return !!appointmentId && !(appointment.detailLoading &&
+        appointment.detailRequestKey === String(appointmentId));
     },
   }
 );
@@ -287,6 +290,8 @@ const initialState = {
     typeof window !== 'undefined' ? localStorage.getItem('selectedAppointmentId') : null,
   detailLoading: false,
   detailError: null,
+  detailRequestId: null,
+  detailRequestKey: null,
   // Short-lived in-memory cache keyed by appointmentId.
   // Shape: { [appointmentId]: { data: Appointment, timestamp: number } }
   // Avoids redundant API calls when multiple clinical sub-pages mount for the
@@ -327,7 +332,10 @@ const appointmentSlice = createSlice({
     // so we don't need to re-fetch it.
     setCurrentAppointment: (state, action) => {
       state.currentAppointment = action.payload;
-      state.selectedAppointmentId = action.payload?._id || action.payload?.id || null;
+      state.selectedAppointmentId = appointmentIdOf(action.payload);
+      state.detailRequestId = null;
+      state.detailRequestKey = null;
+      state.detailLoading = false;
       state.detailError = null;
       if (state.selectedAppointmentId) {
         localStorage.setItem('selectedAppointmentId', state.selectedAppointmentId);
@@ -340,7 +348,17 @@ const appointmentSlice = createSlice({
     // Used when navigating to a clinical page from a link that only has the ID —
     // the page then dispatches fetchAppointmentById to load the full record.
     setSelectedAppointmentId: (state, action) => {
-      state.selectedAppointmentId = action.payload;
+      const id = action.payload == null ? null : String(action.payload);
+      state.selectedAppointmentId = id;
+      if (appointmentIdOf(state.currentAppointment) !== id) {
+        state.currentAppointment = null;
+      }
+      if (state.detailRequestKey !== id) {
+        state.detailRequestId = null;
+        state.detailRequestKey = null;
+        state.detailLoading = false;
+        state.detailError = null;
+      }
       if (action.payload) {
         localStorage.setItem('selectedAppointmentId', action.payload);
       } else {
@@ -354,6 +372,10 @@ const appointmentSlice = createSlice({
     clearCurrentAppointment: (state) => {
       state.currentAppointment = null;
       state.selectedAppointmentId = null;
+      state.detailRequestId = null;
+      state.detailRequestKey = null;
+      state.detailLoading = false;
+      state.detailError = null;
       state.conflicts = [];
       localStorage.removeItem('selectedAppointmentId');
     },
@@ -502,22 +524,33 @@ const appointmentSlice = createSlice({
       })
 
       // ── fetchAppointmentById ──────────────────────────────────────────────
-      .addCase(fetchAppointmentById.pending, (state) => {
+      .addCase(fetchAppointmentById.pending, (state, action) => {
         state.detailLoading = true;
         state.detailError = null;
+        state.detailRequestId = action.meta.requestId;
+        state.detailRequestKey = String(action.meta.arg);
+        state.selectedAppointmentId = String(action.meta.arg);
+        if (appointmentIdOf(state.currentAppointment) !== state.selectedAppointmentId) {
+          state.currentAppointment = null;
+        }
+        localStorage.setItem('selectedAppointmentId', state.selectedAppointmentId);
       })
       .addCase(fetchAppointmentById.fulfilled, (state, action) => {
+        if (state.detailRequestId !== action.meta.requestId) return;
         state.currentAppointment = action.payload;
-        state.selectedAppointmentId = action.payload?._id || null;
+        state.selectedAppointmentId = appointmentIdOf(action.payload);
         state.detailLoading = false;
+        state.detailRequestId = null;
         // Write to cache so subsequent navigations within the TTL window skip the network.
-        state.cache[action.payload._id] = { data: action.payload, timestamp: Date.now() };
+        state.cache[action.meta.arg] = { data: action.payload, timestamp: action.meta.cachedAt ?? Date.now() };
         if (state.selectedAppointmentId) {
           localStorage.setItem('selectedAppointmentId', state.selectedAppointmentId);
         }
       })
       .addCase(fetchAppointmentById.rejected, (state, action) => {
+        if (state.detailRequestId !== action.meta.requestId) return;
         state.detailLoading = false;
+        state.detailRequestId = null;
         state.detailError = action.payload;
       })
 

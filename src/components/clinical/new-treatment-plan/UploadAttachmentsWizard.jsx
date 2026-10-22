@@ -30,7 +30,8 @@ import {
 import {
   Close as CloseIcon,
   DeleteOutline as DeleteIcon,
-  ErrorOutline as ErrorIcon
+  ErrorOutline as ErrorIcon,
+  CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../../services/appointment.service';
@@ -53,17 +54,17 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
   const [tabValue, setTabValue] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  
+
   // Images Tab State
   const [imageSource, setImageSource] = useState('external');
-  
+
   // Narratives Tab State
   const [selectedAppointment, setSelectedAppointment] = useState('');
   const [narrativeText, setNarrativeText] = useState('');
   const [appointments, setAppointments] = useState([]);
   const [clinicalNote, setClinicalNote] = useState(null);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
-  
+
   // Perio Chart Tab State
   const [perioSource, setPerioSource] = useState('external');
   const [examDate, setExamDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -272,7 +273,7 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
 
   const renderDropZone = (type) => {
     const currentFiles = stagedFiles.filter(f => f.type === type);
-    
+
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 3 }}>
         <Box sx={{ display: 'flex', gap: 4 }}>
@@ -346,12 +347,48 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1700, '& .MuiDialog-paper': { height: '80vh' } }}>
-      <DialogTitle sx={{ borderBottom: '1px solid #e2e8f0', p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '16px', color: '#0f172a' }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth 
+      sx={{ zIndex: 1700 }}
+      PaperProps={{
+        sx: {
+          height: '80vh',
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }
+      }}
+    >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          p: '12px 16px',
+          gap: '8px',
+          borderBottom: '1px solid #d8dee8',
+          backgroundColor: '#eff4fa',
+          m: 0,
+          flexShrink: 0,
+        }}
+      >
+        <CloudUploadIcon sx={{ fontSize: '20px', color: '#2563eb' }} />
+        <Typography
+          sx={{
+            fontSize: '15px',
+            fontWeight: 600,
+            color: '#0f172a',
+            flex: 1,
+            fontFamily: 'Inter, sans-serif'
+          }}
+        >
           Upload Attachments
         </Typography>
-        <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
+        <IconButton size="small" onClick={onClose} sx={{ color: '#64748b' }}>
+          <CloseIcon sx={{ fontSize: '18px' }} />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
@@ -368,11 +405,11 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
         {activeStep === 0 && (
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ borderBottom: '1px solid #e2e8f0', px: 3 }}>
-              <Tabs 
-                value={tabValue} 
-                onChange={(e, v) => setTabValue(v)} 
-                sx={{ 
-                  minHeight: 48, 
+              <Tabs
+                value={tabValue}
+                onChange={(e, v) => setTabValue(v)}
+                sx={{
+                  minHeight: 48,
                   '& .MuiTabs-indicator': { backgroundColor: '#2563eb', height: '2px' },
                   '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontFamily: 'Inter', minHeight: 48, fontSize: '14px', color: '#64748b' },
                   '& .Mui-selected': { color: '#2563eb !important' }
@@ -393,7 +430,7 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
                     <FormControlLabel value="system" control={<Radio size="small" />} label={<Typography sx={{ fontFamily: 'Inter', fontSize: '14px' }}>Select Image</Typography>} />
                     <FormControlLabel value="external" control={<Radio size="small" />} label={<Typography sx={{ fontFamily: 'Inter', fontSize: '14px' }}>Select External Image</Typography>} />
                   </RadioGroup>
-                  
+
                   {imageSource === 'external' ? renderDropZone('Image') : (
                     <Box sx={{ p: 4, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
                       <Typography sx={{ color: '#64748b', fontFamily: 'Inter' }}>System images would load here...</Typography>
@@ -426,7 +463,7 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
                         );
                       })}
                     </Select>
-                    
+
                     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 2, border: '1px solid #e2e8f0', borderRadius: '4px', bgcolor: '#f8fafc', overflowY: 'auto' }}>
                       {isLoadingNotes ? (
                         <Typography sx={{ fontFamily: 'Inter', color: '#64748b', fontSize: '14px' }}>Loading notes...</Typography>
@@ -478,13 +515,13 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
                   ) : (
                     <Box>
                       <Typography sx={{ fontFamily: 'Inter', fontWeight: 600, fontSize: '13px', color: '#0f172a', mb: 1 }}>Select System Perio Chart</Typography>
-                      <Select 
-                        size="small" 
-                        fullWidth 
-                        value={selectedPerioExam} 
-                        onChange={(e) => setSelectedPerioExam(e.target.value)} 
-                        displayEmpty 
-                        sx={{ mb: 4 }} 
+                      <Select
+                        size="small"
+                        fullWidth
+                        value={selectedPerioExam}
+                        onChange={(e) => setSelectedPerioExam(e.target.value)}
+                        displayEmpty
+                        sx={{ mb: 4 }}
                         MenuProps={{ sx: { zIndex: 1800 } }}
                       >
                         <MenuItem value="">Select exam...</MenuItem>
@@ -494,14 +531,14 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
                           </MenuItem>
                         ))}
                       </Select>
-                      
+
                       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, border: '1px solid #e2e8f0', borderRadius: '4px', bgcolor: '#f8fafc' }}>
                         {selectedPerioExam ? (
                           <Typography sx={{ fontFamily: 'Inter', color: '#10b981', fontSize: '14px', fontWeight: 500 }}>
                             Perio chart from {dayjs(selectedPerioExam).format('MMM D, YYYY')} selected for attachment.
                           </Typography>
                         ) : (
-                           <Typography sx={{ fontFamily: 'Inter', color: '#64748b', fontSize: '14px' }}>Please select a perio chart to attach.</Typography>
+                          <Typography sx={{ fontFamily: 'Inter', color: '#64748b', fontSize: '14px' }}>Please select a perio chart to attach.</Typography>
                         )}
                       </Box>
                     </Box>
@@ -512,7 +549,7 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
               {/* Other Tab */}
               {tabValue === 3 && (
                 <Box>
-                   {renderDropZone('Other')}
+                  {renderDropZone('Other')}
                 </Box>
               )}
             </Box>
@@ -547,12 +584,45 @@ export default function UploadAttachmentsWizard({ open, onClose, onSave, patient
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-        <Button onClick={handleBack} disabled={isSaving} variant="outlined" sx={{ minWidth: '120px', textTransform: 'none', fontWeight: 600, fontFamily: 'Inter', color: '#2563eb', borderColor: '#bfdbfe', '&:hover': { borderColor: '#93c5fd', bgcolor: '#eff6ff' } }}>
+      <DialogActions sx={{ p: 2, borderTop: '1px solid #e2e8f0', gap: 1 }}>
+        <Button 
+          onClick={handleBack} 
+          disabled={isSaving} 
+          variant="outlined"
+          size="small"
+          sx={{
+            color: '#64748b',
+            borderColor: '#cbd5e1',
+            borderRadius: '8px',
+            '&:hover': { borderColor: '#94a3b8', backgroundColor: '#f1f5f9' },
+            textTransform: 'none',
+            px: 2,
+            fontWeight: 600,
+          }}
+        >
           {activeStep === 0 ? 'Cancel' : 'Back'}
         </Button>
-        <Button onClick={handleNext} disabled={isSaving} variant="contained" sx={{ minWidth: '120px', textTransform: 'none', fontWeight: 600, fontFamily: 'Inter', bgcolor: '#2563eb', color: '#fff', '&:hover': { bgcolor: '#1d4ed8' }, boxShadow: 'none' }}>
-          {isSaving ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : activeStep === 0 ? 'Review' : 'Submit'}
+        <Button 
+          onClick={handleNext} 
+          disabled={isSaving} 
+          variant="contained" 
+          size="small"
+          sx={{
+            bgcolor: '#2563eb',
+            color: '#fff',
+            textTransform: 'none',
+            boxShadow: 'none',
+            borderRadius: '8px',
+            fontWeight: 600,
+            px: 2,
+            '&:hover': { bgcolor: '#1565c0' },
+            '&.Mui-disabled': {
+              bgcolor: '#cbd5e1',
+              color: '#fff',
+            },
+          }}
+        >
+          {isSaving ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : activeStep === 0 ? 'Review' : 'Submit'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -138,14 +138,24 @@ export const getFeeGuideLabel = (planFeeGuide, feeGuides = []) => {
 /**
  * Match a coverage record to its benefit-usage payload from `getInsuranceUsage`.
  *
- * That endpoint only reports primary and secondary usage, so a record is matched
- * by plan name when the names line up and otherwise by coverage ordinal. Passing
- * the payload into `getCoverageAmounts` is what makes "used" mean actual claims
- * paid to date instead of a stale limit/copay field stored on the coverage.
+ * Prefer the coverage id returned by the backend, including plans beyond the
+ * first two. Older payloads without ids still use the previous name/ordinal
+ * fallback. Passing the matched result into `getCoverageAmounts` uses actual
+ * claims paid to date instead of a stale limit on the coverage.
  */
 export const getCoverageUsage = (ins, index, usagePayload) => {
   const primaryUsage = usagePayload?.primaryInsurance ?? null;
   const secondaryUsage = usagePayload?.secondaryInsurance ?? null;
+  const coverageId = String(ins?._id ?? ins?.id ?? '');
+  const policyUsage = usagePayload?.coverages?.find(
+    (entry) => coverageId && String(entry?.coverageId ?? '') === coverageId
+  );
+  if (policyUsage) return policyUsage;
+  if (coverageId && String(primaryUsage?.coverageId ?? '') === coverageId) return primaryUsage;
+  if (coverageId && String(secondaryUsage?.coverageId ?? '') === coverageId) return secondaryUsage;
+  // The backend identifies usage by patient coverage, so another policy's
+  // benefit balance must not be assigned by its position in the list.
+  if (usagePayload?.coverages || primaryUsage?.coverageId || secondaryUsage?.coverageId) return null;
   const coverageOrdinal = Number(ins?.Ordinal ?? ins?.ordinal ?? index + 1);
   const rowName = (ins?.planName || ins?.groupName || '').toLowerCase();
 
