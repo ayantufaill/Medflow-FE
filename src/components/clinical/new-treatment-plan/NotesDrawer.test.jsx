@@ -4,20 +4,30 @@ import NotesDrawer from './NotesDrawer';
 import { clinicalNoteService } from '../../../services/clinical-note.service';
 import { progressNoteService } from '../../../services/progress-note.service';
 import { noteTemplateService } from '../../../services/note-template.service';
+import { printNote } from './notePrint';
+
+jest.mock('./notePrint', () => ({
+  noteFields: jest.requireActual('./notePrint').noteFields,
+  printNote: jest.fn(),
+}));
 
 jest.mock('react-redux', () => ({ useSelector: () => [], useDispatch: () => jest.fn() }));
-jest.mock('../../../store/slices/providerSlice', () => ({ selectProviderDropdownList: jest.fn() }));
-jest.mock('../edit-note/EditNoteForm', () => ({ patientId, providerId }) => (
-  <div>Clinical editor for {patientId} with provider {providerId}</div>
+jest.mock('../../../store/slices/providerSlice', () => ({ selectProviderDropdownList: jest.fn(), fetchAllProvidersForDropdown: jest.fn() }));
+jest.mock('../edit-note/EditNoteForm', () => ({ patientId, providerId, onOpenActions }) => (
+  <div>Clinical editor for {patientId} with provider {providerId}<button aria-label="Note actions" onClick={onOpenActions}>Actions</button></div>
 ));
 jest.mock('../../../services/clinical-note.service', () => ({ clinicalNoteService: {
   getClinicalNotesByPatient: jest.fn(),
+  getClinicalNoteById: jest.fn(),
+  getHistory: jest.fn(),
   createClinicalNote: jest.fn(),
   updateClinicalNote: jest.fn(),
   signClinicalNote: jest.fn(),
 } }));
 jest.mock('../../../services/progress-note.service', () => ({ progressNoteService: {
   getAll: jest.fn(),
+  getById: jest.fn(),
+  getHistory: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
 } }));
@@ -37,6 +47,164 @@ beforeEach(() => {
   progressNoteService.create.mockResolvedValue({});
   clinicalNoteService.createClinicalNote.mockResolvedValue({});
   clinicalNoteService.signClinicalNote.mockResolvedValue({});
+  clinicalNoteService.getHistory.mockResolvedValue([]);
+  progressNoteService.getHistory.mockResolvedValue([]);
+  printNote.mockResolvedValue();
+});
+
+it('keeps the full filter list and filters saved notes with removable selections', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '1', noteType: 'progress', structuredData: { title: 'Clinical allergy', tags: ['Allergy'] } },
+    { _id: '2', noteType: 'progress', structuredData: { title: 'Clinical follow up', tags: ['Follow Up'] } },
+  ], pagination: { pages: 1 } });
+  progressNoteService.getAll.mockResolvedValue({ data: { notes: [
+    { id: '3', title: 'General follow up', tags: ['Follow Up'], date: '2026-10-20T10:00:00Z' },
+  ], pagination: { pages: 1 } } });
+
+  renderDrawer();
+  expect(await screen.findByText('3 results')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Filter notes' }));
+  expect(screen.getByRole('menuitemcheckbox', { name: 'Clinical' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitemcheckbox', { name: 'General' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitemcheckbox', { name: 'Allergy' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitemcheckbox', { name: 'Birthday' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Clinical' }));
+  expect(screen.getByText('2 results')).toBeInTheDocument();
+  expect(screen.queryByText('General follow up')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'General' }));
+  expect(screen.getByText('3 results')).toBeInTheDocument();
+  expect(screen.getByText('General follow up')).toBeInTheDocument();
+
+  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+  fireEvent.click(document.querySelector('.MuiChip-deletable .MuiChip-deleteIcon'));
+  expect(screen.getByText('1 result')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+  expect(screen.getByText('3 results')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+});
+
+it('prints the saved record for the clicked note only', async () => {
+  progressNoteService.getAll.mockResolvedValue({ data: { notes: [
+    { id: '8', title: 'First', description: 'First text', date: '2026-10-16T10:00:00Z' },
+    { id: '9', title: 'Second', description: 'Second text', date: '2026-10-17T10:00:00Z' },
+  ], pagination: { pages: 1 } } });
+  progressNoteService.getById.mockResolvedValue({ id: '8', patientId: '42', description: 'Saved full text' });
+  renderDrawer();
+  const firstCard = (await screen.findByText('First')).closest('.MuiPaper-root');
+  fireEvent.click(firstCard.querySelector('button:last-child'));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Print' }));
+  await waitFor(() => expect(progressNoteService.getById).toHaveBeenCalledWith('8'));
+  expect(printNote).toHaveBeenCalledWith(expect.objectContaining({
+    source: 'general', note: expect.objectContaining({ description: 'Saved full text' }),
+  }));
+});
+
+it('loads real history for the clicked note and shows the saved change', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', noteType: 'progress', structuredData: { title: 'First clinical' } },
+    { _id: '6', noteType: 'progress', structuredData: { title: 'Second clinical' } },
+  ], pagination: { pages: 1 } });
+  clinicalNoteService.getHistory.mockResolvedValue([{ id: '12', action: 'updated', actor: 'Dr. Test',
+    occurredAt: '2026-10-17T10:00:00Z', oldValues: { content: 'Before' }, newValues: { content: 'After' } }]);
+  renderDrawer();
+  const secondCard = (await screen.findByText('Second clinical')).closest('.MuiPaper-root');
+  fireEvent.click(secondCard.querySelector('button:last-child'));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'History' }));
+  await waitFor(() => expect(clinicalNoteService.getHistory).toHaveBeenCalledWith('6'));
+  expect(await screen.findByText('After')).toBeInTheDocument();
+  expect(screen.queryByText('Zarria Sampson')).not.toBeInTheDocument();
+});
+
+it('opens a signed clinical note for reading without editable fields or Save', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', noteType: 'soap', isSigned: true, structuredData: { title: 'Signed clinical', content: 'Final clinical text' } },
+  ], pagination: { pages: 1 } });
+  renderDrawer();
+  const card = (await screen.findByText('Signed clinical')).closest('.MuiPaper-root');
+  fireEvent.click(card.querySelector('button:last-child'));
+  expect(screen.getByRole('menuitem', { name: 'View' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'View' }));
+
+  expect(screen.getByText('View Signed Note')).toBeInTheDocument();
+  expect(screen.getByText('Final clinical text')).toBeInTheDocument();
+  expect(screen.getByText('This note is signed and read-only.')).toBeInTheDocument();
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+  expect(clinicalNoteService.updateClinicalNote).not.toHaveBeenCalled();
+});
+
+it('opens a signed general note for reading', async () => {
+  progressNoteService.getAll.mockResolvedValue({ data: { notes: [
+    { id: '8', title: 'Signed general', description: 'Final general text', status: 'signed', date: '2026-10-20T10:00:00Z' },
+  ], pagination: { pages: 1 } } });
+  renderDrawer();
+  const card = (await screen.findByText('Signed general')).closest('.MuiPaper-root');
+  fireEvent.click(card);
+
+  expect(screen.getByText('View Signed Note')).toBeInTheDocument();
+  expect(screen.getByText('Final general text')).toBeInTheDocument();
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+  expect(progressNoteService.update).not.toHaveBeenCalled();
+});
+
+it('prints the saved signed note from its view menu', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', patientId: '42', noteType: 'soap', isSigned: true, structuredData: { title: 'Signed clinical', content: 'Final text' } },
+  ], pagination: { pages: 1 } });
+  clinicalNoteService.getClinicalNoteById.mockResolvedValue({
+    id: '5', patientId: '42', isSigned: true, structuredData: { title: 'Signed clinical', content: 'Final text' },
+  });
+  renderDrawer();
+  fireEvent.click((await screen.findByText('Signed clinical')).closest('.MuiPaper-root'));
+  fireEvent.click(screen.getByRole('button', { name: 'Note actions' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Print' }));
+
+  await waitFor(() => expect(printNote).toHaveBeenCalledWith(expect.objectContaining({
+    note: expect.objectContaining({ id: '5', isSigned: true }),
+  })));
+});
+
+it('shows the provider name instead of the editor user ID on signed notes', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', noteType: 'soap', isSigned: true, lastEditedBy: '1',
+      providerId: { _id: '7', firstName: 'Ava', lastName: 'Stone' },
+      structuredData: { title: 'Signed clinical', content: 'Final text' } },
+  ], pagination: { pages: 1 } });
+  renderDrawer();
+  fireEvent.click((await screen.findByText('Signed clinical')).closest('.MuiPaper-root'));
+
+  expect(screen.getByText('Provider: Ava Stone')).toBeInTheDocument();
+  expect(screen.queryByText('1')).not.toBeInTheDocument();
+});
+
+it('shows the signer name when a signed note has no linked provider', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', noteType: 'soap', isSigned: true, lastEditedBy: '1',
+      signedBy: { _id: '1', firstName: 'Sam', lastName: 'Rivera' },
+      structuredData: { title: 'Signed clinical', content: 'Final text' } },
+  ], pagination: { pages: 1 } });
+  renderDrawer();
+  fireEvent.click((await screen.findByText('Signed clinical')).closest('.MuiPaper-root'));
+
+  expect(screen.getByText('Signed by: Sam Rivera')).toBeInTheDocument();
+  expect(screen.queryByText('1')).not.toBeInTheDocument();
+});
+
+it('opens the same note actions from the clinical edit view', async () => {
+  clinicalNoteService.getClinicalNotesByPatient.mockResolvedValue({ clinicalNotes: [
+    { _id: '5', noteType: 'progress', structuredData: { title: 'Editable clinical', content: 'Saved text' } },
+  ], pagination: { pages: 1 } });
+  clinicalNoteService.getHistory.mockResolvedValue([{ id: '12', action: 'updated', actor: 'Dr. Test',
+    newValues: { content: 'Saved text' } }]);
+  renderDrawer();
+  fireEvent.click((await screen.findByText('Editable clinical')).closest('.MuiPaper-root'));
+  fireEvent.click(screen.getByRole('button', { name: 'Note actions' }));
+  expect(screen.getByRole('menuitem', { name: 'Print' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'History' }));
+  await waitFor(() => expect(clinicalNoteService.getHistory).toHaveBeenCalledWith('5'));
+  expect(await screen.findByText('Saved text')).toBeInTheDocument();
 });
 
 it('opens the app menu and saves a general note for the selected patient', async () => {
@@ -56,6 +224,7 @@ it('opens the app menu and saves a general note for the selected patient', async
   fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
   await waitFor(() => expect(progressNoteService.create).toHaveBeenCalledWith({
     patientId: '42', providerId: '7', category: 'General Notes', description: 'Patient called about care.',
+    title: '', tags: [],
   }));
   await waitFor(() => expect(progressNoteService.getAll).toHaveBeenCalledTimes(2));
   expect(await screen.findByText('Patient called about care.')).toBeInTheDocument();

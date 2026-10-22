@@ -18,6 +18,8 @@ const LabCasesPage = () => {
     setPage,
     rowsPerPage,
     setRowsPerPage,
+    printError,
+    setPrintError,
     selectedIds,
     menuAnchor,
     setMenuAnchor,
@@ -68,6 +70,12 @@ const LabCasesPage = () => {
       {!patientId && (
         <Alert severity="info" sx={{ mb: 2, borderRadius: radius.md }}>
           No patient selected. Showing demo lab cases.
+        </Alert>
+      )}
+
+      {printError && (
+        <Alert severity="error" onClose={() => setPrintError("")} sx={{ mb: 2, borderRadius: radius.md }}>
+          {printError}
         </Alert>
       )}
 

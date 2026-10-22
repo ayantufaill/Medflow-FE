@@ -64,17 +64,18 @@ const LabCasesFiltersBar = ({
 
       <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", ml: "auto", alignItems: "center" }}>
         <Button
-          variant="outlined"
+          variant="contained"
           disableElevation
           startIcon={<ScienceIcon sx={{ fontSize: "16px" }} />}
           onClick={onOpenNewDialog}
           sx={{
             ...actionButtonSx,
-            borderColor: COLORS.BORDER,
-            color: COLORS.TEXT_BODY,
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            boxShadow: "none",
             "&:hover": {
-              borderColor: COLORS.TEXT_MUTED,
-              backgroundColor: COLORS.SURFACE_HOVER,
+              backgroundColor: COLORS.ACCENT_HOVER,
+              boxShadow: "none",
             },
           }}
         >

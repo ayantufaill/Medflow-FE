@@ -2256,6 +2256,7 @@ const AddNewPatientAppointmentForm = ({
 
       {isLabOrderOpen && labCaseForm && (
         <NewLabCaseDialog
+          scheduleStyle
           open={isLabOrderOpen}
           onClose={() => {
             setIsLabOrderOpen(false);

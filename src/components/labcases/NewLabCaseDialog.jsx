@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -33,7 +34,7 @@ import {
 } from "../../store/slices/providerSlice";
 import apiClient from "../../config/api";
 import { COLORS } from "../../constants/colors";
-import { fontSize, fontWeight, roundedAutocompletePaperSx } from "../../constants/styles";
+import { fontSize, fontWeight, radius, roundedAutocompletePaperSx, standardFieldSx } from "../../constants/styles";
 
 const STATUS_OPTIONS = ["Draft", "Sent", "Received", "Returned", "Ready", "Complete"];
 
@@ -71,7 +72,34 @@ const subLabelSx = {
   mb: 1,
 };
 
+const scheduleLabelSx = {
+  fontFamily: "Inter",
+  fontWeight: fontWeight.semibold,
+  fontSize: fontSize.base,
+  color: COLORS.TEXT_SECONDARY,
+  mb: 0.75,
+};
+
+const scheduleFieldSx = {
+  ...standardFieldSx,
+  "& .MuiOutlinedInput-root": {
+    ...standardFieldSx["& .MuiOutlinedInput-root"],
+    backgroundColor: COLORS.SURFACE_CARD,
+  },
+  "& .MuiOutlinedInput-input": {
+    ...standardFieldSx["& .MuiOutlinedInput-input"],
+    fontSize: fontSize.md,
+  },
+};
+
+const scheduleGridSx = {
+  display: "grid",
+  gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" },
+  gap: 2,
+};
+
 const NewLabCaseDialog = ({
+  scheduleStyle = false,
   open,
   onClose,
   title,
@@ -163,47 +191,62 @@ const NewLabCaseDialog = ({
       (opt) => String(opt.ProcCode || opt.code) === String(value || "")
     ) || null;
 
+  const activeFieldSx = scheduleStyle ? scheduleFieldSx : fieldSx;
+  const activeLabelSx = scheduleStyle ? scheduleLabelSx : fieldLabelSx;
+  const activeSubLabelSx = scheduleStyle ? scheduleLabelSx : subLabelSx;
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      aria-labelledby="lab-case-dialog-title"
       fullWidth
-      maxWidth="sm"
+      maxWidth={scheduleStyle ? "md" : "sm"}
       sx={{ zIndex: 9999 }}
       PaperProps={{
-        sx: {
-          borderRadius: "10px",
-          overflow: "hidden",
-          boxShadow: "0px 10px 40px rgba(0,0,0,0.12)",
-        },
+        sx: scheduleStyle
+          ? { borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: "hidden", boxShadow: "0px 8px 24px rgba(0,0,0,0.1)" }
+          : { borderRadius: "10px", overflow: "hidden", boxShadow: "0px 10px 40px rgba(0,0,0,0.12)" },
       }}
     >
       <DialogTitle
+        component="div"
         sx={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #e2e8f0",
-          py: 1.8,
-          px: 3,
+          justifyContent: scheduleStyle ? "flex-start" : "space-between",
+          gap: scheduleStyle ? 1.5 : 0,
+          borderBottom: `1px solid ${scheduleStyle ? COLORS.BORDER : "#e2e8f0"}`,
+          backgroundColor: scheduleStyle ? COLORS.SURFACE_TINT : COLORS.SURFACE_CARD,
+          py: scheduleStyle ? 1.25 : 1.8,
+          px: scheduleStyle ? { xs: 2, sm: 2.5 } : 3,
         }}
       >
-        <Typography
-          sx={{
-            fontFamily: "Inter",
-            fontSize: "15px",
-            color: "#64748b",
-          }}
-        >
-          Patients / {title} / Lab Cases /{" "}
-          <Box component="span" sx={{ fontWeight: 700, color: "#0f172a" }}>
-            {heading}
-          </Box>
-        </Typography>
+        {scheduleStyle ? (
+          <>
+            <Box sx={{ width: 36, height: 36, borderRadius: radius.md, backgroundColor: "#eff6ff", color: COLORS.ACCENT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <ScienceOutlinedIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography id="lab-case-dialog-title" component="h2" sx={{ fontFamily: "Inter", fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: COLORS.TEXT_PRIMARY }}>
+                {heading}
+              </Typography>
+              <Typography sx={{ fontFamily: "Inter", fontSize: fontSize.sm, color: COLORS.TEXT_SECONDARY }}>
+                Lab case details{title ? ` for ${title}` : ""}
+              </Typography>
+            </Box>
+          </>
+        ) : (
+          <Typography id="lab-case-dialog-title" component="h2" sx={{ fontFamily: "Inter", fontSize: "15px", color: "#64748b" }}>
+            Patients / {title} / Lab Cases /{" "}
+            <Box component="span" sx={{ fontWeight: 700, color: "#0f172a" }}>{heading}</Box>
+          </Typography>
+        )}
         <IconButton
           size="small"
           onClick={onClose}
-          sx={{ color: "#94a3b8", "&:hover": { color: "#334155" } }}
+          aria-label="Close lab case dialog"
+          sx={scheduleStyle ? { color: COLORS.TEXT_SECONDARY } : { color: "#94a3b8", "&:hover": { color: "#334155" } }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -212,27 +255,29 @@ const NewLabCaseDialog = ({
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <DialogContent
           sx={{
-            p: 3,
+            p: scheduleStyle ? { xs: 2, sm: 3 } : 3,
+            ...(scheduleStyle ? { ".MuiDialogTitle-root + &": { pt: { xs: 2, sm: 3 } } } : {}),
             maxHeight: "75vh",
             overflowY: "auto",
+            backgroundColor: scheduleStyle ? COLORS.SURFACE_CARD : undefined,
           }}
         >
         {/* ─── Patient & Date ─────────────────────────────── */}
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px", mt: 1 }}>
+        <Box sx={scheduleStyle ? { ...scheduleGridSx, mt: 0 } : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px", mt: 1 }}>
           <Box>
-            <Typography sx={fieldLabelSx}>Patient</Typography>
+            <Typography sx={activeLabelSx}>Patient</Typography>
             <TextField
               size="small"
               name="patient"
               value={formData.patient || title}
               onChange={handleChange}
               fullWidth
-              sx={fieldSx}
+              sx={activeFieldSx}
             />
           </Box>
 
           <Box>
-            <Typography sx={fieldLabelSx}>Date</Typography>
+            <Typography sx={activeLabelSx}>Date</Typography>
             <DatePicker
               value={formData.date ? dayjs(formData.date) : null}
               onChange={handleDateChange("date")}
@@ -242,7 +287,7 @@ const NewLabCaseDialog = ({
                 textField: {
                   size: "small",
                   fullWidth: true,
-                  sx: fieldSx,
+                  sx: activeFieldSx,
                 },
               }}
             />
@@ -252,13 +297,13 @@ const NewLabCaseDialog = ({
         {/* ─── Select Procedure ───────────────────────────── */}
         <Box sx={{ mt: 3 }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-            <Typography sx={{ ...fieldLabelSx, mb: 0 }}>Select Procedure</Typography>
+            <Typography sx={{ ...activeLabelSx, ...(scheduleStyle ? { fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY } : {}), mb: 0 }}>Select Procedure</Typography>
             <IconButton
               size="small"
               onClick={handleAddProcedure}
               aria-label="Add procedure"
               sx={{
-                color: "#2563eb",
+                color: scheduleStyle ? COLORS.ACCENT : "#2563eb",
                 "&:hover": { backgroundColor: "rgba(37, 99, 235, 0.08)" },
               }}
             >
@@ -323,7 +368,7 @@ const NewLabCaseDialog = ({
                         {...params}
                         size="small"
                         placeholder={`Procedure ${index + 1} — search code or description`}
-                        sx={fieldSx}
+                        sx={activeFieldSx}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -356,11 +401,11 @@ const NewLabCaseDialog = ({
 
         {/* ─── Details ────────────────────────────────────── */}
           <Box sx={{ mt: 3 }}>
-            <Typography sx={{ ...fieldLabelSx, mb: 1.5 }}>Details</Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
+            <Typography sx={{ ...activeLabelSx, ...(scheduleStyle ? { fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY } : {}), mb: 1.5 }}>Details</Typography>
+            <Box sx={scheduleStyle ? scheduleGridSx : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
               {effectiveProviderOptions && (
                 <Box>
-                  <Typography sx={subLabelSx}>Provider</Typography>
+                  <Typography sx={activeSubLabelSx}>Provider</Typography>
                   <TextField
                     size="small"
                     select
@@ -369,7 +414,7 @@ const NewLabCaseDialog = ({
                     onChange={handleChange}
                     fullWidth
                     displayEmpty
-                    sx={fieldSx}
+                    sx={activeFieldSx}
                     SelectProps={{
                       MenuProps: { sx: { zIndex: 10000 } },
                     }}
@@ -392,7 +437,7 @@ const NewLabCaseDialog = ({
 
               {effectiveTypeOptions && (
                 <Box>
-                  <Typography sx={subLabelSx}>Type</Typography>
+                  <Typography sx={activeSubLabelSx}>Type</Typography>
                   <TextField
                     size="small"
                     select
@@ -401,7 +446,7 @@ const NewLabCaseDialog = ({
                     onChange={handleChange}
                     fullWidth
                     displayEmpty
-                    sx={fieldSx}
+                    sx={activeFieldSx}
                     SelectProps={{
                       MenuProps: { sx: { zIndex: 10000 } },
                     }}
@@ -423,7 +468,7 @@ const NewLabCaseDialog = ({
               )}
 
             <Box>
-              <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+              <Typography sx={activeSubLabelSx}>
                 Select Lab
               </Typography>
               <TextField
@@ -434,7 +479,7 @@ const NewLabCaseDialog = ({
                 onChange={handleChange}
                 fullWidth
                 displayEmpty
-                sx={fieldSx}
+                sx={activeFieldSx}
                 SelectProps={{
                   MenuProps: {
                     sx: { zIndex: 10000 },
@@ -454,7 +499,7 @@ const NewLabCaseDialog = ({
             </Box>
 
             <Box>
-              <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+              <Typography sx={activeSubLabelSx}>
                 Tracking Number
               </Typography>
               <TextField
@@ -464,12 +509,12 @@ const NewLabCaseDialog = ({
                 value={formData.trackingNumber || ""}
                 onChange={handleChange}
                 fullWidth
-                sx={fieldSx}
+                sx={activeFieldSx}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+              <Typography sx={activeSubLabelSx}>
                 Est Receive Date
               </Typography>
               <DatePicker
@@ -481,14 +526,14 @@ const NewLabCaseDialog = ({
                   textField: {
                     size: "small",
                     fullWidth: true,
-                    sx: fieldSx,
+                    sx: activeFieldSx,
                   },
                 }}
               />
             </Box>
 
             <Box>
-              <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+              <Typography sx={activeSubLabelSx}>
                 Status
               </Typography>
               <TextField
@@ -498,7 +543,7 @@ const NewLabCaseDialog = ({
                 value={formData.status}
                 onChange={handleChange}
                 fullWidth
-                sx={fieldSx}
+                sx={activeFieldSx}
                 SelectProps={{
                   MenuProps: { sx: { zIndex: 10000 } },
                 }}
@@ -512,7 +557,7 @@ const NewLabCaseDialog = ({
             </Box>
 
             <Box sx={{ gridColumn: "1 / -1" }}>
-              <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+              <Typography sx={activeSubLabelSx}>
                 Notes
               </Typography>
               <TextField
@@ -524,7 +569,7 @@ const NewLabCaseDialog = ({
                 fullWidth
                 multiline
                 minRows={4}
-                sx={fieldSx}
+                sx={activeFieldSx}
               />
             </Box>
           </Box>
@@ -532,10 +577,10 @@ const NewLabCaseDialog = ({
 
           {/* ─── Cost ─────────────────────────────────────── */}
           <Box sx={{ mt: 3 }}>
-            <Typography sx={{ ...fieldLabelSx, mb: 1.5 }}>Cost</Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
+            <Typography sx={{ ...activeLabelSx, ...(scheduleStyle ? { fontSize: fontSize.lg, color: COLORS.TEXT_PRIMARY } : {}), mb: 1.5 }}>Cost</Typography>
+            <Box sx={scheduleStyle ? scheduleGridSx : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 14px" }}>
               <Box>
-                <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+                <Typography sx={activeSubLabelSx}>
                   Shipping
                 </Typography>
                 <TextField
@@ -545,7 +590,7 @@ const NewLabCaseDialog = ({
                   value={formData.shipping || ""}
                   onChange={handleChange}
                   fullWidth
-                  sx={fieldSx}
+                  sx={activeFieldSx}
                   slotProps={{
                     input: { startAdornment: <Typography sx={{ mr: 0.75, color: "#94a3b8", fontSize: "13px" }}>$</Typography> },
                   }}
@@ -553,7 +598,7 @@ const NewLabCaseDialog = ({
               </Box>
 
               <Box>
-                <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+                <Typography sx={activeSubLabelSx}>
                   Lab Fee
                 </Typography>
                 <TextField
@@ -563,7 +608,7 @@ const NewLabCaseDialog = ({
                   value={formData.labFee || ""}
                   onChange={handleChange}
                   fullWidth
-                  sx={fieldSx}
+                  sx={activeFieldSx}
                   slotProps={{
                     input: { startAdornment: <Typography sx={{ mr: 0.75, color: "#94a3b8", fontSize: "13px" }}>$</Typography> },
                   }}
@@ -571,7 +616,7 @@ const NewLabCaseDialog = ({
               </Box>
 
               <Box sx={{ gridColumn: "1 / -1" }}>
-                <Typography sx={{ fontFamily: "Inter", fontWeight: 600, fontSize: "12px", color: "#334155", mb: 1 }}>
+                <Typography sx={activeSubLabelSx}>
                   Total Amount
                 </Typography>
                 <TextField
@@ -580,9 +625,9 @@ const NewLabCaseDialog = ({
                   fullWidth
                   readOnly
                   sx={{
-                    ...fieldSx,
+                    ...activeFieldSx,
                     "& .MuiOutlinedInput-root": {
-                      ...fieldSx["& .MuiOutlinedInput-root"],
+                      ...activeFieldSx["& .MuiOutlinedInput-root"],
                       backgroundColor: "#f8fafc",
                       "& fieldset": { borderColor: "#e2e8f0" },
                     },
@@ -597,17 +642,30 @@ const NewLabCaseDialog = ({
 
       <DialogActions
         sx={{
-          py: 2,
-          px: 3,
+          py: scheduleStyle ? 1.5 : 2,
+          px: scheduleStyle ? { xs: 2, sm: 3 } : 3,
           display: "flex",
-          justifyContent: "center",
-          gap: 1.5,
-          borderTop: "1px solid #f1f5f9",
+          justifyContent: scheduleStyle ? "flex-end" : "center",
+          gap: scheduleStyle ? 1 : 1.5,
+          borderTop: `1px solid ${scheduleStyle ? COLORS.BORDER : "#f1f5f9"}`,
+          backgroundColor: scheduleStyle ? COLORS.SURFACE_CARD : undefined,
         }}
       >
         <Button
+          variant={scheduleStyle ? "outlined" : "text"}
           onClick={onClose}
-          sx={{
+          sx={scheduleStyle ? {
+            textTransform: "none",
+            px: 2,
+            py: 0.875,
+            borderRadius: radius.md,
+            borderColor: "#d0d5dd",
+            color: COLORS.TEXT_BODY,
+            fontFamily: "Inter",
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.medium,
+            "&:hover": { backgroundColor: COLORS.SURFACE_HOVER, borderColor: COLORS.TEXT_MUTED },
+          } : {
             textTransform: "none",
             px: 3.5,
             py: 0.7,
@@ -626,7 +684,19 @@ const NewLabCaseDialog = ({
           variant="contained"
           disableElevation
           onClick={onSubmit}
-          sx={{
+          sx={scheduleStyle ? {
+            textTransform: "none",
+            px: 2.5,
+            py: 0.875,
+            borderRadius: radius.md,
+            backgroundColor: COLORS.ACCENT,
+            color: COLORS.WHITE,
+            fontFamily: "Inter",
+            fontSize: fontSize.md,
+            fontWeight: fontWeight.semibold,
+            boxShadow: "none",
+            "&:hover": { backgroundColor: COLORS.ACCENT_HOVER, boxShadow: "none" },
+          } : {
             textTransform: "none",
             px: 3.5,
             py: 0.7,

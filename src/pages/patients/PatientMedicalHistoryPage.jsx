@@ -38,6 +38,7 @@ import SectionCard from "../../components/shared/SectionCard";
 import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { printMedicalHistoryFromData } from "../../utils/printMedicalHistory";
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -113,14 +114,23 @@ const PatientMedicalHistoryPage = () => {
   const hasPrinted = useRef(false);
 
   useEffect(() => {
+    hasPrinted.current = false;
+  }, [patientId]);
+
+  useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get("print") === "true" && !loading && !hasPrinted.current) {
+    const matchesPatient = [patient?._id, patient?.id, patient?.PatNum]
+      .some((id) => id != null && String(id) === String(patientId));
+    if (searchParams.get("print") !== "true" || loading || !medicalHistory || !matchesPatient || hasPrinted.current) return;
+    const timer = setTimeout(() => {
+      if (hasPrinted.current) return;
       hasPrinted.current = true;
-      setTimeout(() => {
-        window.print();
-      }, 500);
-    }
-  }, [location.search, loading]);
+      printMedicalHistoryFromData(medicalHistory, patient).catch((printError) =>
+        showSnackbar(printError.message, "error"),
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [location.search, loading, medicalHistory, patient, patientId, showSnackbar]);
 
   const [historyTab, setHistoryTab] = useState(0); // 0 = Summary, 1 = Full Medical History
   const [medications, setMedications] = useState([]);
@@ -406,7 +416,23 @@ const PatientMedicalHistoryPage = () => {
   }
 
   const handlePrint = () => {
-    window.print();
+    const matchesPatient = [patient?._id, patient?.id, patient?.PatNum]
+      .some((id) => id != null && String(id) === String(patientId));
+    if (!medicalHistory || !matchesPatient) {
+      showSnackbar("The patient history is still loading. Please try again.", "warning");
+      return;
+    }
+    const currentHistory = {
+      ...medicalHistory,
+      generalInfo,
+      sections: rawSections,
+      premed: localPremed || {},
+      medications,
+      supplements,
+      review: { ...medicalHistory.review, signatureDataUrl: signature },
+    };
+    printMedicalHistoryFromData(currentHistory, patient, false, { unsaved: hasUnsavedChanges })
+      .catch((printError) => showSnackbar(printError.message, "error"));
   };
 
   if (error) {
@@ -911,7 +937,10 @@ const PatientMedicalHistoryPage = () => {
           </Box>
           <PatientSignatureCard
             value={signature}
-            onChange={setSignature}
+            onChange={(value) => {
+              setSignature(value);
+              setHasUnsavedChanges(true);
+            }}
             reviewedWithPatient={reviewedWithPatient}
           />
         </Box>

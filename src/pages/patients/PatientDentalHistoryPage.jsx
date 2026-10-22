@@ -37,6 +37,7 @@ import SectionCard from "../../components/shared/SectionCard";
 import UnsavedChangesPrompt from "../../components/shared/UnsavedChangesPrompt";
 import { COLORS } from "../../constants/colors";
 import { fontSize, fontWeight, radius } from "../../constants/styles";
+import { printDentalHistoryFromData } from "../../utils/printDentalHistory";
 
 const EMPTY_HISTORY = {
   generalInfo: {
@@ -335,7 +336,25 @@ const PatientDentalHistoryPage = () => {
   const showContent = !isActuallyLoading || patient;
 
   const handlePrint = () => {
-    window.print();
+    const matchesPatient = [patient?._id, patient?.id, patient?.PatNum]
+      .some((id) => id != null && String(id) === String(patientId));
+    if (!dentalHistory || !matchesPatient) {
+      showSnackbar("The patient history is still loading. Please try again.", "warning");
+      return;
+    }
+    const currentHistory = {
+      ...dentalHistory,
+      generalInfo: localGeneralInfo,
+      personalHistory: localPersonalHistory,
+      gumAndBone: localGumAndBone,
+      biteAndJawJoint: localBiteAndJawJoint,
+      toothStructure: localToothStructure,
+      smileCharacteristics: localSmileCharacteristics,
+      sectionSummaries: localSectionSummaries,
+      review: { ...dentalHistory.review, signatureDataUrl: signature },
+    };
+    printDentalHistoryFromData(currentHistory, patient, false, { unsaved: hasUnsavedChanges })
+      .catch((printError) => showSnackbar(printError.message, "error"));
   };
 
   const handleUpdateItem = (section, id, field, value) => {
@@ -755,7 +774,10 @@ const PatientDentalHistoryPage = () => {
               <PatientSignatureCard
                 patient={patient}
                 value={signature}
-                onChange={setSignature}
+                onChange={(value) => {
+                  setSignature(value);
+                  setHasUnsavedChanges(true);
+                }}
                 reviewedWithPatient={Boolean(dentalHistory?.reviewStatus)}
               />
             </Box>
