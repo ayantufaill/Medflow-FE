@@ -143,6 +143,8 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
   const displayDate = appt.appointmentDate
     ? formatBranchDateLong(appt.appointmentDate)
     : "";
+  // YYYY-MM-DD key used for week-view column lookup (separate from displayDate which is human-readable)
+  const dateStr = appt.appointmentDate ? branchDateStr(appt.appointmentDate) : "";
 
   const statusKey = (appt.status || "unconfirmed").toLowerCase();
 
@@ -215,6 +217,7 @@ const mapApiAppointmentToGridItem = (appt, providerMap = {}) => {
     time: displayTime,
     endTime: displayEndTime,
     date: displayDate,
+    dateStr,  // YYYY-MM-DD – used for week-view column lookup
     status: statusKey.toUpperCase(),
     startHour,
     startMinute,
@@ -280,13 +283,11 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
     <Box
       ref={setNodeRef}
       onClick={(e) => {
-        if (isCloseOpenDayMode || isClosed || isPast) return;
+        // Week view (and month view) do not support click-to-create.
+        // Creating an appointment from those views requires using the + button.
+        if (isCloseOpenDayMode || isClosed || isPast || isWeek) return;
         e.stopPropagation();
-        if (isWeek) {
-          if (onSlotClick) onSlotClick(hour, mins, roomId);
-        } else {
-          setActiveCell({ hour, mins, roomId });
-        }
+        setActiveCell({ hour, mins, roomId });
       }}
       sx={{
         flex: 1,
@@ -301,7 +302,7 @@ const PortionDroppableZone = ({ hour, mins, roomId, onSlotClick, setActiveCell, 
           borderBottom: mins !== 50 ? '1px dashed rgba(203, 213, 225, 0.8)' : 'none',
         },
         '&:hover': {
-          backgroundColor: (isCloseOpenDayMode || isClosed || isPast) ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
+          backgroundColor: (isCloseOpenDayMode || isClosed || isPast || isWeek) ? 'transparent' : 'rgba(34, 98, 239, 0.1)',
         },
       }}
     />
@@ -681,8 +682,11 @@ const ScheduleTimeGrid = ({ rooms: propRooms, onSlotClick, onBlockClick, schedul
         if (isWeek) {
           const weekGroups = {};
           visibleAppointments.forEach((gridItem) => {
-            const apptDateStr = branchDateStr(gridItem.date || gridItem.rawAppointment?.appointmentDate);
-            const colIndex = colIndexMap[apptDateStr] ?? 0;
+            // gridItem.date is a display string ("Oct 22, 2026"); use the dedicated
+            // YYYY-MM-DD dateStr field for column lookup so it matches colIndexMap keys.
+            const apptDateStr = gridItem.dateStr || branchDateStr(gridItem.rawAppointment?.appointmentDate);
+            const colIndex = colIndexMap[apptDateStr] ?? -1;
+            if (colIndex === -1) return; // appointment doesn't belong to this week – skip
             const pos = getGridPosition(gridItem, colIndex);
 
             // Group by the exact top position (or 30 min block)

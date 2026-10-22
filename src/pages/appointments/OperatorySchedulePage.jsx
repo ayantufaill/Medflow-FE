@@ -16,6 +16,7 @@ import { usePatients, usePatient, useScheduleState, useAppointmentList, useBranc
 import {
   branchDateStr,
   calendarDateStr,
+  clinicStartOfDayInstant,
   clinicNow,
   formatBranchTime,
   resolveClinicTimeZone,
@@ -704,9 +705,12 @@ const OperatorySchedulePage = () => {
   const [showExtendedOptions, setShowExtendedOptions] = useState(false);
 
   const handleOpenForm = (dateTime, roomId, extendedOptions = false) => {
-    const baseDate = selectedDate ? dayjs(selectedDate) : dayjs();
-    const defaultTime = dayjs().add(30, "minute");
-    const fallbackDateTime = baseDate.isSame(dayjs(), "day")
+    const now = clinicNow(clinicTz);
+    const baseDate = selectedDate
+      ? clinicStartOfDayInstant(calendarDateStr(selectedDate), clinicTz)
+      : now;
+    const defaultTime = now.add(30, "minute");
+    const fallbackDateTime = baseDate.format("YYYY-MM-DD") === now.format("YYYY-MM-DD")
       ? defaultTime
       : baseDate.hour(defaultTime.hour()).minute(defaultTime.minute()).second(0);
     setInitialFormDateTime(dateTime || fallbackDateTime);
