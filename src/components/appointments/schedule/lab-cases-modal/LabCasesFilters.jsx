@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 
@@ -40,7 +40,7 @@ const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
       <ReportSelect 
         value={filters.status} 
         onChange={handleStatusChange} 
-        options={['Select Status', 'New', 'Printed', 'Completed']} 
+        options={['Select Status', 'Draft', 'Sent', 'Received', 'Complete']} 
         sx={{ width: 160 }} 
       />
       <Box sx={{ ml: 2 }}>
@@ -98,6 +98,7 @@ const LabCasesFilters = ({ filters, onFiltersChange, onApplyFilters }) => {
 
   return (
     <ReportFilterBar 
+      wrapFilters
       topRowFilters={topFilters}
       bottomRowFilters={bottomFilters}
       onApplyFilters={onApplyFilters}

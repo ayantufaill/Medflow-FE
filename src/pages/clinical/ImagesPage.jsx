@@ -106,7 +106,6 @@ const ImagesPage = () => {
           onSearchChange={(v) => { setSearch(v); setPage(0); }}
           onClearSearch={() => setSearch("")}
           onOpenNewMountMenu={(e) => setMenuAnchor(e.currentTarget)}
-          onOpenImportDialog={handleOpenImportDialog}
           onOpenSettings={() => setDialog("settings")}
           selectedCount={selectedIds.length}
           onOpenBatchDelete={() => setBatchDeleteDialog(true)}

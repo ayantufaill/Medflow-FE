@@ -72,7 +72,7 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
         }}
       >
         <ViewToggle value={viewLabel} onChange={handleViewChange} />
-        
+
         {/* Live Current Time Display - clean text on background */}
         <Box
           sx={{
@@ -107,15 +107,15 @@ const ScheduleGridHeader = ({ onNewAppointment, onPrintClick, onMoreClick, priva
 
         {/* Flexible space to push icons and button to the right side if needed, or simply let ActionIconsBar handle alignment */}
         <Box sx={{ flex: 1 }} />
-        
-        <ActionIconsBar 
-          onPrintClick={onPrintClick} 
-          onMoreClick={onMoreClick} 
-          privacyMode={privacyMode} 
-          onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)} 
-          hideBlocks={hideBlocks} 
-          onToggleHideBlocks={() => setHideBlocks(!hideBlocks)} 
-          showGhosted={showGhosted} 
+
+        <ActionIconsBar
+          onPrintClick={onPrintClick}
+          onMoreClick={onMoreClick}
+          privacyMode={privacyMode}
+          onTogglePrivacyMode={() => setPrivacyMode(!privacyMode)}
+          hideBlocks={hideBlocks}
+          onToggleHideBlocks={() => setHideBlocks(!hideBlocks)}
+          showGhosted={showGhosted}
           onToggleShowGhosted={() => setShowGhosted(!showGhosted)}
           lastViewedDates={lastViewedDates}
           onDateSelect={(dateStr) => setSelectedDate(dayjs(dateStr).toISOString())}
