@@ -116,6 +116,11 @@ export const useCoverageData = (
           );
 
           if (editTarget) {
+            let savedCoverageLimits = editTarget.coverageLimits;
+            if (typeof savedCoverageLimits === 'string') {
+              try { savedCoverageLimits = JSON.parse(savedCoverageLimits); }
+              catch { savedCoverageLimits = null; }
+            }
             const fullCompany = editTarget.insuranceCompanyId;
             const address = fullCompany?.address;
             const cityState = [address?.city, address?.state].filter(Boolean).join(', ');
@@ -196,7 +201,12 @@ export const useCoverageData = (
                     metDate: isoToDisplayDate(d.metDate),
                   }))
                 : prev.deductibles,
-              coverage: editTarget.coverageLimits || prev.coverage,
+              coverage: savedCoverageLimits && typeof savedCoverageLimits === 'object'
+                ? { ...prev.coverage, ...savedCoverageLimits, individual: {
+                    ...prev.coverage.individual,
+                    ...savedCoverageLimits.individual,
+                  } }
+                : prev.coverage,
               providersPlanFeeGuides: editTarget.providersPlanFeeGuides || [],
               policyNotes: editTarget.policyNotes || "",
               eligibilityPolicyNotes: editTarget.eligibilityPolicyNotes || "",

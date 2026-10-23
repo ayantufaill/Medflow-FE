@@ -11,7 +11,7 @@ import { fontSize, fontWeight, radius } from '../../../constants/styles';
 // API and shows a results dropdown. Selecting a patient sets currentPatient
 // in Redux, which PatientCard and PatientActions then read.
 
-const PatientSearch = () => {
+const PatientSearch = ({ onPatientSelect }) => {
   const { patients, loading, fetch: searchPatients } = usePatients();
   const { setPatient, setPatientId, clear, fetchById } = usePatient();
 
@@ -42,6 +42,7 @@ const PatientSearch = () => {
 
   // Commit the selected patient to Redux and reset the search field.
   const handleSelectPatient = (patient) => {
+    onPatientSelect?.(patient);
     const pId = patient._id || patient.id || patient.PatNum;
     setPatientId(pId); // sets selectedPatientId in patientSlice
     
@@ -58,6 +59,7 @@ const PatientSearch = () => {
 
   // Clear the current patient and reset the field.
   const handleClear = () => {
+    onPatientSelect?.(null);
     clear();
     setInputValue('');
     setIsOpen(false);

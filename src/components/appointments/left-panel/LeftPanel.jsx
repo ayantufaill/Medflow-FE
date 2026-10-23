@@ -12,6 +12,7 @@ import ProductivityPanel from './ProductivityPanel';
 import { usePatient } from '../../../hooks/redux';
 import { useDispatch, useSelector } from 'react-redux';
 import { COLORS } from '../../../constants/colors';
+import { selectPatientSummaryAppointment } from '../../../utils/selectPatientSummaryAppointment';
 import {
   fetchPatientHistory,
   selectPatientHistoryList,
@@ -23,15 +24,21 @@ import {
 // - PatientCard and PatientActions only mount after a patient is selected so
 //   they never render in an empty/null state.
 
-const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment, pendingItems }) => {
+const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectAppointment, pendingItems, selectedDate }) => {
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('Patient');
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [explicitAppointment, setSelectedAppointment] = useState(null);
+  const [summaryHistory, setSummaryHistory] = useState({ patientId: null, appointments: [] });
   const [showAllHistory, setShowAllHistory] = useState(false);
   // Keep a ref so the event handler always sees the latest value without stale closure
   const selectedApptRef = useRef(null);
   // Read currentPatient from Redux to conditionally show patient sub-components.
   const { currentPatient, fetchById, setPatientId, loading } = usePatient();
+  const currentPatientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
+  const fallbackAppointment = String(summaryHistory.patientId) === String(currentPatientId)
+    ? selectPatientSummaryAppointment(summaryHistory.appointments, selectedDate)
+    : null;
+  const selectedAppointment = explicitAppointment || fallbackAppointment;
 
   // Sync with external selection (from parent)
   useEffect(() => {
@@ -187,14 +194,18 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
       }
     : liveAppt;
 
-  const currentPatientId = currentPatient?._id || currentPatient?.id || currentPatient?.PatNum;
-
   useEffect(() => {
+    let active = true;
     if (currentPatientId) {
-      dispatch(fetchPatientHistory(currentPatientId));
+      dispatch(fetchPatientHistory(currentPatientId)).unwrap().then(appointments => {
+        if (active) setSummaryHistory({ patientId: currentPatientId, appointments });
+      }).catch(() => {
+        if (active) setSummaryHistory({ patientId: currentPatientId, appointments: [] });
+      });
       setShowAllHistory(false);
     }
-  }, [currentPatientId, selectedAppointmentId, dispatch]);
+    return () => { active = false; };
+  }, [currentPatientId, explicitAppointment, dispatch]);
 
   const getAppointmentPatientId = (appointment) =>
     currentPatient?._id ||
@@ -206,7 +217,9 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
     const status = String(appointment?.status || '').toLowerCase();
     return status !== 'scheduled' && status !== 'unconfirmed';
   };
-  const historyAppointments = currentChainRootId
+  const historyAppointments = !explicitAppointment
+    ? (liveAppt ? [liveAppt] : [])
+    : currentChainRootId
     ? patientHistoryList.filter((appointment) => {
         const appointmentId = getAppointmentId(appointment);
         return (
@@ -241,7 +254,11 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
         {activeTab === 'Patient' && (
           <>
             {/* Search is always shown */}
-            <PatientSearch />
+            <PatientSearch onPatientSelect={() => {
+              selectedApptRef.current = null;
+              setSelectedAppointment(null);
+              onSelectAppointment?.(null);
+            }} />
 
             {/* PatientCard renders once a patient is selected */}
             {currentPatient && (
@@ -277,6 +294,11 @@ const LeftPanel = ({ selectedAppointment: externalSelectedAppointment, onSelectA
                           appointment={historyAppt}
                           selected={false}
                           onClick={() => handleHistoryAppointmentClick(historyAppt)}
+                          onDoubleClick={() => {
+                            window.dispatchEvent(new CustomEvent('appointment-card-double-clicked', {
+                              detail: { ...historyAppt, id: historyId },
+                            }));
+                          }}
                         />
                         <Box onClick={(e) => e.stopPropagation()}>
                           <AppointmentChecklist
