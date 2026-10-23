@@ -14,6 +14,7 @@ import {
   ListItemText,
   Collapse,
   Grid,
+  CircularProgress,
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
@@ -39,6 +40,9 @@ import EditCoverageModal from '../insurance/components/EditCoverageModal';
 import ViewCoverage from '../insurance/components/ViewCoverage';
 import ConfirmationDialog from '../shared/ConfirmationDialog';
 import CarrierInfoDialog from '../insurance/components/CarrierInfoDialog';
+import EligibilityResultDialog from '../insurance/components/EligibilityResultDialog';
+import { ELIGIBILITY_STATUS } from '../insurance/utils/eligibilityStatus';
+import { eligibilityService } from '../../services/insurance.service';
 import InsuranceTabs from '../insurance/InsuranceTabs';
 import ImportedCoverageBanner from '../insurance/ImportedCoverageBanner';
 import FamilyCoverageBanner from '../insurance/FamilyCoverageBanner';
@@ -79,9 +83,47 @@ const CoverageRow = ({
   onMoveUp,
   onMoveDown,
   onViewCarrierInfo,
-  usage
+  usage,
+  patientId,
+  onEligibilityError
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [eligibility, setEligibility] = useState(null);
+  const [eligibilityOpen, setEligibilityOpen] = useState(false);
+  const insuranceId = ins._id || ins.id;
+
+  // Prefer the result of a check made on this screen over the status the list was loaded with.
+  const verificationStatus = eligibility
+    ? (eligibility.status === 'active' ? 'verified' : eligibility.status)
+    : ins.verificationStatus;
+  const verificationDate = eligibility?.checkedAt || ins.verificationDate;
+  const statusBadge = verificationStatus && verificationStatus !== 'pending' ? ELIGIBILITY_STATUS[verificationStatus] : null;
+
+  const handleCheckEligibility = async () => {
+    setChecking(true);
+    try {
+      const result = await eligibilityService.checkEligibility(patientId, insuranceId);
+      setEligibility(result);
+      setEligibilityOpen(true);
+    } catch (err) {
+      onEligibilityError?.(err.response?.data?.error?.message || err.response?.data?.message || 'Eligibility check failed');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleViewLastEligibility = async () => {
+    if (eligibility) return setEligibilityOpen(true);
+    try {
+      const result = await eligibilityService.getLatestEligibility(patientId, insuranceId);
+      if (!result) return onEligibilityError?.('No eligibility check on record yet');
+      setEligibility(result);
+      setEligibilityOpen(true);
+    } catch (err) {
+      onEligibilityError?.(err.response?.data?.error?.message || 'Could not load the last eligibility check');
+    }
+  };
   const companyName = getInsuranceCompanyName(ins.insuranceCompanyId);
   const { usedAmount, maxAmount } = getCoverageAmounts(ins, usage);
 
@@ -113,6 +155,29 @@ const CoverageRow = ({
             <Box component="span" sx={{ color: COLORS.TEXT_MUTED }}>by {companyName}</Box>
           </Typography>
         </Box>
+        {!isInactive && (
+          <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }}>
+            {statusBadge && (
+              <Typography
+                onClick={handleViewLastEligibility}
+                title="View last eligibility result"
+                sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, color: statusBadge.color, fontWeight: fontWeight.semibold, whiteSpace: 'nowrap', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+              >
+                {statusBadge.label}{verificationDate ? ` · ${formatDate(verificationDate)}` : ''}
+              </Typography>
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={checking}
+              onClick={handleCheckEligibility}
+              startIcon={checking ? <CircularProgress size={12} /> : null}
+              sx={{ fontFamily: 'Inter', fontSize: fontSize.xs, textTransform: 'none', py: 0.25, px: 1.5, borderRadius: radius.md, borderColor: COLORS.ACCENT, color: COLORS.ACCENT, whiteSpace: 'nowrap' }}
+            >
+              {checking ? 'Checking…' : 'Check Eligibility'}
+            </Button>
+          </Box>
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
           <Typography sx={{ fontFamily: 'Inter', fontSize: fontSize.sm, whiteSpace: 'nowrap' }}>
             <Box component="span" sx={{ color: COLORS.TEXT_MUTED }}>Used up-to-date: </Box>
@@ -154,6 +219,7 @@ const CoverageRow = ({
           </Box>
         </Box>
       </Box>
+      <EligibilityResultDialog open={eligibilityOpen} onClose={() => setEligibilityOpen(false)} result={eligibility} />
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <Box sx={{ p: 2, borderTop: `1px solid ${COLORS.BORDER}`, bgcolor: COLORS.SURFACE_CARD }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, gap: 4 }}>
@@ -718,6 +784,8 @@ export default function PatientInsuranceTabContent({ patientId, patient }) {
                   onMoveDown={() => handleMoveDown(index, array)}
                   onViewCarrierInfo={handleViewCarrierInfo}
                   usage={getUsageForCoverage(ins, index)}
+                  patientId={patientId}
+                  onEligibilityError={(message) => showSnackbar(message, 'error')}
                 />
               ))}
             </Stack>
