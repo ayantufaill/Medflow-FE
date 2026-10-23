@@ -133,3 +133,19 @@ export const coverageGroupService = {
     return response.data.data;
   },
 };
+
+/**
+ * Real-time eligibility (270/271 via Stedi, proxied by the backend).
+ * The backend stores each result, so getLatest never hits the payer.
+ */
+export const eligibilityService = {
+  async checkEligibility(patientId, patientInsuranceId, payload = {}) {
+    const response = await apiClient.post(`/patients/${patientId}/insurance/${patientInsuranceId}/eligibility`, payload);
+    return response.data.data.eligibility;
+  },
+
+  async getLatestEligibility(patientId, patientInsuranceId) {
+    const response = await apiClient.get(`/patients/${patientId}/insurance/${patientInsuranceId}/eligibility`);
+    return response.data.data.eligibility;
+  },
+};
