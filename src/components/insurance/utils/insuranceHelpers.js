@@ -66,10 +66,10 @@ export const parseAmount = (val) => {
 };
 
 /**
- * Pull the individual used/annual-max pair off a coverage record. `usage`
- * (from the eligibility-check redux cache) wins when present; coverageLimits
- * is next, arriving as either an object or a JSON string depending on the
- * endpoint; legacy records fall back to their flat copay/deductible columns.
+ * Pull the individual used/annual-max pair off a coverage record. The saved
+ * Used Amount field is authoritative for the coverage card, including when it
+ * is cleared. coverageLimits can be an object or a JSON string. Older records
+ * without that field may still have a flat usedAmount value.
  */
 export const getCoverageAmounts = (ins, usage) => {
   let coverageLimits = ins?.coverageLimits;
@@ -82,11 +82,7 @@ export const getCoverageAmounts = (ins, usage) => {
   }
   const limitsInd = coverageLimits?.individual;
 
-  const rawUsed =
-    usage?.usedAmount ??
-    limitsInd?.usedAmount ??
-    ins?.usedAmount ??
-    ins?.copayAmount;
+  const rawUsed = limitsInd?.usedAmount ?? ins?.usedAmount;
 
   const rawMax =
     usage?.annualMax ??
@@ -140,8 +136,8 @@ export const getFeeGuideLabel = (planFeeGuide, feeGuides = []) => {
  *
  * Prefer the coverage id returned by the backend, including plans beyond the
  * first two. Older payloads without ids still use the previous name/ordinal
- * fallback. Passing the matched result into `getCoverageAmounts` uses actual
- * claims paid to date instead of a stale limit on the coverage.
+ * fallback. The matched usage can supply the annual maximum; the displayed
+ * Used Amount comes from the saved coverage field.
  */
 export const getCoverageUsage = (ins, index, usagePayload) => {
   const primaryUsage = usagePayload?.primaryInsurance ?? null;

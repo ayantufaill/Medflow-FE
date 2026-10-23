@@ -93,8 +93,9 @@ const CoverageRow = ({
   const company = getCompany(ins.insuranceCompanyId);
   const payerId = company?.payerId || company?.electronicId || '-';
   const address = formatCoverageAddress(company?.address);
-  const remainingBenefits = usage?.annualMaxAvailable && usage.remaining != null
-    ? `$${Number(usage.remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const hasAnnualMax = usage?.annualMaxAvailable || maxAmount > 0;
+  const remainingBenefits = hasAnnualMax
+    ? `$${Math.max(maxAmount - usedAmount, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '-';
 
   return (
