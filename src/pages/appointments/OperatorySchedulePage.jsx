@@ -1416,6 +1416,7 @@ const OperatorySchedulePage = () => {
         {/* LEFT PANEL — Static Width */}
         <Box className="no-print" sx={{ flex: '0 0 280px', width: '280px', minWidth: '280px', maxWidth: '280px', height: '100%', backgroundColor: COLORS.SURFACE_CARD, borderRadius: radius.lg, border: `1px solid ${COLORS.BORDER}`, overflow: 'hidden' }}>
           <LeftPanel 
+            selectedDate={selectedDate.format('YYYY-MM-DD')}
             selectedAppointment={selectedAppointment} 
             onSelectAppointment={setSelectedAppointment}
             pendingItems={pendingItems}

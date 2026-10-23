@@ -28,7 +28,7 @@ const StatusBanner = ({ status }) => {
 };
 
 // Receives the appointment object directly as a prop from LeftPanel
-const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
+const AppointmentSummaryCard = ({ appointment, selected = false, onClick, onDoubleClick }) => {
   const dispatch = useDispatch();
   const { showSnackbar } = useSnackbar();
 
@@ -172,6 +172,13 @@ const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
         e.stopPropagation();
         onClick?.();
       }}
+      onDoubleClickCapture={(e) => {
+        // Handle the entire card before child elements can swallow the event.
+        // Keep the status selector and confirmation buttons independent.
+        if (e.target.closest('button, input, [role="combobox"], [role="listbox"], [role="option"]')) return;
+        e.stopPropagation();
+        onDoubleClick?.();
+      }}
       sx={{
         border: selected ? `2px solid ${COLORS.ACCENT}` : `1px solid ${COLORS.BORDER_LIGHT}`,
         borderRadius: '10px',
@@ -179,7 +186,7 @@ const AppointmentSummaryCard = ({ appointment, selected = false, onClick }) => {
         mt: '8px',
         mb: '2px',
         backgroundColor: COLORS.WHITE,
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: onClick || onDoubleClick ? 'pointer' : 'default',
         boxShadow: selected ? '0 0 0 1px rgba(35, 98, 239, 0.2)' : 'none',
       }}
     >
